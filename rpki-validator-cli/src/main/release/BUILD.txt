@@ -1,0 +1,68 @@
+Certification Validator Tool
+============================
+
+The Certification Validator Tool allows you to validate objects that have been
+published in a public certificate repository.
+ 
+You have downloaded the source release of the validator tool. If your goal is
+to run the validator and not to examine the source code then you should consider
+downloading the binary release from the certification website.
+
+Prerequisites
+-------------
+
+For building the certification validator tool make sure you have the following
+softwares and settings on your system.
+
+- You are running a Unix-like operating system. Windows has not been tested.
+
+- You have maven 2.2.1 installed (http://maven.apache.org/download.html) and
+  the maven bin directory is on your path. If you have downloaded maven
+  into your home directory then you can add it to your path by executing:
+  
+  $ export PATH=$HOME/apache-maven-2.2.1/bin/:$PATH
+
+- You have SUN Java 6 JDK. If you have downloaded the Sun Java 6 JDK
+  into your home directory then you can add it to your path by executing:
+  
+  $ export PATH=$HOME/jdk/bin/:$PATH
+
+- Your JAVA_HOME variable is set. It should point to your Java 6 JDK
+  directory. If you have downloaded the Sun Java 6 JDK into your home
+  directory then you can set the JAVA_HOME variable by executing:
+  
+  $ export JAVA_HOME=$HOME/jdk/
+
+
+Building
+------------
+
+Unpack the downloaded archive. A new directory named 
+"certification-validator-X.Y-src" (where X.Y is the version) will be
+automatically created containing the required components.
+
+Install 2 components distributed in binary format into your maven repository
+by executing the following commands:
+
+  $ mvn install:install-file -Dfile=commons-utils-1.30.jar -DgroupId=net.ripe.commons -DartifactId=commons-utils -Dversion=1.30 -Dpackaging=jar -DgeneratePom=true
+
+  $ mvn install:install-file -Dfile=commons-internet-resources-1.30.jar -DgroupId=net.ripe.commons -DartifactId=commons-internet-resources -Dversion=1.30 -Dpackaging=jar -DgeneratePom=true
+
+
+Build the validator by executing:
+
+  $ mvn clean install
+
+
+Once the build has successfully finished you can find the validator
+in the certification-validator/target/certification-validator-X.Y-bin.zip
+file (where X.Y is the version).
+Please refer to the README.txt about how to use the binary distribution
+that you have just created. 
+
+
+Support
+-------
+
+Please contact certification@ripe.net with any questions relating to the
+Certification Validator Tool or the RIPE NCC resource certification service.

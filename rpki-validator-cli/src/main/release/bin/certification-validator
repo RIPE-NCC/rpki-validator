@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# Wrapper script to invoke certification validator using Java.
+#
+# This script expects that the Java code is located in ../jars, relative to
+# the location of this script.
+
+BASEDIR=`dirname "$0"`/..
+
+VALIDATOR_JAR=`echo "$BASEDIR"/jar/certification-validator-*-jar-with-dependencies.jar`
+
+JAVA=${JAVA:-"$JAVA_HOME/bin/java"}
+if [ ! -e $JAVA ]; then
+  echo "Trying to find java on the path. Consider setting the JAVA_HOME variable" >&2
+  JAVA=`which java`
+fi
+
+if [ ! -e $JAVA ]; then
+  echo "Can't find java on your system. Please make java available on your path or set the JAVA_HOME variable" >&2
+  exit 1
+fi
+
+JAVA_OPTS=${JAVA_OPTS:-"-Xmx1024m"}
+
+exec $JAVA $JAVA_OPTS -jar "$VALIDATOR_JAR" "$@"

@@ -1,0 +1,30 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:wicket="http://wicket.apache.org/dtds.data/wicket-xhtml1.4-strict.dtd"
+      xml:lang="en"
+      lang="en">
+
+<wicket:panel>
+
+    <table border="0" cellpadding="0" cellspacing="0">
+
+        <tr>
+            <td>AS number:</td>
+            <td wicket:id="asNumber"/>
+        </tr>
+
+        <tr>
+            <td valign="top">Prefixes:</td>
+            <td>
+                <table border="0">
+                    <tr wicket:id="prefixes">
+                        <td class="listCell" style="width: 180px" wicket:id="prefix"/>
+                        <td class="listCell" wicket:id="maximumLength"/>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</wicket:panel>
+
+</html>

@@ -1,0 +1,36 @@
+<assembly>
+    <id>bin</id>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>lib</outputDirectory>
+            <scope>runtime</scope>
+        </dependencySet>
+    </dependencySets>
+
+    <fileSets>
+        <fileSet>
+            <directory>${project.basedir}/webapp</directory>
+            <outputDirectory>webapp</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/config</directory>
+            <outputDirectory>config</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/theme</directory>
+            <outputDirectory>theme</outputDirectory>
+        </fileSet>
+    </fileSets>
+
+    <files>
+        <file>
+            <source>${project.basedir}/src/main/assembly/rpki-vs.sh</source>
+            <outputDirectory>/</outputDirectory>
+            <fileMode>755</fileMode>
+        </file>
+
+    </files>
+</assembly>
