@@ -8,7 +8,7 @@
     <inceptionYear>2008</inceptionYear>
 
     <scm>
-        <connection>scm:svn:https://svn.ripe.net/svn/ba/certification/trunk</connection>
+        <connection>scm:svn:https://svn.ripe.net/svn/ba/certification/rpki-validator/trunk</connection>
     </scm>
 
     <distributionManagement>
