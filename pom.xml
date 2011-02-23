@@ -45,9 +45,6 @@
 
         <slf4j.version>1.5.8</slf4j.version>
 
-        <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
-        <sonar.clover.reportPath>target/site/clover/clover.xml</sonar.clover.reportPath>
-
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -168,12 +165,6 @@
                     <licenseLocation>${clover2.licenseLocation}</licenseLocation>
                     <generateXml>true</generateXml>
                     <includesTestSourceRoots>false</includesTestSourceRoots>
-                    <excludes>
-                        <exclude>net/ripe/certification/fixture/**/*</exclude>
-                        <exclude>net/ripe/certification/ripencc/services/stub/*</exclude>
-                        <exclude>net/ripe/certification/ui/stubs/*</exclude>
-                        <exclude>net/ripe/certification/ui/performancetesting/*</exclude>
-                    </excludes>
                 </configuration>
             </plugin>
             <plugin>
