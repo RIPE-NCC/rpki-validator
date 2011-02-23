@@ -187,28 +187,6 @@
         <pluginManagement>
             <plugins>
                 <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>dashboard-maven-plugin</artifactId>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-source-plugin</artifactId>
-                    <version>2.1</version>
-                    <executions>
-                        <execution>
-                            <id>package</id>
-                            <goals>
-                                <goal>jar</goal>
-                                <goal>test-jar</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                    <configuration>
-                        <!-- workaround for http://jira.codehaus.org/browse/MSOURCES-44 -->
-                        <includePom>true</includePom>
-                    </configuration>
-                </plugin>
-                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>2.2</version>
@@ -235,49 +213,5 @@
             </plugins>
         </pluginManagement>
     </build>
-
-    <reporting>
-        <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>dashboard-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>com.atlassian.maven.plugins</groupId>
-                <artifactId>maven-clover2-plugin</artifactId>
-                <version>3.0.2</version>
-                <configuration>
-                    <jdk>1.6</jdk>
-                    <licenseLocation>${clover2.licenseLocation}</licenseLocation>
-                    <generateXml>true</generateXml>
-                    <includesTestSourceRoots>false</includesTestSourceRoots>
-                    <excludes>
-                        <exclude>net/ripe/certification/fixture/**/*</exclude>
-                        <exclude>net/ripe/certification/ripencc/services/stub/*</exclude>
-                        <exclude>net/ripe/certification/ui/stubs/*</exclude>
-                        <exclude>net/ripe/certification/ui/performancetesting/*</exclude>
-                    </excludes>
-                    <executions>
-                        <execution>
-                            <id>main</id>
-                            <phase>verify</phase>
-                            <goals>
-                                <goal>instrument</goal>
-                                <goal>aggregate</goal>
-                            </goals>
-                        </execution>
-                        <execution>
-                            <id>site</id>
-                            <phase>pre-site</phase>
-                            <goals>
-                                <goal>instrument</goal>
-                                <goal>aggregate</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </configuration>
-            </plugin>
-        </plugins>
-    </reporting>
 </project>
 
