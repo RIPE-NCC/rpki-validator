@@ -1,15 +1,14 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <name>RPKI Validator</name>
     <groupId>net.ripe.rpki-validator</groupId>
     <artifactId>rpki-validator-parent</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
     <inceptionYear>2008</inceptionYear>
 
     <scm>
-        <connection>scm:svn:https://svn.ripe.net/svn/ba/certification/rpki-validator/trunk</connection>
+        <connection>scm:svn:https://svn.ripe.net/svn/ba/certification/rpki-validator/tags/RELEASE-1.0.0-20110223</connection>
     </scm>
 
     <distributionManagement>
@@ -28,7 +27,7 @@
     </distributionManagement>
 
     <properties>
-        <rpki.commons.version>1.0.0-SNAPSHOT</rpki.commons.version>
+        <rpki.commons.version>1.0.0</rpki.commons.version>
 
         <net.ripe.commons.version>1.30</net.ripe.commons.version>
 
