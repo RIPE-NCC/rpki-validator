@@ -18,6 +18,9 @@ fi
 # wicket configuration type: [deployment|development]
 JAVA_OPTS="$JAVA_OPTS -Dwicket.configuration=deployment"
 
+# change config directory to be placed elsewhere
+#JAVA_OPTS="$JAVA_OPTS -Drpki.config=<absolute path>"
+
 set lib/*.jar
 CLASSPATH=$(IFS=:; echo "$*")
 
