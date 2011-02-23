@@ -31,8 +31,6 @@
         <rpki.commons.version>1.0.0-SNAPSHOT</rpki.commons.version>
 
         <net.ripe.commons.version>1.30</net.ripe.commons.version>
-        <net.ripe.certification-integration-api.version>1.0</net.ripe.certification-integration-api.version>
-        <net.ripe.portal.version>1.44</net.ripe.portal.version>
 
         <org.springframework.version>3.0.2.RELEASE</org.springframework.version>
         <wicket.version>1.4.15</wicket.version>
