@@ -124,16 +124,9 @@ Known Bugs and Limitations
 --------------------------
 
 1. Validation fails if the next update time for a CRL or manifest is in the
-   past. Maybe this should be a warning instead (or be controlled by a
-   command line switch).
+   past. This should be a warning instead.
 
 2. Rsync timeouts are not implemented.
-
-3. Validating a self-signed certificate (resource trust anchor) fails. The
-   output may be improved. Also we are not sure whether the tool should just
-   trust whatever the user specifies as trust anchor, or that if it should do
-   additional checks to make sure that the trust anchor really follows all
-   standards.
 
 
 
