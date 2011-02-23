@@ -18,6 +18,9 @@
         <fileSet>
             <directory>${project.basedir}/config</directory>
             <outputDirectory>config</outputDirectory>
+            <excludes>
+            	<exclude>**/rpki-vs.properties</exclude>
+            </excludes>
         </fileSet>
         <fileSet>
             <directory>${project.basedir}/theme</directory>
