@@ -1,23 +1,18 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:wicket="http://wicket.apache.org/dtds.data/wicket-xhtml1.4-strict.dtd"
-      xml:lang="en"
-      lang="en">
+	xmlns:wicket="http://wicket.apache.org/dtds.data/wicket-xhtml1.4-strict.dtd"
+	xml:lang="en" lang="en">
 
 <body>
 
 <wicket:panel>
-    <form wicket:id="uploadForm">
-        <fieldset>
-            <p>
-                <label for="upload">Select a ROA:</label>
-                <input wicket:id="fileInput" type="file"/>
-	            <input type="submit" value="Validate!"/>
-            </p>
-        </fieldset>
-    </form>
+	<form wicket:id="uploadForm">
+	<p><label for="upload">Select a ROA:</label> <input
+		wicket:id="fileInput" type="file" /> <input type="submit"
+		value="Validate!" /></p>
+	</form>
 
-    <span wicket:id="feedbackPanel"/>
+	<span wicket:id="feedbackPanel" />
 </wicket:panel>
 
 </body>
