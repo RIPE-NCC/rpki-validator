@@ -1,8 +1,10 @@
-package net.ripe.rpki.validator.daemon.ui.verification.panel;
+package net.ripe.rpki.validator.daemon.ui.bottomup.validation.panel;
 
 import net.ripe.commons.certification.cms.roa.RoaCms;
 import net.ripe.commons.certification.cms.roa.RoaPrefix;
+import net.ripe.rpki.validator.daemon.service.BottomUpRoaValidationResult;
 import net.ripe.rpki.validator.daemon.ui.common.AbstractPanel;
+
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.list.ListItem;
 import org.apache.wicket.markup.html.list.ListView;
@@ -10,12 +12,15 @@ import org.apache.wicket.model.CompoundPropertyModel;
 import org.apache.wicket.model.Model;
 
 public class RoaInfoPanel extends AbstractPanel<RoaCms> {
-    public RoaInfoPanel(String id, RoaCms roaCms) {
-        super(id, new Model<RoaCms>(roaCms));
 
-        add(new Label("asNumber", roaCms.getAsn().toString()));
+	private static final long serialVersionUID = 1L;
 
-        add(new ListView<RoaPrefix>("prefixes", roaCms.getPrefixes()) {
+	public RoaInfoPanel(String id, BottomUpRoaValidationResult result) {
+        super(id, new Model<RoaCms>(result.getRoa()));
+
+        add(new Label("asNumber", result.getRoa().getAsn().toString()));
+
+        add(new ListView<RoaPrefix>("prefixes", result.getRoa().getPrefixes()) {
             private static final long serialVersionUID = 1L;
 
             @Override

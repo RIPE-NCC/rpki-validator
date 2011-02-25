@@ -5,8 +5,7 @@
       lang="en">
 
 <wicket:panel>
-
-    <table border="0" cellpadding="0" cellspacing="0">
+    <table>
 
         <tr>
             <td>AS number:</td>
@@ -16,10 +15,10 @@
         <tr>
             <td valign="top">Prefixes:</td>
             <td>
-                <table border="0">
+                <table border="0" class="roaPrefixes">
                     <tr wicket:id="prefixes">
-                        <td class="listCell" style="width: 180px" wicket:id="prefix"/>
-                        <td class="listCell" wicket:id="maximumLength"/>
+                        <td wicket:id="prefix"/>
+                        <td wicket:id="maximumLength"/>
                     </tr>
                 </table>
             </td>

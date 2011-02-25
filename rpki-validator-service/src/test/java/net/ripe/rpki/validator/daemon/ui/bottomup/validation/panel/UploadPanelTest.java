@@ -1,6 +1,7 @@
-package net.ripe.rpki.validator.daemon.ui.verification.panel;
+package net.ripe.rpki.validator.daemon.ui.bottomup.validation.panel;
 
 import net.ripe.rpki.validator.daemon.ui.AbstractWicketTest;
+import net.ripe.rpki.validator.daemon.ui.bottomup.validation.panel.UploadPanel;
 import net.ripe.rpki.validator.daemon.ui.common.NavigationalCallbackHandler;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.util.file.File;

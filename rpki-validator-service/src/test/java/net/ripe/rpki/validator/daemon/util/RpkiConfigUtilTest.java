@@ -10,7 +10,7 @@ import static org.junit.Assert.assertTrue;
 public class RpkiConfigUtilTest {
     @Test
     public void shouldLoadProperties() throws IOException {
-        System.getProperties().put(RpkiConfigUtil.RPKI_CONFIG, "config/rpki-vs.properties");
+        System.getProperties().put(RpkiConfigUtil.RPKI_CONFIG, "src/test/resources/rpki-vs.properties");
 
         Properties properties = RpkiConfigUtil.loadProperties();
 

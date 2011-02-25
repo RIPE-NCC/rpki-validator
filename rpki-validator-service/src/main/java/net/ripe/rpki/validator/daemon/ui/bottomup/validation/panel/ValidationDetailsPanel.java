@@ -1,4 +1,4 @@
-package net.ripe.rpki.validator.daemon.ui.verification.panel;
+package net.ripe.rpki.validator.daemon.ui.bottomup.validation.panel;
 
 import net.ripe.commons.certification.validation.ValidationCheck;
 import net.ripe.commons.certification.validation.ValidationMessage;

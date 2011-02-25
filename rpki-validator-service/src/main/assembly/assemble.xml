@@ -18,6 +18,9 @@
         <fileSet>
             <directory>${project.basedir}/config</directory>
             <outputDirectory>config</outputDirectory>
+            <excludes>
+                <exclude>**/rpki-vs.properties</exclude>
+            </excludes>
         </fileSet>
         <fileSet>
             <directory>${project.basedir}/theme</directory>
@@ -32,5 +35,9 @@
             <fileMode>755</fileMode>
         </file>
 
+        <file>
+            <source>${project.basedir}/README.txt</source>
+            <outputDirectory>/</outputDirectory>
+        </file>
     </files>
 </assembly>

@@ -18,9 +18,11 @@ fi
 # wicket configuration type: [deployment|development]
 JAVA_OPTS="$JAVA_OPTS -Dwicket.configuration=deployment"
 
+# change config directory to be placed elsewhere
+#JAVA_OPTS="$JAVA_OPTS -Drpki.config=<absolute path>"
+
 set lib/*.jar
 CLASSPATH=$(IFS=:; echo "$*")
-
 
 RPKI_VALIDATOR_PID_FILE=rpki-vs.pid 
 RPKI_VALIDATOR_CMD="$JAVA $JAVA_OPTS -cp $CLASSPATH net.ripe.rpki.validator.daemon.JettyServerRunnerMain"
@@ -28,17 +30,17 @@ RPKI_VALIDATOR_CMD="$JAVA $JAVA_OPTS -cp $CLASSPATH net.ripe.rpki.validator.daem
 
 case $CMD in
     start)
-        echo "Starting rpki-validator"
+        echo "Starting rpki-validator service..."
         $RPKI_VALIDATOR_CMD &
                 echo $! >> $RPKI_VALIDATOR_PID_FILE
         ;;
     stop)
-        echo "Stopping rpki-validator"
+        echo "Stopping rpki-validator service..."
         if [ -e $RPKI_VALIDATOR_PID_FILE ]
         then
             kill `cat $RPKI_VALIDATOR_PID_FILE` && rm $RPKI_VALIDATOR_PID_FILE
         else
-            echo "rpki-validator was not running"
+            echo "rpki-validator service was not running"
         fi
         ;;
     *)
