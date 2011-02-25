@@ -17,8 +17,8 @@ VERSION=`xsltproc pom.xslt pom.xml`
 
 # The projects to package source code for.
 PROJECTS="
-$CHECKOUT_DIR/rpki-validator/rpki-validator-cli
-$CHECKOUT_DIR/rpki-commons/rpki-objects
+$CHECKOUT_DIR/rpki-validator
+$CHECKOUT_DIR/rpki-commons
 "
 
 for p in $PROJECTS; do
@@ -35,7 +35,7 @@ mkdir -p target/sources
 for p in $PROJECTS; do
 	name=`basename $p`
 	mkdir "target/sources/$name"
-	(cd $p && tar -c -f - --exclude ".*" --exclude target --exclude \*.iml --exclude create-source-zip.sh --exclude pom.xslt --exclude src/test *) | (cd "target/sources/$name" && tar -x -f -)
+	(cd $p && tar -c -f - --exclude ".*" --exclude target --exclude \*.iml --exclude create-source-zip.sh --exclude pom.xslt --exclude src/test --exclude rpki-vs.log --exclude validated-tas *) | (cd "target/sources/$name" && tar -x -f -)
 done
 
 LICENSE_FILE="src/main/release/LICENSE.txt"

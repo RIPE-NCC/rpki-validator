@@ -39,7 +39,7 @@ Installation
 ------------
 
 Unpack the downloaded archive. A new directory named
-"rpki-validator--serviceX.Y" (where X.Y is the version) will be created containing
+"rpki-validator-service-X.Y.Z" (where X.Y.Z is the version) will be created containing
 the required components.
 
 
@@ -48,10 +48,18 @@ Configuring
 The service configuration is stored in rpki-vs.properties, to be found in the config
 directory. An example configuration is supplied in config/rpki-vs.properties.example
 
-By default the configuration directory is assumed be located in <current directory>/config.
+By default the configuration directory is assumed to be located in <current directory>/config
 This can be changed by editing rpki-vs.sh and replace <absolute path> with the path
 of your config directory. Make sure to remove the leading # tag in front of:
 #JAVA_OPTS="$JAVA_OPTS -Drpki.config=<absolute path>"
+
+The location of the java binary can also be configured in the rpki-vs.sh file. If
+you want to use the java shipped with your system just comment out the line
+
+JAVA_HOME="/usr/local/bad/java"
+
+, otherwise change the path so that it points to the java binary in your local installation.
+
 
 Configuration options
 ---------------------
@@ -60,7 +68,7 @@ Trust Anchor
 ------------
 In order to validate anything you will have to specify a Trust Anchor Locator that
 the validator can use. You can find a copy of the Trust Anchor Locator file in the
-certification-validator-X.Y/config/root.tal filebut we advise you to obtain the up-to-date
+rpki-validator-service-X.Y.Z/config/root.tal file but we advise you to obtain the up-to-date
 version from another source to make sure it is genuine.
 
 Specify the location of the tal file in rpki-vs.properties:
@@ -74,6 +82,7 @@ Port
 The service by default runs on port 8082. You can change this port with the jetty.port
 property:
 jetty.port=8082
+
 
 Theming
 -------
@@ -117,8 +126,8 @@ prevent security breaches.
 Using the service
 =================
 Browse to http://localhost:8082/certification-validator/
-To verify a ROA, stored on your local filesystem, press the Choose File button and
-select the ROA. Press validate! to validate the ROA.
+To verify a ROA, stored on your local file system, press the Choose File button and
+select the ROA. Press 'Validate!' to validate the ROA.
 
 Known Bugs and Limitations
 --------------------------

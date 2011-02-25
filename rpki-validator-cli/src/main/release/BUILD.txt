@@ -38,7 +38,7 @@ Building
 ------------
 
 Unpack the downloaded archive. A new directory named 
-"certification-validator-X.Y-src" (where X.Y is the version) will be
+"rpki-validator-X.Y.Z-src" (where X.Y.Z is the version) will be
 automatically created containing the required components.
 
 Install 2 components distributed in binary format into your maven repository
@@ -51,12 +51,13 @@ by executing the following commands:
 
 Build the validator by executing:
 
-  $ mvn clean install
+  $ (cd rpki-commons/ && mvn clean install) && (cd rpki-validator/ && mvn clean install)
 
 
-Once the build has successfully finished you can find the validator
-in the certification-validator/target/certification-validator-X.Y-bin.zip
-file (where X.Y is the version).
+Once the build has successfully finished you can find the command line validator
+in the rpki-validator/rpki-validator-cli/target/rpki-validator-cli-X.Y.Z-bin.zip
+and the web validator in the rpki-validator/rpki-validator-service/target/rpki-validator-service-X.Y.Z-bin.zip
+file (where X.Y.Z is the version).
 Please refer to the README.txt about how to use the binary distribution
 that you have just created. 
 

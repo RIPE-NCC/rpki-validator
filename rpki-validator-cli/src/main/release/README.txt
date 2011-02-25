@@ -67,9 +67,9 @@ Installation
 ------------
 
 Unpack the downloaded archive. A new directory named 
-"certification-validator-X.Y" (where X.Y is the version) will be automatically
+"rpki-validator-cli-X.Y.Z" (where X.Y.Z is the version) will be automatically
 created containing the required components. The validator can be run using
-the command "certification-validator-X.Y/bin/certification-validator". The
+the command "certification-validator-X.Y.Z/bin/certification-validator". The
 script expects to be installed in the original unpack directory. Installing
 in /usr/local/bin (or some other directory) is not yet supported (though you can
 modify the script yourself to allow this). 
@@ -84,7 +84,7 @@ Obtaining Trust Anchors
 -----------------------
 In order to validate anything you will have to specify a Trust Anchor Locator that
 the validator can use. You can find a copy of the Trust Anchor Locator file in the
-certification-validator-X.Y/tal directory but we advise you to obtain the up-to-date
+certification-validator-cli-X.Y.Z/tal directory but we advise you to obtain the up-to-date
 version from another source to make sure it is genuine. 
 
 You can use the Trust Anchor Locator file by specifying the '-t' option.

@@ -7,7 +7,7 @@
 
 BASEDIR=`dirname "$0"`/..
 
-VALIDATOR_JAR=`echo "$BASEDIR"/jar/certification-validator-*-jar-with-dependencies.jar`
+VALIDATOR_JAR=`echo "$BASEDIR"/jar/rpki-validator-cli-*-jar-with-dependencies.jar`
 
 JAVA=${JAVA:-"$JAVA_HOME/bin/java"}
 if [ ! -e $JAVA ]; then
