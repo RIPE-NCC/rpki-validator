@@ -27,7 +27,7 @@
     </distributionManagement>
 
     <properties>
-        <rpki.commons.version>1.0.0</rpki.commons.version>
+        <rpki.commons.version>1.0.1-SNAPSHOT</rpki.commons.version>
 
         <net.ripe.commons.version>1.30</net.ripe.commons.version>
 
