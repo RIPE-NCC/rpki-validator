@@ -18,17 +18,17 @@
         <!-- our stuff -->
         <dependency>
             <groupId>net.ripe.rpki-commons</groupId>
-            <artifactId>rpki-objects</artifactId>
+            <artifactId>rpki-commons-objects</artifactId>
         </dependency>
 
         <dependency>
             <groupId>net.ripe.rpki-commons</groupId>
-            <artifactId>rpki-util</artifactId>
+            <artifactId>rpki-commons-util</artifactId>
         </dependency>
 
         <dependency>
             <groupId>net.ripe.rpki-commons</groupId>
-            <artifactId>rpki-objects</artifactId>
+            <artifactId>rpki-commons-objects</artifactId>
             <type>test-jar</type>
         </dependency>
 
