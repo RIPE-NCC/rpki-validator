@@ -1,7 +1,7 @@
 package net.ripe.certification.validator;
 
 import static net.ripe.commons.certification.util.KeyPairFactoryTest.*;
-import static net.ripe.commons.certification.x509cert.X509CertificateBuilder.*;
+import static net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder.*;
 
 import java.math.BigInteger;
 import java.net.URI;
@@ -16,7 +16,7 @@ import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.crl.X509CrlBuilder;
 import net.ripe.commons.certification.util.KeyPairFactory;
 import net.ripe.commons.certification.util.KeyPairFactoryTest;
-import net.ripe.commons.certification.x509cert.X509CertificateBuilder;
+import net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder;
 import net.ripe.commons.certification.x509cert.X509CertificateInformationAccessDescriptor;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
 import net.ripe.ipresource.InheritedIpResourceSet;
@@ -91,23 +91,23 @@ public class RepositoryObjectsSetUpHelper {
     }
 
     public static X509ResourceCertificate getRootResourceCertificate() {
-    	X509CertificateBuilder builder = getRootResourceCertificateBuilder();
+    	X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder();
     	return builder.buildResourceCertificate();
     }
 
     public static X509ResourceCertificate getRootResourceCertificate(IpResourceSet resources) {
-        X509CertificateBuilder builder = getRootResourceCertificateBuilder().withResources(resources);
+        X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder().withResources(resources);
         return builder.buildResourceCertificate();
     }
 
     public static X509ResourceCertificate getExpiredRootResourceCertificate() {
-        X509CertificateBuilder builder = getRootResourceCertificateBuilder();
+        X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder();
         builder.withValidityPeriod(new ValidityPeriod(new DateTime().minusMonths(1), new DateTime().minusDays(1)));
         return builder.buildResourceCertificate();
     }
 
     public static X509ResourceCertificate getRootResourceCertificateWithAiaFieldPointingToItself() {
-    	X509CertificateBuilder builder = getRootResourceCertificateBuilder();
+    	X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder();
     	X509CertificateInformationAccessDescriptor[] descriptors = {
                 new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_CA_CA_ISSUERS, ROOT_CERTIFICATE_LOCATION),
         };
@@ -145,8 +145,8 @@ public class RepositoryObjectsSetUpHelper {
         return builder;
     }
 
-    private static X509CertificateBuilder getManifestEEResourceCertificateBuilder() {
-        X509CertificateBuilder builder = new X509CertificateBuilder();
+    private static X509ResourceCertificateBuilder getManifestEEResourceCertificateBuilder() {
+        X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
         builder.withCa(false).withSubjectDN(MANIFEST_CERTIFICATE_NAME).withIssuerDN(ROOT_CERTIFICATE_NAME).withSerial(BigInteger.ONE);
         builder.withPublicKey(MANIFEST_KEY_PAIR.getPublic());
         builder.withSigningKeyPair(ROOT_KEY_PAIR);
@@ -157,8 +157,8 @@ public class RepositoryObjectsSetUpHelper {
         return builder;
     }
 
-    private static X509CertificateBuilder getRootResourceCertificateBuilder() {
-        X509CertificateBuilder builder = new X509CertificateBuilder();
+    private static X509ResourceCertificateBuilder getRootResourceCertificateBuilder() {
+        X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
 
         builder.withSubjectDN(ROOT_CERTIFICATE_NAME);
         builder.withIssuerDN(ROOT_CERTIFICATE_NAME);
@@ -183,8 +183,8 @@ public class RepositoryObjectsSetUpHelper {
         return builder;
     }
 
-    private static X509CertificateBuilder createChildBuilder() {
-		X509CertificateBuilder builder = new X509CertificateBuilder();
+    private static X509ResourceCertificateBuilder createChildBuilder() {
+		X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
 
     	builder.withSubjectDN(FIRST_CHILD_CERTIFICATE_NAME);
         builder.withIssuerDN(ROOT_CERTIFICATE_NAME);
@@ -208,8 +208,8 @@ public class RepositoryObjectsSetUpHelper {
 		return builder;
 	}
 
-	private static X509CertificateBuilder createSecondChildBuilder() {
-		X509CertificateBuilder builder = new X509CertificateBuilder();
+	private static X509ResourceCertificateBuilder createSecondChildBuilder() {
+		X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
 
     	builder.withSubjectDN(SECOND_CHILD_CERTIFICATE_NAME);
         builder.withIssuerDN(FIRST_CHILD_CERTIFICATE_NAME);

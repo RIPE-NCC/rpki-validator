@@ -1,7 +1,7 @@
 package net.ripe.certification.validator.commands;
 
 import static net.ripe.commons.certification.util.KeyPairFactoryTest.*;
-import static net.ripe.commons.certification.x509cert.X509CertificateBuilder.*;
+import static net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder.*;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
@@ -22,7 +22,7 @@ import net.ripe.commons.certification.crl.X509CrlBuilder;
 import net.ripe.commons.certification.util.KeyPairFactory;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.commons.certification.x509cert.X509CertificateBuilder;
+import net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder;
 import net.ripe.commons.certification.x509cert.X509CertificateInformationAccessDescriptor;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
 import net.ripe.ipresource.InheritedIpResourceSet;
@@ -205,7 +205,7 @@ public class TopDownWalkerTest {
     }
 
     static X509ResourceCertificate createManifestEECertificate() {
-        X509CertificateBuilder builder = new X509CertificateBuilder();
+        X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
         builder.withCa(false).withSubjectDN(ROOT_CERTIFICATE_NAME).withIssuerDN(ROOT_CERTIFICATE_NAME).withSerial(BigInteger.ONE);
         builder.withPublicKey(ROOT_KEY_PAIR.getPublic());
         builder.withSigningKeyPair(ROOT_KEY_PAIR);
@@ -216,7 +216,7 @@ public class TopDownWalkerTest {
 
 
     static X509ResourceCertificate getRootResourceCertificate() {
-        X509CertificateBuilder builder = new X509CertificateBuilder();
+        X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
 
         builder.withSubjectDN(ROOT_CERTIFICATE_NAME);
         builder.withIssuerDN(ROOT_CERTIFICATE_NAME);
