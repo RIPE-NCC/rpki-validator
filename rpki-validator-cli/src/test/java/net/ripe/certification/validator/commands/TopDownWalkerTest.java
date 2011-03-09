@@ -1,7 +1,7 @@
 package net.ripe.certification.validator.commands;
 
 import static net.ripe.commons.certification.util.KeyPairFactoryTest.*;
-import static net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder.*;
+import static net.ripe.commons.certification.x509cert.X509CertificateBuilderHelper.*;
 import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
 
@@ -211,7 +211,7 @@ public class TopDownWalkerTest {
         builder.withSigningKeyPair(ROOT_KEY_PAIR);
         builder.withResources(InheritedIpResourceSet.getInstance());
         builder.withValidityPeriod(new ValidityPeriod(THIS_UPDATE_TIME, NEXT_UPDATE_TIME));
-        return builder.buildResourceCertificate();
+        return builder.build();
     }
 
 
@@ -238,7 +238,7 @@ public class TopDownWalkerTest {
         };
         builder.withSubjectInformationAccess(descriptors);
 
-        return builder.buildResourceCertificate();
+        return builder.build();
     }
 
     private X509Crl getCrl() {

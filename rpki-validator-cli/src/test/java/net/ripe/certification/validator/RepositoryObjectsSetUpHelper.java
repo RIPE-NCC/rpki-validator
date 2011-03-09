@@ -1,7 +1,7 @@
 package net.ripe.certification.validator;
 
 import static net.ripe.commons.certification.util.KeyPairFactoryTest.*;
-import static net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder.*;
+import static net.ripe.commons.certification.x509cert.X509CertificateBuilderHelper.*;
 
 import java.math.BigInteger;
 import java.net.URI;
@@ -73,7 +73,7 @@ public class RepositoryObjectsSetUpHelper {
 
     public static ManifestCms getInvalidRootManifestCms() {
     	ManifestCmsBuilder rootManifestBuilder = getRootManifestBuilder();
-    	X509ResourceCertificate expiredCert = getManifestEEResourceCertificateBuilder().withValidityPeriod(new ValidityPeriod(new DateTime().minusMonths(1), new DateTime().minusMinutes(1))).buildResourceCertificate();
+    	X509ResourceCertificate expiredCert = getManifestEEResourceCertificateBuilder().withValidityPeriod(new ValidityPeriod(new DateTime().minusMonths(1), new DateTime().minusMinutes(1))).build();
     	rootManifestBuilder.withCertificate(expiredCert);
     	return rootManifestBuilder.build(MANIFEST_KEY_PAIR.getPrivate());
     }
@@ -92,18 +92,18 @@ public class RepositoryObjectsSetUpHelper {
 
     public static X509ResourceCertificate getRootResourceCertificate() {
     	X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder();
-    	return builder.buildResourceCertificate();
+    	return builder.build();
     }
 
     public static X509ResourceCertificate getRootResourceCertificate(IpResourceSet resources) {
         X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder().withResources(resources);
-        return builder.buildResourceCertificate();
+        return builder.build();
     }
 
     public static X509ResourceCertificate getExpiredRootResourceCertificate() {
         X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder();
         builder.withValidityPeriod(new ValidityPeriod(new DateTime().minusMonths(1), new DateTime().minusDays(1)));
-        return builder.buildResourceCertificate();
+        return builder.build();
     }
 
     public static X509ResourceCertificate getRootResourceCertificateWithAiaFieldPointingToItself() {
@@ -112,15 +112,15 @@ public class RepositoryObjectsSetUpHelper {
                 new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_CA_CA_ISSUERS, ROOT_CERTIFICATE_LOCATION),
         };
     	builder.withAuthorityInformationAccess(descriptors);
-    	return builder.buildResourceCertificate();
+    	return builder.build();
     }
 
     public static X509ResourceCertificate getChildResourceCertificate() {
-    	return createChildBuilder().buildResourceCertificate();
+    	return createChildBuilder().build();
     }
 
     public static X509ResourceCertificate getSecondChildResourceCertificate() {
-    	return createSecondChildBuilder().buildResourceCertificate();
+    	return createSecondChildBuilder().build();
     }
 
     private static X509CrlBuilder getRootCrlBuilder() {
@@ -136,7 +136,7 @@ public class RepositoryObjectsSetUpHelper {
 
     private static ManifestCmsBuilder getRootManifestBuilder() {
         ManifestCmsBuilder builder = new ManifestCmsBuilder();
-        builder.withCertificate(getManifestEEResourceCertificateBuilder().buildResourceCertificate());
+        builder.withCertificate(getManifestEEResourceCertificateBuilder().build());
         builder.withManifestNumber(BigInteger.valueOf(68));
         builder.withThisUpdateTime(THIS_UPDATE_TIME).withNextUpdateTime(NEXT_UPDATE_TIME);
         builder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER);
