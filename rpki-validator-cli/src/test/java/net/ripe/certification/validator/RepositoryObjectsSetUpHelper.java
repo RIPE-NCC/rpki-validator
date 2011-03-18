@@ -16,9 +16,9 @@ import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.crl.X509CrlBuilder;
 import net.ripe.commons.certification.util.KeyPairFactory;
 import net.ripe.commons.certification.util.KeyPairFactoryTest;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder;
 import net.ripe.commons.certification.x509cert.X509CertificateInformationAccessDescriptor;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
+import net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder;
 import net.ripe.ipresource.InheritedIpResourceSet;
 import net.ripe.ipresource.IpResourceSet;
 
@@ -148,6 +148,7 @@ public class RepositoryObjectsSetUpHelper {
     private static X509ResourceCertificateBuilder getManifestEEResourceCertificateBuilder() {
         X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
         builder.withCa(false).withSubjectDN(MANIFEST_CERTIFICATE_NAME).withIssuerDN(ROOT_CERTIFICATE_NAME).withSerial(BigInteger.ONE);
+        builder.withKeyUsage(KeyUsage.digitalSignature);
         builder.withPublicKey(MANIFEST_KEY_PAIR.getPublic());
         builder.withSigningKeyPair(ROOT_KEY_PAIR);
         builder.withResources(InheritedIpResourceSet.getInstance());
@@ -166,7 +167,7 @@ public class RepositoryObjectsSetUpHelper {
         builder.withValidityPeriod(VALIDITY_PERIOD);
         builder.withPublicKey(ROOT_KEY_PAIR.getPublic());
         builder.withCa(true);
-        builder.withKeyUsage(KeyUsage.keyCertSign);
+        builder.withKeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign);
         builder.withAuthorityKeyIdentifier(true);
         builder.withSubjectKeyIdentifier(true);
         builder.withResources(ROOT_RESOURCE_SET);
@@ -193,11 +194,10 @@ public class RepositoryObjectsSetUpHelper {
         builder.withAuthorityKeyIdentifier(true);
         builder.withSigningKeyPair(ROOT_KEY_PAIR);
         builder.withCa(true);
-        builder.withKeyUsage(KeyUsage.keyCertSign);
-        builder.withAuthorityKeyIdentifier(true);
+        builder.withKeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign);
+        builder.withValidityPeriod(VALIDITY_PERIOD);
         builder.withSubjectKeyIdentifier(true);
         builder.withResources(InheritedIpResourceSet.getInstance());
-        builder.withValidityPeriod(VALIDITY_PERIOD);
         builder.withCrlDistributionPoints(new URI[] { ROOT_MANIFEST_CRL_LOCATION });
 
         X509CertificateInformationAccessDescriptor[] descriptors = {
@@ -217,8 +217,9 @@ public class RepositoryObjectsSetUpHelper {
         builder.withPublicKey(SECOND_CHILD_KEY_PAIR.getPublic());
         builder.withAuthorityKeyIdentifier(true);
         builder.withSigningKeyPair(FIRST_CHILD_KEY_PAIR);
+        builder.withCa(true);
+        builder.withKeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign);
     	builder.withValidityPeriod(VALIDITY_PERIOD);
-    	builder.withAuthorityKeyIdentifier(true);
         builder.withSubjectKeyIdentifier(true);
     	builder.withResources(SECOND_CHILD_RESOURCE_SET);
     	builder.withCrlDistributionPoints(new URI[] { FIRST_CHILD_MANIFEST_CRL_LOCATION });
