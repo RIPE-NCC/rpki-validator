@@ -16,26 +16,26 @@ import org.apache.wicket.spring.injection.annot.SpringBean;
 
 public class RoaValidationPage extends AbstractPage {
 
-
 	private static final long serialVersionUID = 1l;
 
     static final String ID_ROA_INFO = "roaInfo";
     static final String ID_ROA_VALIDITY = "roaValidity";
     static final String ID_ROA_VALIDATION_DETAILS = "validationDetailsPanel";
-    
+
     @SpringBean(name = "roaValidationService")
     private BottomUpRoaValidationService roaValidationService;
-    
+
+
     public RoaValidationPage() {
         this(null);
     }
-    
+
     RoaValidationPage(Model<byte[]> uploadContents) {
     	add(new UploadPanel("uploadPanel", new CallbackHandler()));
-    	
+
     	if (uploadContents != null) {
     		BottomUpRoaValidationResult result = roaValidationService.validateRoa(uploadContents.getObject());
-    		add(createRoaValdityPanel(result));
+    		add(createRoaValidityPanel(result));
     		add(createRoaInfoPanel(result));
     		add(createValidationDetailsPanel(result));
     	} else {
@@ -44,8 +44,8 @@ public class RoaValidationPage extends AbstractPage {
     		add(new EmptyPanel(ID_ROA_VALIDATION_DETAILS));
     	}
     }
-    
-    private WebMarkupContainer createRoaValdityPanel(BottomUpRoaValidationResult result) {
+
+    private WebMarkupContainer createRoaValidityPanel(BottomUpRoaValidationResult result) {
 		return new RoaValidityPanel(ID_ROA_VALIDITY, result);
 	}
 
@@ -69,13 +69,9 @@ public class RoaValidationPage extends AbstractPage {
         return validationPanel;
     }
 
-
     private boolean isWithDetailedResults(BottomUpRoaValidationResult result) {
         return result.getResult() != null && result.getResult().getValidatedLocations() != null && result.getResult().getValidatedLocations().size() > 0;
     }
-    
-    
-    
 
     /**
      * callback called on submit inside upload panel
