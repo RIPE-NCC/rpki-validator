@@ -11,7 +11,7 @@ public final class ValidationSummaryPrinter {
         
         messageBuilder.append("\n");
         messageBuilder.append("# Statistics Summary (see README for detail):\n");
-        messageBuilder.append("# date\t\tcerts\troas\troa-asn\troa-v4\troa-v4u\troa-v6\troa-v6u\n");
+        messageBuilder.append("# date\t\tcerts\troas\troa-asn\troa-v4\troa-v4u\troa-v6\troa-v6u\tcert-X\troa-X\n");
         
         messageBuilder.append(new DateTime().toString("YYYY-MM-dd") + "\t");
         messageBuilder.append(collector.getNumberOfCertificates() + "\t");
@@ -20,7 +20,9 @@ public final class ValidationSummaryPrinter {
         messageBuilder.append(collector.getNumberOfDistinctRoaIPv4Prefixes() + "\t");
         messageBuilder.append(collector.getRoaIPv4Coverage() + "\t");
         messageBuilder.append(collector.getNumberOfDistinctRoaIPv6Prefixes() + "\t");
-        messageBuilder.append(collector.getRoaIPv6Coverage() + "\n");
+        messageBuilder.append(collector.getRoaIPv6Coverage() + "\t");
+        messageBuilder.append(collector.getNumberOfRejectedCerts() + "\t");
+        messageBuilder.append(collector.getNumberOfRejectedRoas() + "\n");
         
         return messageBuilder.toString();
     }

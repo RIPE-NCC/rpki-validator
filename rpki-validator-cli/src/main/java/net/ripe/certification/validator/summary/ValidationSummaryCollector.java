@@ -34,6 +34,10 @@ public class ValidationSummaryCollector implements FetchNotificationCallback {
     private Set<RoaPrefix> distinctRoaIPv4Prefixes = new HashSet<RoaPrefix>();
 
     private Set<RoaPrefix> distinctRoaIPv6Prefixes = new HashSet<RoaPrefix>();
+    
+    private int numberOfRejectedRoas = 0;
+    
+    private int numberOfRejectedCerts = 0;
 
 
     @Override
@@ -48,7 +52,11 @@ public class ValidationSummaryCollector implements FetchNotificationCallback {
 
     @Override
     public void afterFetchFailure(URI uri, ValidationResult result) {
-        // Don't care. Only provide summary for successfully retrieved objects
+        if (uri.toString().endsWith("cer")) {
+            numberOfRejectedCerts++;
+        } else if (uri.toString().endsWith("roa")) {
+            numberOfRejectedRoas++;
+        }
     }
 
     @Override
@@ -99,7 +107,7 @@ public class ValidationSummaryCollector implements FetchNotificationCallback {
     int getNumberOfDistinctAsns() {
         return distinctAsns.size();
     }
-
+    
     BigInteger getRoaIPv4Coverage() {
         IpResourceSet ipResourceSet = convertRoaPrefixSetToResourceSet(distinctRoaIPv4Prefixes);
         BigInteger coverage = calculateNumberOfAddressesContainedInIpResourceSet(ipResourceSet);
@@ -139,5 +147,13 @@ public class ValidationSummaryCollector implements FetchNotificationCallback {
         }
 
         return coverage;
+    }
+    
+    public int getNumberOfRejectedCerts() {
+        return numberOfRejectedCerts;
+    }
+    
+    public int getNumberOfRejectedRoas() {
+        return numberOfRejectedRoas;
     }
 }
