@@ -97,7 +97,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
         } catch (CertificateRepositoryObjectParserException ex) {
             cro = null;
         }
-        result.notNull(cro, UNKNOWN_OBJECT_TYPE, uri);
+        result.notNull(cro, KNOWN_OBJECT_TYPE, uri);
         return cro;
     }
 

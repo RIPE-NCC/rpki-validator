@@ -76,7 +76,7 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
     public void shouldFetchObject() {
         rsyncFileContents = manifest.getEncoded();
         assertEquals(manifest, subject.getObject(TEST_OBJECT_URI, null, Specifications.<byte[]>alwaysTrue(), validationResult));
-        assertEquals(new ValidationCheck(true, UNKNOWN_OBJECT_TYPE, TEST_OBJECT_URI), validationResult.getResult(TEST_OBJECT_URI, UNKNOWN_OBJECT_TYPE));
+        assertEquals(new ValidationCheck(true, KNOWN_OBJECT_TYPE, TEST_OBJECT_URI), validationResult.getResult(TEST_OBJECT_URI, KNOWN_OBJECT_TYPE));
     }
 
     @Test
@@ -90,7 +90,7 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
     public void shouldNotFetchObjectIfContentsCannotBeParsed() {
         rsyncFileContents = new byte[] { 0x10, 0x12, 0x3 };
         assertNull("content should not be parsed", subject.getObject(TEST_OBJECT_URI, null, Specifications.<byte[]>alwaysTrue(), validationResult));
-        assertEquals(new ValidationCheck(false, UNKNOWN_OBJECT_TYPE, TEST_OBJECT_URI), validationResult.getResult(TEST_OBJECT_URI, UNKNOWN_OBJECT_TYPE));
+        assertEquals(new ValidationCheck(false, KNOWN_OBJECT_TYPE, TEST_OBJECT_URI), validationResult.getResult(TEST_OBJECT_URI, KNOWN_OBJECT_TYPE));
     }
 
     @Test
