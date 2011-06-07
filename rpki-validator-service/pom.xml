@@ -9,7 +9,7 @@
     <parent>
         <groupId>net.ripe.rpki-validator</groupId>
         <artifactId>rpki-validator-parent</artifactId>
-        <version>1.0.2-SNAPSHOT</version>
+        <version>1.0.2</version>
     </parent>
 
     <properties>
