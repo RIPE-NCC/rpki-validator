@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -12,11 +13,17 @@ import org.junit.Test;
 public class PrintVersionCommandTest {
 
     private PrintVersionCommand subject;
-
+    private PrintStream savedSystemOut;
 
     @Before
     public void setUp() {
         subject = new PrintVersionCommand();
+        savedSystemOut = System.out;
+    }
+    
+    @After
+    public void cleanUp() {
+        System.setOut(savedSystemOut);
     }
 
     @Test
@@ -27,6 +34,5 @@ public class PrintVersionCommandTest {
         subject.execute();
 
         assertTrue(outContent.toString().startsWith("RIPE NCC"));
-        System.setOut(null);
     }
 }
