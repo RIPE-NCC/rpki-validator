@@ -1,9 +1,9 @@
 package net.ripe.rpki.validator.daemon.util;
 
-import org.apache.commons.io.FileUtils;
-
 import java.io.File;
 import java.io.IOException;
+
+import org.apache.commons.io.FileUtils;
 
 public final class FileResourceUtil {
 
@@ -46,19 +46,19 @@ public final class FileResourceUtil {
         File file = new File(filename);
 
         if (!file.exists()) {
-            file = new File(prefixPathWithPathOfConfig(filename));
+            file = prefixWithConfigPath(filename);
 
             if (!file.exists()) {
-                throw new IllegalArgumentException(file.getAbsolutePath() + " does not exist");
+                throw new IllegalArgumentException(file.getAbsolutePath() + " or " + new File(filename).getAbsolutePath() + " does not exist");
             }
         }
         return file;
     }
 
-    private static String prefixPathWithPathOfConfig(String filename) {
+    private static File prefixWithConfigPath(String filename) {
         String rpkiConfig = System.getProperty(RpkiConfigUtil.RPKI_CONFIG);
         String rpkiPath = new File(rpkiConfig).getParent();
-        return rpkiPath + System.getProperty("file.separator") + filename;
+        return new File(rpkiPath, filename);
     }
 
 }
