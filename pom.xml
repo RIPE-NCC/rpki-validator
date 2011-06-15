@@ -1,215 +1,240 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <name>RPKI Validator</name>
-    <groupId>net.ripe.rpki-validator</groupId>
-    <artifactId>rpki-validator-parent</artifactId>
-    <version>1.0.3-SNAPSHOT</version>
-    <packaging>pom</packaging>
-    <inceptionYear>2008</inceptionYear>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<name>RPKI Validator</name>
+	<groupId>net.ripe.rpki-validator</groupId>
+	<artifactId>rpki-validator-parent</artifactId>
+	<version>1.0.3-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<inceptionYear>2008</inceptionYear>
 
-    <scm>
-        <connection>scm:svn:https://svn.ripe.net/svn/ba/certification/rpki-validator/trunk</connection>
-    </scm>
+	<scm>
+		<connection>scm:svn:https://svn.ripe.net/svn/ba/certification/rpki-validator/trunk</connection>
+	</scm>
 
-    <distributionManagement>
-        <repository>
-            <id>ripe-releases</id>
-            <name>BA repository (nexus)</name>
-            <url>http://${dist.repo.url}/nexus/content/repositories/releases</url>
-        </repository>
-        <snapshotRepository>
-            <id>bad-public-snapshots</id>
-            <name>BA snapshots repository (nexus)</name>
-            <url>http://${dist.repo.snapshot.url}/nexus/content/repositories/snapshots</url>
-            <!-- prevents timed snapshot to be created. -->
-            <uniqueVersion>false</uniqueVersion>
-        </snapshotRepository>
-    </distributionManagement>
+	<distributionManagement>
+		<repository>
+			<id>ripe-releases</id>
+			<name>BA repository (nexus)</name>
+			<url>http://${dist.repo.url}/nexus/content/repositories/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>bad-public-snapshots</id>
+			<name>BA snapshots repository (nexus)</name>
+			<url>http://${dist.repo.snapshot.url}/nexus/content/repositories/snapshots</url>
+			<!-- prevents timed snapshot to be created. -->
+			<uniqueVersion>false</uniqueVersion>
+		</snapshotRepository>
+	</distributionManagement>
 
-    <properties>
-        <rpki.commons.version>1.0.1</rpki.commons.version>
+	<properties>
+		<rpki.commons.version>1.0.1</rpki.commons.version>
 
-        <net.ripe.commons.version>1.30</net.ripe.commons.version>
+		<net.ripe.commons.version>1.30</net.ripe.commons.version>
 
-        <org.springframework.version>3.0.2.RELEASE</org.springframework.version>
-        <wicket.version>1.4.15</wicket.version>
+		<org.springframework.version>3.0.2.RELEASE</org.springframework.version>
+		<wicket.version>1.4.15</wicket.version>
 
-        <dist.repo.url>nexus.ripe.net</dist.repo.url>
-        <dist.repo.snapshot.url>nexus.ripe.net</dist.repo.snapshot.url>
+		<dist.repo.url>nexus.ripe.net</dist.repo.url>
+		<dist.repo.snapshot.url>nexus.ripe.net</dist.repo.snapshot.url>
 
-        <easymock.version>3.0</easymock.version>
-        <commons.io.version>1.4</commons.io.version>
+		<easymock.version>3.0</easymock.version>
+		<commons.io.version>1.4</commons.io.version>
 
-        <slf4j.version>1.5.8</slf4j.version>
+		<slf4j.version>1.5.8</slf4j.version>
 
-        <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
-        <sonar.clover.reportPath>target/site/clover/clover.xml</sonar.clover.reportPath>
-        
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+		<sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+		<sonar.clover.reportPath>target/site/clover/clover.xml</sonar.clover.reportPath>
 
-    <modules>
-        <module>rpki-validator-cli</module>
-        <module>rpki-validator-service</module>
-    </modules>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.4</version>
-        </dependency>
+	<modules>
+		<module>rpki-validator-cli</module>
+		<module>rpki-validator-service</module>
+	</modules>
 
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.14</version>
-        </dependency>
+	<dependencies>
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>2.4</version>
+		</dependency>
 
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>1.5</version>
-        </dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.14</version>
+		</dependency>
 
-        <!-- DEPENDENCIES FOR TESTING -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.8.1</version>
-            <scope>test</scope>
-        </dependency>
+		<dependency>
+			<groupId>joda-time</groupId>
+			<artifactId>joda-time</artifactId>
+			<version>1.5</version>
+		</dependency>
 
-        <dependency>
-            <groupId>org.easymock</groupId>
-            <artifactId>easymock</artifactId>
-            <version>${easymock.version}</version>
-            <scope>test</scope>
-        </dependency>
+		<!-- DEPENDENCIES FOR TESTING -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.8.1</version>
+			<scope>test</scope>
+		</dependency>
 
-        <dependency>
-            <groupId>asm</groupId>
-            <artifactId>asm</artifactId>
-            <version>1.5.3</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+		<dependency>
+			<groupId>org.easymock</groupId>
+			<artifactId>easymock</artifactId>
+			<version>${easymock.version}</version>
+			<scope>test</scope>
+		</dependency>
 
-    <dependencyManagement>
-        <dependencies>
-            <!--Intraproject dependencies -->
-            <dependency>
-                <groupId>net.ripe.rpki-commons</groupId>
-                <artifactId>rpki-commons-objects</artifactId>
-                <version>${rpki.commons.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.hibernate</groupId>
-                        <artifactId>hibernate</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
+		<dependency>
+			<groupId>asm</groupId>
+			<artifactId>asm</artifactId>
+			<version>1.5.3</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
 
-            <dependency>
-                <groupId>net.ripe.rpki-commons</groupId>
-                <artifactId>rpki-commons-objects</artifactId>
-                <version>${rpki.commons.version}</version>
-                <type>test-jar</type>
-                <scope>test</scope>
-            </dependency>
+	<dependencyManagement>
+		<dependencies>
+			<!--Intraproject dependencies -->
+			<dependency>
+				<groupId>net.ripe.rpki-commons</groupId>
+				<artifactId>rpki-commons-objects</artifactId>
+				<version>${rpki.commons.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>org.hibernate</groupId>
+						<artifactId>hibernate</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
 
-            <dependency>
-                <groupId>net.ripe.rpki-commons</groupId>
-                <artifactId>rpki-commons-util</artifactId>
-                <version>${rpki.commons.version}</version>
-            </dependency>
+			<dependency>
+				<groupId>net.ripe.rpki-commons</groupId>
+				<artifactId>rpki-commons-objects</artifactId>
+				<version>${rpki.commons.version}</version>
+				<type>test-jar</type>
+				<scope>test</scope>
+			</dependency>
 
-            <!--Interproject dependencies -->
-            <dependency>
-                <groupId>net.ripe.rpki-validator</groupId>
-                <artifactId>rpki-validator-cli</artifactId>
-                <version>${project.version}</version>
-            </dependency>
+			<dependency>
+				<groupId>net.ripe.rpki-commons</groupId>
+				<artifactId>rpki-commons-util</artifactId>
+				<version>${rpki.commons.version}</version>
+			</dependency>
 
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-api</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
+			<!--Interproject dependencies -->
+			<dependency>
+				<groupId>net.ripe.rpki-validator</groupId>
+				<artifactId>rpki-validator-cli</artifactId>
+				<version>${project.version}</version>
+			</dependency>
 
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-log4j12</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>com.atlassian.maven.plugins</groupId>
-                <artifactId>maven-clover2-plugin</artifactId>
-                <configuration>
-                    <jdk>1.6</jdk>
-                    <licenseLocation>${clover2.licenseLocation}</licenseLocation>
-                    <generateXml>true</generateXml>
-                    <includesTestSourceRoots>false</includesTestSourceRoots>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-            </plugin>
-        </plugins>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-log4j12</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>2.8.1</version>
-                </plugin>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>com.atlassian.maven.plugins</groupId>
+				<artifactId>maven-clover2-plugin</artifactId>
+				<configuration>
+					<jdk>1.6</jdk>
+					<licenseLocation>${clover2.licenseLocation}</licenseLocation>
+					<generateXml>true</generateXml>
+					<includesTestSourceRoots>false</includesTestSourceRoots>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+			</plugin>
 
-                <plugin>
-                    <groupId>com.atlassian.maven.plugins</groupId>
-                    <artifactId>maven-clover2-plugin</artifactId>
-                    <version>3.1.0</version>
-                </plugin>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+			</plugin>
 
-                <plugin>
-                    <artifactId>maven-assembly-plugin</artifactId>
-                    <version>2.2.1</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>2.3.1</version>
-                    <executions>
-                        <execution>
-                            <id>package</id>
-                            <goals>
-                                <goal>jar</goal>
-                                <goal>test-jar</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+			</plugin>
 
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>2.3.2</version>
-                    <configuration>
-                        <source>1.6</source>
-                        <target>1.6</target>
-                        <encoding>UTF-8</encoding>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
-    </build>
+		</plugins>
+
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>2.8.1</version>
+				</plugin>
+
+				<plugin>
+					<groupId>com.atlassian.maven.plugins</groupId>
+					<artifactId>maven-clover2-plugin</artifactId>
+					<version>3.1.0</version>
+				</plugin>
+
+				<plugin>
+					<artifactId>maven-assembly-plugin</artifactId>
+					<version>2.2.1</version>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>2.3.1</version>
+					<executions>
+						<execution>
+							<id>package</id>
+							<goals>
+								<goal>jar</goal>
+								<goal>test-jar</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>2.3.2</version>
+					<configuration>
+						<source>1.6</source>
+						<target>1.6</target>
+						<encoding>UTF-8</encoding>
+					</configuration>
+				</plugin>
+
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-source-plugin</artifactId>
+					<version>2.1</version>
+					<executions>
+						<execution>
+							<id>package</id>
+							<goals>
+								<goal>jar</goal>
+								<goal>test-jar</goal>
+							</goals>
+						</execution>
+					</executions>
+				</plugin>
+
+			</plugins>
+		</pluginManagement>
+	</build>
 </project>
 
