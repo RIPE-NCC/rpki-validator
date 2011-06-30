@@ -134,6 +134,7 @@ public class RepositoryObjectsSetUpHelper {
         return builder;
     }
 
+    @SuppressWarnings("deprecation")
     private static ManifestCmsBuilder getRootManifestBuilder() {
         ManifestCmsBuilder builder = new ManifestCmsBuilder();
         builder.withCertificate(getManifestEEResourceCertificateBuilder().build());

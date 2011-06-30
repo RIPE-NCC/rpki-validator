@@ -22,9 +22,9 @@ import net.ripe.commons.certification.crl.X509CrlBuilder;
 import net.ripe.commons.certification.util.KeyPairFactory;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder;
 import net.ripe.commons.certification.x509cert.X509CertificateInformationAccessDescriptor;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
+import net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder;
 import net.ripe.ipresource.InheritedIpResourceSet;
 import net.ripe.ipresource.IpResourceSet;
 
@@ -194,6 +194,7 @@ public class TopDownWalkerTest {
     }
 
 
+    @SuppressWarnings("deprecation")
     public static ManifestCms getRootManifestCms() {
         ManifestCmsBuilder builder = new ManifestCmsBuilder();
         builder.withCertificate(createManifestEECertificate()).withManifestNumber(BigInteger.valueOf(68));
