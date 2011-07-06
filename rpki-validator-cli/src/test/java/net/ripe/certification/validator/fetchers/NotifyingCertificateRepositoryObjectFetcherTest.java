@@ -29,8 +29,9 @@
  */
 package net.ripe.certification.validator.fetchers;
 
-import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
+
+import static org.easymock.EasyMock.*;
 
 import java.net.URI;
 
@@ -38,11 +39,11 @@ import net.ripe.certification.validator.RepositoryObjectsSetUpHelper;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.crl.X509Crl;
+import net.ripe.commons.certification.util.Specification;
+import net.ripe.commons.certification.util.Specifications;
 import net.ripe.commons.certification.validation.CertificateRepositoryObjectValidationContextTest;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.utils.Specification;
-import net.ripe.utils.Specifications;
 
 import org.junit.Before;
 import org.junit.Test;

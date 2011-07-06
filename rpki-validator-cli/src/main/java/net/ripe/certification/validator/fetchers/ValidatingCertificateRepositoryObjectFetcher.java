@@ -36,10 +36,10 @@ import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.crl.CrlLocator;
 import net.ripe.commons.certification.crl.X509Crl;
+import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.utils.Specification;
 
 import org.apache.commons.lang.Validate;
 

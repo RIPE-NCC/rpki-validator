@@ -36,9 +36,9 @@ import java.util.Map;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.crl.X509Crl;
+import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.utils.Specification;
 
 /**
  * Caches the results from fetching objects using another {@link CertificateRepositoryObjectFetcher}.

@@ -38,11 +38,11 @@ import java.util.List;
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
 import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
 import net.ripe.commons.certification.CertificateRepositoryObject;
+import net.ripe.commons.certification.util.Specifications;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-import net.ripe.utils.Specifications;
 
 
 /**
@@ -144,7 +144,7 @@ public class SingleObjectWalker {
 
     /**
      * Verify the certificate found at the top against the specified TA(s)
-     * @param trustAnchors 
+     * @param trustAnchors
      */
     void validateTrustAnchor(List<CertificateRepositoryObjectValidationContext> trustAnchors) {
         URI rootURI = parentCertificateChain.get(0);

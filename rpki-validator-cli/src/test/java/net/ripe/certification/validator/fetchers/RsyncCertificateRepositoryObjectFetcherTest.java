@@ -30,6 +30,7 @@
 package net.ripe.certification.validator.fetchers;
 
 import static net.ripe.commons.certification.validation.ValidationString.*;
+
 import static org.junit.Assert.*;
 
 import java.io.File;
@@ -42,9 +43,9 @@ import net.ripe.certification.validator.util.UriToFileMapper;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.rsync.Rsync;
+import net.ripe.commons.certification.util.Specifications;
 import net.ripe.commons.certification.validation.ValidationCheck;
 import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.utils.Specifications;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.After;

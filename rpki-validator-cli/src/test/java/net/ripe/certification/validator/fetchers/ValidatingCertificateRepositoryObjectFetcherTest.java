@@ -30,17 +30,20 @@
 package net.ripe.certification.validator.fetchers;
 
 import static net.ripe.certification.validator.RepositoryObjectsSetUpHelper.*;
-import static org.easymock.EasyMock.*;
+
 import static org.junit.Assert.*;
+
+import static org.easymock.EasyMock.*;
+
 import net.ripe.certification.validator.RepositoryObjectsSetUpHelper;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.crl.X509Crl;
+import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-import net.ripe.utils.Specification;
 
 import org.easymock.IAnswer;
 import org.junit.Before;

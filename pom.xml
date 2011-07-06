@@ -28,9 +28,7 @@
 	</distributionManagement>
 
 	<properties>
-		<rpki.commons.version>1.0.2</rpki.commons.version>
-
-		<net.ripe.commons.version>1.30</net.ripe.commons.version>
+		<rpki.commons.version>1.0.3-SNAPSHOT</rpki.commons.version>
 
 		<org.springframework.version>3.0.2.RELEASE</org.springframework.version>
 		<wicket.version>1.4.15</wicket.version>
@@ -103,12 +101,6 @@
 				<groupId>net.ripe.rpki-commons</groupId>
 				<artifactId>rpki-commons-objects</artifactId>
 				<version>${rpki.commons.version}</version>
-				<exclusions>
-					<exclusion>
-						<groupId>org.hibernate</groupId>
-						<artifactId>hibernate</artifactId>
-					</exclusion>
-				</exclusions>
 			</dependency>
 
 			<dependency>

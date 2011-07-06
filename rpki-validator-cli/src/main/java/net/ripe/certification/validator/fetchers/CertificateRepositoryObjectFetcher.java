@@ -34,9 +34,9 @@ import java.net.URI;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.crl.CrlLocator;
+import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.utils.Specification;
 
 public interface CertificateRepositoryObjectFetcher extends CrlLocator {
 

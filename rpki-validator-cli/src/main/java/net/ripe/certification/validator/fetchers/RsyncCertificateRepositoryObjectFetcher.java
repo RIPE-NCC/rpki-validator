@@ -43,10 +43,10 @@ import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.rsync.Rsync;
 import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory;
 import net.ripe.commons.certification.util.CertificateRepositoryObjectParserException;
+import net.ripe.commons.certification.util.Specification;
+import net.ripe.commons.certification.util.Specifications;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.utils.Specification;
-import net.ripe.utils.Specifications;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
