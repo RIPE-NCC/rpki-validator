@@ -93,7 +93,7 @@
         <!-- RPKI depenencies -->
         <dependency>
             <groupId>net.ripe.rpki-commons</groupId>
-            <artifactId>rpki-commons-objects</artifactId>
+            <artifactId>rpki-commons</artifactId>
         </dependency>
         <dependency>
             <groupId>net.ripe.rpki-validator</groupId>
@@ -164,7 +164,7 @@
         <!-- Test dependencies -->
         <dependency>
             <groupId>net.ripe.rpki-commons</groupId>
-            <artifactId>rpki-commons-objects</artifactId>
+            <artifactId>rpki-commons</artifactId>
             <type>test-jar</type>
         </dependency>
     </dependencies>

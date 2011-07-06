@@ -99,22 +99,16 @@
 			<!--Intraproject dependencies -->
 			<dependency>
 				<groupId>net.ripe.rpki-commons</groupId>
-				<artifactId>rpki-commons-objects</artifactId>
+				<artifactId>rpki-commons</artifactId>
 				<version>${rpki.commons.version}</version>
 			</dependency>
 
 			<dependency>
 				<groupId>net.ripe.rpki-commons</groupId>
-				<artifactId>rpki-commons-objects</artifactId>
+				<artifactId>rpki-commons</artifactId>
 				<version>${rpki.commons.version}</version>
 				<type>test-jar</type>
 				<scope>test</scope>
-			</dependency>
-
-			<dependency>
-				<groupId>net.ripe.rpki-commons</groupId>
-				<artifactId>rpki-commons-util</artifactId>
-				<version>${rpki.commons.version}</version>
 			</dependency>
 
 			<!--Interproject dependencies -->
