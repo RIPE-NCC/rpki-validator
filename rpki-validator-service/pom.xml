@@ -75,6 +75,7 @@
                     <header>src/main/release/LICENSE.txt</header>
                     <excludes>
                         <exclude>**/*.txt</exclude>
+                        <exclude>**/rpki-vs.properties</exclude>
                     </excludes>
                 </configuration>
                 <executions>
