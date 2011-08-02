@@ -66,7 +66,7 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
     @Before
     public void setUp() {
         result = new ValidationResult();
-        result.push(TEST_URI);
+        result.setLocation(TEST_URI);
 
         context = CertificateRepositoryObjectValidationContextTest.create();
         fetcher = createMock(CertificateRepositoryObjectFetcher.class);

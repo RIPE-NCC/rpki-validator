@@ -113,7 +113,7 @@ public class SingleObjectWalker {
         URI parentURI = startingPoint.getParentCertificateUri();
 
         while(parentURI != null) {
-            result.push(parentURI.toString());
+            result.setLocation(parentURI.toString());
             CertificateRepositoryObject parent = chainBuildFetcher.getObject(parentURI, null, Specifications.<byte[]>alwaysTrue(), result);
 
             if (parent instanceof X509ResourceCertificate) {
@@ -148,7 +148,7 @@ public class SingleObjectWalker {
      */
     void validateTrustAnchor(List<CertificateRepositoryObjectValidationContext> trustAnchors) {
         URI rootURI = parentCertificateChain.get(0);
-        result.push(rootURI);
+        result.setLocation(rootURI);
         X509ResourceCertificate rootCertificate = (X509ResourceCertificate) chainBuildFetcher.getObject(rootURI, null, Specifications.<byte[]>alwaysTrue(), result);
 
         boolean rootCertIsTa = false;

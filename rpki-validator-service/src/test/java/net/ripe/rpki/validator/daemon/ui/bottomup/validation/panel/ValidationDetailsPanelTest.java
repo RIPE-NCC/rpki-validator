@@ -29,16 +29,15 @@
  */
 package net.ripe.rpki.validator.daemon.ui.bottomup.validation.panel;
 
+import static org.junit.Assert.*;
+
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.rpki.validator.daemon.ui.AbstractWicketTest;
-import net.ripe.rpki.validator.daemon.ui.bottomup.validation.panel.ValidationDetailsPanel;
 
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.util.tester.TestPanelSource;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class ValidationDetailsPanelTest extends AbstractWicketTest {
     public ValidationResult validationResult;
@@ -46,7 +45,7 @@ public class ValidationDetailsPanelTest extends AbstractWicketTest {
     @Before
     public void setUpValidationResult() {
         validationResult = new ValidationResult();
-        validationResult.push("objects.crl.valid");
+        validationResult.setLocation("objects.crl.valid");
         validationResult.isTrue(true, "objects.crl.valid");
     }
 

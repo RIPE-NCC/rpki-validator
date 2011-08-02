@@ -93,7 +93,7 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
         manifest = TopDownWalkerTest.getRootManifestCms();
         crl = RepositoryObjectsSetUpHelper.getRootCrl();
         validationResult = new ValidationResult();
-        validationResult.push(TEST_OBJECT_URI);
+        validationResult.setLocation(TEST_OBJECT_URI);
         subject = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(TEST_TARGET_DIRECTORY));
     }
 

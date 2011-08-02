@@ -30,6 +30,7 @@
 package net.ripe.certification.validator.util;
 
 import static net.ripe.commons.certification.validation.ValidationString.*;
+
 import static org.junit.Assert.*;
 
 import java.io.File;
@@ -53,7 +54,7 @@ public class UriToFileMapperTest {
     @Before
     public void setUp() {
         validationResult = new ValidationResult();
-        validationResult.push("test");
+        validationResult.setLocation("test");
         subject = new UriToFileMapper(TARGET_DIRECTORY);
     }
 

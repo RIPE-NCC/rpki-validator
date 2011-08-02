@@ -179,7 +179,7 @@ public class TopDownCertificateRepositoryValidator {
     private void doPrefetching() {
         for (URI prefetchUri : prefetchUris) {
             ValidationResult validationResult = new ValidationResult();
-            validationResult.push(prefetchUri);
+            validationResult.setLocation(prefetchUri);
             fetcher.prefetch(prefetchUri, validationResult);
         }
     }

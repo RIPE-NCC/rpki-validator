@@ -64,7 +64,7 @@ public class CachingCertificateRepositoryObjectFetcherTest {
         context = CertificateRepositoryObjectValidationContextTest.create();
         fileContentSpecification = Specifications.alwaysTrue();
         result = new ValidationResult();
-        result.push(uri);
+        result.setLocation(uri);
         fetcher = createMock(CertificateRepositoryObjectFetcher.class);
         subject = new CachingCertificateRepositoryObjectFetcher(fetcher);
     }

@@ -62,7 +62,7 @@ public class ValidatedObjectWriterTest {
     @Before
     public void setUp() {
         result = new ValidationResult();
-        result.push(TEST_OBJECT_URI);
+        result.setLocation(TEST_OBJECT_URI);
 
         certificate = X509ResourceCertificateTest.createSelfSignedCaResourceCertificate();
         subject = new ValidatedObjectWriter(new UriToFileMapper(TEST_TARGET_DIRECTORY));

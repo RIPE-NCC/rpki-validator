@@ -73,7 +73,7 @@ public class TopDownWalker {
 
     void prefetch(CertificateRepositoryObjectValidationContext context) {
         URI repositoryURI = context.getRepositoryURI();
-        validationResult.push(repositoryURI);
+        validationResult.setLocation(repositoryURI);
         certificateRepositoryObjectFetcher.prefetch(repositoryURI, validationResult);
     }
 
@@ -86,7 +86,7 @@ public class TopDownWalker {
     }
 
     ManifestCms fetchManifest(URI manifestURI, CertificateRepositoryObjectValidationContext context) {
-        validationResult.push(manifestURI);
+        validationResult.setLocation(manifestURI);
         return certificateRepositoryObjectFetcher.getManifest(manifestURI, context, validationResult);
     }
 
@@ -99,7 +99,7 @@ public class TopDownWalker {
 
     void processManifestEntry(ManifestCms manifestCms, CertificateRepositoryObjectValidationContext context, URI repositoryURI, String fileName) {
         URI uri = repositoryURI.resolve(fileName);
-        validationResult.push(uri);
+        validationResult.setLocation(uri);
         CertificateRepositoryObject object = certificateRepositoryObjectFetcher.getObject(uri, context, manifestCms.getFileContentSpecification(fileName), validationResult);
         addToWorkQueueIfObjectIssuer(context, uri, object);
     }

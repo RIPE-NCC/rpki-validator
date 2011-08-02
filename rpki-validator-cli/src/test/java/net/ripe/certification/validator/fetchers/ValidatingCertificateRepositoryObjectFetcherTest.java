@@ -103,7 +103,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         });
         replayMocks();
 
-        result.push(ROOT_MANIFEST_CRL_LOCATION);
+        result.setLocation(ROOT_MANIFEST_CRL_LOCATION);
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
         verifyMocks();
@@ -121,7 +121,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
         replayMocks();
 
-        result.push(ROOT_MANIFEST_CRL_LOCATION);
+        result.setLocation(ROOT_MANIFEST_CRL_LOCATION);
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
         verifyMocks();
@@ -140,7 +140,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
         replayMocks();
 
-        result.push(ROOT_MANIFEST_CRL_LOCATION);
+        result.setLocation(ROOT_MANIFEST_CRL_LOCATION);
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
         verifyMocks();
@@ -159,7 +159,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
         replayMocks();
 
-        result.push(ROOT_MANIFEST_CRL_LOCATION);
+        result.setLocation(ROOT_MANIFEST_CRL_LOCATION);
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
         verifyMocks();
@@ -170,7 +170,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
 
     @Test
     public void shouldRejectInvalidCrl() {
-        result.push(ROOT_CERTIFICATE_LOCATION);
+        result.setLocation(ROOT_CERTIFICATE_LOCATION);
 
         X509Crl crlFromRepository = getRootCrlWithInvalidSignature();
         expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
@@ -190,7 +190,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
 
     @Test
     public void shouldReturnNullForCrlWhenCrlNotReturnedFromRsync() {
-        result.push(ROOT_CERTIFICATE_LOCATION);
+        result.setLocation(ROOT_CERTIFICATE_LOCATION);
 
         X509Crl crlFromRepository = null;
         expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
