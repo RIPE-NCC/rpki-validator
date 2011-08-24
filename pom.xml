@@ -27,7 +27,7 @@
 	</distributionManagement>
 
 	<properties>
-		<rpki.commons.version>1.0.5-SNAPSHOT</rpki.commons.version>
+		<rpki.commons.version>1.0.7-SNAPSHOT</rpki.commons.version>
 
 		<org.springframework.version>3.0.2.RELEASE</org.springframework.version>
 		<wicket.version>1.4.15</wicket.version>
