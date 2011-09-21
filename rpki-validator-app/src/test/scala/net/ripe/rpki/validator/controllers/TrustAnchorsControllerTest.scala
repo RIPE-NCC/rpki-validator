@@ -34,7 +34,9 @@ import org.scalatra.ScalatraFilter
 import support.ControllerTestCase
 
 class TrustAnchorControllersTest extends ControllerTestCase {
-  override def controller = new ControllerFilter with TrustAnchorsController
+  override def controller = new ControllerFilter with TrustAnchorsController {
+    override def trustAnchors = Seq.empty
+  }
 
   test("list trust anchors") {
     get("/trust-anchors") {

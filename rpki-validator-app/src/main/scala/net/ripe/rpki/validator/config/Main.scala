@@ -33,14 +33,33 @@ package config
 import grizzled.slf4j.Logging
 import grizzled.slf4j.Logger
 import org.eclipse.jetty.server.Server
+import org.apache.commons.io.FileUtils
+import java.io.File
+import scala.collection.JavaConverters._
+import net.ripe.certification.validator.util.TrustAnchorExtractor
+import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.validator.rtr.RTRServer
 
 object Main {
   val logger = Logger[this.type]
 
+  var trustAnchors: Seq[CertificateRepositoryObjectValidationContext] = Seq.empty
+
   def main(args: Array[String]) {
+    trustAnchors = loadTrustAnchors()
     runServer()
     RTRServer.startServer()
+  }
+
+  def loadTrustAnchors(): Seq[CertificateRepositoryObjectValidationContext] = {
+    import java.{util => ju}
+    logger.info("Loading trust anchors...")
+    val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[java.util.Collection[File]])
+    val trustAnchors = new TrustAnchorExtractor().extractTAS(tals, "tmp/tal").asScala
+    trustAnchors foreach { ta =>
+      logger.info("Loaded trust anchor from location " + ta.getLocation())
+    }
+    trustAnchors.toIndexedSeq
   }
 
   def setup(server: Server): Server = {
@@ -53,7 +72,9 @@ object Main {
     defaultServletHolder.setName("default")
     defaultServletHolder.setInitParameter("dirAllowed", "false")
     root.addServlet(defaultServletHolder, "/*")
-    root.addFilter(new FilterHolder(new WebFilter), "/*", FilterMapping.ALL)
+    root.addFilter(new FilterHolder(new WebFilter {
+      def trustAnchors = Main.trustAnchors
+    }), "/*", FilterMapping.ALL)
     server.setHandler(root)
     server
   }
@@ -69,6 +90,6 @@ object Main {
       }
     })
     server.start()
-    logger.info("Welcome to the lessdb example, available on port " + port + ". Hit CTRL+C to terminate.")
+    logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + port + ". Hit CTRL+C to terminate.")
   }
 }

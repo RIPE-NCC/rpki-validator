@@ -27,14 +27,47 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.views
-import scala.xml.Text
+package net.ripe.rpki.validator
+package views
 
-class TrustAnchorsView extends View {
+import scala.xml.Text
+import org.joda.time._
+import org.joda.time.format.PeriodFormat
+import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import lib.DateAndTime._
+import scala.xml.NodeSeq
+
+class TrustAnchorsView(trustAnchors: Seq[CertificateRepositoryObjectValidationContext]) extends View {
   def tab = TrustAnchorsTab
   def title = Text("Configured Trust Anchors")
   def body =
-    <ul>
-      <li>RIPE NCC</li>
-    </ul>
+    <table class="zebra-striped">
+      <thead>
+        <th>#</th>
+        <th>Name</th>
+        <th>Expires in</th>
+        <th>Location</th>
+      </thead>
+      <tbody>{
+        for ((ta, index) <- sortedTrustAnchors.zipWithIndex) yield {
+          <tr>
+            <td>{ index + 1 }</td>
+            <td>{ ta.getCertificate().getSubject() }</td>
+            <td>{ expiresIn(ta.getCertificate().getValidityPeriod().getNotValidAfter()) }</td>
+            <td>{ ta.getLocation() }</td>
+          </tr>
+        }
+      }</tbody>
+    </table>
+
+  private def expiresIn(notValidAfter: DateTime): NodeSeq = {
+    if (now.isBefore(notValidAfter)) {
+      val period = keepMostSignificantPeriodFields(n = 2, period = new Period(now, notValidAfter))
+      Text(PeriodFormat.getDefault().print(period))
+    } else {
+      <strong>EXPIRED</strong>
+    }
+  }
+  private val now = new DateTime
+  private def sortedTrustAnchors = trustAnchors.sortBy(_.getCertificate().getSubject().toString().toLowerCase())
 }

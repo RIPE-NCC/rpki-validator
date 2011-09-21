@@ -110,6 +110,10 @@
             <artifactId>joda-time</artifactId>
             <version>1.6.2</version>
         </dependency>
+        <dependency>
+        	<groupId>net.ripe.rpki-validator</groupId>
+        	<artifactId>rpki-validator-cli</artifactId>
+        </dependency>
     </dependencies>
 
     <pluginRepositories>

@@ -36,7 +36,7 @@ import controllers._
 import views.View
 import views.Layouts
 
-class WebFilter extends ScalatraFilter
+abstract class WebFilter extends ScalatraFilter
   with ApplicationController
   with TrustAnchorsController {
 
