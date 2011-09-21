@@ -48,9 +48,22 @@ class RTRServerTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers 
   test("should connect") {
     val socket = new Socket("127.0.0.1", 8282)
     socket.isConnected() should equal(true)
+    socket.close()
   }
   
-  
+  test("should return no data available") {
+    val socket = new Socket("127.0.0.1", 8282)
+    val out = socket.getOutputStream()
+    out.write(123)
+    out.flush()
+    
+    val in = socket.getInputStream()
+    var bytes = Array[Byte]()
+    in.read(bytes)
+    bytes.foreach(b => println(b.toString))
+
+    socket.close()
+  }
   
   
   

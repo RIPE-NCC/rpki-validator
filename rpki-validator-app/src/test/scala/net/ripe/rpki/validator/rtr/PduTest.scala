@@ -27,48 +27,24 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package config
+package net.ripe.rpki.validator.rtr
 
-import grizzled.slf4j.Logging
-import grizzled.slf4j.Logger
-import org.eclipse.jetty.server.Server
-import net.ripe.rpki.validator.rtr.RTRServer
+import org.scalatest.FunSuite
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
+import java.nio.charset.Charset
+import org.scalatest.matchers.ShouldMatchers
 
-object Main {
-  val logger = Logger[this.type]
+@RunWith(classOf[JUnitRunner])
+class PduTest extends FunSuite with ShouldMatchers {
 
-  def main(args: Array[String]) {
-    runServer()
-    RTRServer.startServer()
-  }
+  val NoDataAvailablePduBytes = Array[Byte](0x0, 0xa, 0x0, 0x2, 0x0, 0x0, 0x0, 0x10, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
 
-  def setup(server: Server): Server = {
-    import org.eclipse.jetty.servlet._
-    import org.scalatra._
-
-    val root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS)
-    root.setResourceBase(getClass().getResource("/public").toString())
-    val defaultServletHolder = new ServletHolder(new DefaultServlet())
-    defaultServletHolder.setName("default")
-    defaultServletHolder.setInitParameter("dirAllowed", "false")
-    root.addServlet(defaultServletHolder, "/*")
-    root.addFilter(new FilterHolder(new WebFilter), "/*", FilterMapping.ALL)
-    server.setHandler(root)
-    server
-  }
-
-  private def runServer(): Unit = {
-    val port = 8080
-    val server = setup(new Server(port))
-
-    Runtime.getRuntime().addShutdownHook(new Thread {
-      override def run() {
-        server.stop()
-        logger.info("Bye, bye...")
-      }
-    })
-    server.start()
-    logger.info("Welcome to the lessdb example, available on port " + port + ". Hit CTRL+C to terminate.")
+  test("convert to byte array an ErrorPdu without causingPdu nor errorText") {
+    val pdu = new ErrorPdu(ErrorPdus.NoDataAvailable)
+    val bytes = pdu.asByteArray
+    bytes should equal(NoDataAvailablePduBytes)
   }
 }

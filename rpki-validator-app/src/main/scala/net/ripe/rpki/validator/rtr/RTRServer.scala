@@ -42,6 +42,7 @@ import org.jboss.netty.channel.ChannelHandlerContext
 import org.jboss.netty.channel.MessageEvent
 import org.jboss.netty.channel.ExceptionEvent
 import grizzled.slf4j.Logger
+import org.jboss.netty.buffer.ChannelBuffer
 
 object RTRServer {
   val logger = Logger[this.type]
@@ -49,7 +50,7 @@ object RTRServer {
 
   var bootstrap: ServerBootstrap = _
 
-  def startServer: Unit = {
+  def startServer(): Unit = {
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool(),
       Executors.newCachedThreadPool()))
@@ -68,8 +69,18 @@ class RTRServerHandler extends SimpleChannelHandler {
   val logger = Logger[this.type]
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
+	import org.jboss.netty.buffer.ChannelBuffers
+	println("received")
     logger.trace("RTR request received from " + event.getRemoteAddress().toString())
-    // TODO send 'no data available' PDU as first implementation
+
+    val responsePduBytes = new ErrorPdu(ErrorPdus.NoDataAvailable).asByteArray
+    
+    val channel = event.getChannel()
+    
+    val buf = ChannelBuffers.buffer(responsePduBytes.length)
+    //buf.writeBytes(responsePduBytes)
+    buf.writeBytes("testing!".getBytes("UTF-8"))
+    channel.write(buf)
   }
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {

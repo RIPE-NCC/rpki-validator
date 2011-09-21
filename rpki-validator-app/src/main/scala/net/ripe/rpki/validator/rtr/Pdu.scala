@@ -27,31 +27,59 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.rtr
+package net.ripe.rpki.validator
+package rtr
+
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
+import java.nio.charset.Charset
 
 
 trait PduWriter {
-  def toBytes: Array[Byte]
+  def asByteArray: Array[Byte]
 }
 
-case class ErrorPdu(val errorCode: Int) extends PduWriter {
+abstract class Pdu extends PduWriter {
+  final val protocolVersion: Byte = 0
+  val pduType: Byte
+  val length: Int
+}
 
-  val protocolVersion: Byte = 0
-  val pduType: Byte = 10
+case class ErrorPdu(errorCode: Int, causingPdu: Option[Pdu] = None, errorText: Option[String] = None) extends Pdu {
+  final override val pduType: Byte = 10
+
+  val causingPduLength = causingPdu match {
+    case Some(pdu) => pdu.length
+    case None => 0
+  }
+
+  val errorTextLength = errorText match {
+    case Some(text) => text.length()
+    case None => 0
+  }
+
+  override val length = 8 + 4 + causingPduLength + 4 + errorTextLength
   
-  val causingPdu: String = ""
-  val errorText: String = ""
-  
-  override def toBytes: Array[Byte] = {
-    var causingPduLength = causingPdu.length()
-    var errorTextLength = errorText.length()
-    var totalLength = 8 + 4 + causingPduLength + 4 + errorTextLength
-    
-    val bytes: Array[Byte] = new Array[Byte](totalLength)
-    bytes(0) = protocolVersion
-    
-    
-    null // TODO convert to array and more...
+  override def asByteArray = {
+    val bos = new ByteArrayOutputStream
+    val data = new DataOutputStream(bos)
+
+    // header
+    data.writeByte(protocolVersion)
+    data.writeByte(pduType)
+    data.writeShort(errorCode)
+    data.writeInt(length)
+
+    // ErrorPdu specific content
+    data.writeInt(causingPduLength)
+    if (causingPdu != None) 
+      data.write(causingPdu.get.asByteArray)
+    data.writeInt(errorTextLength)
+    if (errorText != None) 
+      data.write(errorText.get.getBytes(Charset.forName("UTF-8")))
+
+    data.flush()
+    bos.toByteArray()
   }
   
 }
