@@ -1,226 +1,229 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<name>RPKI Validator</name>
-	<groupId>net.ripe.rpki-validator</groupId>
-	<artifactId>rpki-validator-parent</artifactId>
-	<version>1.0.4-SNAPSHOT</version>
-	<packaging>pom</packaging>
-	<inceptionYear>2008</inceptionYear>
+    <modelVersion>4.0.0</modelVersion>
+    <name>RPKI Validator</name>
+    <groupId>net.ripe.rpki-validator</groupId>
+    <artifactId>rpki-validator-parent</artifactId>
+    <version>1.0.4-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <inceptionYear>2008</inceptionYear>
 
-	<scm>
-		<connection>scm:svn:https://svn.ripe.net/svn/ba/certification/rpki-validator/trunk</connection>
-	</scm>
+    <scm>
+        <connection>scm:svn:https://svn.ripe.net/svn/ba/certification/rpki-validator/trunk</connection>
+    </scm>
 
-	<distributionManagement>
-		<repository>
-			<id>ripe-releases</id>
-			<name>BA repository (nexus)</name>
-			<url>http://${dist.repo.url}/nexus/content/repositories/releases</url>
-		</repository>
-		<snapshotRepository>
-			<id>bad-public-snapshots</id>
-			<name>BA snapshots repository (nexus)</name>
-			<url>http://${dist.repo.snapshot.url}/nexus/content/repositories/snapshots</url>
-			<!-- prevents timed snapshot to be created. -->
-			<uniqueVersion>false</uniqueVersion>
-		</snapshotRepository>
-	</distributionManagement>
+    <distributionManagement>
+        <repository>
+            <id>ripe-releases</id>
+            <name>BA repository (nexus)</name>
+            <url>http://${dist.repo.url}/nexus/content/repositories/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>bad-public-snapshots</id>
+            <name>BA snapshots repository (nexus)</name>
+            <url>http://${dist.repo.snapshot.url}/nexus/content/repositories/snapshots</url>
+            <!-- prevents timed snapshot to be created. -->
+            <uniqueVersion>false</uniqueVersion>
+        </snapshotRepository>
+    </distributionManagement>
 
-	<properties>
-		<rpki.commons.version>1.0.7-SNAPSHOT</rpki.commons.version>
+    <properties>
+        <rpki.commons.version>1.0.7-SNAPSHOT</rpki.commons.version>
 
-		<org.springframework.version>3.0.6.RELEASE</org.springframework.version>
-		<wicket.version>1.4.15</wicket.version>
+        <org.springframework.version>3.0.6.RELEASE</org.springframework.version>
+        <wicket.version>1.4.15</wicket.version>
 
-		<dist.repo.url>nexus.ripe.net</dist.repo.url>
-		<dist.repo.snapshot.url>nexus.ripe.net</dist.repo.snapshot.url>
+        <dist.repo.url>nexus.ripe.net</dist.repo.url>
+        <dist.repo.snapshot.url>nexus.ripe.net</dist.repo.snapshot.url>
 
-		<easymock.version>3.0</easymock.version>
-		<commons.io.version>1.4</commons.io.version>
+        <easymock.version>3.0</easymock.version>
+        <commons.io.version>1.4</commons.io.version>
 
-		<slf4j.version>1.6.2</slf4j.version>
+        <slf4j.version>1.6.2</slf4j.version>
 
-		<sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
-		<sonar.clover.reportPath>target/site/clover/clover.xml</sonar.clover.reportPath>
+        <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+        <sonar.clover.reportPath>target/site/clover/clover.xml</sonar.clover.reportPath>
 
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-	</properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
-	<modules>
-		<module>rpki-validator-app</module>
-		<module>rpki-validator-cli</module>
-		<module>rpki-validator-service</module>
-	</modules>
+    <modules>
+        <module>rpki-validator-app</module>
+        <module>rpki-validator-cli</module>
+        <module>rpki-validator-service</module>
+    </modules>
 
-	<dependencies>
-		<dependency>
-			<groupId>commons-lang</groupId>
-			<artifactId>commons-lang</artifactId>
-			<version>2.4</version>
-		</dependency>
+    <dependencies>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.4</version>
+        </dependency>
 
-		<dependency>
-			<groupId>log4j</groupId>
-			<artifactId>log4j</artifactId>
-			<version>1.2.14</version>
-		</dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.14</version>
+        </dependency>
 
-		<dependency>
-			<groupId>joda-time</groupId>
-			<artifactId>joda-time</artifactId>
-			<version>1.5</version>
-		</dependency>
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <version>1.5</version>
+        </dependency>
 
-		<!-- DEPENDENCIES FOR TESTING -->
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.8.1</version>
-			<scope>test</scope>
-		</dependency>
+        <!-- DEPENDENCIES FOR TESTING -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.1</version>
+            <scope>test</scope>
+        </dependency>
 
-		<dependency>
-			<groupId>org.easymock</groupId>
-			<artifactId>easymock</artifactId>
-			<version>${easymock.version}</version>
-			<scope>test</scope>
-		</dependency>
+        <dependency>
+            <groupId>org.easymock</groupId>
+            <artifactId>easymock</artifactId>
+            <version>${easymock.version}</version>
+            <scope>test</scope>
+        </dependency>
 
-		<dependency>
-			<groupId>asm</groupId>
-			<artifactId>asm</artifactId>
-			<version>1.5.3</version>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
+        <dependency>
+            <groupId>asm</groupId>
+            <artifactId>asm</artifactId>
+            <version>1.5.3</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
-	<dependencyManagement>
-		<dependencies>
-			<!--Intraproject dependencies -->
-			<dependency>
-				<groupId>net.ripe.rpki-commons</groupId>
-				<artifactId>rpki-commons</artifactId>
-				<version>${rpki.commons.version}</version>
-			</dependency>
+    <dependencyManagement>
+        <dependencies>
+            <!--Intraproject dependencies -->
+            <dependency>
+                <groupId>net.ripe.rpki-commons</groupId>
+                <artifactId>rpki-commons</artifactId>
+                <version>${rpki.commons.version}</version>
+            </dependency>
 
-			<dependency>
-				<groupId>net.ripe.rpki-commons</groupId>
-				<artifactId>rpki-commons</artifactId>
-				<version>${rpki.commons.version}</version>
-				<type>test-jar</type>
-				<scope>test</scope>
-			</dependency>
+            <dependency>
+                <groupId>net.ripe.rpki-commons</groupId>
+                <artifactId>rpki-commons</artifactId>
+                <version>${rpki.commons.version}</version>
+                <type>test-jar</type>
+                <scope>test</scope>
+            </dependency>
 
-			<!--Interproject dependencies -->
-			<dependency>
-				<groupId>net.ripe.rpki-validator</groupId>
-				<artifactId>rpki-validator-cli</artifactId>
-				<version>${project.version}</version>
-			</dependency>
+            <!--Interproject dependencies -->
+            <dependency>
+                <groupId>net.ripe.rpki-validator</groupId>
+                <artifactId>rpki-validator-cli</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
-			<dependency>
-				<groupId>org.slf4j</groupId>
-				<artifactId>slf4j-api</artifactId>
-				<version>${slf4j.version}</version>
-			</dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
 
-			<dependency>
-				<groupId>org.slf4j</groupId>
-				<artifactId>slf4j-log4j12</artifactId>
-				<version>${slf4j.version}</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>com.atlassian.maven.plugins</groupId>
-				<artifactId>maven-clover2-plugin</artifactId>
-				<configuration>
-					<jdk>1.6</jdk>
-					<licenseLocation>${clover2.licenseLocation}</licenseLocation>
-					<generateXml>true</generateXml>
-					<includesTestSourceRoots>false</includesTestSourceRoots>
-				</configuration>
-			</plugin>
-			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>
-			</plugin>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.atlassian.maven.plugins</groupId>
+                <artifactId>maven-clover2-plugin</artifactId>
+                <configuration>
+                    <jdk>1.6</jdk>
+                    <licenseLocation>${clover2.licenseLocation}</licenseLocation>
+                    <generateXml>true</generateXml>
+                    <includesTestSourceRoots>false</includesTestSourceRoots>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
 
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-			</plugin>
+            <plugin>
+                <artifactId>maven-assembly-plugin</artifactId>
+            </plugin>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-source-plugin</artifactId>
-			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+            </plugin>
 
-		</plugins>
+        </plugins>
 
-		<pluginManagement>
-			<plugins>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-surefire-plugin</artifactId>
-					<version>2.8.1</version>
-				</plugin>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.9</version>
+                    <configuration>
+                        <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    </configuration>
+                </plugin>
 
-				<plugin>
-					<groupId>com.atlassian.maven.plugins</groupId>
-					<artifactId>maven-clover2-plugin</artifactId>
-					<version>3.1.0</version>
-				</plugin>
+                <plugin>
+                    <groupId>com.atlassian.maven.plugins</groupId>
+                    <artifactId>maven-clover2-plugin</artifactId>
+                    <version>3.1.0</version>
+                </plugin>
 
-				<plugin>
-					<artifactId>maven-assembly-plugin</artifactId>
-					<version>2.2.1</version>
-				</plugin>
+                <plugin>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>2.2.1</version>
+                </plugin>
 
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-jar-plugin</artifactId>
-					<version>2.3.1</version>
-					<executions>
-						<execution>
-							<id>package</id>
-							<goals>
-								<goal>jar</goal>
-								<goal>test-jar</goal>
-							</goals>
-						</execution>
-					</executions>
-				</plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>2.3.1</version>
+                    <executions>
+                        <execution>
+                            <id>package</id>
+                            <goals>
+                                <goal>jar</goal>
+                                <goal>test-jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
 
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-compiler-plugin</artifactId>
-					<version>2.3.2</version>
-					<configuration>
-						<source>1.6</source>
-						<target>1.6</target>
-						<encoding>UTF-8</encoding>
-					</configuration>
-				</plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>2.3.2</version>
+                    <configuration>
+                        <source>1.6</source>
+                        <target>1.6</target>
+                        <encoding>UTF-8</encoding>
+                    </configuration>
+                </plugin>
 
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-source-plugin</artifactId>
-					<version>2.1.2</version>
-					<executions>
-						<execution>
-							<id>package</id>
-							<goals>
-								<goal>jar</goal>
-								<goal>test-jar</goal>
-							</goals>
-						</execution>
-					</executions>
-				</plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>2.1.2</version>
+                    <executions>
+                        <execution>
+                            <id>package</id>
+                            <goals>
+                                <goal>jar</goal>
+                                <goal>test-jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
 
-			</plugins>
-		</pluginManagement>
-	</build>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>
 
