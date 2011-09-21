@@ -15,7 +15,7 @@
         <scala.version>2.9.1</scala.version>
         <jetty.version>7.4.5.v20110725</jetty.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <main.class>net.ripe.rpki.validator.Main</main.class>
+        <main.class>net.ripe.rpki.validator.config.Main</main.class>
     </properties>
 
     <!-- ====================================================================== -->
@@ -71,6 +71,21 @@
             <artifactId>slf4j-log4j12</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-servlet</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-xml</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
 
         <!-- Test deps -->
         <dependency>
@@ -115,7 +130,7 @@
                     <configurationDirectory>conf</configurationDirectory>
                     <configurationSourceDirectory>conf</configurationSourceDirectory>
                     <copyConfigurationDirectory>false</copyConfigurationDirectory>
-                    <extraJvmArguments>-Xms128m</extraJvmArguments>
+                    <extraJvmArguments>-Xms128m -Xmx128m</extraJvmArguments>
                     <programs>
                         <program>
                             <mainClass>${main.class}</mainClass>
@@ -184,7 +199,7 @@
                     <strictCheck>true</strictCheck>
                     <header>LICENSE.txt</header>
                     <excludes>
-                        <exclude>.*</exclude>
+                        <exclude>**/.*</exclude>
                         <exclude>log/**</exclude>
                         <exclude>**/*.txt</exclude>
                         <exclude>**/*.tal</exclude>
