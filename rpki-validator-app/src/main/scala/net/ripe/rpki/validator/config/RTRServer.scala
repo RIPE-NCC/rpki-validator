@@ -46,27 +46,31 @@ object RTRServer {
   val logger = Logger[this.type]
   val Port = 8282
 
-  val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
+  var bootstrap: ServerBootstrap = _
+
+  def startServer: Unit = {
+    bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool(),
       Executors.newCachedThreadPool()))
 
-  bootstrap.setPipelineFactory(new ChannelPipelineFactory {
-    override def getPipeline: ChannelPipeline = {
-      Channels.pipeline(new RTRServerHandler)
-    }
-  })
-  bootstrap.setOption("child.keepAlive", true)
-  bootstrap.bind(new InetSocketAddress(Port))
+    bootstrap.setPipelineFactory(new ChannelPipelineFactory {
+      override def getPipeline: ChannelPipeline = {
+        Channels.pipeline(new RTRServerHandler)
+      }
+    })
+    bootstrap.setOption("child.keepAlive", true)
+    bootstrap.bind(new InetSocketAddress(Port))
+  }
 }
 
 class RTRServerHandler extends SimpleChannelHandler {
   val logger = Logger[this.type]
-  
+
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
-    logger.trace("RTR request received from "+event.getRemoteAddress().toString())
+    logger.trace("RTR request received from " + event.getRemoteAddress().toString())
     // TODO send 'no data available' PDU as first implementation
   }
-  
+
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {
     // TODO maybe send 'no data available' PDU
     logger.warn(event.getCause().getMessage())
