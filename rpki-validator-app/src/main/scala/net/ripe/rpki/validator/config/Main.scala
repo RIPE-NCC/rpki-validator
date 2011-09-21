@@ -29,6 +29,7 @@
  */
 package net.ripe.rpki.validator
 package config
+
 import grizzled.slf4j.Logging
 import grizzled.slf4j.Logger
 import org.eclipse.jetty.server.Server

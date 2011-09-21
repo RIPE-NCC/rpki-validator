@@ -27,9 +27,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.features
+package net.ripe.rpki.validator
+package features
 
-import net.ripe.rpki.validator.support.FeatureSpecification
+import support.FeatureSpecification
 
 class WelcomePageSpec extends FeatureSpecification {
   feature("Welcome page") {
