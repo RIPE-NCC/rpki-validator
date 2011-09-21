@@ -28,11 +28,20 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package config
+package controllers
 
 import org.scalatra.ScalatraFilter
-import controllers._
+import scala.xml.NodeSeq
+import support.ControllerTestCase
+import scala.xml.Node
+import scala.xml.Elem
 
-class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with TrustAnchorsController
+class TrustAnchorControllersTest extends ControllerTestCase {
+  override def controller = new ControllerFilter with TrustAnchorsController
+
+  test("list trust anchors") {
+    get("/trust-anchors") {
+      result.toString should include("<li>RIPE NCC</li>")
+    }
+  }
+}

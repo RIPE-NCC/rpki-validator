@@ -27,12 +27,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package config
+package net.ripe.rpki.validator.controllers
+import org.scalatra.ScalatraKernel
 
-import org.scalatra.ScalatraFilter
-import controllers._
-
-class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with TrustAnchorsController
+trait TrustAnchorsController extends ApplicationController {
+  get("/trust-anchors") {
+    <ul>
+      <li>RIPE NCC</li>
+    </ul>
+  }
+}

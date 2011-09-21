@@ -28,11 +28,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package config
+package controllers
 
-import org.scalatra.ScalatraFilter
-import controllers._
+import org.scalatra.ScalatraKernel
 
-class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with TrustAnchorsController
+trait ApplicationController extends ScalatraKernel {
+  get("/") {
+    <p>Hello, World!</p>
+  }
+}

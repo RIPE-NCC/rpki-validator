@@ -28,11 +28,45 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package config
+package support
 
+import org.junit.runner.RunWith
+import org.scalatest._
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.mock.MockitoSugar
 import org.scalatra.ScalatraFilter
-import controllers._
+import org.scalatra.test.scalatest.ScalatraFunSuite
+import org.scalatra.test.scalatest.ScalatraFeatureSpec
 
-class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with TrustAnchorsController
+import config.WebFilter
+
+@RunWith(classOf[JUnitRunner])
+abstract class ControllerTestCase extends ScalatraFunSuite with ShouldMatchers with MockitoSugar {
+  /**
+   * The result of the last render action.
+   */
+  protected var result: Any = _
+
+  /**
+   * Special filter that stores the result of the matching action into `result` without rendering.
+   */
+  protected abstract class ControllerFilter extends ScalatraFilter {
+    override def renderPipeline = {
+      case r =>
+        result = r
+    }
+  }
+
+  protected override def runTest(testName: String, reporter: Reporter, stopper: Stopper, configMap: Map[String, Any], tracker: Tracker) {
+    result = null
+    super.runTest(testName, reporter, stopper, configMap, tracker)
+  }
+
+  /**
+   * Controller being tested.
+   */
+  def controller: ControllerFilter
+
+  addFilter(controller, "/*")
+}

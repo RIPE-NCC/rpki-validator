@@ -27,12 +27,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package config
+package net.ripe.rpki.validator.features
 
-import org.scalatra.ScalatraFilter
-import controllers._
+import net.ripe.rpki.validator.support.FeatureSpecification
 
-class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with TrustAnchorsController
+class TrustAnchorsSpec extends FeatureSpecification {
+  feature("Trust anchor") {
+    scenario("view configured trust anchors")(pending)
+  }
+}
