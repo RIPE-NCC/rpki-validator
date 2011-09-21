@@ -28,18 +28,46 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package controllers
+package views
 
-import org.scalatra.ScalatraFilter
-import support.ControllerTestCase
+import scala.xml._
+import org.joda.time._
 
-class TrustAnchorControllersTest extends ControllerTestCase {
-  override def controller = new ControllerFilter with TrustAnchorsController
-
-  test("list trust anchors") {
-    get("/trust-anchors") {
-      response.status should equal(200)
-      result.isInstanceOf[views.TrustAnchorsView] should be(true)
-    }
-  }
+object Layouts {
+  def standard(view: View): NodeSeq =
+    <html lang="en">
+      <head>
+        <meta charset="utf-8"/>
+        <title>RPKI Validator - { view.title }</title>
+        <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.3.0/bootstrap.css"/>
+        <style type="text/css">{
+          Unparsed("""
+      body {
+        padding-top: 60px;
+      }
+""")
+        }</style>
+      </head>
+      <body>
+        <div class="topbar">
+          <div class="fill">
+            <div class="container">
+              <a class="brand" href="#">RPKI Validator</a>
+              <ul class="nav">{
+                for (tab <- Tabs.all) yield {
+                  <li class={ if (tab == view.tab) "active" else "" }><a href={ tab.url }>{ tab.text }</a></li>
+                }
+              }</ul>
+            </div>
+          </div>
+        </div>
+        <div class="container">
+          <h1>{ view.title }</h1>
+          { view.body }
+          <footer>
+            <p>Copyright © {(2009 to (new DateTime).getYear).mkString(", ")} the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted.</p>
+          </footer>
+        </div>
+      </body>
+    </html>
 }

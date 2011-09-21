@@ -27,19 +27,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package controllers
+package net.ripe.rpki.validator.views
+import scala.xml.Text
 
-import org.scalatra.ScalatraFilter
-import support.ControllerTestCase
-
-class TrustAnchorControllersTest extends ControllerTestCase {
-  override def controller = new ControllerFilter with TrustAnchorsController
-
-  test("list trust anchors") {
-    get("/trust-anchors") {
-      response.status should equal(200)
-      result.isInstanceOf[views.TrustAnchorsView] should be(true)
-    }
-  }
+class TrustAnchorsView extends View {
+  def tab = TrustAnchorsTab
+  def title = Text("Configured Trust Anchors")
+  def body =
+    <ul>
+      <li>RIPE NCC</li>
+    </ul>
 }

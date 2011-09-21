@@ -34,8 +34,6 @@ import org.scalatra.ScalatraKernel
 
 trait TrustAnchorsController extends ApplicationController {
   get("/trust-anchors") {
-    <ul>
-      <li>RIPE NCC</li>
-    </ul>
+    new views.TrustAnchorsView()
   }
 }

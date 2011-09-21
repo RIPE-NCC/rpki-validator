@@ -27,19 +27,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package controllers
+package net.ripe.rpki.validator.views
 
-import org.scalatra.ScalatraFilter
-import support.ControllerTestCase
+sealed trait Tab {
+  def text: String
+  def url: String
+}
+case object HomeTab extends Tab {
+  def text = "Home"
+  def url = "/"
+}
+case object TrustAnchorsTab extends Tab {
+  def text = "Trust Anchors"
+  def url = "/trust-anchors"
+}
 
-class TrustAnchorControllersTest extends ControllerTestCase {
-  override def controller = new ControllerFilter with TrustAnchorsController
-
-  test("list trust anchors") {
-    get("/trust-anchors") {
-      response.status should equal(200)
-      result.isInstanceOf[views.TrustAnchorsView] should be(true)
-    }
-  }
+object Tabs {
+  def all = Seq(HomeTab, TrustAnchorsTab)
 }

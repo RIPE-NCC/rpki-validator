@@ -30,9 +30,21 @@
 package net.ripe.rpki.validator
 package config
 
-import org.scalatra.ScalatraFilter
+import org.scalatra._
+import scala.xml.Xhtml
 import controllers._
+import views.View
+import views.Layouts
 
 class WebFilter extends ScalatraFilter
   with ApplicationController
-  with TrustAnchorsController
+  with TrustAnchorsController {
+
+  private def renderView: RenderPipeline = {
+    case view: View =>
+      contentType = "text/html"
+      "<!DOCTYPE html>\n" + Xhtml.toXhtml(Layouts.standard(view))
+  }
+
+  override protected def renderPipeline = renderView orElse super.renderPipeline
+}

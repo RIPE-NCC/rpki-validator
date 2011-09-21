@@ -27,19 +27,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package controllers
+package net.ripe.rpki.validator.views
 
-import org.scalatra.ScalatraFilter
-import support.ControllerTestCase
+import scala.xml.NodeSeq
 
-class TrustAnchorControllersTest extends ControllerTestCase {
-  override def controller = new ControllerFilter with TrustAnchorsController
-
-  test("list trust anchors") {
-    get("/trust-anchors") {
-      response.status should equal(200)
-      result.isInstanceOf[views.TrustAnchorsView] should be(true)
-    }
-  }
+trait View {
+  def tab: Tab
+  def title: NodeSeq
+  def body: NodeSeq
 }

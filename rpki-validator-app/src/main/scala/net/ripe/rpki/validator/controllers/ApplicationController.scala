@@ -31,9 +31,14 @@ package net.ripe.rpki.validator
 package controllers
 
 import org.scalatra.ScalatraKernel
+import scala.xml.Text
 
 trait ApplicationController extends ScalatraKernel {
   get("/") {
-    <p>Hello, World!</p>
+    new views.View {
+      def tab = views.HomeTab
+      def title = Text("Welcome")
+      def body = <p>Hello, World!</p>
+    }
   }
 }
