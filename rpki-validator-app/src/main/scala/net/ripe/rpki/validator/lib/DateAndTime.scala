@@ -33,16 +33,17 @@ package lib
 import org.joda.time._
 
 object DateAndTime {
-  def keepMostSignificantPeriodFields(n: Int, period: Period): ReadablePeriod = {
-    for (i <- period.getFieldTypes().indices.dropRight(n - 1)) {
-      if (period.getValue(i) != 0) {
-        val result = new MutablePeriod()
-        for (j <- i until (i + n)) {
-          result.setValue(j, period.getValue(j))
-        }
-        return result.toPeriod()
+  def keepMostSignificantPeriodFields(period: Period, number: Int): Period = {
+    val values = period.getValues()
+    val mostSignificantField = values.indexWhere(_ != 0)
+    if (mostSignificantField < 0) {
+      period
+    } else {
+      val result = new MutablePeriod()
+      for (i <- mostSignificantField.until(mostSignificantField + number).intersect(values.indices)) {
+        result.setValue(i, values(i))
       }
+      result.toPeriod()
     }
-    return period
   }
 }

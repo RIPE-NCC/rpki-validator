@@ -39,16 +39,16 @@ class DateAndTimeTest extends TestCase {
 
   test("keep first significant field") {
     val period = new Period().withWeeks(3).withDays(6)
-    keepMostSignificantPeriodFields(1, period) should equal(new Period().withWeeks(3))
+    keepMostSignificantPeriodFields(period, 1) should equal(new Period().withWeeks(3))
   }
 
   test("keep three significant fields") {
     val period = new Period().withWeeks(3).withDays(6).withHours(23).withMinutes(40).withMillis(300)
-    keepMostSignificantPeriodFields(3, period) should equal(new Period().withWeeks(3).withDays(6).withHours(23))
+    keepMostSignificantPeriodFields(period, 3) should equal(new Period().withWeeks(3).withDays(6).withHours(23))
   }
 
   test("stay within field bounds") {
     val period = new Period().withMillis(300)
-    keepMostSignificantPeriodFields(3, period) should equal(new Period().withMillis(300))
+    keepMostSignificantPeriodFields(period, 3) should equal(new Period().withMillis(300))
   }
 }

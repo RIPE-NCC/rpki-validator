@@ -62,7 +62,7 @@ class TrustAnchorsView(trustAnchors: Seq[CertificateRepositoryObjectValidationCo
 
   private def expiresIn(notValidAfter: DateTime): NodeSeq = {
     if (now.isBefore(notValidAfter)) {
-      val period = keepMostSignificantPeriodFields(n = 2, period = new Period(now, notValidAfter))
+      val period = keepMostSignificantPeriodFields(new Period(now, notValidAfter), number = 2)
       Text(PeriodFormat.getDefault().print(period))
     } else {
       <strong>EXPIRED</strong>
