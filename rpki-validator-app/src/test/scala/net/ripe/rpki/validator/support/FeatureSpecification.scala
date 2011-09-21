@@ -27,19 +27,18 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
+package net.ripe.rpki.validator.support
 
-import org.scalatest.FunSuite
-import org.scalatest.junit.JUnitRunner
-import grizzled.slf4j.Logger
 import org.junit.runner.RunWith
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.mock.MockitoSugar
+import org.scalatra.test.scalatest.ScalatraFunSuite
+import net.ripe.rpki.validator.config.WebFilter
+import org.scalatra.test.scalatest.ScalatraFeatureSpec
 
 @RunWith(classOf[JUnitRunner])
-class MainTest extends FunSuite {
-
-  val logger = Logger[MainTest]
-
-  test("hello world") {
-    logger.info("Hello, world!")
-  }
+abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatchers with MockitoSugar {
+  addFilter(new WebFilter, "/*")
 }
