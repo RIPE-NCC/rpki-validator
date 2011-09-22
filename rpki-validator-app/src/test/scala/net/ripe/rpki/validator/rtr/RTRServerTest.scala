@@ -55,8 +55,9 @@ class RTRServerTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers 
 
   test("connect with RTRClient") {
     val client = new RTRClient(8282)
-    client.sendPdu(new ErrorPdu(errorCode = 2))
-    Thread.sleep(1000)
+    var response = client.sendPdu(new ErrorPdu(errorCode = 2))
+    response should equal (PduTest.NoDataAvailablePduBytes)
+    client.close
   }
 
   test("should return no data available") {

@@ -41,49 +41,76 @@ import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
 
 class RTRClient(val port: Int) {
 
-  def sendPdu(pduToSend: Pdu) {
-    val bootstrap: ClientBootstrap = new ClientBootstrap(
-      new NioClientSocketChannelFactory(
-        Executors.newCachedThreadPool(),
-        Executors.newCachedThreadPool()));
-
-    bootstrap.setPipelineFactory(new ChannelPipelineFactory {
-      override def getPipeline: ChannelPipeline = {
-        Channels.pipeline(
-          new LengthFieldBasedFrameDecoder(
-          	/*maxFrameLength*/ 4096,
-          	/*lengthFieldOffset*/ 4,
-          	/*lengthFieldLength*/ 4,
-          	/*lengthAdjustment*/ -8,
-          	/*initialBytesToStrip*/ 0),
-          new RTRClientHandler(pduToSend))
-      }
-    })
-    var future = bootstrap.connect(new InetSocketAddress("localhost", port))
-    
-//    future.getChannel().getCloseFuture().awaitUninterruptibly()
-    
-//    bootstrap.releaseExternalResources()
-  }
-}
-
-class RTRClientHandler(val pduToSend: Pdu) extends SimpleChannelUpstreamHandler {
-
   val logger = Logger[this.type]
+  
+  @volatile
+  var receivedBytes: Option[Array[Byte]] = None
+  
+  val clientHandler = new RTRClientHandler(this)
 
-   override def channelConnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
+  val bootstrap: ClientBootstrap = new ClientBootstrap(
+    new NioClientSocketChannelFactory(
+      Executors.newCachedThreadPool(),
+      Executors.newCachedThreadPool()));
+
+  bootstrap.setPipelineFactory(new ChannelPipelineFactory {
+    override def getPipeline: ChannelPipeline = {
+      Channels.pipeline(
+        new LengthFieldBasedFrameDecoder(
+          /*maxFrameLength*/ 4096,
+          /*lengthFieldOffset*/ 4,
+          /*lengthFieldLength*/ 4,
+          /*lengthAdjustment*/ -8,
+          /*initialBytesToStrip*/ 0),
+        clientHandler)
+    }
+  })
+  var channelFuture: ChannelFuture = bootstrap.connect(new InetSocketAddress("localhost", port))
+  channelFuture.await(1000)
+
+  def sendPdu(pduToSend: Pdu) = {
+    
+    receivedBytes = None
+    
     var bytes = pduToSend.asByteArray;
     var buffer = ChannelBuffers.buffer(bytes.length)
     buffer.writeBytes(bytes)
-    event.getChannel().write(buffer)
+    channelFuture.getChannel().write(buffer)
+    logger.warn("pdu sent")
+    
+    while(!receivedBytes.isDefined) {
+      Thread.sleep(5)
+    }
+    
+    receivedBytes.get
+  }
+
+  def isConnected = {
+    channelFuture.getChannel().isConnected()
+  }
+
+  def callBack(bytes: Array[Byte]) = {
+    logger.warn("Got called back")
+    receivedBytes = Some(bytes)
+  }
+
+  def close = {
+    channelFuture.getChannel().close()
+  }
+}
+
+class RTRClientHandler(val callingClient: RTRClient) extends SimpleChannelUpstreamHandler {
+
+  val logger = Logger[this.type]
+
+  override def channelConnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
     logger.warn("connected")
   }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
     logger.warn("Got response: " + event.getMessage())
     var buffer: ChannelBuffer = event.getMessage.asInstanceOf[ChannelBuffer];
-    buffer.array().foreach(b => println(b.toInt + " "))
-    
+    callingClient.callBack(buffer.array())
   }
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {

@@ -40,11 +40,15 @@ import org.scalatest.matchers.ShouldMatchers
 @RunWith(classOf[JUnitRunner])
 class PduTest extends FunSuite with ShouldMatchers {
 
-  val NoDataAvailablePduBytes = Array[Byte](0x0, 0xa, 0x0, 0x2, 0x0, 0x0, 0x0, 0x10, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
-
   test("convert to byte array an ErrorPdu without causingPdu nor errorText") {
     val pdu = new ErrorPdu(ErrorPdus.NoDataAvailable)
     val bytes = pdu.asByteArray
-    bytes should equal(NoDataAvailablePduBytes)
+    bytes should equal(PduTest.NoDataAvailablePduBytes)
   }
+}
+
+object PduTest {
+  
+	val NoDataAvailablePduBytes = Array[Byte](0x0, 0xa, 0x0, 0x2, 0x0, 0x0, 0x0, 0x10, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+  
 }
