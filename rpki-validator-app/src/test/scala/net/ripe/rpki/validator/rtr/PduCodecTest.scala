@@ -29,55 +29,32 @@
  */
 package net.ripe.rpki.validator.rtr
 
-import org.junit.runner.RunWith
 import org.scalatest.FunSuite
-import org.scalatest.junit.JUnitRunner
-import java.net.Socket
-import java.net.InetAddress
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.matchers.ShouldMatchers._
-import java.io.PrintWriter
-import java.io.DataOutputStream
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import org.jboss.netty.buffer.ChannelBuffer
+import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
 
 @RunWith(classOf[JUnitRunner])
-class RTRServerTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers {
+class PduCodecTest extends FunSuite with ShouldMatchers {
 
-  override def beforeAll() = {
-    RTRServer.startServer
-  }
-
-  ignore("should connect") {
-    val socket = new Socket("127.0.0.1", 8282)
-    socket.isConnected() should equal(true)
-    socket.close()
-  }
-
-  test("connect with RTRClient") {
-    val client = new RTRClient(8282)
-    var response = client.sendPdu(new ErrorPdu(errorCode = 2))
-
-    assert(response.isInstanceOf[ErrorPdu])
-    val errorPdu = response.asInstanceOf[ErrorPdu]
-    errorPdu.errorCode should equal(ErrorPdus.NoDataAvailable)
+  test("should encode NoDataAvailablePdu") {
+    val encoder = new PduEncoder()
+    val encoded = encoder.encode(null, null, PduTest.NoDataAvailablePdu)
     
-    client.close
+    assert(encoded.isInstanceOf[ChannelBuffer])
+    val buffer = encoded.asInstanceOf[ChannelBuffer]
+    buffer.array() should equal(PduTest.NoDataAvailablePduBytes)
   }
-
-  ignore("should return no data available") {
-    val socket = new Socket("127.0.0.1", 8282)
-    val os = socket.getOutputStream()
-    val dos = new DataOutputStream(os)
-
-    dos.write(new ErrorPdu(errorCode = 2).asByteArray)
-    dos.flush()
-
-    val in = socket.getInputStream()
-    var bytes = Array[Byte]()
-    in.read(bytes)
-    bytes.foreach(b => println(b.toString))
-
-    socket.close()
+  
+  test("should decoded NoDataAvailablePduBytes") {
+    val decoder = new PduDecoder
+    val channelBuffer = new BigEndianHeapChannelBuffer(PduTest.NoDataAvailablePduBytes)
+    val decoded = decoder.decode(null, null, channelBuffer)
+    assert(decoded.isInstanceOf[ErrorPdu])
+    val errorPdu = decoded.asInstanceOf[ErrorPdu]
+    errorPdu.errorCode should equal(ErrorPdus.NoDataAvailable)
   }
-
+  
 }

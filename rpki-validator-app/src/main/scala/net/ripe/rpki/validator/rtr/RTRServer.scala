@@ -37,11 +37,12 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import java.net.InetSocketAddress
 import grizzled.slf4j.Logger
 import org.jboss.netty.buffer.ChannelBuffer
+import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
 
 object RTRServer {
   final val ProtocolVersion = 0
   val Port = 8282
-  
+
   val logger = Logger[this.type]
 
   var bootstrap: ServerBootstrap = _
@@ -50,19 +51,28 @@ object RTRServer {
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool(),
       Executors.newCachedThreadPool()))
-    
+
     registerShutdownHook()
 
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       override def getPipeline: ChannelPipeline = {
-        Channels.pipeline(new PduEncoder, new PduDecoder, new RTRServerHandler)
+        Channels.pipeline(
+          new LengthFieldBasedFrameDecoder(
+            /*maxFrameLength*/ 4096,
+            /*lengthFieldOffset*/ 4,
+            /*lengthFieldLength*/ 4,
+            /*lengthAdjustment*/ -8,
+            /*initialBytesToStrip*/ 0),
+          new PduEncoder,
+          new PduDecoder,
+          new RTRServerHandler)
       }
     })
     bootstrap.setOption("child.keepAlive", true)
     val listenAddress = new InetSocketAddress(Port)
     bootstrap.bind(listenAddress)
-    
-    logger.info("RTR server listening on "+ listenAddress.toString)
+
+    logger.info("RTR server listening on " + listenAddress.toString)
     logger.trace("RTR tracing enabled")
   }
 
@@ -74,7 +84,7 @@ object RTRServer {
       }
     })
   }
-  
+
   private def shutdownServer() {
     // TODO graceful: close all open channels asynchronously
     bootstrap.getFactory().releaseExternalResources()
@@ -85,11 +95,11 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
   val logger = Logger[this.type]
 
   override def channelConnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
-    logger.trace("Channel connected: "+ context.getName())
+    logger.trace("Channel connected: " + context.getName())
   }
-  
+
   override def channelDisconnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
-    logger.trace("Channel disconnected: "+ context.getName())
+    logger.trace("Channel disconnected: " + context.getName())
   }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
@@ -101,7 +111,7 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     // decode and process
-    
+
     // respond
     val responsePdu = new ErrorPdu(ErrorPdus.NoDataAvailable)
     event.getChannel().write(responsePdu)

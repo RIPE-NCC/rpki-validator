@@ -41,8 +41,7 @@ import org.scalatest.matchers.ShouldMatchers
 class PduTest extends FunSuite with ShouldMatchers {
 
   test("convert to byte array an ErrorPdu without causingPdu nor errorText") {
-    val pdu = new ErrorPdu(ErrorPdus.NoDataAvailable)
-    val bytes = pdu.asByteArray
+    val bytes = PduTest.NoDataAvailablePdu.asByteArray
     bytes should equal(PduTest.NoDataAvailablePduBytes)
   }
 }
@@ -50,5 +49,6 @@ class PduTest extends FunSuite with ShouldMatchers {
 object PduTest {
   
   val NoDataAvailablePduBytes = Array[Byte](0x0, 0xa, 0x0, 0x2, 0x0, 0x0, 0x0, 0x10, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
+  val NoDataAvailablePdu = new ErrorPdu(ErrorPdus.NoDataAvailable)
   
 }

@@ -42,10 +42,10 @@ import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
 class RTRClient(val port: Int) {
 
   val logger = Logger[this.type]
-  
+
   @volatile
   var receivedPdu: Option[Pdu] = None
-  
+
   val clientHandler = new RTRClientHandler(pduReceived)
 
   val bootstrap: ClientBootstrap = new ClientBootstrap(
@@ -56,13 +56,14 @@ class RTRClient(val port: Int) {
   bootstrap.setPipelineFactory(new ChannelPipelineFactory {
     override def getPipeline: ChannelPipeline = {
       Channels.pipeline(
-          new PduDecoder,
-//        new LengthFieldBasedFrameDecoder(
-//          /*maxFrameLength*/ 4096,
-//          /*lengthFieldOffset*/ 4,
-//          /*lengthFieldLength*/ 4,
-//          /*lengthAdjustment*/ -8,
-//          /*initialBytesToStrip*/ 0),
+        new LengthFieldBasedFrameDecoder(
+          /*maxFrameLength*/ 4096,
+          /*lengthFieldOffset*/ 4,
+          /*lengthFieldLength*/ 4,
+          /*lengthAdjustment*/ -8,
+          /*initialBytesToStrip*/ 0),
+        new PduDecoder,
+        new PduEncoder,
         clientHandler)
     }
   })
@@ -70,19 +71,20 @@ class RTRClient(val port: Int) {
   channelFuture.await(1000)
 
   def sendPdu(pduToSend: Pdu) = {
-    
+
     receivedPdu = None
-    
-    var bytes = pduToSend.asByteArray;
-    var buffer = ChannelBuffers.buffer(bytes.length)
-    buffer.writeBytes(bytes)
-    channelFuture.getChannel().write(buffer)
+
+    channelFuture.getChannel().write(pduToSend)
     logger.trace("pdu sent")
-    
-    while(!receivedPdu.isDefined) {
-      Thread.sleep(5)
+
+    val maxMillis = 1000
+    val retryMillis = 5
+    var spentMillis = 0
+    while (!receivedPdu.isDefined && spentMillis < maxMillis) {
+      Thread.sleep(retryMillis)
+      spentMillis += retryMillis
     }
-    
+
     receivedPdu.get
   }
 
@@ -115,8 +117,8 @@ class RTRClientHandler(pduReceived: Pdu => Unit) extends SimpleChannelUpstreamHa
   }
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {
-    // TODO maybe send 'no data available' PDU
-    logger.warn("Received exception: " + event.getCause().getMessage())
+    // TODO: handle? Or just let it explode
+    logger.error("Received exception: " + event.getCause().getMessage())
     logger.debug("", event.getCause())
   }
 

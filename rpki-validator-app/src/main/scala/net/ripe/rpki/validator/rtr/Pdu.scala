@@ -33,6 +33,7 @@ package rtr
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.nio.charset.Charset
+import org.jboss.netty.buffer.ChannelBuffer
 
 abstract class Pdu {
   val protocolVersion: Byte = RTRServer.ProtocolVersion
@@ -92,3 +93,13 @@ case class ErrorPdu(errorCode: Int, causingPdu: Option[Pdu] = None, errorText: O
 object ErrorPdus {
   val NoDataAvailable = 2
 }
+
+object PduFactory {
+  
+  def fromByteArray(buffer: ChannelBuffer): Pdu = {
+    
+    new ErrorPdu(ErrorPdus.NoDataAvailable)
+  }
+  
+}
+
