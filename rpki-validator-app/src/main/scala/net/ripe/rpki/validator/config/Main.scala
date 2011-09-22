@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package config
 
-import grizzled.slf4j.Logging
 import grizzled.slf4j.Logger
 import org.eclipse.jetty.server.Server
 import org.apache.commons.io.FileUtils
@@ -39,11 +38,12 @@ import scala.collection.JavaConverters._
 import net.ripe.certification.validator.util.TrustAnchorExtractor
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.validator.rtr.RTRServer
+import models.TrustAnchors
 
 object Main {
   val logger = Logger[this.type]
 
-  var trustAnchors: Seq[CertificateRepositoryObjectValidationContext] = Seq.empty
+  var trustAnchors: TrustAnchors = null
 
   def main(args: Array[String]) {
     trustAnchors = loadTrustAnchors()
@@ -51,15 +51,10 @@ object Main {
     RTRServer.startServer()
   }
 
-  def loadTrustAnchors(): Seq[CertificateRepositoryObjectValidationContext] = {
+  def loadTrustAnchors(): TrustAnchors = {
     import java.{util => ju}
-    logger.info("Loading trust anchors...")
     val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[java.util.Collection[File]])
-    val trustAnchors = new TrustAnchorExtractor().extractTAS(tals, "tmp/tal").asScala
-    trustAnchors foreach { ta =>
-      logger.info("Loaded trust anchor from location " + ta.getLocation())
-    }
-    trustAnchors.toIndexedSeq
+    TrustAnchors.load(tals.asScala, "tmp/tals")
   }
 
   def setup(server: Server): Server = {

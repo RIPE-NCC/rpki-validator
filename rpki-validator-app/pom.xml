@@ -28,11 +28,15 @@
             <groupId>net.ripe.rpki-commons</groupId>
             <artifactId>rpki-commons</artifactId>
         </dependency>
-
         <dependency>
             <groupId>net.ripe.rpki-commons</groupId>
             <artifactId>rpki-commons</artifactId>
             <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.ripe.rpki-validator</groupId>
+            <artifactId>rpki-validator-cli</artifactId>
         </dependency>
 
         <!-- 3rd party -->
@@ -50,6 +54,16 @@
             <groupId>org.jboss.netty</groupId>
             <artifactId>netty</artifactId>
             <version>3.2.5.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <version>1.6.2</version>
+        </dependency>
+        <dependency>
+            <groupId>se.scalablesolutions.akka</groupId>
+            <artifactId>akka-actor</artifactId>
+            <version>1.2</version>
         </dependency>
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -104,15 +118,6 @@
             <artifactId>mockito-all</artifactId>
             <version>1.8.4</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>1.6.2</version>
-        </dependency>
-        <dependency>
-        	<groupId>net.ripe.rpki-validator</groupId>
-        	<artifactId>rpki-validator-cli</artifactId>
         </dependency>
     </dependencies>
 
@@ -224,6 +229,7 @@
                     <excludes>
                         <exclude>**/.*</exclude>
                         <exclude>log/**</exclude>
+                        <exclude>tmp/**</exclude>
                         <exclude>**/*.txt</exclude>
                         <exclude>**/*.tal</exclude>
                         <exclude>pom.xslt</exclude>

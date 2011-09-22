@@ -57,12 +57,12 @@ public class TrustAnchorExtractor {
     public List<CertificateRepositoryObjectValidationContext> extractTAS(List<File> trustAnchorFiles, String rootCertificateOutputDir) {
         List<CertificateRepositoryObjectValidationContext> tas = new ArrayList<CertificateRepositoryObjectValidationContext>();
         for (File talFile : trustAnchorFiles) {
-            tas.add(getValidationContextForTAL(talFile, rootCertificateOutputDir));
+            tas.add(extractTA(talFile, rootCertificateOutputDir));
         }
         return tas;
     }
 
-    private CertificateRepositoryObjectValidationContext getValidationContextForTAL(File talFile, String rootCertificateOutputDir) {
+    public CertificateRepositoryObjectValidationContext extractTA(File talFile, String rootCertificateOutputDir) {
         String content = getContent(talFile);
         List<String> lines = new ArrayList<String>(Arrays.asList(content.split("\n")));
 

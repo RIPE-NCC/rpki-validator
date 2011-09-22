@@ -31,10 +31,10 @@ package net.ripe.rpki.validator
 package controllers
 
 import org.scalatra.ScalatraKernel
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import models.TrustAnchors
 
 trait TrustAnchorsController extends ApplicationController {
-  def trustAnchors: Seq[CertificateRepositoryObjectValidationContext]
+  def trustAnchors: TrustAnchors
 
   get("/trust-anchors") {
     new views.TrustAnchorsView(trustAnchors)

@@ -27,22 +27,26 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package controllers
+package net.ripe.rpki.validator.models
 
-import org.scalatra.ScalatraFilter
-import support.ControllerTestCase
-import models.TrustAnchors
+import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import java.io.File
+import net.ripe.certification.validator.util.TrustAnchorExtractor
+import scala.collection.JavaConverters._
+import grizzled.slf4j.Logging
+import akka.dispatch.Future
 
-class TrustAnchorControllersTest extends ControllerTestCase {
-  override def controller = new ControllerFilter with TrustAnchorsController {
-    override def trustAnchors = new TrustAnchors(Map.empty)
-  }
+class TrustAnchors(val all: Map[String, Future[CertificateRepositoryObjectValidationContext]]) {
 
-  test("list trust anchors") {
-    get("/trust-anchors") {
-      response.status should equal(200)
-      result.isInstanceOf[views.TrustAnchorsView] should be(true)
-    }
+}
+object TrustAnchors extends Logging {
+  def load(files: Seq[File], outputDirectory: String): TrustAnchors = {
+    info("Loading trust anchors...")
+    val trustAnchors = for (file <- files) yield file.getName() -> Future({
+      val ta = new TrustAnchorExtractor().extractTA(file, outputDirectory)
+      info("Loaded trust anchor from location " + ta.getLocation())
+      ta
+    }, timeout = 60 * 60 * 1000)
+    new TrustAnchors(trustAnchors.toMap)
   }
 }

@@ -30,14 +30,15 @@
 package net.ripe.rpki.validator
 package views
 
-import scala.xml.Text
 import org.joda.time._
 import org.joda.time.format.PeriodFormat
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import lib.DateAndTime._
+import scala.xml.Text
 import scala.xml.NodeSeq
+import scala.collection.SortedMap
+import lib.DateAndTime._
+import models.TrustAnchors
 
-class TrustAnchorsView(trustAnchors: Seq[CertificateRepositoryObjectValidationContext]) extends View {
+class TrustAnchorsView(trustAnchors: TrustAnchors) extends View {
   def tab = TrustAnchorsTab
   def title = Text("Configured Trust Anchors")
   def body =
@@ -49,12 +50,17 @@ class TrustAnchorsView(trustAnchors: Seq[CertificateRepositoryObjectValidationCo
         <th>Location</th>
       </thead>
       <tbody>{
-        for ((ta, index) <- sortedTrustAnchors.zipWithIndex) yield {
+        for (((name, ta), index) <- sortedTrustAnchors.zipWithIndex) yield {
           <tr>
             <td>{ index + 1 }</td>
-            <td>{ ta.getCertificate().getSubject() }</td>
-            <td>{ expiresIn(ta.getCertificate().getValidityPeriod().getNotValidAfter()) }</td>
-            <td>{ ta.getLocation() }</td>
+            <td>{ name }</td>{
+              if (ta.isCompleted) {
+                <td>{ expiresIn(ta.get.getCertificate().getValidityPeriod().getNotValidAfter()) }</td>
+                <td>{ ta.get.getLocation() }</td>
+              } else {
+                <td colspan="2">Loading...</td>
+              }
+            }
           </tr>
         }
       }</tbody>
@@ -69,5 +75,5 @@ class TrustAnchorsView(trustAnchors: Seq[CertificateRepositoryObjectValidationCo
     }
   }
   private val now = new DateTime
-  private def sortedTrustAnchors = trustAnchors.sortBy(_.getCertificate().getSubject().toString().toLowerCase())
+  private def sortedTrustAnchors = SortedMap(trustAnchors.all.toSeq: _*)
 }
