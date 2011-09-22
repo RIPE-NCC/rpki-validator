@@ -37,11 +37,12 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import java.net.InetSocketAddress
 import grizzled.slf4j.Logger
 import org.jboss.netty.buffer.ChannelBuffer
-import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
 
 object RTRServer {
-  val logger = Logger[this.type]
+  final val ProtocolVersion = 0
   val Port = 8282
+  
+  val logger = Logger[this.type]
 
   var bootstrap: ServerBootstrap = _
 
@@ -49,43 +50,66 @@ object RTRServer {
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool(),
       Executors.newCachedThreadPool()))
+    
+    registerShutdownHook()
 
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       override def getPipeline: ChannelPipeline = {
-        Channels.pipeline(
-          new LengthFieldBasedFrameDecoder(
-            /*maxFrameLength*/ 4096,
-            /*lengthFieldOffset*/ 4,
-            /*lengthFieldLength*/ 4,
-            /*lengthAdjustment*/ -8,
-            /*initialBytesToStrip*/ 0),
-          new RTRServerHandler)
+        Channels.pipeline(new PduEncoder, new PduDecoder, new RTRServerHandler)
       }
     })
     bootstrap.setOption("child.keepAlive", true)
-    bootstrap.bind(new InetSocketAddress(Port))
+    val listenAddress = new InetSocketAddress(Port)
+    bootstrap.bind(listenAddress)
+    
+    logger.info("RTR server listening on "+ listenAddress.toString)
+    logger.trace("RTR tracing enabled")
+  }
+
+  def registerShutdownHook() {
+    Runtime.getRuntime.addShutdownHook(new Thread {
+      override def run() {
+        shutdownServer()
+        logger.info("RTR server stopped")
+      }
+    })
+  }
+  
+  private def shutdownServer() {
+    // TODO graceful: close all open channels asynchronously
+    bootstrap.getFactory().releaseExternalResources()
   }
 }
 
-class RTRServerHandler extends SimpleChannelHandler {
+class RTRServerHandler extends SimpleChannelUpstreamHandler {
   val logger = Logger[this.type]
+
+  override def channelConnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
+    logger.trace("Channel connected: "+ context.getName())
+  }
+  
+  override def channelDisconnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
+    logger.trace("Channel disconnected: "+ context.getName())
+  }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
     import org.jboss.netty.buffer.ChannelBuffers
-    logger.warn("RTR request received from " + event.getRemoteAddress().toString())
 
-    val responsePduBytes = new ErrorPdu(ErrorPdus.NoDataAvailable).asByteArray
+    if (logger.isTraceEnabled) {
+      val clientAddr = event.getRemoteAddress().asInstanceOf[InetSocketAddress]
+      logger.trace("RTR request received from " + clientAddr.getAddress.toString)
+    }
 
-    val channel = event.getChannel()
-    val buffer = ChannelBuffers.buffer(responsePduBytes.length)
-    buffer.writeBytes(responsePduBytes)
+    // decode and process
     
-    channel.write(buffer)
-    logger.warn("Responded: " + responsePduBytes.length + " bytes")
+    // respond
+    val responsePdu = new ErrorPdu(ErrorPdus.NoDataAvailable)
+    event.getChannel().write(responsePdu)
   }
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {
     // TODO maybe send 'no data available' PDU
-    logger.warn("Received exception: " + event.getCause().getMessage())
+    logger.warn("Exception: " + event.getCause().getMessage())
+    logger.debug("", event.getCause())
   }
 }

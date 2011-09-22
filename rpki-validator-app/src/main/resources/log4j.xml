@@ -49,11 +49,11 @@
 
 
     <logger name="net.ripe">
-        <level value="INFO" />
+        <level value="TRACE" />
     </logger>
 
     <root>
-        <priority value="INFO" />
+        <priority value="TRACE" />
         <appender-ref ref="CONSOLE" />
         <appender-ref ref="FILE" />
     </root>

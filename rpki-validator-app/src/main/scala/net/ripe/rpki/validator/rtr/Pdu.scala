@@ -34,15 +34,23 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.nio.charset.Charset
 
-trait PduWriter {
-  def asByteArray: Array[Byte]
-  def writeTo(dos: DataOutputStream): Unit = dos.write(asByteArray)
-}
-
-abstract class Pdu extends PduWriter {
-  final val protocolVersion: Byte = 0
+abstract class Pdu {
+  val protocolVersion: Byte = RTRServer.ProtocolVersion
   val pduType: Byte
   val length: Int
+
+  def asByteArray: Array[Byte]
+  def writeTo(dos: DataOutputStream) = dos.write(asByteArray)
+}
+
+case class PduHeader(protocolVersion:Byte, pduType:Byte, errorCode:Short, length:Int)
+
+case class UnknownPdu(header: PduHeader, content: Array[Byte]) extends Pdu {
+  override val protocolVersion = header.protocolVersion
+  override val pduType = header.pduType
+  override val length = header.length
+  
+  override def asByteArray = Array[Byte]()  
 }
 
 case class ErrorPdu(errorCode: Int, causingPdu: Option[Pdu] = None, errorText: Option[String] = None) extends Pdu {
