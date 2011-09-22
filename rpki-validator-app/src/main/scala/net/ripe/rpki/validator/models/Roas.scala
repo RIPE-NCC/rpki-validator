@@ -65,7 +65,7 @@ object Roas extends Logging {
       }
 
       override def afterPrefetchSuccess(uri: URI, result: ValidationResult) {
-        info("Prefetched '" + uri + "'")
+        debug("Prefetched '" + uri + "'")
       }
 
       override def afterFetchFailure(uri: URI, result: ValidationResult) {
@@ -78,7 +78,7 @@ object Roas extends Logging {
             info("Fetched ROA '" + uri + "'")
             roas += roa
           case _ =>
-            info("Fetched '" + uri + "'")
+            debug("Fetched '" + uri + "'")
         }
       }
     });
