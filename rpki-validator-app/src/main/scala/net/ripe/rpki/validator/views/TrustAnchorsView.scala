@@ -45,7 +45,8 @@ class TrustAnchorsView(trustAnchors: TrustAnchors) extends View {
     <table class="zebra-striped">
       <thead>
         <th>#</th>
-        <th>Name</th>
+        <th>File name</th>
+        <th>Subject</th>
         <th>Expires in</th>
         <th>Location</th>
       </thead>
@@ -54,11 +55,17 @@ class TrustAnchorsView(trustAnchors: TrustAnchors) extends View {
           <tr>
             <td>{ index + 1 }</td>
             <td>{ name }</td>{
-              if (ta.isCompleted) {
-                <td>{ expiresIn(ta.get.getCertificate().getValidityPeriod().getNotValidAfter()) }</td>
-                <td>{ ta.get.getLocation() }</td>
-              } else {
-                <td colspan="2">Loading...</td>
+              ta.value match {
+                case Some(Left(exception)) =>
+                  <td colspan="3">{ exception.toString }</td>
+                case Some(Right(ta)) =>
+                  <td>{ ta.getCertificate().getSubject() }</td>
+                  <td>{ expiresIn(ta.getCertificate().getValidityPeriod().getNotValidAfter()) }</td>
+                  <td>{ ta.getLocation() }</td>
+                case None if ta.isExpired =>
+                  <td colspan="3" class="error">Timed out</td>
+                case None =>
+                  <td colspan="3" class="info">Loading...</td>
               }
             }
           </tr>

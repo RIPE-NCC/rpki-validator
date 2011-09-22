@@ -40,13 +40,7 @@ object Layouts {
         <meta charset="utf-8"/>
         <title>RPKI Validator - { view.title }</title>
         <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.3.0/bootstrap.css"/>
-        <style type="text/css">{
-          Unparsed("""
-      body {
-        padding-top: 60px;
-      }
-""")
-        }</style>
+        <link rel="stylesheet" href="/stylesheets/application.css"/>
       </head>
       <body>
         <div class="topbar">
