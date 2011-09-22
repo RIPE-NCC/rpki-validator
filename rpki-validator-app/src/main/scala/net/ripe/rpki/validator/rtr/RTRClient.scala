@@ -27,65 +27,68 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package rtr
-
-import org.jboss.netty.bootstrap.ServerBootstrap
+package net.ripe.rpki.validator.rtr
+import org.jboss.netty.bootstrap.ClientBootstrap
 import java.util.concurrent.Executors
 import org.jboss.netty.channel._
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
+import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory
 import java.net.InetSocketAddress
 import grizzled.slf4j.Logger
 import org.jboss.netty.buffer.ChannelBuffer
+import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
+import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
 
-object RTRServer {
-  val logger = Logger[this.type]
-  val Port = 8282
+class RTRClient(val port: Int) {
 
-  var bootstrap: ServerBootstrap = _
-
-  def startServer(): Unit = {
-    bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
-      Executors.newCachedThreadPool(),
-      Executors.newCachedThreadPool()))
+  def sendPdu(pduToSend: Pdu) {
+    val bootstrap: ClientBootstrap = new ClientBootstrap(
+      new NioClientSocketChannelFactory(
+        Executors.newCachedThreadPool(),
+        Executors.newCachedThreadPool()));
 
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       override def getPipeline: ChannelPipeline = {
         Channels.pipeline(
           new LengthFieldBasedFrameDecoder(
-            /*maxFrameLength*/ 4096,
-            /*lengthFieldOffset*/ 4,
-            /*lengthFieldLength*/ 4,
-            /*lengthAdjustment*/ -8,
-            /*initialBytesToStrip*/ 0),
-          new RTRServerHandler)
+          	/*maxFrameLength*/ 4096,
+          	/*lengthFieldOffset*/ 4,
+          	/*lengthFieldLength*/ 4,
+          	/*lengthAdjustment*/ -8,
+          	/*initialBytesToStrip*/ 0),
+          new RTRClientHandler(pduToSend))
       }
     })
-    bootstrap.setOption("child.keepAlive", true)
-    bootstrap.bind(new InetSocketAddress(Port))
+    var future = bootstrap.connect(new InetSocketAddress("localhost", port))
+    
+//    future.getChannel().getCloseFuture().awaitUninterruptibly()
+    
+//    bootstrap.releaseExternalResources()
   }
 }
 
-class RTRServerHandler extends SimpleChannelHandler {
+class RTRClientHandler(val pduToSend: Pdu) extends SimpleChannelUpstreamHandler {
+
   val logger = Logger[this.type]
 
+   override def channelConnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
+    var bytes = pduToSend.asByteArray;
+    var buffer = ChannelBuffers.buffer(bytes.length)
+    buffer.writeBytes(bytes)
+    event.getChannel().write(buffer)
+    logger.warn("connected")
+  }
+
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
-    import org.jboss.netty.buffer.ChannelBuffers
-    logger.warn("RTR request received from " + event.getRemoteAddress().toString())
-
-    val responsePduBytes = new ErrorPdu(ErrorPdus.NoDataAvailable).asByteArray
-
-    val channel = event.getChannel()
-    val buffer = ChannelBuffers.buffer(responsePduBytes.length)
-    buffer.writeBytes(responsePduBytes)
+    logger.warn("Got response: " + event.getMessage())
+    var buffer: ChannelBuffer = event.getMessage.asInstanceOf[ChannelBuffer];
+    buffer.array().foreach(b => println(b.toInt + " "))
     
-    channel.write(buffer)
-    logger.warn("Responded: " + responsePduBytes.length + " bytes")
   }
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {
     // TODO maybe send 'no data available' PDU
     logger.warn("Received exception: " + event.getCause().getMessage())
   }
+
 }

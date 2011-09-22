@@ -37,26 +37,36 @@ import java.net.InetAddress
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.matchers.ShouldMatchers._
+import java.io.PrintWriter
+import java.io.DataOutputStream
 
 @RunWith(classOf[JUnitRunner])
 class RTRServerTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers {
 
   override def beforeAll() = {
-	  RTRServer.startServer
+    RTRServer.startServer
   }
-  
+
   test("should connect") {
     val socket = new Socket("127.0.0.1", 8282)
     socket.isConnected() should equal(true)
     socket.close()
   }
-  
+
+  test("connect with RTRClient") {
+    val client = new RTRClient(8282)
+    client.sendPdu(new ErrorPdu(errorCode = 2))
+    Thread.sleep(1000)
+  }
+
   test("should return no data available") {
     val socket = new Socket("127.0.0.1", 8282)
-    val out = socket.getOutputStream()
-    out.write(123)
-    out.flush()
-    
+    val os = socket.getOutputStream()
+    val dos = new DataOutputStream(os)
+
+    dos.write(new ErrorPdu(errorCode = 2).asByteArray)
+    dos.flush()
+
     val in = socket.getInputStream()
     var bytes = Array[Byte]()
     in.read(bytes)
@@ -64,7 +74,5 @@ class RTRServerTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers 
 
     socket.close()
   }
-  
-  
-  
+
 }

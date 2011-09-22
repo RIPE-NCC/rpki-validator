@@ -34,9 +34,9 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.nio.charset.Charset
 
-
 trait PduWriter {
   def asByteArray: Array[Byte]
+  def writeTo(dos: DataOutputStream): Unit = dos.write(asByteArray)
 }
 
 abstract class Pdu extends PduWriter {
@@ -53,13 +53,11 @@ case class ErrorPdu(errorCode: Int, causingPdu: Option[Pdu] = None, errorText: O
     case None => 0
   }
 
-  val errorTextLength = errorText match {
-    case Some(text) => text.length()
-    case None => 0
-  }
+  val errorTextBytes: Array[Byte] = errorText.map(_.getBytes(Charset.forName("UTF-8"))).getOrElse(Array.empty[Byte])
+  val errorTextLength = errorTextBytes.length
 
   override val length = 8 + 4 + causingPduLength + 4 + errorTextLength
-  
+
   override def asByteArray = {
     val bos = new ByteArrayOutputStream
     val data = new DataOutputStream(bos)
@@ -72,16 +70,15 @@ case class ErrorPdu(errorCode: Int, causingPdu: Option[Pdu] = None, errorText: O
 
     // ErrorPdu specific content
     data.writeInt(causingPduLength)
-    if (causingPdu != None) 
-      data.write(causingPdu.get.asByteArray)
+    causingPdu foreach { _.writeTo(data) }
+
     data.writeInt(errorTextLength)
-    if (errorText != None) 
-      data.write(errorText.get.getBytes(Charset.forName("UTF-8")))
+    data.write(errorTextBytes)
 
     data.flush()
     bos.toByteArray()
   }
-  
+
 }
 
 object ErrorPdus {
