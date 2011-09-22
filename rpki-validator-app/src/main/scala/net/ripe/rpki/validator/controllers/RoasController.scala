@@ -30,19 +30,14 @@
 package net.ripe.rpki.validator
 package controllers
 
-import org.scalatra.ScalatraFilter
-import support.ControllerTestCase
-import models.TrustAnchors
+import org.scalatra.ScalatraKernel
+import models.Roas
+import views.RoasView
 
-class TrustAnchorControllersTest extends ControllerTestCase {
-  override def controller = new ControllerFilter with TrustAnchorsController {
-    override def trustAnchors = new TrustAnchors(Seq.empty)
-  }
+trait RoasController { this: ScalatraKernel =>
+  def roas: Roas
 
-  test("list trust anchors") {
-    get("/trust-anchors") {
-      response.status should equal(200)
-      result.isInstanceOf[views.TrustAnchorsView] should be(true)
-    }
+  get("/roas") {
+    new RoasView(roas)
   }
 }

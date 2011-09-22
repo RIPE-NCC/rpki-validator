@@ -43,7 +43,6 @@ import net.ripe.commons.certification.x509cert.X509CertificateUtil;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
 
 
 public class TrustAnchorExtractor {
@@ -69,7 +68,7 @@ public class TrustAnchorExtractor {
         String rsyncLocation = lines.remove(0);
         X509ResourceCertificate cert = getRemoteCertificate(rsyncLocation, talFile, rootCertificateOutputDir);
 
-        verifyTrustAnchor(StringUtils.join(lines.toArray()), cert);
+        verifyTrustAnchor(lines.remove(0), cert);
 
         return new CertificateRepositoryObjectValidationContext(URI.create(rsyncLocation), cert);
     }

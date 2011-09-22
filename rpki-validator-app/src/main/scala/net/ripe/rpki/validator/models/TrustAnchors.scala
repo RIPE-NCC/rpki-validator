@@ -35,18 +35,25 @@ import net.ripe.certification.validator.util.TrustAnchorExtractor
 import scala.collection.JavaConverters._
 import grizzled.slf4j.Logging
 import akka.dispatch.Future
+import net.ripe.commons.certification.x509cert.X509ResourceCertificate
+import java.net.URI
 
-class TrustAnchors(val all: Map[String, Future[CertificateRepositoryObjectValidationContext]]) {
+case class TrustAnchor(name: String, prefetchUri: Option[URI], certificate: Future[CertificateRepositoryObjectValidationContext])
+
+class TrustAnchors(val all: Seq[TrustAnchor]) {
 
 }
 object TrustAnchors extends Logging {
   def load(files: Seq[File], outputDirectory: String): TrustAnchors = {
     info("Loading trust anchors...")
-    val trustAnchors = for (file <- files) yield file.getName() -> Future({
-      val ta = new TrustAnchorExtractor().extractTA(file, outputDirectory)
-      info("Loaded trust anchor from location " + ta.getLocation())
-      ta
-    }, timeout = 60 * 60 * 1000)
-    new TrustAnchors(trustAnchors.toMap)
+    val trustAnchors = for (file <- files) yield {
+      val lines = io.Source.fromFile(file).getLines.toIndexedSeq
+      TrustAnchor(file.getName, lines.lift(2).map(URI.create(_)), Future({
+        val ta = new TrustAnchorExtractor().extractTA(file, outputDirectory)
+        info("Loaded trust anchor from location " + ta.getLocation())
+        ta
+      }, timeout = 60 * 60 * 1000))
+    }
+    new TrustAnchors(trustAnchors)
   }
 }

@@ -37,11 +37,15 @@ case object HomeTab extends Tab {
   def text = "Home"
   def url = "/"
 }
+case object RoasTab extends Tab {
+  def text = "ROAs"
+  def url = "/roas"
+}
 case object TrustAnchorsTab extends Tab {
   def text = "Trust Anchors"
   def url = "/trust-anchors"
 }
 
 object Tabs {
-  def all = Seq(HomeTab, TrustAnchorsTab)
+  def all = Seq(HomeTab, RoasTab, TrustAnchorsTab)
 }

@@ -28,21 +28,48 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package controllers
+package views
 
-import org.scalatra.ScalatraFilter
-import support.ControllerTestCase
-import models.TrustAnchors
+import scala.collection.JavaConverters._
+import scala.xml._
+import models.Roas
+import akka.dispatch.Future
+import net.ripe.commons.certification.cms.roa.RoaCms
 
-class TrustAnchorControllersTest extends ControllerTestCase {
-  override def controller = new ControllerFilter with TrustAnchorsController {
-    override def trustAnchors = new TrustAnchors(Seq.empty)
+class RoasView(roas: Roas) extends View {
+  def title = Text("ROAs")
+  def tab = RoasTab
+  def body = {
+    <table>
+      <thead>
+        <th>Trust Anchor</th><th>ASN</th><th>Prefix</th><th></th>
+      </thead>
+      <tbody>{
+        for ((name, roas) <- roas.all; row <- makeRows(name, roas)) yield {
+          <tr>{ row }</tr>
+        }
+      }</tbody>
+    </table>
   }
 
-  test("list trust anchors") {
-    get("/trust-anchors") {
-      response.status should equal(200)
-      result.isInstanceOf[views.TrustAnchorsView] should be(true)
+  private def makeRows(name: String, roas: Future[Seq[RoaCms]]): Seq[Seq[Node]] = {
+    roas.value match {
+      case Some(Left(exception)) =>
+        Seq(<td>{ name }</td>
+            <td colspan="3">{ exception.toString }</td>)
+      case Some(Right(roas)) =>
+        for (roa <- roas; prefix <- roa.getPrefixes().asScala) yield {
+          <td>{ name }</td>
+          <td>{ roa.getAsn() }</td>
+          <td>{ prefix.getPrefix() }</td>
+          <td>{ prefix.getEffectiveMaximumLength() } </td>
+        }
+      case None if roas.isExpired =>
+        Seq(<td>{ name }</td>
+            <td colspan="3" class="error">Timed out</td>)
+      case None =>
+        Seq(<td>{ name }</td>
+            <td colspan="3" class="info">Loading...</td>)
     }
   }
 }

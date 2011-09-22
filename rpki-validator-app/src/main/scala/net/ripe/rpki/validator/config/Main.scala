@@ -38,15 +38,17 @@ import scala.collection.JavaConverters._
 import net.ripe.certification.validator.util.TrustAnchorExtractor
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.validator.rtr.RTRServer
-import models.TrustAnchors
+import models._
 
 object Main {
   val logger = Logger[this.type]
 
   var trustAnchors: TrustAnchors = null
+  var roas: Roas = null
 
   def main(args: Array[String]) {
     trustAnchors = loadTrustAnchors()
+    roas = Roas.fetch(trustAnchors)
     runServer()
     RTRServer.startServer()
   }
@@ -69,6 +71,7 @@ object Main {
     root.addServlet(defaultServletHolder, "/*")
     root.addFilter(new FilterHolder(new WebFilter {
       def trustAnchors = Main.trustAnchors
+      def roas = Main.roas
     }), "/*", FilterMapping.ALL)
     server.setHandler(root)
     server

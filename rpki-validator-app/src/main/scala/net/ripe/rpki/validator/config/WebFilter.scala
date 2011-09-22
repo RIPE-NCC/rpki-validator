@@ -38,6 +38,7 @@ import views.Layouts
 
 abstract class WebFilter extends ScalatraFilter
   with ApplicationController
+  with RoasController
   with TrustAnchorsController {
 
   private def renderView: RenderPipeline = {

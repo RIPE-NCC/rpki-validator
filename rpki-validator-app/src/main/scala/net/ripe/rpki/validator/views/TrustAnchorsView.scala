@@ -51,18 +51,18 @@ class TrustAnchorsView(trustAnchors: TrustAnchors) extends View {
         <th>Location</th>
       </thead>
       <tbody>{
-        for (((name, ta), index) <- sortedTrustAnchors.zipWithIndex) yield {
+        for ((ta, index) <- sortedTrustAnchors.zipWithIndex) yield {
           <tr>
             <td>{ index + 1 }</td>
-            <td>{ name }</td>{
-              ta.value match {
+            <td>{ ta.name }</td>{
+              ta.certificate.value match {
                 case Some(Left(exception)) =>
                   <td colspan="3">{ exception.toString }</td>
                 case Some(Right(ta)) =>
                   <td>{ ta.getCertificate().getSubject() }</td>
                   <td>{ expiresIn(ta.getCertificate().getValidityPeriod().getNotValidAfter()) }</td>
                   <td>{ ta.getLocation() }</td>
-                case None if ta.isExpired =>
+                case None if ta.certificate.isExpired =>
                   <td colspan="3" class="error">Timed out</td>
                 case None =>
                   <td colspan="3" class="info">Loading...</td>
@@ -82,5 +82,5 @@ class TrustAnchorsView(trustAnchors: TrustAnchors) extends View {
     }
   }
   private val now = new DateTime
-  private def sortedTrustAnchors = SortedMap(trustAnchors.all.toSeq: _*)
+  private def sortedTrustAnchors = trustAnchors.all.sortBy(_.name)
 }

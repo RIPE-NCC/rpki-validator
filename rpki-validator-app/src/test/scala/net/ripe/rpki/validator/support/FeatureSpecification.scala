@@ -42,5 +42,6 @@ import org.scalatra.test.scalatest.ScalatraFeatureSpec
 abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatchers with MockitoSugar {
   addFilter(new WebFilter {
     override lazy val trustAnchors = sys.error("TBD")
+    override lazy val roas = sys.error("TBD")
   }, "/*")
 }
