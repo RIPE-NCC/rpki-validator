@@ -79,13 +79,13 @@ object RTRServer {
   def registerShutdownHook() {
     Runtime.getRuntime.addShutdownHook(new Thread {
       override def run() {
-        shutdownServer()
+        stopServer()
         logger.info("RTR server stopped")
       }
     })
   }
 
-  private def shutdownServer() {
+  def stopServer() {
     // TODO graceful: close all open channels asynchronously
     bootstrap.getFactory().releaseExternalResources()
   }
@@ -111,10 +111,18 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     // decode and process
+    val requestPdu: Pdu = event.getMessage().asInstanceOf[Pdu]
+    var responsePdu: Pdu = processRequest(requestPdu)
 
     // respond
-    val responsePdu = new ErrorPdu(ErrorPdus.NoDataAvailable)
     event.getChannel().write(responsePdu)
+  }
+
+  private def processRequest(requestPdu: Pdu) = {
+    requestPdu match {
+      case requestPdu: ResetQueryPdu => new ErrorPdu(ErrorPdus.NoDataAvailable, None, None)
+      case _ => new ErrorPdu(ErrorPdus.InvalidRequest, None, None)
+    }
   }
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {

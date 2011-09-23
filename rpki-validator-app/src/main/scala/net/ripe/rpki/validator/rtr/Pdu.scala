@@ -44,18 +44,44 @@ abstract class Pdu {
   def writeTo(dos: DataOutputStream) = dos.write(asByteArray)
 }
 
-case class PduHeader(protocolVersion:Byte, pduType:Byte, errorCode:Short, length:Int)
+case class PduHeader(protocolVersion: Byte, pduType: Byte, errorCode: Short, length: Int)
 
 case class UnknownPdu(header: PduHeader, content: Array[Byte]) extends Pdu {
   override val protocolVersion = header.protocolVersion
   override val pduType = header.pduType
   override val length = header.length
+
+  override def asByteArray = Array[Byte]()
+}
+
+/**
+ * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.3
+ */
+case class ResetQueryPdu() extends Pdu {
   
-  override def asByteArray = Array[Byte]()  
+  override val protocolVersion: Byte = 0
+  override val pduType = PduTypes.ResetQuery
+  override val length = 8
+
+  val headerShort = 0
+  
+  override def asByteArray = {
+    val bos = new ByteArrayOutputStream
+    val data = new DataOutputStream(bos)
+
+    // header
+    data.writeByte(protocolVersion)
+    data.writeByte(pduType)
+    data.writeShort(headerShort)
+    data.writeInt(length)
+
+    data.flush()
+    bos.toByteArray()
+  }
 }
 
 case class ErrorPdu(errorCode: Int, causingPdu: Option[Pdu] = None, errorText: Option[String] = None) extends Pdu {
-  final override val pduType: Byte = 10
+  final override val pduType = PduTypes.Error
 
   val causingPduLength = causingPdu match {
     case Some(pdu) => pdu.length
@@ -87,19 +113,52 @@ case class ErrorPdu(errorCode: Int, causingPdu: Option[Pdu] = None, errorText: O
     data.flush()
     bos.toByteArray()
   }
+}
 
+object ErrorPdu {
+  
+  val errorCodeOffset = 2
+  
+  def parse(buffer: ChannelBuffer): ErrorPdu = {
+    val errorCode: Int = buffer.getShort(errorCodeOffset)
+    
+    // TODO: Actual parsing
+    new ErrorPdu(errorCode)
+  }
+  
 }
 
 object ErrorPdus {
+  val InvalidRequest = 3
   val NoDataAvailable = 2
 }
 
+object PduTypes {
+  val ResetQuery: Byte = 2
+  val Error: Byte = 10
+}
+
+
 object PduFactory {
-  
-  def fromByteArray(buffer: ChannelBuffer): Pdu = {
-    
-    new ErrorPdu(ErrorPdus.NoDataAvailable)
+
+  object FieldOffset {
+    val ProtocolVersion = 0
+    val PduType = 1
+    val Lenght = 4
+    val Message = 8
   }
   
+  def fromByteArray(buffer: ChannelBuffer): Pdu = {
+
+    // TODO: Actual parsing...
+    val pduType = buffer.getByte(FieldOffset.PduType)
+    pduType match {
+      case PduTypes.Error => ErrorPdu.parse(buffer)
+      case PduTypes.ResetQuery => new ResetQueryPdu
+      case _ => null
+    }
+    
+  }
+
 }
 

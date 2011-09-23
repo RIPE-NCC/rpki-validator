@@ -41,21 +41,16 @@ import java.io.PrintWriter
 import java.io.DataOutputStream
 
 @RunWith(classOf[JUnitRunner])
-class RTRServerTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers {
+class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers {
 
   override def beforeAll() = {
     RTRServer.startServer
   }
-
-  ignore("should connect") {
-    val socket = new Socket("127.0.0.1", 8282)
-    socket.isConnected() should equal(true)
-    socket.close()
-  }
-
-  test("connect with RTRClient") {
+  
+  // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.4
+  test("Server should answer with No Data Available Error Pdu when RTRClient sends Serial Query -- and there is no data") {
     val client = new RTRClient(8282)
-    var response = client.sendPdu(new ErrorPdu(errorCode = 2))
+    var response = client.sendPdu(new ResetQueryPdu)
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
@@ -64,20 +59,16 @@ class RTRServerTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers 
     client.close
   }
 
-  ignore("should return no data available") {
-    val socket = new Socket("127.0.0.1", 8282)
-    val os = socket.getOutputStream()
-    val dos = new DataOutputStream(os)
+  // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
+  test("Server should answer with Invalid Reques Error Pdu when RTRClient sends nonsense") {
+    val client = new RTRClient(8282)
+    var response = client.sendPdu(new ErrorPdu(errorCode = 2))
 
-    dos.write(new ErrorPdu(errorCode = 2).asByteArray)
-    dos.flush()
-
-    val in = socket.getInputStream()
-    var bytes = Array[Byte]()
-    in.read(bytes)
-    bytes.foreach(b => println(b.toString))
-
-    socket.close()
+    assert(response.isInstanceOf[ErrorPdu])
+    val errorPdu = response.asInstanceOf[ErrorPdu]
+    errorPdu.errorCode should equal(ErrorPdus.InvalidRequest)
+    
+    client.close
   }
 
 }
