@@ -46,25 +46,34 @@ abstract class Pdu {
 
 case class PduHeader(protocolVersion: Byte, pduType: Byte, errorCode: Short, length: Int)
 
-case class UnknownPdu(header: PduHeader, content: Array[Byte]) extends Pdu {
-  override val protocolVersion = header.protocolVersion
-  override val pduType = header.pduType
-  override val length = header.length
+case class UnknownPdu(content: Array[Byte]) extends Pdu {
 
-  override def asByteArray = Array[Byte]()
+  override val protocolVersion: Byte = content(0)
+  override val pduType = content(1)
+  override val length = content.length
+
+  override def asByteArray = content
+}
+
+case class UnsupportedProtocolPdu(content: Array[Byte]) extends Pdu {
+  override val protocolVersion: Byte = content(0)
+  override val pduType = content(1)
+  override val length = content.length
+
+  override def asByteArray = content
 }
 
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.3
  */
 case class ResetQueryPdu() extends Pdu {
-  
+
   override val protocolVersion: Byte = 0
   override val pduType = PduTypes.ResetQuery
   override val length = 8
 
   val headerShort = 0
-  
+
   override def asByteArray = {
     val bos = new ByteArrayOutputStream
     val data = new DataOutputStream(bos)
@@ -116,21 +125,27 @@ case class ErrorPdu(errorCode: Int, causingPdu: Option[Pdu] = None, errorText: O
 }
 
 object ErrorPdu {
-  
+
   val errorCodeOffset = 2
-  
+
   def parse(buffer: ChannelBuffer): ErrorPdu = {
     val errorCode: Int = buffer.getShort(errorCodeOffset)
-    
+
     // TODO: Actual parsing
     new ErrorPdu(errorCode)
   }
-  
+
 }
 
 object ErrorPdus {
-  val InvalidRequest = 3
+  val CorruptData = 0
+  val InternalError = 1
   val NoDataAvailable = 2
+  val InvalidRequest = 3
+  val UnsupportedProtocolVersion = 4
+  val UnsupportedPduType = 5
+  val WithdrawalOfUnkownRecord = 6
+  val DuplicateAnnouncementReceived = 7
 }
 
 object PduTypes {
@@ -138,8 +153,9 @@ object PduTypes {
   val Error: Byte = 10
 }
 
-
 object PduFactory {
+
+  val SupportedProtocol: Byte = 0
 
   object FieldOffset {
     val ProtocolVersion = 0
@@ -147,17 +163,24 @@ object PduFactory {
     val Lenght = 4
     val Message = 8
   }
-  
+
   def fromByteArray(buffer: ChannelBuffer): Pdu = {
 
-    // TODO: Actual parsing...
-    val pduType = buffer.getByte(FieldOffset.PduType)
-    pduType match {
-      case PduTypes.Error => ErrorPdu.parse(buffer)
-      case PduTypes.ResetQuery => new ResetQueryPdu
-      case _ => null
+    var parsedPdu: Pdu = null
+    
+    val protocol = buffer.getByte(FieldOffset.ProtocolVersion)
+    if (protocol == SupportedProtocol) {
+      // TODO: Actual parsing...
+      val pduType = buffer.getByte(FieldOffset.PduType) match {
+        case PduTypes.Error => parsedPdu = ErrorPdu.parse(buffer)
+        case PduTypes.ResetQuery => parsedPdu = new ResetQueryPdu
+        case _ => parsedPdu = new UnknownPdu(buffer.array)
+      }
+    } else {
+      parsedPdu = new UnsupportedProtocolPdu(buffer.array)
     }
     
+    parsedPdu
   }
 
 }

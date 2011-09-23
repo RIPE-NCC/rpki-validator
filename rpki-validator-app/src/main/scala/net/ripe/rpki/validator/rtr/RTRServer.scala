@@ -38,6 +38,7 @@ import java.net.InetSocketAddress
 import grizzled.slf4j.Logger
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
+import org.jboss.netty.handler.codec.frame.CorruptedFrameException
 
 object RTRServer {
   final val ProtocolVersion = 0
@@ -92,15 +93,8 @@ object RTRServer {
 }
 
 class RTRServerHandler extends SimpleChannelUpstreamHandler {
+
   val logger = Logger[this.type]
-
-  override def channelConnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
-    logger.trace("Channel connected: " + context.getName())
-  }
-
-  override def channelDisconnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
-    logger.trace("Channel disconnected: " + context.getName())
-  }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
     import org.jboss.netty.buffer.ChannelBuffers
@@ -121,13 +115,24 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
   private def processRequest(requestPdu: Pdu) = {
     requestPdu match {
       case requestPdu: ResetQueryPdu => new ErrorPdu(ErrorPdus.NoDataAvailable, None, None)
+      case requestPdu: UnknownPdu => new ErrorPdu(ErrorPdus.UnsupportedPduType, None, None)
+      case requestPdu: UnsupportedProtocolPdu => new ErrorPdu(ErrorPdus.UnsupportedProtocolVersion, None, None)
       case _ => new ErrorPdu(ErrorPdus.InvalidRequest, None, None)
     }
   }
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {
-    // TODO maybe send 'no data available' PDU
+    // Can anyone think of a nice way to test this? Without tons of mocking and overkill?
+    // Otherwise I will assume the code below is doing too little to be able to contain bugs ;)
     logger.warn("Exception: " + event.getCause().getMessage())
     logger.debug("", event.getCause())
+
+    var errorPdu: Pdu = null
+    val cause = event.getCause() match {
+      case cause: CorruptedFrameException => errorPdu = new ErrorPdu(ErrorPdus.CorruptData, None, None)
+      case _ => errorPdu = new ErrorPdu(ErrorPdus.InternalError, None, None)
+    }
+
+    event.getChannel().write(errorPdu)
   }
 }

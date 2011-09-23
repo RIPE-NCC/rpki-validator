@@ -46,7 +46,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with ShouldMatch
   override def beforeAll() = {
     RTRServer.startServer
   }
-  
+
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.4
   test("Server should answer with No Data Available Error Pdu when RTRClient sends Serial Query -- and there is no data") {
     val client = new RTRClient(8282)
@@ -55,19 +55,45 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with ShouldMatch
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdus.NoDataAvailable)
-    
+
     client.close
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
   test("Server should answer with Invalid Reques Error Pdu when RTRClient sends nonsense") {
     val client = new RTRClient(8282)
-    var response = client.sendPdu(new ErrorPdu(errorCode = 2))
+    var response = client.sendPdu(new ErrorPdu(errorCode = 2, None, None))
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdus.InvalidRequest)
-    
+
+    client.close
+  }
+
+  // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
+  test("Server should answer with '5 - Unsupported PDU Type' when unsupported Pdu is sent") {
+
+    val client = new RTRClient(8282)
+    val response = client.sendPdu(new UnknownPdu(Array[Byte](0x0, 0x7f, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8)))
+
+    assert(response.isInstanceOf[ErrorPdu])
+    val errorPdu = response.asInstanceOf[ErrorPdu]
+    errorPdu.errorCode should equal(ErrorPdus.UnsupportedPduType)
+
+    client.close
+  }
+
+  // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
+  test("Server should answer with '4: Unsupported Protocol Version' when unsupported protocol is sent") {
+
+    val client = new RTRClient(8282)
+    val response = client.sendPdu(new UnknownPdu(Array[Byte](0x1, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8)))
+
+    assert(response.isInstanceOf[ErrorPdu])
+    val errorPdu = response.asInstanceOf[ErrorPdu]
+    errorPdu.errorCode should equal(ErrorPdus.UnsupportedProtocolVersion)
+
     client.close
   }
 

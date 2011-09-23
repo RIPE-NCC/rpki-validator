@@ -37,44 +37,6 @@ import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder
 
-//class PduDecoder extends FrameDecoder {
-//  val logger = Logger[this.type]
-//  val PduHeaderSize = 8
-//
-//  object FieldOffset {
-//    val ProtocolVersion = 0
-//    val PduType = 1
-//    val ErrorCode = 2
-//    val Lenght = 4
-//    val Message = 8
-//  }
-//  
-//  override def decode(context:ChannelHandlerContext, channel:Channel, buffer:ChannelBuffer): Object = {
-//    if (buffer.readableBytes() < PduHeaderSize) {
-//      logger.trace("waiting for PDU header")
-//      null		// wait first for the header
-//    } else {
-//      val header = PduHeader(
-//          buffer.getByte(FieldOffset.ProtocolVersion),
-//          buffer.getByte(FieldOffset.PduType),
-//          buffer.getShort(FieldOffset.ErrorCode),
-//          buffer.getInt(FieldOffset.Lenght))
-//      logger.trace("PDU header received: pduType %d, errorCode=%d, lenght=%d".format(header.pduType, header.errorCode, header.length))
-//      if (buffer.readableBytes() < header.length) {
-//        logger.trace("waiting for PDU message")
-//        null	// wait for the rest of the frame
-//      } else {
-//        // TODO parsing to the correct PDU type
-//        val content = new Array[Byte](header.length)
-//        buffer.getBytes(FieldOffset.Message, content, 0, header.length - PduHeaderSize)
-//        buffer.skipBytes(header.length)
-//        
-//        UnknownPdu(header, content)
-//      }
-//    }
-//  }
-//}
-
 class PduDecoder extends OneToOneDecoder {
 
   val logger = Logger[this.type]
