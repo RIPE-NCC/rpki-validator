@@ -1,4 +1,5 @@
 .cache
+.scala_dependencies
 log
 target
 tmp
