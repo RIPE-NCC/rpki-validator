@@ -30,14 +30,43 @@
 package net.ripe.rpki.validator
 package controllers
 
-import org.scalatra.ScalatraKernel
+import scala.collection.JavaConverters._
+import org.joda.time.DateTimeZone
+import org.joda.time.format.DateTimeFormat
 import models.Roas
 import views.RoasView
 
-trait RoasController { this: ScalatraKernel =>
+trait RoasController extends ApplicationController {
   def roas: Roas
 
   get("/roas") {
     new RoasView(roas)
+  }
+  get("/roas.csv") {
+    val dateFormatter = DateTimeFormat.forPattern("YYYY-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC)
+    val Header = "URI,ASN,IP Prefix,Max Length,Not Before,Not After\n"
+    val RowFormat = "\"%s\",%s,%s,%s,%s,%s\n"
+
+    contentType = "text/csv"
+    response.addHeader("Content-Disposition", "attachment; filename=roas.csv")
+    response.addHeader("Pragma", "public")
+    response.addHeader("Cache-Control", "no-cache")
+
+    val writer = response.getWriter()
+    writer.print(Header)
+    for {
+      (_, validatedRoas) <- roas.all if validatedRoas.fulfilled
+      validatedRoa <- validatedRoas.get
+      roa = validatedRoa.roa
+      prefix <- roa.getPrefixes().asScala
+    } {
+      writer.print(RowFormat.format(
+        validatedRoa.uri,
+        roa.getAsn(),
+        prefix.getPrefix(),
+        Option(prefix.getMaximumLength()).getOrElse(""),
+        dateFormatter.print(roa.getNotValidBefore()),
+        dateFormatter.print(roa.getNotValidAfter())))
+    }
   }
 }
