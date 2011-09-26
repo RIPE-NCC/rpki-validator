@@ -27,38 +27,24 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.models
+package net.ripe.certification.validator.util;
 
-import scala.collection.JavaConverters._
-import java.io.File
-import java.net.URI
-import grizzled.slf4j.Logging
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate
-import net.ripe.certification.validator.util.TrustAnchorExtractor
-import net.ripe.certification.validator.util.TrustAnchorLocator
-import scalaz.concurrent.Promise
+import java.io.File;
+import java.util.Collection;
 
-class TrustAnchor(val locator: TrustAnchorLocator, val certificate: Promise[CertificateRepositoryObjectValidationContext]) {
-  def name: String = locator.getCaName()
-  def prefetchUris: Seq[URI] = locator.getPrefetchUris().asScala
-}
+import org.apache.commons.io.FileUtils;
+import org.junit.Test;
 
-class TrustAnchors(val all: Seq[TrustAnchor])
 
-object TrustAnchors extends Logging {
-  def load(files: Seq[File], outputDirectory: String): TrustAnchors = {
-    info("Loading trust anchors...")
-    val trustAnchors = for (file <- files) yield {
-      val tal = TrustAnchorLocator.fromFile(file)
-      new TrustAnchor(
-        locator = tal,
-        certificate = Promise {
-          val ta = new TrustAnchorExtractor().extractTA(tal, outputDirectory)
-          info("Loaded trust anchor from location " + ta.getLocation())
-          ta
-        })
+public class TrustAnchorLocatorTest {
+
+    @Test
+    public void should_load_trust_anchor_files() {
+        @SuppressWarnings("unchecked")
+        Collection<File> tals = (Collection<File>) FileUtils.listFiles(new File("src/main/release/tal"), new String[] {"tal"}, false);
+        for (File file : tals) {
+            TrustAnchorLocator.fromFile(file);
+        }
     }
-    new TrustAnchors(trustAnchors)
-  }
+
 }

@@ -35,6 +35,8 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.ripe.certification.validator.util.TrustAnchorLocator;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -64,7 +66,7 @@ public class CommandLineOptions {
 
     private File inputFile;
     private File outputDir;
-    private List<File> trustAnchorFiles = new ArrayList<File>();
+    private List<TrustAnchorLocator> trustAnchorLocators = new ArrayList<TrustAnchorLocator>();
     private List<URI> prefetchUris = new ArrayList<URI>();
     private File roaExportFile;
 
@@ -167,9 +169,11 @@ public class CommandLineOptions {
     }
 
     private void parseTrustAnchorFile(CommandLine commandLine) {
-        trustAnchorFiles = new ArrayList<File>();
+        trustAnchorLocators = new ArrayList<TrustAnchorLocator>();
         for (String optionValue : commandLine.getOptionValues(TAL)) {
-            trustAnchorFiles.add(new File(optionValue));
+            TrustAnchorLocator tal = TrustAnchorLocator.fromFile(new File(optionValue));
+            trustAnchorLocators.add(tal);
+            prefetchUris.addAll(tal.getPrefetchUris());
         }
     }
 
@@ -216,8 +220,8 @@ public class CommandLineOptions {
         return inputFile;
     }
 
-    public List<File> getTrustAnchorFiles() {
-        return trustAnchorFiles;
+    public List<TrustAnchorLocator> getTrustAnchorFiles() {
+        return trustAnchorLocators;
     }
 
     public boolean isVerboseEnabled() {

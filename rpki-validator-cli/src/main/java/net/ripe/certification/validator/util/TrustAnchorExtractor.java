@@ -30,10 +30,7 @@
 package net.ripe.certification.validator.util;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import net.ripe.certification.validator.cli.CommandLineOptions;
@@ -42,61 +39,44 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 import net.ripe.commons.certification.x509cert.X509CertificateUtil;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
 
-import org.apache.commons.io.FileUtils;
-
 
 public class TrustAnchorExtractor {
 
-
     public List<CertificateRepositoryObjectValidationContext> extractTAS(CommandLineOptions options) {
-        List<File> trustAnchorFiles = options.getTrustAnchorFiles();
-        return extractTAS(trustAnchorFiles, options.getOutputDir().getAbsolutePath());
+        return extractTAS(options.getTrustAnchorFiles(), options.getOutputDir().getAbsolutePath());
     }
 
-    public List<CertificateRepositoryObjectValidationContext> extractTAS(List<File> trustAnchorFiles, String rootCertificateOutputDir) {
+    public List<CertificateRepositoryObjectValidationContext> extractTAS(List<TrustAnchorLocator> list, String rootCertificateOutputDir) {
         List<CertificateRepositoryObjectValidationContext> tas = new ArrayList<CertificateRepositoryObjectValidationContext>();
-        for (File talFile : trustAnchorFiles) {
-            tas.add(extractTA(talFile, rootCertificateOutputDir));
+        for (TrustAnchorLocator tal : list) {
+            tas.add(extractTA(tal, rootCertificateOutputDir));
         }
         return tas;
     }
 
-    public CertificateRepositoryObjectValidationContext extractTA(File talFile, String rootCertificateOutputDir) {
-        String content = getContent(talFile);
-        List<String> lines = new ArrayList<String>(Arrays.asList(content.split("\n")));
+    public CertificateRepositoryObjectValidationContext extractTA(TrustAnchorLocator tal, String rootCertificateOutputDir) {
+        X509ResourceCertificate cert = getRemoteCertificate(tal, rootCertificateOutputDir);
 
-        String rsyncLocation = lines.remove(0);
-        X509ResourceCertificate cert = getRemoteCertificate(rsyncLocation, talFile, rootCertificateOutputDir);
+        verifyTrustAnchor(tal, cert);
 
-        verifyTrustAnchor(lines.remove(0), cert);
-
-        return new CertificateRepositoryObjectValidationContext(URI.create(rsyncLocation), cert);
+        return new CertificateRepositoryObjectValidationContext(tal.getCertificateLocation(), cert);
     }
 
-    private void verifyTrustAnchor(String join, X509ResourceCertificate resourceCertificate) {
+    private void verifyTrustAnchor(TrustAnchorLocator tal, X509ResourceCertificate resourceCertificate) {
         String encodedSubjectPublicKeyInfo;
         try {
             encodedSubjectPublicKeyInfo = X509CertificateUtil.getEncodedSubjectPublicKeyInfo(resourceCertificate.getCertificate());
         } catch (Exception e) {
             throw new TrustAnchorExtractorException("Problem parsing remote Trust Anchor certificate", e);
         }
-        if (!encodedSubjectPublicKeyInfo.equals(join)) {
+        if (!encodedSubjectPublicKeyInfo.equals(tal.getPublicKeyInfo())) {
             throw new TrustAnchorExtractorException("Remote Trust Anchor does not match public key mentioned in TAL");
         }
     }
 
-    // Extracted for unit testing
-    private String getContent(File talFile) {
-        try {
-            return FileUtils.readFileToString(talFile);
-        } catch (IOException e) {
-            throw new TrustAnchorExtractorException("Can not read tal file " + talFile.getAbsolutePath(), e);
-        }
-    }
-
-    private X509ResourceCertificate getRemoteCertificate(String rsyncLocation, File talFile, String rootCertificateOutputDir) {
+    private X509ResourceCertificate getRemoteCertificate(TrustAnchorLocator tal, String rootCertificateOutputDir) {
         Rsync rsync = new Rsync();
-        rsync.setSource(rsyncLocation);
+        rsync.setSource(tal.getCertificateLocation().toString());
 
         String targetDirectoryPath = rootCertificateOutputDir;
         File targetDirectory = new File(targetDirectoryPath);
@@ -104,7 +84,7 @@ public class TrustAnchorExtractor {
             targetDirectory.mkdirs();
         }
 
-        String dest = targetDirectoryPath + "/" + talFile.getName() + ".cer";
+        String dest = targetDirectoryPath + "/" + tal.getFile().getName() + ".cer";
         rsync.setDestination(dest);
         rsync.execute();
 

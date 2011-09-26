@@ -29,31 +29,28 @@
  */
 package net.ripe.rpki.validator.daemon.service;
 
+import java.net.URI;
+import java.util.Arrays;
+import java.util.List;
+
 import net.ripe.certification.validator.commands.BottomUpCertificateRepositoryObjectValidator;
 import net.ripe.certification.validator.util.TrustAnchorExtractor;
+import net.ripe.certification.validator.util.TrustAnchorLocator;
 import net.ripe.commons.certification.cms.roa.RoaCms;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-
-import java.io.File;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
 
 public class BottomUpRoaValidationCommand {
 
     private static final URI OBJECT_TO_VALIDATE_FAKE_URI = URI.create("rsync://no/where");
 
-    public ValidationResult validate(RoaCms roaCms, File talFile) {
-        return new BottomUpCertificateRepositoryObjectValidator(getTrustAnchors(talFile), roaCms, OBJECT_TO_VALIDATE_FAKE_URI).validate();
+    public ValidationResult validate(RoaCms roaCms, TrustAnchorLocator tal) {
+        return new BottomUpCertificateRepositoryObjectValidator(getTrustAnchors(tal), roaCms, OBJECT_TO_VALIDATE_FAKE_URI).validate();
     }
 
-    List<CertificateRepositoryObjectValidationContext> getTrustAnchors(File talFile) {
-        List<File> talFiles = new ArrayList<File>();
-        talFiles.add(talFile);
-
+    List<CertificateRepositoryObjectValidationContext> getTrustAnchors(TrustAnchorLocator tal) {
         TrustAnchorExtractor trustAnchorExtractor = new TrustAnchorExtractor();
-        return trustAnchorExtractor.extractTAS(talFiles, "./validated-tas");
+        return Arrays.asList(trustAnchorExtractor.extractTA(tal, "./validated-tas"));
     }
 
 }

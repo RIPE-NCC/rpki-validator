@@ -53,12 +53,14 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.Validate;
+import org.apache.log4j.Logger;
 
 
 /**
  * Validates a complete repository, recursively, starting with the trust anchors.
  */
 public class TopDownCertificateRepositoryValidator {
+    private static final Logger LOG = Logger.getLogger(TopDownCertificateRepositoryValidator.class);
 
     static final String BASE_DIRECTORY_NAME = "rta";
 
@@ -112,24 +114,24 @@ public class TopDownCertificateRepositoryValidator {
         this.fetcher = createCertificateRepositoryObjectFetcher();
         this.topDownWalker = new TopDownWalker(fetcher);
     }
-    
+
     private CachingCertificateRepositoryObjectFetcher createCertificateRepositoryObjectFetcher() {
         RsyncCertificateRepositoryObjectFetcher rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(getUnvalidatedOutputDirectory()));
-        
+
         ValidatingCertificateRepositoryObjectFetcher validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
-        
+
         NotifyingCertificateRepositoryObjectFetcher notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
         notifyingFetcher.addCallback(new ObjectFetcherResultLogger());
         notifyingFetcher.addCallback(new ValidatedObjectWriter(new UriToFileMapper(getValidatedOutputDirectory())));
-        
+
         validationSummaryCollector = new ValidationSummaryCollector();
         notifyingFetcher.addCallback(validationSummaryCollector);
         if (roaExportEnabled) {
             notifyingFetcher.addCallback(roaExporterCallBack);
         }
-        
+
         CachingCertificateRepositoryObjectFetcher cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
-        
+
         validatingFetcher.setOuterMostDecorator(cachingFetcher);
         return cachingFetcher;
     }
@@ -167,17 +169,18 @@ public class TopDownCertificateRepositoryValidator {
     public void validate() {
         doPrefetching();
         processTrustAnchors();
-        
+
         if (roaExportEnabled) {
             roaExporterCallBack.writeCsvFile(roaExportFile);
         }
-        
+
         printSummary();
     }
 
 
     private void doPrefetching() {
         for (URI prefetchUri : prefetchUris) {
+            LOG.info("prefetching " + prefetchUri);
             ValidationResult validationResult = new ValidationResult();
             validationResult.setLocation(prefetchUri);
             fetcher.prefetch(prefetchUri, validationResult);
@@ -190,7 +193,7 @@ public class TopDownCertificateRepositoryValidator {
             topDownWalker.execute();
         }
     }
-    
+
     private void printSummary() {
         System.out.print(ValidationSummaryPrinter.getMessage(validationSummaryCollector)); //NOPMD - We want this summary without the usual LOG4J stuff..
     }

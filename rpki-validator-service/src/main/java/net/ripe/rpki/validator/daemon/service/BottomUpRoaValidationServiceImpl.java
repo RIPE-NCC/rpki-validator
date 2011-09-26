@@ -29,6 +29,7 @@
  */
 package net.ripe.rpki.validator.daemon.service;
 
+import net.ripe.certification.validator.util.TrustAnchorLocator;
 import net.ripe.commons.certification.cms.roa.RoaCms;
 import net.ripe.commons.certification.cms.roa.RoaCmsParser;
 import net.ripe.commons.certification.validation.ValidationResult;
@@ -60,7 +61,7 @@ public class BottomUpRoaValidationServiceImpl implements BottomUpRoaValidationSe
 
         File talFile = FileResourceUtil.findFileInPathOrConfigPath(talLocation);
 
-        ValidationResult validationResults = validationCommand.validate(roaCms, talFile);
+        ValidationResult validationResults = validationCommand.validate(roaCms, TrustAnchorLocator.fromFile(talFile));
         return new BottomUpRoaValidationResult(roaCms, validationResults);
     }
 

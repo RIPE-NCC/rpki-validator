@@ -29,18 +29,17 @@
  */
 package net.ripe.rpki.validator.daemon.service;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import net.ripe.certification.validator.util.TrustAnchorLocator;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.cms.manifest.ManifestCmsTest;
 import net.ripe.commons.certification.cms.roa.RoaCms;
 import net.ripe.commons.certification.cms.roa.RoaCmsObjectMother;
 import net.ripe.commons.certification.validation.ValidationResult;
+
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.File;
-
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 
 public class BottomUpRoaValidationServiceTest {
@@ -86,7 +85,7 @@ public class BottomUpRoaValidationServiceTest {
         private boolean called = false;
 
         @Override
-        public ValidationResult validate(RoaCms roaCms, File talFile) {
+        public ValidationResult validate(RoaCms roaCms, TrustAnchorLocator talFile) {
             called = true;
             return new ValidationResult();
         }

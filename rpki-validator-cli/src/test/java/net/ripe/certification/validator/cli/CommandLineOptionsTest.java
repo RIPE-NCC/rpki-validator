@@ -40,6 +40,9 @@ import org.junit.Test;
 
 public class CommandLineOptionsTest {
 
+    private static final String TEST1_TAL = "src/test/resources/test1.tal";
+    private static final String TEST2_TAL = "src/test/resources/test2.tal";
+
     private CommandLineOptions subject = new CommandLineOptions();
 
 
@@ -97,118 +100,118 @@ public class CommandLineOptionsTest {
 
     @Test
     public void shouldParseTrustAnchorFileShortOption() throws ParseException {
-        subject.parse("-t", "filename1", "-o", "/some/where");
+        subject.parse("-t", TEST1_TAL, "-o", "/some/where");
         assertNotNull(subject.getTrustAnchorFiles());
         assertTrue(subject.getTrustAnchorFiles().size() == 1);
-        assertEquals(new File("filename1"), subject.getTrustAnchorFiles().get(0));
+        assertEquals(new File(TEST1_TAL), subject.getTrustAnchorFiles().get(0).getFile());
     }
 
     @Test
     public void shouldParseTrustAnchorFileLongOption() throws ParseException {
-        subject.parse("--tal", "filename2", "-o", "/some/where");
+        subject.parse("--tal", TEST1_TAL, "-o", "/some/where");
         assertNotNull(subject.getTrustAnchorFiles());
         assertTrue(subject.getTrustAnchorFiles().size() == 1);
-        assertEquals(new File("filename2"), subject.getTrustAnchorFiles().get(0));
+        assertEquals(new File(TEST1_TAL), subject.getTrustAnchorFiles().get(0).getFile());
     }
 
     @Test
     public void shouldParseMultipleTrustAnchorFiles() throws ParseException {
-        subject.parse("-t", "filename1", "-t", "filename2", "-o", "/some/where");
+        subject.parse("-t", TEST1_TAL, "-t", TEST2_TAL, "-o", "/some/where");
         assertNotNull(subject.getTrustAnchorFiles());
         assertTrue(subject.getTrustAnchorFiles().size() == 2);
-        assertEquals(new File("filename1"), subject.getTrustAnchorFiles().get(0));
-        assertEquals(new File("filename2"), subject.getTrustAnchorFiles().get(1));
+        assertEquals(new File(TEST1_TAL), subject.getTrustAnchorFiles().get(0).getFile());
+        assertEquals(new File(TEST2_TAL), subject.getTrustAnchorFiles().get(1).getFile());
     }
 
     @Test(expected=ParseException.class)
     public void shouldRejectValidationWithoutOutputDirectory() throws ParseException {
-        subject.parse("-t", "file.tal");
+        subject.parse("-t", TEST1_TAL);
     }
 
     @Test
     public void shouldParseOutputDirShortOption() throws ParseException {
-        subject.parse("-t", "file.tal", "-o", "dir");
+        subject.parse("-t", TEST1_TAL, "-o", "dir");
         assertEquals(new File("dir"), subject.getOutputDir());
     }
 
     @Test
     public void shouldParseOutputDirLongOption() throws ParseException {
-        subject.parse("-t", "file.tal", "--output-dir", "dir");
+        subject.parse("-t", TEST1_TAL, "--output-dir", "dir");
         assertEquals(new File("dir"), subject.getOutputDir());
     }
 
     @Test
     public void shouldDefaultToEmptyPrefetchUriList() throws ParseException {
-        subject.parse("-t", "file.tal", "-o", "dir");
+        subject.parse("-t", TEST1_TAL, "-o", "dir");
         assertTrue(subject.getPrefetchUris().isEmpty());
     }
 
     @Test
     public void shouldParsePrefetchURIOption() throws ParseException {
-        subject.parse("-t", "file.tal", "--prefetch", "rsync://foo/bar/", "-o", "/some/where");
+        subject.parse("-t", TEST1_TAL, "--prefetch", "rsync://foo/bar/", "-o", "/some/where");
         assertEquals(Arrays.asList(URI.create("rsync://foo/bar/")), subject.getPrefetchUris());
     }
 
     @Test
     public void shouldParseMultiplePrefetchURIs() throws ParseException {
-        subject.parse("-t", "file.tal", "--prefetch", "rsync://foo/bar/", "--prefetch", "rsync://bar/baz/", "-o", "/some/where");
+        subject.parse("-t", TEST1_TAL, "--prefetch", "rsync://foo/bar/", "--prefetch", "rsync://bar/baz/", "-o", "/some/where");
         assertEquals(Arrays.asList(URI.create("rsync://foo/bar/"), URI.create("rsync://bar/baz/")), subject.getPrefetchUris());
     }
 
     @Test
     public void shouldIgnoreInvalidPrefetchUri() throws ParseException {
-        subject.parse("-t", "file.tal", "--prefetch", "rsync://foo bar/", "-o", "/some/where");
+        subject.parse("-t", TEST1_TAL, "--prefetch", "rsync://foo bar/", "-o", "/some/where");
         assertTrue(subject.getPrefetchUris().isEmpty());
     }
 
     @Test
     public void shouldAppendMissingSlashToPrefetchUri() throws ParseException {
-        subject.parse("-t", "file.tal", "--prefetch", "rsync://foo/bar", "-o", "/some/where");
+        subject.parse("-t", TEST1_TAL, "--prefetch", "rsync://foo/bar", "-o", "/some/where");
         assertEquals(Arrays.asList(URI.create("rsync://foo/bar/")), subject.getPrefetchUris());
     }
 
     @Test
     public void shouldDoBottomUpValidationWhenFileOptionUsed() throws ParseException {
-        subject.parse("-t", "root.tal", "-f", "file.cer", "-o", "out");
+        subject.parse("-t", TEST1_TAL, "-f", "file.cer", "-o", "out");
         assertTrue(subject.isValidationMode());
         assertFalse(subject.isTopDownValidationEnabled());
     }
 
     @Test
     public void shouldDoTopDownValidationWhenFileOptionIsNotUsed() throws ParseException {
-        subject.parse("-t", "root.tal", "-o", "out");
+        subject.parse("-t", TEST1_TAL, "-o", "out");
         assertTrue(subject.isValidationMode());
         assertTrue(subject.isTopDownValidationEnabled());
     }
 
     @Test
     public void shouldDefaultToVerboseDisabled() throws ParseException {
-        subject.parse("-t", "file.tal", "-o", "dir");
+        subject.parse("-t", TEST1_TAL, "-o", "dir");
         assertFalse(subject.isVerboseEnabled());
     }
 
     @Test
     public void shouldParseVerboseShortOption() throws ParseException {
-        subject.parse("-t", "file.tal", "-f", "file.cer", "-o", "dir", "-v");
+        subject.parse("-t", TEST1_TAL, "-f", "file.cer", "-o", "dir", "-v");
         assertTrue(subject.isVerboseEnabled());
     }
 
     @Test
     public void shouldParseVerboseLongOption() throws ParseException {
-        subject.parse("-t", "file.tal", "-f", "file.cer", "-o", "dir", "--verbose");
+        subject.parse("-t", TEST1_TAL, "-f", "file.cer", "-o", "dir", "--verbose");
         assertTrue(subject.isVerboseEnabled());
     }
 
     @Test
     public void shouldParseRoaExportShortOption() throws ParseException {
-        subject.parse("-t", "file.tal", "-o", "out", "-r", "roa.csv");
+        subject.parse("-t", TEST1_TAL, "-o", "out", "-r", "roa.csv");
         assertTrue(subject.isRoaExportEnabled());
         assertEquals(subject.getRoaExportFile(), new File("roa.csv"));
     }
 
     @Test
     public void shouldParseRoaExportLongOption() throws ParseException {
-        subject.parse("-t", "file.tal", "-o", "out", "--roa-export", "roa.csv");
+        subject.parse("-t", TEST1_TAL, "-o", "out", "--roa-export", "roa.csv");
         assertTrue(subject.isRoaExportEnabled());
         assertEquals(subject.getRoaExportFile(), new File("roa.csv"));
     }

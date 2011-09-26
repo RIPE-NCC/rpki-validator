@@ -45,7 +45,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors) extends View {
     <table class="zebra-striped">
       <thead>
         <th>#</th>
-        <th>File name</th>
+        <th>CA Name</th>
         <th>Subject</th>
         <th>Expires in</th>
         <th>Location</th>

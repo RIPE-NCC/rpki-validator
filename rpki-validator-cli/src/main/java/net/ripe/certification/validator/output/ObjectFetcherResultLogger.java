@@ -72,6 +72,7 @@ public class ObjectFetcherResultLogger implements NotifyingCertificateRepository
     @Override
     public void afterPrefetchFailure(URI uri, ValidationResult result) {
         logResults(uri, result);
+        LOG.warn("failed to prefetch " + uri);
     }
 
     @Override

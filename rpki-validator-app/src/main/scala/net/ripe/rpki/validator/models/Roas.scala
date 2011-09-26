@@ -68,7 +68,7 @@ object Roas {
       val roas = collection.mutable.Buffer.empty[ValidatedRoa]
       notifyingFetcher.addCallback(new RoaCollector(trustAnchor, roas))
 
-      trustAnchor.prefetchUri.foreach { prefetchUri =>
+      trustAnchor.prefetchUris.foreach { prefetchUri =>
         logger.info("Prefetching '" + prefetchUri + "'")
         val validationResult = new ValidationResult();
         validationResult.setLocation(prefetchUri);
