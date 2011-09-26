@@ -35,31 +35,42 @@ import scala.xml._
 import models.Roas
 import scalaz.concurrent.Promise
 import net.ripe.commons.certification.cms.roa.RoaCms
+import net.ripe.rpki.validator.models.TrustAnchor
+import net.ripe.rpki.validator.models.ValidatedRoa
 
 class RoasView(roas: Roas) extends View {
   def tab = RoasTab
   def title = Text("Validated ROAs")
   def body = {
     val (ready, loading) = roas.all.partition(_._2.fulfilled)
-    <div class="alert-message block-message info">{
-      optional(ready.nonEmpty, <p>Loaded ROAs from { ready.map(_._1).mkString(", ") }.</p>) ++
-        optional(loading.nonEmpty, <p>Currently loading ROAs from { loading.map(_._1).mkString(", ") }.</p>)
-    }</div>
-    <table id="roas-table" class="zebra-striped">
+    <div class="alert-message block-message info">
+      {
+        optional(ready.nonEmpty, <p>Validated ROAs from { listTrustAnchorNames(ready.keys.toSeq) }.</p>) ++
+          optional(loading.nonEmpty, <p>Still retrieving and validating ROAs from { listTrustAnchorNames(loading.keys.toSeq) }.</p>)
+      }
+      <div class="alert-actions">
+        <a href="roas.csv" class="btn small">Download validated ROAs as CSV</a>
+      </div>
+    </div>
+    <table id="roas-table" class="zebra-striped" style="display: none;">
       <thead>
-        <th>Trust Anchor</th><th>ASN</th><th>Prefix</th><th>Maximum Length</th>
+        <th>ASN</th>
+        <th>Prefix</th>
+        <th>Maximum Length</th>
+        <th>Trust Anchor</th>
       </thead>
       <tbody>{
         for {
-          (name, validatedRoas) <- ready
-          roa <- validatedRoas.get
+          (trustAnchor, roas) <- ready
+          validated <- roas.get
+          roa = validated.roa
           prefix <- roa.getPrefixes().asScala
         } yield {
           <tr>
-            <td>{ name }</td>
-            <td>{ roa.getAsn() }</td>
+            <td>{ roa.getAsn().getValue() }</td>
             <td>{ prefix.getPrefix() }</td>
             <td>{ prefix.getEffectiveMaximumLength() } </td>
+            <td>{ trustAnchor.name }</td>
           </tr>
         }
       }</tbody>
@@ -68,10 +79,12 @@ class RoasView(roas: Roas) extends View {
 $(document).ready(function() {
   $('#roas-table').dataTable({
         "sPaginationType": "full_numbers"
-    });
+    }).show();
 });
 // --></script>
   }
 
   private def optional(condition: Boolean, body: => NodeSeq) = if (condition) body else NodeSeq.Empty
+  private def listTrustAnchorNames(elements: Seq[TrustAnchor]): NodeSeq =
+    elements.map(_.name).sorted.map(name => <strong>{ name }</strong>: NodeSeq).reduce(_ ++ Text(", ") ++ _)
 }
