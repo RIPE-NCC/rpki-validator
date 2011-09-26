@@ -33,43 +33,45 @@ package views
 import scala.collection.JavaConverters._
 import scala.xml._
 import models.Roas
-import akka.dispatch.Future
+import scalaz.concurrent.Promise
 import net.ripe.commons.certification.cms.roa.RoaCms
 
 class RoasView(roas: Roas) extends View {
-  def title = Text("ROAs")
   def tab = RoasTab
+  def title = Text("Validated ROAs")
   def body = {
-    <table>
+    val (ready, loading) = roas.all.partition(_._2.fulfilled)
+    <div class="alert-message block-message info">{
+      optional(ready.nonEmpty, <p>Loaded ROAs from { ready.map(_._1).mkString(", ") }.</p>) ++
+        optional(loading.nonEmpty, <p>Currently loading ROAs from { loading.map(_._1).mkString(", ") }.</p>)
+    }</div>
+    <table id="roas-table" class="zebra-striped">
       <thead>
-        <th>Trust Anchor</th><th>ASN</th><th>Prefix</th><th></th>
+        <th>Trust Anchor</th><th>ASN</th><th>Prefix</th><th>Maximum Length</th>
       </thead>
       <tbody>{
-        for ((name, roas) <- roas.all; row <- makeRows(name, roas)) yield {
-          <tr>{ row }</tr>
+        for {
+          (name, validatedRoas) <- ready
+          roa <- validatedRoas.get
+          prefix <- roa.getPrefixes().asScala
+        } yield {
+          <tr>
+            <td>{ name }</td>
+            <td>{ roa.getAsn() }</td>
+            <td>{ prefix.getPrefix() }</td>
+            <td>{ prefix.getEffectiveMaximumLength() } </td>
+          </tr>
         }
       }</tbody>
     </table>
+    <script><!--
+$(document).ready(function() {
+  $('#roas-table').dataTable({
+        "sPaginationType": "full_numbers"
+    });
+});
+// --></script>
   }
 
-  private def makeRows(name: String, roas: Future[Seq[RoaCms]]): Seq[Seq[Node]] = {
-    roas.value match {
-      case Some(Left(exception)) =>
-        Seq(<td>{ name }</td>
-            <td colspan="3">{ exception.toString }</td>)
-      case Some(Right(roas)) =>
-        for (roa <- roas; prefix <- roa.getPrefixes().asScala) yield {
-          <td>{ name }</td>
-          <td>{ roa.getAsn() }</td>
-          <td>{ prefix.getPrefix() }</td>
-          <td>{ prefix.getEffectiveMaximumLength() } </td>
-        }
-      case None if roas.isExpired =>
-        Seq(<td>{ name }</td>
-            <td colspan="3" class="error">Timed out</td>)
-      case None =>
-        Seq(<td>{ name }</td>
-            <td colspan="3" class="info">Loading...</td>)
-    }
-  }
+  private def optional(condition: Boolean, body: => NodeSeq) = if (condition) body else NodeSeq.Empty
 }

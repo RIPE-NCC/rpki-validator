@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package models
 
-import akka.dispatch.Future
 import java.io.File
 import java.net.URI
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
@@ -41,8 +40,9 @@ import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.roa.RoaCms
 import grizzled.slf4j.Logging
+import scalaz.concurrent.Promise
 
-class Roas(val all: Map[String, Future[Seq[RoaCms]]])
+class Roas(val all: Map[String, Promise[Seq[RoaCms]]])
 
 object Roas extends Logging {
   def fetch(trustAnchors: TrustAnchors): Roas = {
@@ -50,7 +50,7 @@ object Roas extends Logging {
     new Roas(all.toMap)
   }
 
-  private def fetchObjects(name: String, prefetchUri: Option[URI], ta: CertificateRepositoryObjectValidationContext): Future[Seq[RoaCms]] = Future({
+  private def fetchObjects(name: String, prefetchUri: Option[URI], ta: CertificateRepositoryObjectValidationContext): Promise[Seq[RoaCms]] = Promise {
     import net.ripe.commons.certification.rsync.Rsync
 
     val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(new File("tmp/cache/" + name)));
@@ -76,7 +76,7 @@ object Roas extends Logging {
     info("Finished validating " + name + ", fetched " + roas.size + " valid ROAs")
 
     roas.toIndexedSeq
-  }, timeout = 60 * 60 * 1000)
+  }
 
   private class RoaCollector(roas: collection.mutable.Buffer[RoaCms]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
       override def afterPrefetchFailure(uri: URI, result: ValidationResult) {

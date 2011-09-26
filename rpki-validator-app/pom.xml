@@ -61,9 +61,9 @@
             <version>1.6.2</version>
         </dependency>
         <dependency>
-            <groupId>se.scalablesolutions.akka</groupId>
-            <artifactId>akka-actor</artifactId>
-            <version>1.2</version>
+            <groupId>org.scalaz</groupId>
+            <artifactId>scalaz-core_2.9.1</artifactId>
+            <version>6.0.3</version>
         </dependency>
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -238,6 +238,7 @@
                         <exclude>**/*.txt</exclude>
                         <exclude>**/*.tal</exclude>
                         <exclude>pom.xslt</exclude>
+                        <exclude>src/main/resources/public/javascript/datatables/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>

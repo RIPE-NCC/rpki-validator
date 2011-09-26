@@ -41,6 +41,8 @@ object Layouts {
         <title>RPKI Validator - { view.title }</title>
         <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.3.0/bootstrap.css"/>
         <link rel="stylesheet" href="/stylesheets/application.css"/>
+        <script src="/javascript/datatables/1.8.2/jquery.js"/>
+        <script src="/javascript/datatables/1.8.2/jquery.dataTables.min.js"/>
       </head>
       <body>
         <div class="topbar">
@@ -59,7 +61,7 @@ object Layouts {
           <h1>{ view.title }</h1>
           { view.body }
           <footer>
-            <p>Copyright © {(2009 to (new DateTime).getYear).mkString(", ")} the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted.</p>
+            <p>Copyright © { (2009 to (new DateTime).getYear).mkString(", ") } the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted.</p>
           </footer>
         </div>
       </body>
