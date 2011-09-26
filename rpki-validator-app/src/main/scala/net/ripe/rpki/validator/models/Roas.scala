@@ -42,9 +42,8 @@ import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.roa.RoaCms
 import grizzled.slf4j.Logging
 
-class Roas(val all: Map[String, Future[Seq[RoaCms]]]) {
+class Roas(val all: Map[String, Future[Seq[RoaCms]]])
 
-}
 object Roas extends Logging {
   def fetch(trustAnchors: TrustAnchors): Roas = {
     val all = for (ta <- trustAnchors.all) yield ta.name -> ta.certificate.flatMap(certificate => fetchObjects(ta.name, ta.prefetchUri, certificate))
@@ -57,9 +56,29 @@ object Roas extends Logging {
     val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(new File("tmp/cache/" + name)));
     val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
+    val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
+    validatingFetcher.setOuterMostDecorator(cachingFetcher);
 
     val roas = collection.mutable.ArrayBuffer.empty[RoaCms]
-    notifyingFetcher.addCallback(new NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
+    notifyingFetcher.addCallback(new RoaCollector(roas))
+
+    prefetchUri.foreach { prefetchUri =>
+      info("Prefetching '" + prefetchUri + "'")
+      val validationResult = new ValidationResult();
+      validationResult.setLocation(prefetchUri);
+      cachingFetcher.prefetch(prefetchUri, validationResult);
+    }
+
+    val walker = new TopDownWalker(cachingFetcher)
+    walker.addTrustAnchor(ta)
+    info("Started validating " + name)
+    walker.execute()
+    info("Finished validating " + name + ", fetched " + roas.size + " valid ROAs")
+
+    roas.toIndexedSeq
+  }, timeout = 60 * 60 * 1000)
+
+  private class RoaCollector(roas: collection.mutable.Buffer[RoaCms]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
       override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
         warn("Failed to prefetch '" + uri + "'")
       }
@@ -81,24 +100,5 @@ object Roas extends Logging {
             debug("Fetched '" + uri + "'")
         }
       }
-    });
-
-    val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
-    validatingFetcher.setOuterMostDecorator(cachingFetcher);
-
-    prefetchUri.foreach { prefetchUri =>
-      info("Prefetching '" + prefetchUri + "'")
-      val validationResult = new ValidationResult();
-      validationResult.setLocation(prefetchUri);
-      cachingFetcher.prefetch(prefetchUri, validationResult);
-    }
-
-    val walker = new TopDownWalker(cachingFetcher)
-    walker.addTrustAnchor(ta)
-    info("Start validating " + name)
-    walker.execute()
-    info("Finished validating " + name)
-
-    roas.toIndexedSeq
-  }, timeout = 60 * 60 * 1000)
+  }
 }
