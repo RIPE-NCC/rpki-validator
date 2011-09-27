@@ -36,6 +36,7 @@ import grizzled.slf4j.Logger
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder
+import java.nio.ByteOrder
 
 class PduDecoder extends OneToOneDecoder {
 
@@ -44,7 +45,7 @@ class PduDecoder extends OneToOneDecoder {
   override def decode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = {
     logger.trace("Getting the Array[Byte] from the channel buffer and converting to pdu")
     val buffer = msg.asInstanceOf[ChannelBuffer]
-    PduFactory.fromByteArray(buffer)
+    Pdus.fromByteArray(buffer)
   }
 
 }
@@ -52,12 +53,15 @@ class PduDecoder extends OneToOneDecoder {
 class PduEncoder extends OneToOneEncoder {
   val logger = Logger[this.type]
 
-  override def encode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = {
-    val pdu = msg.asInstanceOf[Pdu]
-    val buffer = ChannelBuffers.buffer(pdu.length)
-    buffer.writeBytes(pdu.asByteArray)
-
-    logger.trace("Response: written %d bytes".format(pdu.length))
-    buffer
+  override def encode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = msg match {
+    case pdu: Pdu =>
+      val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, pdu.length)
+      buffer.writeBytes(Pdus.encode(pdu))
+      buffer
+    case bytes: Array[Byte] =>
+      val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, bytes.length)
+      buffer.writeBytes(bytes)
+      logger.trace("bytes written %d bytes".format(bytes.length))
+      buffer
   }
 }

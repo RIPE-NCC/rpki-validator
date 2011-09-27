@@ -70,12 +70,15 @@ class RTRClient(val port: Int) {
   val channelFuture: ChannelFuture = bootstrap.connect(new InetSocketAddress("localhost", port))
   channelFuture.await(1000)
 
-  def sendPdu(pduToSend: Pdu) = {
+  def sendPdu(pduToSend: Pdu) = sendAny(pduToSend)
 
+  def sendData(data: Array[Byte]) = sendAny(data)
+
+  private def sendAny(data: Any) = {
     receivedPdu = None
 
-    channelFuture.getChannel().write(pduToSend)
-    logger.trace("pdu sent")
+    channelFuture.getChannel().write(data)
+    logger.trace("data sent")
 
     val maxMillis = 1000
     val retryMillis = 5
@@ -87,7 +90,7 @@ class RTRClient(val port: Int) {
 
     receivedPdu.get
   }
-
+  
   def isConnected = {
     channelFuture.getChannel().isConnected()
   }
@@ -97,8 +100,8 @@ class RTRClient(val port: Int) {
     receivedPdu = Some(pdu)
   }
 
-  def close = {
-    channelFuture.getChannel().close()
+  def close(): Unit = {
+    channelFuture.getChannel().close().await()
   }
 }
 
@@ -112,8 +115,12 @@ class RTRClientHandler(pduReceived: Pdu => Unit) extends SimpleChannelUpstreamHa
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
     logger.trace("Got response: " + event.getMessage())
-    val pdu = event.getMessage().asInstanceOf[Pdu]
-    pduReceived(pdu)
+    event.getMessage() match {
+      case Right(pdu: Pdu) =>
+        pduReceived(pdu)
+      case message =>
+        logger.warn("bad message received: " + message)
+    }
   }
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {

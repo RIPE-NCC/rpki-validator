@@ -49,13 +49,13 @@ object Main {
   def main(args: Array[String]) {
     trustAnchors = loadTrustAnchors()
     roas = Roas.fetch(trustAnchors)
-    runServer()
-    RTRServer.startServer()
+    runWebServer()
+    runRtrServer()
   }
 
   def loadTrustAnchors(): TrustAnchors = {
-    import java.{util => ju}
-    val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[java.util.Collection[File]])
+    import java.{ util => ju }
+    val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[ju.Collection[File]])
     TrustAnchors.load(tals.asScala, "tmp/tals")
   }
 
@@ -77,17 +77,19 @@ object Main {
     server
   }
 
-  private def runServer(): Unit = {
+  private def runWebServer(): Unit = {
     val port = 8080
     val server = setup(new Server(port))
 
-    Runtime.getRuntime().addShutdownHook(new Thread {
-      override def run() {
-        server.stop()
-        logger.info("Bye, bye...")
-      }
+    sys.addShutdownHook({
+      server.stop()
+      logger.info("Bye, bye...")
     })
     server.start()
     logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + port + ". Hit CTRL+C to terminate.")
+  }
+
+  private def runRtrServer(): Unit = {
+    new RTRServer(8282).startServer()
   }
 }

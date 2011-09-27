@@ -29,23 +29,12 @@
  */
 package net.ripe.rpki.validator.views
 
-sealed trait Tab {
-  def text: String
-  def url: String
-}
-case object HomeTab extends Tab {
-  def text = "Home"
-  def url = "/"
-}
-case object RoasTab extends Tab {
-  def text = "ROAs"
-  def url = "/roas"
-}
-case object TrustAnchorsTab extends Tab {
-  def text = "Trust Anchors"
-  def url = "/trust-anchors"
-}
+case class Tab(text: String, url: String)
 
 object Tabs {
+  val HomeTab = Tab("Home", "/")
+  val RoasTab = Tab("ROAs", "/roas")
+  val TrustAnchorsTab = Tab("Trust Anchors", "/trust-anchors")
+  
   def all = Seq(HomeTab, RoasTab, TrustAnchorsTab)
 }

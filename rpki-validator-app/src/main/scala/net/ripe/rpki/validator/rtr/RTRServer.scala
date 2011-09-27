@@ -41,8 +41,11 @@ import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
 import org.jboss.netty.handler.codec.frame.CorruptedFrameException
 
 object RTRServer {
-  final val ProtocolVersion = 0
-  val Port = 8282
+    final val ProtocolVersion = 0
+}
+
+class RTRServer(port: Int) {
+  
 
   val logger = Logger[this.type]
 
@@ -70,7 +73,7 @@ object RTRServer {
       }
     })
     bootstrap.setOption("child.keepAlive", true)
-    val listenAddress = new InetSocketAddress(Port)
+    val listenAddress = new InetSocketAddress(port)
     bootstrap.bind(listenAddress)
 
     logger.info("RTR server listening on " + listenAddress.toString)
@@ -105,19 +108,21 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
     }
 
     // decode and process
-    val requestPdu: Pdu = event.getMessage().asInstanceOf[Pdu]
+    val requestPdu = event.getMessage().asInstanceOf[Either[BadData, Pdu]]
     var responsePdu: Pdu = processRequest(requestPdu)
 
     // respond
     event.getChannel().write(responsePdu)
   }
 
-  private def processRequest(requestPdu: Pdu) = {
-    requestPdu match {
-      case requestPdu: ResetQueryPdu => new ErrorPdu(ErrorPdus.NoDataAvailable, None, None)
-      case requestPdu: UnknownPdu => new ErrorPdu(ErrorPdus.UnsupportedPduType, None, None)
-      case requestPdu: UnsupportedProtocolPdu => new ErrorPdu(ErrorPdus.UnsupportedProtocolVersion, None, None)
-      case _ => new ErrorPdu(ErrorPdus.InvalidRequest, None, None)
+  private def processRequest(request: Either[BadData, Pdu]) = {
+    request match {
+      case Left(BadData(errorCode, content)) => 
+        ErrorPdu(errorCode, content, "")
+      case Right(ResetQueryPdu()) => 
+        ErrorPdu(ErrorPdus.NoDataAvailable, Array.empty, "")
+      case Right(_) => 
+        ErrorPdu(ErrorPdus.InvalidRequest, Array.empty, "")
     }
   }
 
@@ -129,10 +134,11 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
 
     var errorPdu: Pdu = null
     val cause = event.getCause() match {
-      case cause: CorruptedFrameException => errorPdu = new ErrorPdu(ErrorPdus.CorruptData, None, None)
-      case _ => errorPdu = new ErrorPdu(ErrorPdus.InternalError, None, None)
+      case cause: CorruptedFrameException => errorPdu = new ErrorPdu(ErrorPdus.CorruptData, Array.empty, "")
+      case _ => errorPdu = new ErrorPdu(ErrorPdus.InternalError, Array.empty, "")
     }
 
-    event.getChannel().write(errorPdu)
+      val channelFuture = event.getChannel()
+      channelFuture.write(errorPdu)
   }
 }

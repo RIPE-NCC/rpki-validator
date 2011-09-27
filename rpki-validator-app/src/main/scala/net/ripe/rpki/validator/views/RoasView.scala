@@ -39,7 +39,7 @@ import net.ripe.rpki.validator.models.TrustAnchor
 import net.ripe.rpki.validator.models.ValidatedRoa
 
 class RoasView(roas: Roas) extends View {
-  def tab = RoasTab
+  def tab = Tabs.RoasTab
   def title = Text("Validated ROAs")
   def body = {
     val (ready, loading) = roas.all.partition(_._2.fulfilled)
@@ -54,10 +54,12 @@ class RoasView(roas: Roas) extends View {
     </div>
     <table id="roas-table" class="zebra-striped" style="display: none;">
       <thead>
-        <th>ASN</th>
-        <th>Prefix</th>
-        <th>Maximum Length</th>
-        <th>Trust Anchor</th>
+        <tr>
+          <th>ASN</th>
+          <th>Prefix</th>
+          <th>Maximum Length</th>
+          <th>Trust Anchor</th>
+        </tr>
       </thead>
       <tbody>{
         for {

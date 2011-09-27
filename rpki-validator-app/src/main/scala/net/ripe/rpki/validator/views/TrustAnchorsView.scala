@@ -38,22 +38,20 @@ import scala.collection.SortedMap
 import lib.DateAndTime._
 import models.TrustAnchors
 
-class TrustAnchorsView(trustAnchors: TrustAnchors) extends View {
-  def tab = TrustAnchorsTab
+class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime) extends View {
+  def tab = Tabs.TrustAnchorsTab
   def title = Text("Configured Trust Anchors")
   def body =
     <table class="zebra-striped">
       <thead>
-        <th>#</th>
         <th>CA Name</th>
         <th>Subject</th>
         <th>Expires in</th>
         <th>Location</th>
       </thead>
       <tbody>{
-        for ((ta, index) <- sortedTrustAnchors.zipWithIndex) yield {
+        for (ta <- sortedTrustAnchors) yield {
           <tr>
-            <td>{ index + 1 }</td>
             <td>{ ta.name }</td>{
               if (ta.certificate.fulfilled) {
                 <td>{ ta.certificate.get.getCertificate().getSubject() }</td>
@@ -76,6 +74,5 @@ class TrustAnchorsView(trustAnchors: TrustAnchors) extends View {
       <strong>EXPIRED</strong>
     }
   }
-  private val now = new DateTime
   private def sortedTrustAnchors = trustAnchors.all.sortBy(_.name)
 }

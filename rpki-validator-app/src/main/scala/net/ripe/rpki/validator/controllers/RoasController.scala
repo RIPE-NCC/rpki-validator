@@ -44,7 +44,7 @@ trait RoasController extends ApplicationController {
   }
   get("/roas.csv") {
     val dateFormatter = DateTimeFormat.forPattern("YYYY-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC)
-    val Header = "URI,ASN,IP Prefix,Max Length,Not Before,Not After\n"
+    val Header = "URI,ASN,IP Prefix,Max Length,Not Before (UTC),Not After (UTC)\n"
     val RowFormat = "\"%s\",%s,%s,%s,%s,%s\n"
 
     contentType = "text/csv"
@@ -56,7 +56,7 @@ trait RoasController extends ApplicationController {
     writer.print(Header)
     for {
       (_, validatedRoas) <- roas.all if validatedRoas.fulfilled
-      validatedRoa <- validatedRoas.get
+      validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
       roa = validatedRoa.roa
       prefix <- roa.getPrefixes().asScala
     } {
@@ -68,5 +68,7 @@ trait RoasController extends ApplicationController {
         dateFormatter.print(roa.getNotValidBefore()),
         dateFormatter.print(roa.getNotValidAfter())))
     }
+    
+    ()
   }
 }

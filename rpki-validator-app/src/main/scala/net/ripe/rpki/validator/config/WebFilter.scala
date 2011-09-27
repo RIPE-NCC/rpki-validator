@@ -41,7 +41,7 @@ abstract class WebFilter extends ScalatraFilter
   with RoasController
   with TrustAnchorsController {
 
-  private def renderView: RenderPipeline = {
+  private def renderView: PartialFunction[Any, Any] = {
     case view: View =>
       contentType = "text/html"
       "<!DOCTYPE html>\n" + Xhtml.toXhtml(Layouts.standard(view))

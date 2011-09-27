@@ -36,7 +36,7 @@ import scala.xml.Text
 trait ApplicationController extends ScalatraKernel {
   get("/") {
     new views.View {
-      def tab = views.HomeTab
+      def tab = views.Tabs.HomeTab
       def title = Text("Welcome")
       def body = <p>Hello, World!</p>
     }

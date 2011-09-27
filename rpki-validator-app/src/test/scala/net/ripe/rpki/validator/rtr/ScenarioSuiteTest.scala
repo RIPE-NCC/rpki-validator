@@ -39,62 +39,68 @@ import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.matchers.ShouldMatchers._
 import java.io.PrintWriter
 import java.io.DataOutputStream
+import org.scalatest.BeforeAndAfter
+import net.ripe.rpki.validator.lib.Port
 
 @RunWith(classOf[JUnitRunner])
-class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers {
+class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
 
+  val port = Port.any
+  
+  var server: RTRServer = null
+  var client: RTRClient = null
+  
   override def beforeAll() = {
-    RTRServer.startServer
+    server = new RTRServer(port)
+    server.startServer()
+  }
+  
+  before {
+	client = new RTRClient(port)
+  }
+  
+  override def afterAll() = {
+    server.stopServer()
+  }
+  
+  after {
+	client.close()
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.4
   test("Server should answer with No Data Available Error Pdu when RTRClient sends Serial Query -- and there is no data") {
-    val client = new RTRClient(8282)
-    var response = client.sendPdu(new ResetQueryPdu)
+    var response = client.sendPdu(ResetQueryPdu())
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdus.NoDataAvailable)
-
-    client.close
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
   test("Server should answer with Invalid Reques Error Pdu when RTRClient sends nonsense") {
-    val client = new RTRClient(8282)
-    var response = client.sendPdu(new ErrorPdu(errorCode = 2, None, None))
+    var response = client.sendPdu(new ErrorPdu(errorCode = ErrorPdus.NoDataAvailable, Array.empty, ""))
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdus.InvalidRequest)
-
-    client.close
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
-  test("Server should answer with '5 - Unsupported PDU Type' when unsupported Pdu is sent") {
-
-    val client = new RTRClient(8282)
-    val response = client.sendPdu(new UnknownPdu(Array[Byte](0x0, 0x7f, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8)))
+  test("Server should answer with '5 - Unsupported PDU Type' when unsupported PDU type is sent") {
+    val response = client.sendData(Array[Byte](0x0, 0xff.toByte, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8))
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdus.UnsupportedPduType)
-
-    client.close
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
   test("Server should answer with '4: Unsupported Protocol Version' when unsupported protocol is sent") {
-
-    val client = new RTRClient(8282)
-    val response = client.sendPdu(new UnknownPdu(Array[Byte](0x1, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8)))
+    val response = client.sendData(Array[Byte](0x1, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8))
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdus.UnsupportedProtocolVersion)
-
-    client.close
   }
 
 }
