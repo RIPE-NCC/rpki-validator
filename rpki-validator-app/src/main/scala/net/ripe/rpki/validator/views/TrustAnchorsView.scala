@@ -53,7 +53,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime)
         for (ta <- sortedTrustAnchors) yield {
           <tr>
             <td>{ ta.name }</td>{
-              if (ta.certificate.fulfilled) {
+              if (ta.certificate.isDefined) {
                 <td>{ ta.certificate.get.getCertificate().getSubject() }</td>
                 <td>{ expiresIn(ta.certificate.get.getCertificate().getValidityPeriod().getNotValidAfter()) }</td>
                 <td>{ ta.certificate.get.getLocation() }</td>

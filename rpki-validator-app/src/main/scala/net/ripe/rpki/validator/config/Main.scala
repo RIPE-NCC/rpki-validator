@@ -39,16 +39,37 @@ import net.ripe.certification.validator.util.TrustAnchorExtractor
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.validator.rtr.RTRServer
 import models._
+import java.util.concurrent.atomic.AtomicReference
+import scala.annotation.tailrec
+import scalaz.concurrent.Promise
+
+case class Database(trustAnchors: TrustAnchors, roas: Roas)
+
+class Atomic[T](value: T) {
+  val db: AtomicReference[T] = new AtomicReference(value)
+
+  def get = db.get
+
+  @tailrec
+  final def update(f: T => T) {
+    val current = get
+    val updated = f(current)
+    if (!db.compareAndSet(current, updated)) {
+      update(f)
+    }
+  }
+}
 
 object Main {
   val logger = Logger[this.type]
 
-  var trustAnchors: TrustAnchors = null
-  var roas: Roas = null
+  var database: Atomic[Database] = null
 
   def main(args: Array[String]) {
-    trustAnchors = loadTrustAnchors()
-    roas = Roas.fetch(trustAnchors)
+    val trustAnchors = loadTrustAnchors()
+    val roas = Roas.apply(trustAnchors)
+    database = new Atomic(Database(trustAnchors, roas))
+
     runWebServer()
     runRtrServer()
   }
@@ -56,7 +77,21 @@ object Main {
   def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
     val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[ju.Collection[File]])
-    TrustAnchors.load(tals.asScala, "tmp/tals")
+    val trustAnchors = TrustAnchors.load(tals.asScala, "tmp/tals")
+    for (ta <- trustAnchors.all) {
+      Promise {
+        val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
+        logger.info("Loaded trust anchor from location " + certificate.getLocation())
+        database.update { db =>
+          db.copy(trustAnchors = db.trustAnchors.update(ta.locator, certificate))
+        }
+        val validatedRoas = Roas.fetchObjects(ta.locator, certificate)
+        database.update { db =>
+          db.copy(roas = db.roas.update(ta.locator, validatedRoas))
+        }
+      }
+    }
+    trustAnchors
   }
 
   def setup(server: Server): Server = {
@@ -70,8 +105,8 @@ object Main {
     defaultServletHolder.setInitParameter("dirAllowed", "false")
     root.addServlet(defaultServletHolder, "/*")
     root.addFilter(new FilterHolder(new WebFilter {
-      def trustAnchors = Main.trustAnchors
-      def roas = Main.roas
+      def trustAnchors = database.get.trustAnchors
+      def roas = database.get.roas
     }), "/*", FilterMapping.ALL)
     server.setHandler(root)
     server

@@ -39,12 +39,19 @@ import net.ripe.certification.validator.util.TrustAnchorExtractor
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import scalaz.concurrent.Promise
 
-class TrustAnchor(val locator: TrustAnchorLocator, val certificate: Promise[CertificateRepositoryObjectValidationContext]) {
+class TrustAnchor(val locator: TrustAnchorLocator, val certificate: Option[CertificateRepositoryObjectValidationContext]) {
   def name: String = locator.getCaName()
   def prefetchUris: Seq[URI] = locator.getPrefetchUris().asScala
 }
 
-class TrustAnchors(val all: Seq[TrustAnchor])
+class TrustAnchors(val all: Seq[TrustAnchor]) {
+  def update(locator: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext): TrustAnchors = {
+    new TrustAnchors(all.map { ta =>
+      if (ta.locator == locator) new TrustAnchor(locator, Some(certificate))
+      else ta
+    })
+  }
+}
 
 object TrustAnchors extends Logging {
   def load(files: Seq[File], outputDirectory: String): TrustAnchors = {
@@ -53,11 +60,7 @@ object TrustAnchors extends Logging {
       val tal = TrustAnchorLocator.fromFile(file)
       new TrustAnchor(
         locator = tal,
-        certificate = Promise {
-          val ta = new TrustAnchorExtractor().extractTA(tal, outputDirectory)
-          info("Loaded trust anchor from location " + ta.getLocation())
-          ta
-        })
+        certificate = None)
     }
     new TrustAnchors(trustAnchors)
   }

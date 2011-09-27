@@ -44,48 +44,50 @@ import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import scalaz.concurrent.Promise
 
-case class ValidatedRoa(val roa: RoaCms, val uri: URI, val trustAnchor: TrustAnchor)
+case class ValidatedRoa(val roa: RoaCms, val uri: URI, val trustAnchor: TrustAnchorLocator)
 
-class Roas(val all: Map[TrustAnchor, Promise[Seq[ValidatedRoa]]])
+class Roas(val all: Map[TrustAnchorLocator, Option[Seq[ValidatedRoa]]]) {
+  def update(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) = {
+    new Roas(all.updated(tal, Some(validatedRoas)))
+  }
+}
 
 object Roas {
   private val logger = Logger[this.type]
 
-  def fetch(trustAnchors: TrustAnchors): Roas = {
-    new Roas(trustAnchors.all.map(ta => ta -> fetchObjects(ta))(breakOut))
+  def apply(trustAnchors: TrustAnchors): Roas = {
+    new Roas(trustAnchors.all.map(ta => ta.locator -> None)(breakOut))
   }
 
-  private def fetchObjects(trustAnchor: TrustAnchor): Promise[Seq[ValidatedRoa]] = trustAnchor.certificate.flatMap { certificate =>
-    Promise {
-      import net.ripe.commons.certification.rsync.Rsync
+  def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext): Seq[ValidatedRoa] = {
+    import net.ripe.commons.certification.rsync.Rsync
 
-      val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(new File("tmp/cache/" + trustAnchor.locator.getFile().getName())));
-      val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
-      val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
-      val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
-      validatingFetcher.setOuterMostDecorator(cachingFetcher);
+    val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(new File("tmp/cache/" + trustAnchor.getFile().getName())));
+    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
+    val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
+    val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
+    validatingFetcher.setOuterMostDecorator(cachingFetcher);
 
-      val roas = collection.mutable.Buffer.empty[ValidatedRoa]
-      notifyingFetcher.addCallback(new RoaCollector(trustAnchor, roas))
+    val roas = collection.mutable.Buffer.empty[ValidatedRoa]
+    notifyingFetcher.addCallback(new RoaCollector(trustAnchor, roas))
 
-      trustAnchor.prefetchUris.foreach { prefetchUri =>
-        logger.info("Prefetching '" + prefetchUri + "'")
-        val validationResult = new ValidationResult();
-        validationResult.setLocation(prefetchUri);
-        cachingFetcher.prefetch(prefetchUri, validationResult);
-      }
-
-      val walker = new TopDownWalker(cachingFetcher)
-      walker.addTrustAnchor(certificate)
-      logger.info("Started validating " + trustAnchor.name)
-      walker.execute()
-      logger.info("Finished validating " + trustAnchor.name + ", fetched " + roas.size + " valid ROAs")
-
-      roas.toIndexedSeq
+    trustAnchor.getPrefetchUris().asScala.foreach { prefetchUri =>
+      logger.info("Prefetching '" + prefetchUri + "'")
+      val validationResult = new ValidationResult();
+      validationResult.setLocation(prefetchUri);
+      cachingFetcher.prefetch(prefetchUri, validationResult);
     }
+
+    val walker = new TopDownWalker(cachingFetcher)
+    walker.addTrustAnchor(certificate)
+    logger.info("Started validating " + trustAnchor.getCaName())
+    walker.execute()
+    logger.info("Finished validating " + trustAnchor.getCaName() + ", fetched " + roas.size + " valid ROAs")
+
+    roas.toIndexedSeq
   }
 
-  private class RoaCollector(trustAnchor: TrustAnchor, roas: collection.mutable.Buffer[ValidatedRoa]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
+  private class RoaCollector(trustAnchor: TrustAnchorLocator, roas: collection.mutable.Buffer[ValidatedRoa]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
     override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
       logger.warn("Failed to prefetch '" + uri + "'")
     }

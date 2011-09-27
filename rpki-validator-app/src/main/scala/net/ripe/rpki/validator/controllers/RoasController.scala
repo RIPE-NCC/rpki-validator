@@ -55,7 +55,7 @@ trait RoasController extends ApplicationController {
     val writer = response.getWriter()
     writer.print(Header)
     for {
-      (_, validatedRoas) <- roas.all if validatedRoas.fulfilled
+      (_, validatedRoas) <- roas.all if validatedRoas.isDefined
       validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
       roa = validatedRoa.roa
       prefix <- roa.getPrefixes().asScala
