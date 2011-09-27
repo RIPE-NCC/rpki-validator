@@ -30,19 +30,19 @@
 package net.ripe.rpki.validator
 package models
 
+import scala.collection._
+import scala.collection.JavaConverters._
 import java.io.File
 import java.net.URI
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import grizzled.slf4j.Logger
 import net.ripe.certification.validator.fetchers._
 import net.ripe.certification.validator.util._
 import net.ripe.certification.validator.commands.TopDownWalker
-import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.roa.RoaCms
-import grizzled.slf4j.Logging
+import net.ripe.commons.certification.validation.ValidationResult
+import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import scalaz.concurrent.Promise
-import scala.collection._
-import grizzled.slf4j.Logger
 
 case class ValidatedRoa(val roa: RoaCms, val uri: URI, val trustAnchor: TrustAnchor)
 
@@ -59,7 +59,7 @@ object Roas {
     Promise {
       import net.ripe.commons.certification.rsync.Rsync
 
-      val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(new File("tmp/cache/" + trustAnchor.name)));
+      val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(new File("tmp/cache/" + trustAnchor.locator.getFile().getName())));
       val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
       val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
       val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
@@ -95,13 +95,13 @@ object Roas {
     }
 
     override def afterFetchFailure(uri: URI, result: ValidationResult) {
-      logger.warn("Failed to fetch '" + uri + "'")
+      logger.warn("Failed to validate '" + uri + "': " + result.getFailuresForCurrentLocation().asScala.map(_.toString()).mkString(", "))
     }
 
     override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
       obj match {
         case roa: RoaCms =>
-          logger.info("Fetched ROA '" + uri + "'")
+          logger.debug("Fetched ROA '" + uri + "'")
           roas += new ValidatedRoa(roa, uri, trustAnchor)
         case _ =>
           logger.debug("Fetched '" + uri + "'")
