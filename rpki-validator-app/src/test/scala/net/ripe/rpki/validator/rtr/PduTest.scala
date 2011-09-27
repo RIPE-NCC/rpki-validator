@@ -48,5 +48,5 @@ class PduTest extends FunSuite with ShouldMatchers {
 
 object PduTest {
   val NoDataAvailablePduBytes = Array[Byte](0x0, 0xa, 0x0, 0x2, 0x0, 0x0, 0x0, 0x10, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0)
-  val NoDataAvailablePdu = ErrorPdu(ErrorPdus.NoDataAvailable, Array.empty, "")
+  val NoDataAvailablePdu = ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, "")
 }

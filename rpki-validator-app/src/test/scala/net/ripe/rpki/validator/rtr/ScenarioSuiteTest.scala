@@ -46,25 +46,25 @@ import net.ripe.rpki.validator.lib.Port
 class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
 
   val port = Port.any
-  
+
   var server: RTRServer = null
   var client: RTRClient = null
-  
+
   override def beforeAll() = {
     server = new RTRServer(port)
     server.startServer()
   }
-  
+
   before {
-	client = new RTRClient(port)
+    client = new RTRClient(port)
   }
-  
+
   override def afterAll() = {
     server.stopServer()
   }
-  
+
   after {
-	client.close()
+    client.close()
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.4
@@ -73,16 +73,18 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
-    errorPdu.errorCode should equal(ErrorPdus.NoDataAvailable)
+    errorPdu.errorCode should equal(ErrorPdu.NoDataAvailable)
+    client.isConnected should be(true)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
   test("Server should answer with Invalid Reques Error Pdu when RTRClient sends nonsense") {
-    var response = client.sendPdu(new ErrorPdu(errorCode = ErrorPdus.NoDataAvailable, Array.empty, ""))
+    var response = client.sendPdu(new ErrorPdu(errorCode = ErrorPdu.NoDataAvailable, Array.empty, ""))
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
-    errorPdu.errorCode should equal(ErrorPdus.InvalidRequest)
+    errorPdu.errorCode should equal(ErrorPdu.InvalidRequest)
+    client.isConnected should be(false)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -91,7 +93,8 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
-    errorPdu.errorCode should equal(ErrorPdus.UnsupportedPduType)
+    errorPdu.errorCode should equal(ErrorPdu.UnsupportedPduType)
+    client.isConnected should be(false)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -100,7 +103,28 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
-    errorPdu.errorCode should equal(ErrorPdus.UnsupportedProtocolVersion)
+    errorPdu.errorCode should equal(ErrorPdu.UnsupportedProtocolVersion)
+    client.isConnected should be(false)
+  }
+
+  // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
+  test("Server should answer with CorruptData when PDU length less than 8") {
+    val response = client.sendData(Array[Byte](0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x6))
+
+    assert(response.isInstanceOf[ErrorPdu])
+    val errorPdu = response.asInstanceOf[ErrorPdu]
+    errorPdu.errorCode should equal(ErrorPdu.CorruptData)
+    client.isConnected should be(false)
+  }
+
+  // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
+  test("Server should answer with CorruptData when PDU length more than 4096") {
+    val response = client.sendData(Array[Byte](0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x10, 0x1) ++ Array.fill[Byte](4097 - 8)(0))
+
+    assert(response.isInstanceOf[ErrorPdu])
+    val errorPdu = response.asInstanceOf[ErrorPdu]
+    errorPdu.errorCode should equal(ErrorPdu.CorruptData)
+    client.isConnected should be(false)
   }
 
 }

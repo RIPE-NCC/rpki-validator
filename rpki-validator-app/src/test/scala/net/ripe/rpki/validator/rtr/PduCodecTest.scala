@@ -53,7 +53,7 @@ class PduCodecTest extends FunSuite with ShouldMatchers {
     val channelBuffer = new BigEndianHeapChannelBuffer(PduTest.NoDataAvailablePduBytes)
     decoder.decode(null, null, channelBuffer) match {
       case Right(pdu: ErrorPdu) =>
-        pdu.errorCode should equal(ErrorPdus.NoDataAvailable)
+        pdu.errorCode should equal(ErrorPdu.NoDataAvailable)
       case _ =>
         fail("not an error pdu")
     }

@@ -67,7 +67,7 @@ case class ErrorPdu(errorCode: Int, causingPdu: Array[Byte], errorText: String) 
   override val length = 8 + 4 + causingPduLength + 4 + errorTextLength
 }
 
-object ErrorPdus {
+object ErrorPdu {
   val CorruptData = 0
   val InternalError = 1
   val NoDataAvailable = 2
@@ -76,6 +76,9 @@ object ErrorPdus {
   val UnsupportedPduType = 5
   val WithdrawalOfUnkownRecord = 6
   val DuplicateAnnouncementReceived = 7
+  
+  def isFatal(errorCode: Int) = errorCode != NoDataAvailable
+  
 }
 
 object PduTypes {
@@ -112,7 +115,7 @@ object Pdus {
     val length = buffer.readInt()
 
     if (protocol != SupportedProtocol) {
-      Left(BadData(ErrorPdus.UnsupportedProtocolVersion, buffer.array))
+      Left(BadData(ErrorPdu.UnsupportedProtocolVersion, buffer.array))
     } else {
       pduType match {
         case PduTypes.Error =>
@@ -125,12 +128,12 @@ object Pdus {
         case PduTypes.ResetQuery =>
           Right(ResetQueryPdu())
         case _ =>
-          Left(BadData(ErrorPdus.UnsupportedPduType, buffer.array))
+          Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
       }
     }
   } catch {
     case e: IndexOutOfBoundsException =>
-      Left(BadData(ErrorPdus.CorruptData, buffer.array()))
+      Left(BadData(ErrorPdu.CorruptData, buffer.array()))
   }
 }
 

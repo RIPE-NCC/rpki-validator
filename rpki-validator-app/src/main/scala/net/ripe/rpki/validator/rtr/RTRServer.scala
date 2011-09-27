@@ -39,13 +39,13 @@ import grizzled.slf4j.Logger
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
 import org.jboss.netty.handler.codec.frame.CorruptedFrameException
+import org.jboss.netty.handler.codec.frame.TooLongFrameException
 
 object RTRServer {
-    final val ProtocolVersion = 0
+  final val ProtocolVersion = 0
 }
 
 class RTRServer(port: Int) {
-  
 
   val logger = Logger[this.type]
 
@@ -112,33 +112,43 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
     var responsePdu: Pdu = processRequest(requestPdu)
 
     // respond
-    event.getChannel().write(responsePdu)
+    val channelFuture = event.getChannel().write(responsePdu)
+
+    responsePdu match {
+      case ErrorPdu(errorCode, _, _) if (ErrorPdu.isFatal(errorCode)) =>
+        channelFuture.addListener(ChannelFutureListener.CLOSE)
+      case _ =>
+    }
+
   }
 
   private def processRequest(request: Either[BadData, Pdu]) = {
     request match {
-      case Left(BadData(errorCode, content)) => 
+      case Left(BadData(errorCode, content)) =>
         ErrorPdu(errorCode, content, "")
-      case Right(ResetQueryPdu()) => 
-        ErrorPdu(ErrorPdus.NoDataAvailable, Array.empty, "")
-      case Right(_) => 
-        ErrorPdu(ErrorPdus.InvalidRequest, Array.empty, "")
+      case Right(ResetQueryPdu()) =>
+        ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, "")
+      case Right(_) =>
+        ErrorPdu(ErrorPdu.InvalidRequest, Array.empty, "")
     }
   }
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {
     // Can anyone think of a nice way to test this? Without tons of mocking and overkill?
     // Otherwise I will assume the code below is doing too little to be able to contain bugs ;)
-    logger.warn("Exception: " + event.getCause().getMessage())
-    logger.debug("", event.getCause())
-
-    var errorPdu: Pdu = null
-    val cause = event.getCause() match {
-      case cause: CorruptedFrameException => errorPdu = new ErrorPdu(ErrorPdus.CorruptData, Array.empty, "")
-      case _ => errorPdu = new ErrorPdu(ErrorPdus.InternalError, Array.empty, "")
+    logger.warn("Exception: " + event.getCause, event.getCause)
+    
+    if(!event.getChannel().isOpen()) {
+      return
     }
 
-      val channelFuture = event.getChannel()
-      channelFuture.write(errorPdu)
+    val response: Pdu = event.getCause() match {
+      case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+      case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+      case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
+    }
+
+    val channelFuture = event.getChannel().write(response)
+    channelFuture.addListener(ChannelFutureListener.CLOSE)
   }
 }
