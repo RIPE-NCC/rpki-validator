@@ -38,6 +38,8 @@ import org.jboss.netty.buffer.ChannelBuffers
 import java.nio.ByteOrder
 import scala.util.Random
 
+import net.ripe.ipresource._
+
 sealed trait Pdu {
   def protocolVersion: Byte = 0
   def pduType: Byte
@@ -65,6 +67,17 @@ case class CacheResponsePdu(nonce: Short = (new Random().nextInt() % Short.MaxVa
   override def length = 8
 }
 
+/**
+ * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.5
+ */
+case class IPv4PrefixAnnouncePdu(val ipv4PrefixStart: Ipv4Address, val prefixLength: Byte, val maxLength: Byte, val asn: Asn) extends Pdu {
+
+  override def pduType = PduTypes.IPv4Prefix
+  override def headerShort: Short = 0
+  override def length = 20
+
+}
+
 case class ErrorPdu(errorCode: Int, causingPdu: Array[Byte], errorText: String) extends Pdu {
   final override val pduType = PduTypes.Error
   override def headerShort = errorCode.toShort
@@ -86,14 +99,15 @@ object ErrorPdu {
   val UnsupportedPduType = 5
   val WithdrawalOfUnkownRecord = 6
   val DuplicateAnnouncementReceived = 7
-  
+
   def isFatal(errorCode: Int) = errorCode != NoDataAvailable
-  
+
 }
 
 object PduTypes {
   val ResetQuery: Byte = 2
   val CacheResponse: Byte = 3
+  val IPv4Prefix: Byte = 4
   val Error: Byte = 10
 }
 
@@ -115,8 +129,15 @@ object Pdus {
         buffer.writeBytes(errorPdu.errorTextBytes)
       case ResetQueryPdu() =>
       case CacheResponsePdu(_) =>
+      case IPv4PrefixAnnouncePdu(prefix, length, maxLength, asn) =>
+        buffer.writeByte(1)
+        buffer.writeByte(length)
+        buffer.writeByte(maxLength)
+        buffer.writeByte(0)
+        buffer.writeInt(prefix.longValue().toInt)
+        buffer.writeInt(asn.longValue().toInt)
     }
-    
+
     buffer.array()
   }
 
@@ -142,6 +163,18 @@ object Pdus {
         case PduTypes.CacheResponse =>
           val nonce = headerShort
           Right(CacheResponsePdu(nonce))
+        case PduTypes.IPv4Prefix =>
+          buffer.readByte() match {
+            case 1 =>
+              val length = buffer.readByte()
+              val maxLenght = buffer.readByte()
+              buffer.skipBytes(1)
+              val prefix = new Ipv4Address(buffer.readInt())
+              val asn = new Asn(buffer.readInt())
+              Right(IPv4PrefixAnnouncePdu(prefix, length, maxLenght, asn))
+            case _ =>
+              Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
+          }
         case _ =>
           Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
       }

@@ -38,6 +38,8 @@ import java.nio.charset.Charset
 import org.scalatest.matchers.ShouldMatchers
 import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
 
+import net.ripe.ipresource._
+
 @RunWith(classOf[JUnitRunner])
 class PduTest extends FunSuite with ShouldMatchers {
 
@@ -72,6 +74,20 @@ class PduTest extends FunSuite with ShouldMatchers {
         decodedPdu should equal(cacheResponsePdu)
       case _ => fail("Got back a wrong response")
     }
+  }
+  
+  test("should convert ipv4 prefix announce pdu to byte array and back") {
+	  val ipv4PrefixPdu = new IPv4PrefixAnnouncePdu(Ipv4Address.parse("10.0.0.0"), 8, 10, Asn.parse("65535"))
+	  val expectedBytes = Array[Byte](0x0, 0x4, 0x0, 0x0, 0x0, 0x0, 0x0, 0x14, 0x1, 0x8, 0xa, 0x0, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, 255.toByte, 255.toByte)
+	  val bytes = Pdus.encode(ipv4PrefixPdu)
+	  
+	  bytes should equal(expectedBytes)
+	  
+	  Pdus.fromByteArray(new BigEndianHeapChannelBuffer(bytes)) match {
+	  case Right(decodedPdu: IPv4PrefixAnnouncePdu) =>
+	  decodedPdu should equal(ipv4PrefixPdu)
+	  case _ => fail("Got back a wrong response")
+	  }
   }
   
 }
