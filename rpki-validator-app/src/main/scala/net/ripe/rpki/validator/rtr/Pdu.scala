@@ -36,6 +36,7 @@ import java.nio.charset.Charset
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.ChannelBuffers
 import java.nio.ByteOrder
+import scala.util.Random
 
 sealed trait Pdu {
   def protocolVersion: Byte = 0
@@ -52,6 +53,15 @@ case class BadData(errorCode: Int, content: Array[Byte])
 case class ResetQueryPdu() extends Pdu {
   override def pduType = PduTypes.ResetQuery
   override def headerShort: Short = 0
+  override def length = 8
+}
+
+/**
+ * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.4
+ */
+case class CacheResponsePdu(nonce: Short = (new Random().nextInt() % Short.MaxValue).toShort) extends Pdu {
+  override def pduType = PduTypes.CacheResponse
+  override def headerShort: Short = nonce
   override def length = 8
 }
 
@@ -83,6 +93,7 @@ object ErrorPdu {
 
 object PduTypes {
   val ResetQuery: Byte = 2
+  val CacheResponse: Byte = 3
   val Error: Byte = 10
 }
 
@@ -103,6 +114,7 @@ object Pdus {
         buffer.writeInt(errorPdu.errorTextBytes.length)
         buffer.writeBytes(errorPdu.errorTextBytes)
       case ResetQueryPdu() =>
+      case CacheResponsePdu(_) =>
     }
     
     buffer.array()
@@ -111,7 +123,7 @@ object Pdus {
   def fromByteArray(buffer: ChannelBuffer): Either[BadData, Pdu] = try {
     val protocol = buffer.readByte()
     val pduType = buffer.readByte()
-    val headerShort = buffer.readUnsignedShort()
+    val headerShort = buffer.readUnsignedShort().toShort
     val length = buffer.readInt()
 
     if (protocol != SupportedProtocol) {
@@ -127,6 +139,9 @@ object Pdus {
           Right(ErrorPdu(headerShort, causingPdu, errorText))
         case PduTypes.ResetQuery =>
           Right(ResetQueryPdu())
+        case PduTypes.CacheResponse =>
+          val nonce = headerShort
+          Right(CacheResponsePdu(nonce))
         case _ =>
           Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
       }

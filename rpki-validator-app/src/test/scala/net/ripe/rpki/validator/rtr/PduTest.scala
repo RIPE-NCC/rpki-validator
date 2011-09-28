@@ -36,6 +36,7 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.nio.charset.Charset
 import org.scalatest.matchers.ShouldMatchers
+import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
 
 @RunWith(classOf[JUnitRunner])
 class PduTest extends FunSuite with ShouldMatchers {
@@ -44,6 +45,35 @@ class PduTest extends FunSuite with ShouldMatchers {
     val bytes = Pdus.encode(PduTest.NoDataAvailablePdu)
     bytes should equal(PduTest.NoDataAvailablePduBytes)
   }
+  
+  test("should convert reset pdu to byte array and back") {
+    val resetPdu = new ResetQueryPdu()
+    val expectedBytes = Array[Byte](0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8)
+    val bytes = Pdus.encode(resetPdu)
+    
+    bytes should equal(expectedBytes)
+    
+    Pdus.fromByteArray(new BigEndianHeapChannelBuffer(bytes)) match {
+      case Right(decodedPdu: ResetQueryPdu) =>
+        decodedPdu should equal(resetPdu)
+      case _ => fail("Got back a wrong response")
+    }
+  }
+  
+  test("should convert cache response pdu to byte array and back") {
+    val cacheResponsePdu = new CacheResponsePdu(nonce = 0)
+    val expectedBytes = Array[Byte](0x0, 0x3, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8)
+    val bytes = Pdus.encode(cacheResponsePdu)
+
+    bytes should equal(expectedBytes)
+
+    Pdus.fromByteArray(new BigEndianHeapChannelBuffer(bytes)) match {
+      case Right(decodedPdu: CacheResponsePdu) =>
+        decodedPdu should equal(cacheResponsePdu)
+      case _ => fail("Got back a wrong response")
+    }
+  }
+  
 }
 
 object PduTest {
