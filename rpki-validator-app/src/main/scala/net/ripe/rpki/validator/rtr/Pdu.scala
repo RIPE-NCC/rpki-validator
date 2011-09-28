@@ -43,32 +43,14 @@ import java.math.BigInteger
 sealed trait Pdu {
   def protocolVersion: Byte = 0
   def pduType: Byte
-  def headerShort: Short
+  def headerShort: Int = 0
   def length: Int
+  
+  assert(headerShort <= Pdu.MAX_HEADER_SHORT_VALUE)
 }
 
-trait EqualsSupport {
-  import org.apache.commons.lang.builder.EqualsBuilder;
-  import org.apache.commons.lang.builder.HashCodeBuilder;
-  import org.apache.commons.lang.builder.ToStringBuilder;
-  import org.apache.commons.lang.builder.ToStringStyle;
-
-  override def equals(obj: Any): Boolean = {
-    if (obj == null || this.getClass() != obj.getClass()) {
-      false
-    } else {
-      EqualsBuilder.reflectionEquals(this, obj)
-    }
-  }
-
-  override def hashCode(): Int = {
-    HashCodeBuilder.reflectionHashCode(this);
-  }
-
-  override def toString(): String = {
-    ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE);
-  }
-
+object Pdu {
+  val MAX_HEADER_SHORT_VALUE = 65536 - 1
 }
 
 case class BadData(errorCode: Int, content: Array[Byte])
@@ -78,16 +60,15 @@ case class BadData(errorCode: Int, content: Array[Byte])
  */
 case class ResetQueryPdu() extends Pdu {
   override def pduType = PduTypes.ResetQuery
-  override def headerShort: Short = 0
   override def length = 8
 }
 
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.4
  */
-case class CacheResponsePdu(nonce: Short = (new Random().nextInt() % Short.MaxValue).toShort) extends Pdu {
+case class CacheResponsePdu(nonce: Int = (new Random().nextInt() % Short.MaxValue)) extends Pdu {
   override def pduType = PduTypes.CacheResponse
-  override def headerShort: Short = nonce
+  override def headerShort = nonce
   override def length = 8
 }
 
@@ -95,22 +76,28 @@ case class CacheResponsePdu(nonce: Short = (new Random().nextInt() % Short.MaxVa
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.5
  */
 case class IPv4PrefixAnnouncePdu(val ipv4PrefixStart: Ipv4Address, val prefixLength: Byte, val maxLength: Byte, val asn: Asn) extends Pdu {
-
   override def pduType = PduTypes.IPv4Prefix
-  override def headerShort: Short = 0
   override def length = 20
-
 }
 
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.6
  */
 case class IPv6PrefixAnnouncePdu(val ipv6PrefixStart: Ipv6Address, val prefixLength: Byte, val maxLength: Byte, val asn: Asn) extends Pdu {
-
   override def pduType = PduTypes.IPv6Prefix
-  override def headerShort: Short = 0
   override def length = 32
+}
 
+case class EndOfDataPdu(nonce: Int, serial: Long) extends Pdu {
+  override def pduType = PduTypes.EndOfData
+  override def headerShort: Int = nonce
+  override def length = 12
+
+  assert(serial <= EndOfDataPdu.MAX_SERIAL)
+}
+
+object EndOfDataPdu {
+  val MAX_SERIAL: Long = 4294967296L - 1
 }
 
 case class ErrorPdu(errorCode: Int, causingPdu: Array[Byte], errorText: String) extends Pdu {
@@ -144,6 +131,7 @@ object PduTypes {
   val CacheResponse: Byte = 3
   val IPv4Prefix: Byte = 4
   val IPv6Prefix: Byte = 6
+  val EndOfData: Byte = 7
   val Error: Byte = 10
 }
 
@@ -179,6 +167,8 @@ object Pdus {
         buffer.writeByte(0)
         buffer.writeBytes(convertToPrependedByteArray(prefix.getValue(), 16))
         buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
+      case EndOfDataPdu(_, serial) =>
+        buffer.writeInt(serial.toInt)
     }
 
     buffer.array()
@@ -200,13 +190,14 @@ object Pdus {
   def fromByteArray(buffer: ChannelBuffer): Either[BadData, Pdu] = try {
     val protocol = buffer.readByte()
     val pduType = buffer.readByte()
-    val headerShort = buffer.readUnsignedShort().toShort
+    val headerShort = buffer.readUnsignedShort()
     val length = buffer.readInt()
 
     if (protocol != SupportedProtocol) {
       Left(BadData(ErrorPdu.UnsupportedProtocolVersion, buffer.array))
     } else {
       pduType match {
+
         case PduTypes.Error =>
           val causingPduLength = buffer.readInt()
           val causingPdu = buffer.readBytes(causingPduLength).array()
@@ -214,11 +205,19 @@ object Pdus {
           val errorTextBytes = buffer.readBytes(errorTextLength)
           val errorText = new String(buffer.array(), "UTF-8")
           Right(ErrorPdu(headerShort, causingPdu, errorText))
+
         case PduTypes.ResetQuery =>
           Right(ResetQueryPdu())
+
         case PduTypes.CacheResponse =>
           val nonce = headerShort
           Right(CacheResponsePdu(nonce))
+
+        case PduTypes.EndOfData =>
+          val nonce = headerShort
+          val serial = buffer.readUnsignedInt()
+          Right(EndOfDataPdu(nonce, serial))
+
         case PduTypes.IPv4Prefix =>
           buffer.readByte() match {
             case 1 =>
@@ -232,6 +231,7 @@ object Pdus {
               // TODO: Support withdrawals
               Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
           }
+
         case PduTypes.IPv6Prefix =>
           buffer.readByte() match {
             case 1 =>
