@@ -45,7 +45,7 @@ sealed trait Pdu {
   def pduType: Byte
   def headerShort: Int = 0
   def length: Int
-  
+
   assert(headerShort <= Pdu.MAX_HEADER_SHORT_VALUE)
 }
 
@@ -54,6 +54,18 @@ object Pdu {
 }
 
 case class BadData(errorCode: Int, content: Array[Byte])
+
+/**
+ * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.2
+ */
+case class SerialQueryPdu(nonce: Int, serial: Long) extends Pdu {
+  override def pduType = PduTypes.SerialQuery
+  override def headerShort = nonce
+  override def length = 12
+  
+  assert(nonce <= Pdu.MAX_HEADER_SHORT_VALUE)
+  assert(serial <= EndOfDataPdu.MAX_SERIAL)
+}
 
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.3
@@ -66,7 +78,7 @@ case class ResetQueryPdu() extends Pdu {
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.4
  */
-case class CacheResponsePdu(nonce: Int = (new Random().nextInt() % Short.MaxValue)) extends Pdu {
+case class CacheResponsePdu(nonce: Int = (new Random().nextInt() % Pdu.MAX_HEADER_SHORT_VALUE)) extends Pdu {
   override def pduType = PduTypes.CacheResponse
   override def headerShort = nonce
   override def length = 8
@@ -127,6 +139,7 @@ object ErrorPdu {
 }
 
 object PduTypes {
+  val SerialQuery: Byte = 1
   val ResetQuery: Byte = 2
   val CacheResponse: Byte = 3
   val IPv4Prefix: Byte = 4
@@ -169,6 +182,9 @@ object Pdus {
         buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
       case EndOfDataPdu(_, serial) =>
         buffer.writeInt(serial.toInt)
+      case SerialQueryPdu(_, serial) =>
+        buffer.writeInt(serial.toInt)
+        
     }
 
     buffer.array()
@@ -206,6 +222,11 @@ object Pdus {
           val errorText = new String(buffer.array(), "UTF-8")
           Right(ErrorPdu(headerShort, causingPdu, errorText))
 
+        case PduTypes.SerialQuery =>
+          val nonce = headerShort
+          val serial = buffer.readUnsignedInt()
+          Right(SerialQueryPdu(nonce, serial))
+          
         case PduTypes.ResetQuery =>
           Right(ResetQueryPdu())
 
@@ -249,6 +270,7 @@ object Pdus {
               // TODO: Support withdrawals
               Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
           }
+          
         case _ =>
           Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
       }

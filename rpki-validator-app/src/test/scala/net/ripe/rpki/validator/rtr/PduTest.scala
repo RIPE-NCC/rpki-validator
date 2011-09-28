@@ -48,6 +48,23 @@ class PduTest extends FunSuite with ShouldMatchers {
     bytes should equal(PduTest.NoDataAvailablePduBytes)
   }
 
+  test("should convert serial query pdu to byte array and back") {
+    val serialQueryPdu = new SerialQueryPdu(nonce = Pdu.MAX_HEADER_SHORT_VALUE, serial = EndOfDataPdu.MAX_SERIAL)
+    val expectedBytes = Array[Byte](
+      0x0, 0x1, 255.toByte, 255.toByte,
+      0x0, 0x0, 0x0, 0xc,
+      255.toByte, 255.toByte, 255.toByte, 255.toByte)
+    val bytes = Pdus.encode(serialQueryPdu)
+
+    bytes should equal(expectedBytes)
+
+    Pdus.fromByteArray(new BigEndianHeapChannelBuffer(bytes)) match {
+      case Right(decodedPdu: SerialQueryPdu) =>
+        decodedPdu should equal(serialQueryPdu)
+      case _ => fail("Got back a wrong response")
+    }
+  }
+
   test("should convert reset pdu to byte array and back") {
     val resetPdu = new ResetQueryPdu()
     val expectedBytes = Array[Byte](
