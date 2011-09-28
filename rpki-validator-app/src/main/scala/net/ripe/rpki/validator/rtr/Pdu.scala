@@ -37,14 +37,38 @@ import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.ChannelBuffers
 import java.nio.ByteOrder
 import scala.util.Random
-
 import net.ripe.ipresource._
+import java.math.BigInteger
 
 sealed trait Pdu {
   def protocolVersion: Byte = 0
   def pduType: Byte
   def headerShort: Short
   def length: Int
+}
+
+trait EqualsSupport {
+  import org.apache.commons.lang.builder.EqualsBuilder;
+  import org.apache.commons.lang.builder.HashCodeBuilder;
+  import org.apache.commons.lang.builder.ToStringBuilder;
+  import org.apache.commons.lang.builder.ToStringStyle;
+
+  override def equals(obj: Any): Boolean = {
+    if (obj == null || this.getClass() != obj.getClass()) {
+      false
+    } else {
+      EqualsBuilder.reflectionEquals(this, obj)
+    }
+  }
+
+  override def hashCode(): Int = {
+    HashCodeBuilder.reflectionHashCode(this);
+  }
+
+  override def toString(): String = {
+    ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE);
+  }
+
 }
 
 case class BadData(errorCode: Int, content: Array[Byte])
@@ -78,6 +102,17 @@ case class IPv4PrefixAnnouncePdu(val ipv4PrefixStart: Ipv4Address, val prefixLen
 
 }
 
+/**
+ * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.6
+ */
+case class IPv6PrefixAnnouncePdu(val ipv6PrefixStart: Ipv6Address, val prefixLength: Byte, val maxLength: Byte, val asn: Asn) extends Pdu {
+
+  override def pduType = PduTypes.IPv6Prefix
+  override def headerShort: Short = 0
+  override def length = 32
+
+}
+
 case class ErrorPdu(errorCode: Int, causingPdu: Array[Byte], errorText: String) extends Pdu {
   final override val pduType = PduTypes.Error
   override def headerShort = errorCode.toShort
@@ -108,6 +143,7 @@ object PduTypes {
   val ResetQuery: Byte = 2
   val CacheResponse: Byte = 3
   val IPv4Prefix: Byte = 4
+  val IPv6Prefix: Byte = 6
   val Error: Byte = 10
 }
 
@@ -134,11 +170,31 @@ object Pdus {
         buffer.writeByte(length)
         buffer.writeByte(maxLength)
         buffer.writeByte(0)
-        buffer.writeInt(prefix.longValue().toInt)
-        buffer.writeInt(asn.longValue().toInt)
+        buffer.writeBytes(convertToPrependedByteArray(prefix.getValue(), 4))
+        buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
+      case IPv6PrefixAnnouncePdu(prefix, length, maxLength, asn) =>
+        buffer.writeByte(1)
+        buffer.writeByte(length)
+        buffer.writeByte(maxLength)
+        buffer.writeByte(0)
+        buffer.writeBytes(convertToPrependedByteArray(prefix.getValue(), 16))
+        buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
     }
 
     buffer.array()
+  }
+
+  def convertToPrependedByteArray(value: BigInteger, bytesNeeded: Int): Array[Byte] = {
+    var valueBytes = value.toByteArray()
+
+    var extraBytesNeeded = bytesNeeded - valueBytes.length
+    if (extraBytesNeeded > 0) {
+      var prependBytes = new Array[Byte](extraBytesNeeded)
+      prependBytes ++ valueBytes
+    } else {
+      valueBytes.drop(extraBytesNeeded * -1)
+    }
+
   }
 
   def fromByteArray(buffer: ChannelBuffer): Either[BadData, Pdu] = try {
@@ -169,10 +225,28 @@ object Pdus {
               val length = buffer.readByte()
               val maxLenght = buffer.readByte()
               buffer.skipBytes(1)
-              val prefix = new Ipv4Address(buffer.readInt())
-              val asn = new Asn(buffer.readInt())
+              val prefix = new Ipv4Address(buffer.readUnsignedInt())
+              val asn = new Asn(buffer.readUnsignedInt())
               Right(IPv4PrefixAnnouncePdu(prefix, length, maxLenght, asn))
             case _ =>
+              // TODO: Support withdrawals
+              Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
+          }
+        case PduTypes.IPv6Prefix =>
+          buffer.readByte() match {
+            case 1 =>
+              val length = buffer.readByte()
+              val maxLenght = buffer.readByte()
+              buffer.skipBytes(1)
+              val ipv6Bytes: Array[Byte] = new Array[Byte](16)
+              buffer.getBytes(12, ipv6Bytes)
+              val prefix = new Ipv6Address(new BigInteger(1, ipv6Bytes)) // Careful, omit sign and bad things happen when calling equals
+
+              buffer.skipBytes(16)
+              val asn = new Asn(buffer.readUnsignedInt())
+              Right(IPv6PrefixAnnouncePdu(prefix, length, maxLenght, asn))
+            case _ =>
+              // TODO: Support withdrawals
               Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
           }
         case _ =>
