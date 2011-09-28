@@ -40,28 +40,38 @@ import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
 import org.jboss.netty.handler.codec.frame.CorruptedFrameException
 import org.jboss.netty.handler.codec.frame.TooLongFrameException
+import org.slf4j.MDC
 import net.ripe.rpki.validator.models.Roas
+import org.jboss.netty.handler.timeout.ReadTimeoutHandler
+import org.jboss.netty.util.Timer
+import org.jboss.netty.util.HashedWheelTimer
+import java.util.concurrent.TimeUnit
+import org.jboss.netty.handler.timeout.ReadTimeoutException
 
 object RTRServer {
   final val ProtocolVersion = 0
 }
 
 class RTRServer(port: Int, validatedRoas: () => Roas) {
+  import TimeUnit._
 
   val logger = Logger[this.type]
 
   var bootstrap: ServerBootstrap = _
+  var timer: Timer = new HashedWheelTimer(5, SECONDS)    // check for timer events every 5 secs
 
   def startServer(): Unit = {
+    
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool(),
       Executors.newCachedThreadPool()))
 
     registerShutdownHook()
-
+    
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       override def getPipeline: ChannelPipeline = {
         Channels.pipeline(
+          new ReadTimeoutHandler(timer, 1, HOURS),
           new LengthFieldBasedFrameDecoder(
             /*maxFrameLength*/ 4096,
             /*lengthFieldOffset*/ 4,
@@ -82,11 +92,9 @@ class RTRServer(port: Int, validatedRoas: () => Roas) {
   }
 
   def registerShutdownHook() {
-    Runtime.getRuntime.addShutdownHook(new Thread {
-      override def run() {
+    sys.addShutdownHook({
         stopServer()
         logger.info("RTR server stopped")
-      }
     })
   }
 
@@ -99,6 +107,18 @@ class RTRServer(port: Int, validatedRoas: () => Roas) {
 class RTRServerHandler extends SimpleChannelUpstreamHandler {
 
   val logger = Logger[this.type]
+  
+  override def channelConnected(context:ChannelHandlerContext, event:ChannelStateEvent) {
+    MDC.put("contextName", context.getName())
+    MDC.put("clientAddress", event.getChannel().getRemoteAddress().toString())
+    super.channelConnected(context, event)
+  }
+  
+  override def channelClosed(context:ChannelHandlerContext, event:ChannelStateEvent) {
+    super.channelClosed(context, event)
+    MDC.remove("contextName")
+    MDC.remove("clientAddress")
+  }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
     import org.jboss.netty.buffer.ChannelBuffers
@@ -139,17 +159,16 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
     // Otherwise I will assume the code below is doing too little to be able to contain bugs ;)
     logger.warn("Exception: " + event.getCause, event.getCause)
     
-    if(!event.getChannel().isOpen()) {
-      return
+    if(event.getChannel().isOpen()) {
+        val response: Pdu = event.getCause() match {
+          case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+          case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+          case cause: ReadTimeoutException => ErrorPdu(ErrorPdu.InternalError, Array.empty, "Connection timed out")
+          case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
+        }
+    
+        val channelFuture = event.getChannel().write(response)
+        channelFuture.addListener(ChannelFutureListener.CLOSE)
     }
-
-    val response: Pdu = event.getCause() match {
-      case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-      case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-      case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
-    }
-
-    val channelFuture = event.getChannel().write(response)
-    channelFuture.addListener(ChannelFutureListener.CLOSE)
   }
 }

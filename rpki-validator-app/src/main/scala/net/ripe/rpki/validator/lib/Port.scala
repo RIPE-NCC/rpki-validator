@@ -32,8 +32,10 @@ package net.ripe.rpki.validator.lib
 object Port {
   def any: Int = {
     val s = new java.net.ServerSocket(0)
-    val port = s.getLocalPort()
-    s.close()
-    port
+    try {
+      s.getLocalPort()
+    } finally {
+      s.close()
+    }
   }
 }
