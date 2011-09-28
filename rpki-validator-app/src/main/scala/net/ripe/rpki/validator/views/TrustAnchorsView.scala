@@ -41,7 +41,7 @@ import models.TrustAnchors
 class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime) extends View {
   def tab = Tabs.TrustAnchorsTab
   def title = Text("Configured Trust Anchors")
-  def body =
+  def body = {
     <table class="zebra-striped">
       <thead>
         <th>CA Name</th>
@@ -65,6 +65,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime)
         }
       }</tbody>
     </table>
+  }
 
   private def expiresIn(notValidAfter: DateTime): NodeSeq = {
     if (now.isBefore(notValidAfter)) {

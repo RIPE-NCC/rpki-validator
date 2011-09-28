@@ -39,7 +39,7 @@ import net.ripe.rpki.validator.models.TrustAnchor
 import net.ripe.rpki.validator.models.ValidatedRoa
 import net.ripe.certification.validator.util.TrustAnchorLocator
 
-class RoasView(roas: Roas) extends View {
+class RoasView(roas: Roas, version: Int) extends View {
   def tab = Tabs.RoasTab
   def title = Text("Validated ROAs")
   def body = {
@@ -47,7 +47,8 @@ class RoasView(roas: Roas) extends View {
     <div class="alert-message block-message info">
       {
         optional(ready.nonEmpty, <p>Validated ROAs from { listTrustAnchorNames(ready.keys.toSeq) }.</p>) ++
-          optional(loading.nonEmpty, <p>Still retrieving and validating ROAs from { listTrustAnchorNames(loading.keys.toSeq) }.</p>)
+        optional(loading.nonEmpty, <p>Still retrieving and validating ROAs from { listTrustAnchorNames(loading.keys.toSeq) }.</p>)
+        <p>Current serial of validated roa cache: <strong>{version}</strong>.</p> 
       }
       <div class="alert-actions">
         <a href="roas.csv" class="btn small">Download validated ROAs as CSV</a>
@@ -64,7 +65,7 @@ class RoasView(roas: Roas) extends View {
       </thead>
       <tbody>{
         for {
-          (tal, Some(roas)) <- ready
+          (talName, Some(roas)) <- ready
           validated <- roas
           roa = validated.roa
           prefix <- roa.getPrefixes().asScala
@@ -73,7 +74,7 @@ class RoasView(roas: Roas) extends View {
             <td>{ roa.getAsn().getValue() }</td>
             <td>{ prefix.getPrefix() }</td>
             <td>{ prefix.getEffectiveMaximumLength() } </td>
-            <td>{ tal.getCaName() }</td>
+            <td>{ talName }</td>
           </tr>
         }
       }</tbody>
@@ -88,6 +89,6 @@ $(document).ready(function() {
   }
 
   private def optional(condition: Boolean, body: => NodeSeq) = if (condition) body else NodeSeq.Empty
-  private def listTrustAnchorNames(elements: Seq[TrustAnchorLocator]): NodeSeq =
-    elements.map(_.getCaName()).sorted.map(name => <strong>{ name }</strong>: NodeSeq).reduce(_ ++ Text(", ") ++ _)
+  private def listTrustAnchorNames(elements: Seq[String]): NodeSeq =
+    elements.sorted.map(name => <strong>{ name }</strong>: NodeSeq).reduce(_ ++ Text(", ") ++ _)
 }

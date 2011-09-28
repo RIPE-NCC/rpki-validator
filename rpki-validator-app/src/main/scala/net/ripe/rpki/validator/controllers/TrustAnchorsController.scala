@@ -32,11 +32,17 @@ package controllers
 
 import org.scalatra.ScalatraKernel
 import models.TrustAnchors
+import net.ripe.rpki.validator.config.Main
 
 trait TrustAnchorsController extends ApplicationController {
   def trustAnchors: TrustAnchors
 
   get("/trust-anchors") {
     new views.TrustAnchorsView(trustAnchors)
+  }
+  
+  get("/update-trust-anchors") {
+    Main.loadTrustAnchors()
+    new views.TrustAnchorsView(trustAnchors) // TODO: show that we're updating... or update per TA, oh and show button on UI
   }
 }

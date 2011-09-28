@@ -40,12 +40,13 @@ import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
 import org.jboss.netty.handler.codec.frame.CorruptedFrameException
 import org.jboss.netty.handler.codec.frame.TooLongFrameException
+import net.ripe.rpki.validator.models.Roas
 
 object RTRServer {
   final val ProtocolVersion = 0
 }
 
-class RTRServer(port: Int) {
+class RTRServer(port: Int, validatedRoas: () => Roas) {
 
   val logger = Logger[this.type]
 

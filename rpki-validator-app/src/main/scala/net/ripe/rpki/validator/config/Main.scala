@@ -43,19 +43,19 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 import scalaz.concurrent.Promise
 
-case class Database(trustAnchors: TrustAnchors, roas: Roas)
+case class Database(trustAnchors: TrustAnchors, roas: Roas, version: Int)
 
 class Atomic[T](value: T) {
   val db: AtomicReference[T] = new AtomicReference(value)
 
   def get = db.get
 
-  @tailrec
   final def update(f: T => T) {
-    val current = get
-    val updated = f(current)
-    if (!db.compareAndSet(current, updated)) {
-      update(f)
+    var current = get
+    var updated = f(current)
+    while (!db.compareAndSet(current, updated)) {
+      current = get
+      updated = f(current)
     }
   }
 }
@@ -68,7 +68,7 @@ object Main {
   def main(args: Array[String]) {
     val trustAnchors = loadTrustAnchors()
     val roas = Roas.apply(trustAnchors)
-    database = new Atomic(Database(trustAnchors, roas))
+    database = new Atomic(Database(trustAnchors, roas, 1))
 
     runWebServer()
     runRtrServer()
@@ -87,7 +87,7 @@ object Main {
         }
         val validatedRoas = Roas.fetchObjects(ta.locator, certificate)
         database.update { db =>
-          db.copy(roas = db.roas.update(ta.locator, validatedRoas))
+          db.copy(roas = db.roas.update(ta.locator, validatedRoas), version = db.version + 1)
         }
       }
     }
@@ -107,6 +107,7 @@ object Main {
     root.addFilter(new FilterHolder(new WebFilter {
       def trustAnchors = database.get.trustAnchors
       def roas = database.get.roas
+      def version = database.get.version
     }), "/*", FilterMapping.ALL)
     server.setHandler(root)
     server
@@ -125,6 +126,6 @@ object Main {
   }
 
   private def runRtrServer(): Unit = {
-    new RTRServer(8282).startServer()
+    new RTRServer(8282, { () => database.get.roas }).startServer()
   }
 }

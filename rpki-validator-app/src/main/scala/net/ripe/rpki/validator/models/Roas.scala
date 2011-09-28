@@ -46,9 +46,25 @@ import scalaz.concurrent.Promise
 
 case class ValidatedRoa(val roa: RoaCms, val uri: URI, val trustAnchor: TrustAnchorLocator)
 
-class Roas(val all: Map[TrustAnchorLocator, Option[Seq[ValidatedRoa]]]) {
+class Roas(val all: Map[String, Option[Seq[ValidatedRoa]]]) {
+
+  val logger = Logger[this.type]
+
+  var msg: String = "Creating new Roas object with tals: "
+  all.keys.foreach {
+    key =>
+      msg = msg + key + " with number of validated Roas: "
+      all.get(key).get match {
+        case None => msg = msg + "none"
+        case Some(roas) => msg = msg + roas.size
+      }
+      msg = msg + "\n"
+  }
+
+  logger.trace(msg)
+
   def update(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) = {
-    new Roas(all.updated(tal, Some(validatedRoas)))
+    new Roas(all.updated(tal.getCaName(), Some(validatedRoas)))
   }
 }
 
@@ -56,7 +72,7 @@ object Roas {
   private val logger = Logger[this.type]
 
   def apply(trustAnchors: TrustAnchors): Roas = {
-    new Roas(trustAnchors.all.map(ta => ta.locator -> None)(breakOut))
+    new Roas(trustAnchors.all.map(ta => ta.locator.getCaName() -> None)(breakOut))
   }
 
   def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext): Seq[ValidatedRoa] = {

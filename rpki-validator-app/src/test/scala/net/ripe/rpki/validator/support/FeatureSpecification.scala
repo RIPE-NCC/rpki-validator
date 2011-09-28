@@ -43,5 +43,6 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
   addFilter(new WebFilter {
     override lazy val trustAnchors = sys.error("TBD")
     override lazy val roas = sys.error("TBD")
+    override lazy val version = sys.error("TBD")
   }, "/*")
 }

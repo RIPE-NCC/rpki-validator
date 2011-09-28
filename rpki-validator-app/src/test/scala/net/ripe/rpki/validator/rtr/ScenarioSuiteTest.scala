@@ -41,6 +41,7 @@ import java.io.PrintWriter
 import java.io.DataOutputStream
 import org.scalatest.BeforeAndAfter
 import net.ripe.rpki.validator.lib.Port
+import net.ripe.rpki.validator.models.Roas
 
 @RunWith(classOf[JUnitRunner])
 class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
@@ -51,7 +52,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
   var client: RTRClient = null
 
   override def beforeAll() = {
-    server = new RTRServer(port)
+    server = new RTRServer(port, () => new Roas(Map.empty))
     server.startServer()
   }
 

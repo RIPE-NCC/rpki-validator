@@ -38,9 +38,10 @@ import views.RoasView
 
 trait RoasController extends ApplicationController {
   def roas: Roas
+  def version: Int
 
   get("/roas") {
-    new RoasView(roas)
+    new RoasView(roas, version)
   }
   get("/roas.csv") {
     val dateFormatter = DateTimeFormat.forPattern("YYYY-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC)
