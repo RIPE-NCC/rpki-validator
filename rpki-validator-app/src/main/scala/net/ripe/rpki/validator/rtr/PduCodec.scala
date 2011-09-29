@@ -54,10 +54,21 @@ class PduEncoder extends OneToOneEncoder {
   val logger = Logger[this.type]
 
   override def encode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = msg match {
-    case pdu: Pdu =>
-      val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, pdu.length)
-      buffer.writeBytes(Pdus.encode(pdu))
+
+    case requestPdu: Pdu =>
+      val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, requestPdu.length)
+      buffer.writeBytes(Pdus.encode(requestPdu))
       buffer
+
+    case responsePdus: List[Pdu] =>
+      var length: Int = 0
+      responsePdus.foreach(pdu => length += pdu.length)
+
+      val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, length)
+
+      responsePdus.foreach(pdu => { buffer.writeBytes(Pdus.encode(pdu)) })
+      buffer
+
     case bytes: Array[Byte] =>
       val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, bytes.length)
       buffer.writeBytes(bytes)

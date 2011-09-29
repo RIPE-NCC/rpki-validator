@@ -42,9 +42,16 @@ import models._
 import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.tailrec
 import scalaz.concurrent.Promise
+import scala.util.Random
+import net.ripe.rpki.validator.rtr.Pdu
 
-case class Database(trustAnchors: TrustAnchors, roas: Roas, version: Int)
+case class Database(trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
 
+  var nonce: Int = (new Random().nextInt() % 4096)
+  
+  if (nonce < 0) { nonce = nonce * -1 }
+
+}
 class Atomic[T](value: T) {
   val db: AtomicReference[T] = new AtomicReference(value)
 
@@ -68,7 +75,7 @@ object Main {
   def main(args: Array[String]) {
     val trustAnchors = loadTrustAnchors()
     val roas = Roas.apply(trustAnchors)
-    database = new Atomic(Database(trustAnchors, roas, 1))
+    database = new Atomic(Database(trustAnchors, roas))
 
     runWebServer()
     runRtrServer()
@@ -126,6 +133,10 @@ object Main {
   }
 
   private def runRtrServer(): Unit = {
-    new RTRServer(8282, { () => database.get.roas }).startServer()
+    new RTRServer(
+      port = 8282,
+      getCurrentCacheSerial = { () => database.get.version },
+      getCurrentRoas = { () => database.get.roas },
+      getCurrentNonce = { () => database.get.nonce }).startServer()
   }
 }

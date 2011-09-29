@@ -47,40 +47,46 @@ import org.jboss.netty.util.Timer
 import org.jboss.netty.util.HashedWheelTimer
 import java.util.concurrent.TimeUnit
 import org.jboss.netty.handler.timeout.ReadTimeoutException
+import net.ripe.rpki.validator.config.Database
+import scala.collection.JavaConverters._
+import net.ripe.ipresource.IpResourceType
+import net.ripe.ipresource.Ipv4Address
+import net.ripe.ipresource.Ipv6Address
 
 object RTRServer {
   final val ProtocolVersion = 0
+  final val MAXIMUM_FRAME_LENGTH = 16777216
 }
 
-class RTRServer(port: Int, validatedRoas: () => Roas) {
+class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) {
   import TimeUnit._
 
   val logger = Logger[this.type]
 
   var bootstrap: ServerBootstrap = _
-  var timer: Timer = new HashedWheelTimer(5, SECONDS)    // check for timer events every 5 secs
+  var timer: Timer = new HashedWheelTimer(5, SECONDS) // check for timer events every 5 secs
 
   def startServer(): Unit = {
-    
+
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool(),
       Executors.newCachedThreadPool()))
 
     registerShutdownHook()
-    
+
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       override def getPipeline: ChannelPipeline = {
         Channels.pipeline(
           new ReadTimeoutHandler(timer, 1, HOURS),
           new LengthFieldBasedFrameDecoder(
-            /*maxFrameLength*/ 4096,
+            /*maxFrameLength*/ RTRServer.MAXIMUM_FRAME_LENGTH,
             /*lengthFieldOffset*/ 4,
             /*lengthFieldLength*/ 4,
             /*lengthAdjustment*/ -8,
             /*initialBytesToStrip*/ 0),
           new PduEncoder,
           new PduDecoder,
-          new RTRServerHandler)
+          new RTRServerHandler(getCurrentCacheSerial, getCurrentRoas, getCurrentNonce))
       }
     })
     bootstrap.setOption("child.keepAlive", true)
@@ -93,8 +99,8 @@ class RTRServer(port: Int, validatedRoas: () => Roas) {
 
   def registerShutdownHook() {
     sys.addShutdownHook({
-        stopServer()
-        logger.info("RTR server stopped")
+      stopServer()
+      logger.info("RTR server stopped")
     })
   }
 
@@ -104,17 +110,17 @@ class RTRServer(port: Int, validatedRoas: () => Roas) {
   }
 }
 
-class RTRServerHandler extends SimpleChannelUpstreamHandler {
+class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends SimpleChannelUpstreamHandler {
 
   val logger = Logger[this.type]
-  
-  override def channelConnected(context:ChannelHandlerContext, event:ChannelStateEvent) {
+
+  override def channelConnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
     MDC.put("contextName", context.getName())
     MDC.put("clientAddress", event.getChannel().getRemoteAddress().toString())
     super.channelConnected(context, event)
   }
-  
-  override def channelClosed(context:ChannelHandlerContext, event:ChannelStateEvent) {
+
+  override def channelClosed(context: ChannelHandlerContext, event: ChannelStateEvent) {
     super.channelClosed(context, event)
     MDC.remove("contextName")
     MDC.remove("clientAddress")
@@ -130,12 +136,12 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
 
     // decode and process
     val requestPdu = event.getMessage().asInstanceOf[Either[BadData, Pdu]]
-    var responsePdu: Pdu = processRequest(requestPdu)
+    var responsePdus: List[Pdu] = processRequest(requestPdu)
 
     // respond
-    val channelFuture = event.getChannel().write(responsePdu)
+    val channelFuture = event.getChannel().write(responsePdus)
 
-    responsePdu match {
+    responsePdus.last match {
       case ErrorPdu(errorCode, _, _) if (ErrorPdu.isFatal(errorCode)) =>
         channelFuture.addListener(ChannelFutureListener.CLOSE)
       case _ =>
@@ -143,14 +149,39 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
 
   }
 
-  private def processRequest(request: Either[BadData, Pdu]) = {
+  private def processRequest(request: Either[BadData, Pdu]): List[Pdu] = {
     request match {
       case Left(BadData(errorCode, content)) =>
-        ErrorPdu(errorCode, content, "")
+        List(ErrorPdu(errorCode, content, ""))
       case Right(ResetQueryPdu()) =>
-        ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, "")
+        getCurrentCacheSerial.apply() match {
+          case 0 => List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
+          case _ =>
+            var responsePdus: List[Pdu] = List[Pdu]()
+            responsePdus = responsePdus ++ List(CacheResponsePdu(nonce = getCurrentNonce.apply()))
+            for {
+              (_, validatedRoas) <- getCurrentRoas.apply().all if validatedRoas.isDefined
+              validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
+              roa = validatedRoa.roa
+              prefix <- roa.getPrefixes().asScala
+            } {
+              var maxLength = prefix.getEffectiveMaximumLength()
+              var length = prefix.getPrefix().getPrefixLength()
+
+              prefix.getPrefix().getStart() match {
+                case ipv4: Ipv4Address =>
+                  // val ipv4PrefixStart: Ipv4Address, val prefixLength: Byte, val maxLength: Byte, val asn: Asn
+                  responsePdus = responsePdus ++ List(IPv4PrefixAnnouncePdu(ipv4, length.toByte, maxLength.toByte, roa.getAsn()))
+                case ipv6: Ipv6Address =>
+                  responsePdus = responsePdus ++ List(IPv6PrefixAnnouncePdu(ipv6, length.toByte, maxLength.toByte, roa.getAsn()))
+                case _ => assert(false)
+              }
+              logger.info("Prefix: " + prefix)
+            }
+            responsePdus ++ List(EndOfDataPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply()))
+        }
       case Right(_) =>
-        ErrorPdu(ErrorPdu.InvalidRequest, Array.empty, "")
+        List(ErrorPdu(ErrorPdu.InvalidRequest, Array.empty, ""))
     }
   }
 
@@ -158,17 +189,17 @@ class RTRServerHandler extends SimpleChannelUpstreamHandler {
     // Can anyone think of a nice way to test this? Without tons of mocking and overkill?
     // Otherwise I will assume the code below is doing too little to be able to contain bugs ;)
     logger.warn("Exception: " + event.getCause, event.getCause)
-    
-    if(event.getChannel().isOpen()) {
-        val response: Pdu = event.getCause() match {
-          case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-          case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-          case cause: ReadTimeoutException => ErrorPdu(ErrorPdu.InternalError, Array.empty, "Connection timed out")
-          case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
-        }
-    
-        val channelFuture = event.getChannel().write(response)
-        channelFuture.addListener(ChannelFutureListener.CLOSE)
+
+    if (event.getChannel().isOpen()) {
+      val response: Pdu = event.getCause() match {
+        case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+        case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+        case cause: ReadTimeoutException => ErrorPdu(ErrorPdu.InternalError, Array.empty, "Connection timed out")
+        case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
+      }
+
+      val channelFuture = event.getChannel().write(response)
+      channelFuture.addListener(ChannelFutureListener.CLOSE)
     }
   }
 }

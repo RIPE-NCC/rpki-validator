@@ -44,7 +44,7 @@ class RTRClient(val port: Int) {
   val logger = Logger[this.type]
 
   @volatile
-  var receivedPdu: Option[Pdu] = None
+  var receivedPdus = List[Pdu]()
 
   val clientHandler = new RTRClientHandler(pduReceived)
 
@@ -57,7 +57,7 @@ class RTRClient(val port: Int) {
     override def getPipeline: ChannelPipeline = {
       Channels.pipeline(
         new LengthFieldBasedFrameDecoder(
-          /*maxFrameLength*/ 4096,
+          /*maxFrameLength*/ 65536,
           /*lengthFieldOffset*/ 4,
           /*lengthFieldLength*/ 4,
           /*lengthAdjustment*/ -8,
@@ -75,20 +75,17 @@ class RTRClient(val port: Int) {
   def sendData(data: Array[Byte]) = sendAny(data)
 
   private def sendAny(data: Any) = {
-    receivedPdu = None
-
     channelFuture.getChannel().write(data)
     logger.trace("data sent")
-
-    val maxMillis = 1000
-    val retryMillis = 5
-    var spentMillis = 0
-    while (!receivedPdu.isDefined && spentMillis < maxMillis) {
-      Thread.sleep(retryMillis)
-      spentMillis += retryMillis
+  }
+  
+  def getResponse(expectedNumber: Int = 1, timeOut: Int = 1000): List[Pdu] = {
+    var waited: Int = 0
+    while(receivedPdus.size < expectedNumber && waited < timeOut) {
+    	Thread.sleep(5)
+    	waited += 5
     }
-
-    receivedPdu.get
+    receivedPdus
   }
   
   def isConnected = {
@@ -97,7 +94,7 @@ class RTRClient(val port: Int) {
 
   def pduReceived(pdu: Pdu) = {
     logger.trace("Got back a PDU")
-    receivedPdu = Some(pdu)
+    receivedPdus = receivedPdus ++ List(pdu)
   }
 
   def close(): Unit = {

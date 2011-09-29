@@ -78,7 +78,7 @@ case class ResetQueryPdu() extends Pdu {
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.4
  */
-case class CacheResponsePdu(nonce: Int = (new Random().nextInt() % Pdu.MAX_HEADER_SHORT_VALUE)) extends Pdu {
+case class CacheResponsePdu(nonce: Int) extends Pdu {
   override def pduType = PduTypes.CacheResponse
   override def headerShort = nonce
   override def length = 8
