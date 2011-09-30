@@ -90,10 +90,11 @@ class PduEncoder extends OneToOneEncoder {
       }
       buffer
 
-    case requestPdu: Pdu =>
-      val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, requestPdu.length)
-      buffer.writeBytes(Pdus.encode(requestPdu))
-
+    case pdu: Pdu =>
+      val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, pdu.length)
+      buffer.writeBytes(Pdus.encode(pdu))
+      
+      RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), Right(pdu), "server"))
 
       buffer
 

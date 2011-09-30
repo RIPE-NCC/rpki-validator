@@ -46,13 +46,8 @@ import scala.util.Random
 import net.ripe.rpki.validator.rtr.Pdu
 import org.joda.time.DateTime
 
-case class Database(trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
+case class Database(trustAnchors: TrustAnchors, roas: Roas, version: Int = 0)
 
-  // Damn these signed Ints....
-  var nonce: Int = (new Random().nextInt() % 32768)
-  if (nonce < 0) { nonce = nonce * -1 }
-
-}
 class Atomic[T](value: T) {
   val db: AtomicReference[T] = new AtomicReference(value)
 
@@ -77,6 +72,10 @@ trait UpdateListener {
 }
 
 object Main {
+  
+  // Damn these signed Ints....
+  var nonce: Int = (new Random().nextInt() % 32768)
+  if (nonce < 0) { nonce = nonce * -1 }
 
   val logger = Logger[this.type]
 
@@ -158,7 +157,7 @@ object Main {
       port = 8282,
       getCurrentCacheSerial = { () => database.get.version },
       getCurrentRoas = { () => database.get.roas },
-      getCurrentNonce = { () => database.get.nonce })
+      getCurrentNonce = { () => Main.nonce })
     rtrServer.startServer()
     registerListener(rtrServer)
   }

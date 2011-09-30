@@ -43,7 +43,8 @@ class PduCodecTest extends FunSuite with ShouldMatchers with MockitoSugar {
 
   test("should encode NoDataAvailablePdu") {
     val encoder = new PduEncoder()
-    val encoded = encoder.encode(null, null, PduTest.NoDataAvailablePdu)
+    var channel = mock[Channel]
+    val encoded = encoder.encode(null, channel, PduTest.NoDataAvailablePdu)
     
     assert(encoded.isInstanceOf[ChannelBuffer])
     val buffer = encoded.asInstanceOf[ChannelBuffer]

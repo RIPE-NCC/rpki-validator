@@ -55,6 +55,7 @@ import scala.collection.mutable._
 import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.Ipv6Address
+import scala.util.Random
 
 @RunWith(classOf[JUnitRunner])
 class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
@@ -65,6 +66,9 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   var client: RTRClient = null
 
   var cache: Atomic[Database] = null
+  
+  var nonce: Int = (new Random().nextInt() % 32768)
+  if (nonce < 0) { nonce = nonce * -1 }
 
   override def beforeAll() = {
     var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
@@ -74,7 +78,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
       port = port,
       getCurrentCacheSerial = { () => cache.get.version },
       getCurrentRoas = { () => cache.get.roas },
-      getCurrentNonce = { () => cache.get.nonce })
+      getCurrentNonce = { () => nonce })
     server.startServer()
   }
 
@@ -125,7 +129,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     var iter = responsePdus.iterator
 
     iter.next() match {
-      case CacheResponsePdu(nonce) => nonce should equal(cache.get.nonce)
+      case CacheResponsePdu(responseNonce) => responseNonce should equal(nonce)
       case _ => fail("Should get cache response")
     }
 
@@ -157,8 +161,8 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     
     var lastSerial: Long = 0
     iter.next() match {
-      case EndOfDataPdu(nonce, serial) =>
-        nonce should equal(cache.get.nonce)
+      case EndOfDataPdu(responseNonce, serial) =>
+        responseNonce should equal(nonce)
         serial should equal(cache.get.version)
         lastSerial = serial
       case _ => fail("Expected end of data")
@@ -167,7 +171,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     client.isConnected should be(true)
     
     // Send serial, should get no data response
-    client.sendPdu(SerialQueryPdu(nonce = cache.get.nonce, serial = lastSerial))
+    client.sendPdu(SerialQueryPdu(nonce = nonce, serial = lastSerial))
 
     var responsePdusBeforeNewRoas = client.getResponse(expectedNumber = 1)
     responsePdusBeforeNewRoas.size should equal(1)
@@ -193,7 +197,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     
     
     // Send serial, should get reset response (we don't support incremental updates yet)
-    client.sendPdu(SerialQueryPdu(nonce = cache.get.nonce, serial = lastSerial))
+    client.sendPdu(SerialQueryPdu(nonce = nonce, serial = lastSerial))
 
     var responsePdusAfterNewRoas = client.getResponse(expectedNumber = 1)
     responsePdusAfterNewRoas.size should equal(1)
