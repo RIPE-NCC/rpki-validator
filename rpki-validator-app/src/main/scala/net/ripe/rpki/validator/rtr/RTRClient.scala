@@ -90,6 +90,13 @@ class RTRClient(val port: Int) {
     result
   }
   
+  def getAllResponses(): List[Pdu] = {
+    var number = receivedPdus.length
+    var result = receivedPdus.take(number)
+    receivedPdus = receivedPdus.drop(number)
+    result
+  }
+  
   def isConnected = {
     channelFuture.getChannel().isConnected()
   }

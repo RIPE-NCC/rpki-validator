@@ -37,6 +37,20 @@ import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder
 import java.nio.ByteOrder
+import java.net.SocketAddress
+import org.joda.time.DateTime
+
+object RtrPduLog {
+
+  var pduLog = List[RtrPduLogEntry]()
+
+  def log(entry: RtrPduLogEntry) {
+    pduLog = pduLog ++ List(entry)
+  }
+
+}
+
+case class RtrPduLogEntry(time: DateTime, childAddress: SocketAddress, data: Either[BadData, Pdu], sender: String)
 
 class PduDecoder extends OneToOneDecoder {
 
@@ -45,7 +59,12 @@ class PduDecoder extends OneToOneDecoder {
   override def decode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = {
     logger.trace("Getting the Array[Byte] from the channel buffer and converting to pdu")
     val buffer = msg.asInstanceOf[ChannelBuffer]
-    Pdus.fromByteArray(buffer)
+
+    var decoded = Pdus.fromByteArray(buffer)
+    // Hardcoded to "client" for now -> quick and dirty logging to have a useable test server
+    RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), decoded, "client"))
+
+    decoded
   }
 
 }
@@ -55,17 +74,27 @@ class PduEncoder extends OneToOneEncoder {
 
   override def encode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = msg match {
 
-    case requestPdu: Pdu =>
-      val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, requestPdu.length)
-      buffer.writeBytes(Pdus.encode(requestPdu))
-      buffer
-
     case responsePdus: List[Pdu] =>
       var length: Int = 0
       responsePdus.foreach(pdu => length += pdu.length)
 
       val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, length)
-      responsePdus.foreach(pdu => { buffer.writeBytes(Pdus.encode(pdu)) })
+      responsePdus.foreach {
+        pdu =>
+          {
+            buffer.writeBytes(Pdus.encode(pdu))
+            
+            // Hardcoded to "server" for now -> only the server sends lists of pdus
+            RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), Right(pdu), "server"))
+          }
+      }
+      buffer
+
+    case requestPdu: Pdu =>
+      val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, requestPdu.length)
+      buffer.writeBytes(Pdus.encode(requestPdu))
+
+
       buffer
 
     case bytes: Array[Byte] =>
@@ -74,4 +103,6 @@ class PduEncoder extends OneToOneEncoder {
       logger.trace("bytes written %d bytes".format(bytes.length))
       buffer
   }
+
+
 }

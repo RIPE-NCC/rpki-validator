@@ -70,7 +70,6 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
   val serverHandler = new RTRServerHandler(getCurrentCacheSerial, getCurrentRoas, getCurrentNonce)
 
   def notify(serial: Long) = {
-    logger.info("Got an update")
     serverHandler.notifyChildren(serial)
   }
 
@@ -201,8 +200,12 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
         case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
       }
 
-      val channelFuture = event.getChannel().write(response)
-      channelFuture.addListener(ChannelFutureListener.CLOSE)
+      try {
+        val channelFuture = event.getChannel().write(response)
+        channelFuture.addListener(ChannelFutureListener.CLOSE)
+      } catch {
+        case _ => event.getChannel().close()
+      }
     }
   }
 
@@ -222,7 +225,7 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
           var length = prefix.getPrefix().getPrefixLength()
 
           prefix.getPrefix().getStart() match {
-            case ipv4: Ipv4Address => 
+            case ipv4: Ipv4Address =>
               responsePdus = responsePdus ++ List(IPv4PrefixAnnouncePdu(ipv4, length.toByte, maxLength.toByte, roa.getAsn()))
             case ipv6: Ipv6Address =>
               responsePdus = responsePdus ++ List(IPv6PrefixAnnouncePdu(ipv6, length.toByte, maxLength.toByte, roa.getAsn()))

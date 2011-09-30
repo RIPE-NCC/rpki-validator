@@ -39,7 +39,8 @@ import views.Layouts
 abstract class WebFilter extends ScalatraFilter
   with ApplicationController
   with RoasController
-  with TrustAnchorsController {
+  with TrustAnchorsController
+  with RtrLogController {
 
   private def renderView: PartialFunction[Any, Any] = {
     case view: View =>

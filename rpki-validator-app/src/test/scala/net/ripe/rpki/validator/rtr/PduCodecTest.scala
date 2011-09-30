@@ -35,9 +35,11 @@ import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
+import org.scalatest.mock.MockitoSugar
+import org.jboss.netty.channel._
 
 @RunWith(classOf[JUnitRunner])
-class PduCodecTest extends FunSuite with ShouldMatchers {
+class PduCodecTest extends FunSuite with ShouldMatchers with MockitoSugar {
 
   test("should encode NoDataAvailablePdu") {
     val encoder = new PduEncoder()
@@ -51,7 +53,9 @@ class PduCodecTest extends FunSuite with ShouldMatchers {
   test("should decoded NoDataAvailablePduBytes") {
     val decoder = new PduDecoder
     val channelBuffer = new BigEndianHeapChannelBuffer(PduTest.NoDataAvailablePduBytes)
-    decoder.decode(null, null, channelBuffer) match {
+    var channel = mock[Channel]
+    
+    decoder.decode(null, channel, channelBuffer) match {
       case Right(pdu: ErrorPdu) =>
         pdu.errorCode should equal(ErrorPdu.NoDataAvailable)
       case _ =>

@@ -27,15 +27,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.views
+package net.ripe.rpki.validator.controllers
 
-case class Tab(text: String, url: String)
+import org.scalatra.ScalatraKernel
+import net.ripe.rpki.validator.views.RtrLogView
 
-object Tabs {
-  val HomeTab = Tab("Home", "/")
-  val TrustAnchorsTab = Tab("Trust Anchors", "/trust-anchors")
-  val RoasTab = Tab("ROAs", "/roas")
-  val RtrLogTab = Tab("rpki-rtr log", "/rtr-log")
+trait RtrLogController extends ScalatraKernel {
+
+  get("/rtr-log") {
+    new RtrLogView()
+  }
   
-  def all = Seq(HomeTab, TrustAnchorsTab, RoasTab, RtrLogTab)
 }
