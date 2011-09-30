@@ -48,7 +48,7 @@ import net.ripe.rpki.validator.rtr.Pdu
 case class Database(trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
 
   var nonce: Int = (new Random().nextInt() % 4096)
-  
+
   if (nonce < 0) { nonce = nonce * -1 }
 
 }
@@ -65,12 +65,21 @@ class Atomic[T](value: T) {
       updated = f(current)
     }
   }
+
+}
+
+trait Listener {
+
+  def notify(serial: Long)
+
 }
 
 object Main {
+
   val logger = Logger[this.type]
 
   var database: Atomic[Database] = null
+  var listeners = List[Listener]()
 
   def main(args: Array[String]) {
     val trustAnchors = loadTrustAnchors()
@@ -79,6 +88,10 @@ object Main {
 
     runWebServer()
     runRtrServer()
+  }
+
+  def registerListener(newListener: Listener) = {
+    listeners = listeners ++ List(newListener)
   }
 
   def loadTrustAnchors(): TrustAnchors = {
@@ -94,7 +107,12 @@ object Main {
         }
         val validatedRoas = Roas.fetchObjects(ta.locator, certificate)
         database.update { db =>
-          db.copy(roas = db.roas.update(ta.locator, validatedRoas), version = db.version + 1)
+          {
+            db.copy(roas = db.roas.update(ta.locator, validatedRoas), version = db.version + 1)
+          }
+        }
+        listeners.foreach {
+          listener => listener.notify(database.get.version)
         }
       }
     }
@@ -133,10 +151,12 @@ object Main {
   }
 
   private def runRtrServer(): Unit = {
-    new RTRServer(
+    var rtrServer = new RTRServer(
       port = 8282,
       getCurrentCacheSerial = { () => database.get.version },
       getCurrentRoas = { () => database.get.roas },
-      getCurrentNonce = { () => database.get.nonce }).startServer()
+      getCurrentNonce = { () => database.get.nonce })
+    rtrServer.startServer()
+    registerListener(rtrServer)
   }
 }

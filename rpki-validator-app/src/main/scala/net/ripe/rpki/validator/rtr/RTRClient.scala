@@ -85,7 +85,9 @@ class RTRClient(val port: Int) {
     	Thread.sleep(5)
     	waited += 5
     }
-    receivedPdus
+    var result = receivedPdus.take(expectedNumber)
+    receivedPdus = receivedPdus.drop(expectedNumber)
+    result
   }
   
   def isConnected = {

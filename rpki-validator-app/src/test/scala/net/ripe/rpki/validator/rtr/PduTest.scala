@@ -48,6 +48,25 @@ class PduTest extends FunSuite with ShouldMatchers {
     bytes should equal(PduTest.NoDataAvailablePduBytes)
   }
 
+  // See http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.1
+  test("should convert serial notify pdu to byte array and back") {
+    val serialNotifyPdu = new SerialNotifyPdu(nonce = Pdu.MAX_HEADER_SHORT_VALUE, serial = EndOfDataPdu.MAX_SERIAL)
+    val expectedBytes = Array[Byte](
+      0x0, 0x0, 255.toByte, 255.toByte,
+      0x0, 0x0, 0x0, 0xc,
+      255.toByte, 255.toByte, 255.toByte, 255.toByte)
+    val bytes = Pdus.encode(serialNotifyPdu)
+
+    bytes should equal(expectedBytes)
+
+    Pdus.fromByteArray(new BigEndianHeapChannelBuffer(bytes)) match {
+      case Right(decodedPdu: SerialNotifyPdu) =>
+        decodedPdu should equal(serialNotifyPdu)
+      case _ => fail("Got back a wrong response")
+    }
+  }
+
+  // See http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.2
   test("should convert serial query pdu to byte array and back") {
     val serialQueryPdu = new SerialQueryPdu(nonce = Pdu.MAX_HEADER_SHORT_VALUE, serial = EndOfDataPdu.MAX_SERIAL)
     val expectedBytes = Array[Byte](
@@ -151,6 +170,22 @@ class PduTest extends FunSuite with ShouldMatchers {
     Pdus.fromByteArray(new BigEndianHeapChannelBuffer(bytes)) match {
       case Right(decodedPdu: EndOfDataPdu) =>
         decodedPdu should equal(endOfDataPdu)
+      case _ => fail("Got back a wrong response")
+    }
+  }
+
+  test("should convert cache reset pdu to byte array and back") {
+    val cacheResetPdu = new CacheResetPdu()
+    val expectedBytes = Array[Byte](
+      0x0, 0x8, 0x0, 0x0,
+      0x0, 0x0, 0x0, 0x8)
+    val bytes = Pdus.encode(cacheResetPdu)
+
+    bytes should equal(expectedBytes)
+
+    Pdus.fromByteArray(new BigEndianHeapChannelBuffer(bytes)) match {
+      case Right(decodedPdu: CacheResetPdu) =>
+        decodedPdu should equal(cacheResetPdu)
       case _ => fail("Got back a wrong response")
     }
   }

@@ -52,19 +52,27 @@ import scala.collection.JavaConverters._
 import net.ripe.ipresource.IpResourceType
 import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Ipv6Address
+import net.ripe.rpki.validator.config.Listener
 
 object RTRServer {
   final val ProtocolVersion = 0
   final val MAXIMUM_FRAME_LENGTH = 16777216
 }
 
-class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) {
+class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends Listener {
   import TimeUnit._
 
   val logger = Logger[this.type]
 
   var bootstrap: ServerBootstrap = _
   var timer: Timer = new HashedWheelTimer(5, SECONDS) // check for timer events every 5 secs
+
+  val serverHandler = new RTRServerHandler(getCurrentCacheSerial, getCurrentRoas, getCurrentNonce)
+
+  def notify(serial: Long) = {
+    logger.info("Got an update")
+    serverHandler.notifyChildren(serial)
+  }
 
   def startServer(): Unit = {
 
@@ -85,8 +93,7 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
             /*lengthAdjustment*/ -8,
             /*initialBytesToStrip*/ 0),
           new PduEncoder,
-          new PduDecoder,
-          new RTRServerHandler(getCurrentCacheSerial, getCurrentRoas, getCurrentNonce))
+          new PduDecoder, serverHandler)
       }
     })
     bootstrap.setOption("child.keepAlive", true)
@@ -114,10 +121,24 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
 
   val logger = Logger[this.type]
 
+  var childChannels = List[Channel]()
+
   override def channelConnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
     MDC.put("contextName", context.getName())
     MDC.put("clientAddress", event.getChannel().getRemoteAddress().toString())
+
+    childChannels = childChannels ++ List(event.getChannel())
+
     super.channelConnected(context, event)
+  }
+
+  def notifyChildren(serial: Long) = {
+    childChannels.foreach {
+      channel =>
+        if (channel.isOpen()) {
+          channel.write(new SerialNotifyPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply()))
+        }
+    }
   }
 
   override def channelClosed(context: ChannelHandlerContext, event: ChannelStateEvent) {
@@ -151,8 +172,10 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
 
   private def processRequest(request: Either[BadData, Pdu]): List[Pdu] = {
     request match {
+
       case Left(BadData(errorCode, content)) =>
         List(ErrorPdu(errorCode, content, ""))
+
       case Right(ResetQueryPdu()) =>
         getCurrentCacheSerial.apply() match {
           case 0 => List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
@@ -180,6 +203,14 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
             }
             responsePdus ++ List(EndOfDataPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply()))
         }
+
+      case Right(SerialQueryPdu(nonce, serial)) =>
+        if (nonce == getCurrentNonce.apply() && serial == getCurrentCacheSerial.apply()) {
+          List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
+        } else {
+          List(CacheResetPdu())
+        }
+
       case Right(_) =>
         List(ErrorPdu(ErrorPdu.InvalidRequest, Array.empty, ""))
     }

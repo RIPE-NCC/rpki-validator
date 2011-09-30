@@ -56,13 +56,25 @@ object Pdu {
 case class BadData(errorCode: Int, content: Array[Byte])
 
 /**
+ * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.1
+ */
+case class SerialNotifyPdu(nonce: Int, serial: Long) extends Pdu {
+  override def pduType = PduTypes.SerialNotify
+  override def headerShort = nonce
+  override def length = 12
+
+  assert(nonce <= Pdu.MAX_HEADER_SHORT_VALUE)
+  assert(serial <= EndOfDataPdu.MAX_SERIAL)
+}
+
+/**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.2
  */
 case class SerialQueryPdu(nonce: Int, serial: Long) extends Pdu {
   override def pduType = PduTypes.SerialQuery
   override def headerShort = nonce
   override def length = 12
-  
+
   assert(nonce <= Pdu.MAX_HEADER_SHORT_VALUE)
   assert(serial <= EndOfDataPdu.MAX_SERIAL)
 }
@@ -100,6 +112,9 @@ case class IPv6PrefixAnnouncePdu(val ipv6PrefixStart: Ipv6Address, val prefixLen
   override def length = 32
 }
 
+/**
+ * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.7
+ */
 case class EndOfDataPdu(nonce: Int, serial: Long) extends Pdu {
   override def pduType = PduTypes.EndOfData
   override def headerShort: Int = nonce
@@ -110,6 +125,14 @@ case class EndOfDataPdu(nonce: Int, serial: Long) extends Pdu {
 
 object EndOfDataPdu {
   val MAX_SERIAL: Long = 4294967296L - 1
+}
+
+/**
+ * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.8
+ */
+case class CacheResetPdu extends Pdu {
+  override def pduType = PduTypes.CacheReset
+  override def length = 8
 }
 
 case class ErrorPdu(errorCode: Int, causingPdu: Array[Byte], errorText: String) extends Pdu {
@@ -139,12 +162,14 @@ object ErrorPdu {
 }
 
 object PduTypes {
+  val SerialNotify: Byte = 0
   val SerialQuery: Byte = 1
   val ResetQuery: Byte = 2
   val CacheResponse: Byte = 3
   val IPv4Prefix: Byte = 4
   val IPv6Prefix: Byte = 6
   val EndOfData: Byte = 7
+  val CacheReset: Byte = 8
   val Error: Byte = 10
 }
 
@@ -159,6 +184,12 @@ object Pdus {
     buffer.writeInt(pdu.length)
 
     pdu match {
+      case SerialNotifyPdu(_, serial) =>
+        buffer.writeInt(serial.toInt)
+
+      case SerialQueryPdu(_, serial) =>
+        buffer.writeInt(serial.toInt)
+
       case errorPdu @ ErrorPdu(errorCode, causingPdu, errorText) =>
         buffer.writeInt(causingPdu.length)
         buffer.writeBytes(causingPdu)
@@ -182,9 +213,8 @@ object Pdus {
         buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
       case EndOfDataPdu(_, serial) =>
         buffer.writeInt(serial.toInt)
-      case SerialQueryPdu(_, serial) =>
-        buffer.writeInt(serial.toInt)
-        
+
+      case CacheResetPdu() =>
     }
 
     buffer.array()
@@ -214,6 +244,16 @@ object Pdus {
     } else {
       pduType match {
 
+        case PduTypes.SerialNotify =>
+          val nonce = headerShort
+          val serial = buffer.readUnsignedInt()
+          Right(SerialNotifyPdu(nonce, serial))
+          
+        case PduTypes.SerialQuery =>
+          val nonce = headerShort
+          val serial = buffer.readUnsignedInt()
+          Right(SerialQueryPdu(nonce, serial))
+
         case PduTypes.Error =>
           val causingPduLength = buffer.readInt()
           val causingPdu = buffer.readBytes(causingPduLength).array()
@@ -222,11 +262,6 @@ object Pdus {
           val errorText = new String(buffer.array(), "UTF-8")
           Right(ErrorPdu(headerShort, causingPdu, errorText))
 
-        case PduTypes.SerialQuery =>
-          val nonce = headerShort
-          val serial = buffer.readUnsignedInt()
-          Right(SerialQueryPdu(nonce, serial))
-          
         case PduTypes.ResetQuery =>
           Right(ResetQueryPdu())
 
@@ -270,7 +305,10 @@ object Pdus {
               // TODO: Support withdrawals
               Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
           }
-          
+
+        case PduTypes.CacheReset =>
+          Right(new CacheResetPdu())
+
         case _ =>
           Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
       }

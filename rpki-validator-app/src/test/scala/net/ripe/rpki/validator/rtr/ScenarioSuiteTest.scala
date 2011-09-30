@@ -155,14 +155,56 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
       
     }
     
+    var lastSerial: Long = 0
     iter.next() match {
       case EndOfDataPdu(nonce, serial) =>
         nonce should equal(cache.get.nonce)
         serial should equal(cache.get.version)
+        lastSerial = serial
       case _ => fail("Expected end of data")
     }
 
     client.isConnected should be(true)
+    
+    // Send serial, should get no data response
+    client.sendPdu(SerialQueryPdu(nonce = cache.get.nonce, serial = lastSerial))
+
+    var responsePdusBeforeNewRoas = client.getResponse(expectedNumber = 1)
+    responsePdusBeforeNewRoas.size should equal(1)
+    responsePdusBeforeNewRoas.first match {
+      case ErrorPdu(errorCode, _, _) =>
+        errorCode should equal(ErrorPdu.NoDataAvailable)
+      case _ => fail("Should get no data response")
+    }
+    client.isConnected should be(true)
+    
+    // Update ROAs, client should get notify
+    cache.update { db =>
+      db.copy(roas = db.roas.update(tal, roas), version = db.version + 1)
+    }
+    server.notify(cache.get.version)
+    
+    var responsePdusAfterCacheUpdate = client.getResponse(expectedNumber = 1)
+    responsePdusAfterCacheUpdate.size should equal(1)
+    responsePdusAfterCacheUpdate.first match {
+      case SerialNotifyPdu(nonce, serial) =>
+      case _ => fail("Should get serial notify")
+    }
+    
+    
+    // Send serial, should get reset response (we don't support incremental updates yet)
+    client.sendPdu(SerialQueryPdu(nonce = cache.get.nonce, serial = lastSerial))
+
+    var responsePdusAfterNewRoas = client.getResponse(expectedNumber = 1)
+    responsePdusAfterNewRoas.size should equal(1)
+    responsePdusAfterNewRoas.first match {
+      case CacheResetPdu() => // No content to check, we're good
+      case _ => fail("Should get cache reset response")
+    }
+    client.isConnected should be(true)
+    
+    
+    
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.4
