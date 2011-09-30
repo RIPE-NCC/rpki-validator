@@ -40,9 +40,5 @@ trait TrustAnchorsController extends ApplicationController {
   get("/trust-anchors") {
     new views.TrustAnchorsView(trustAnchors)
   }
-  
-  get("/update-trust-anchors") {
-    Main.loadTrustAnchors()
-    new views.TrustAnchorsView(trustAnchors) // TODO: show that we're updating... or update per TA, oh and show button on UI
-  }
+
 }

@@ -37,6 +37,7 @@ import org.scalatest.mock.MockitoSugar
 import org.scalatra.test.scalatest.ScalatraFunSuite
 import net.ripe.rpki.validator.config.WebFilter
 import org.scalatra.test.scalatest.ScalatraFeatureSpec
+import org.joda.time.DateTime
 
 @RunWith(classOf[JUnitRunner])
 abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatchers with MockitoSugar {
@@ -44,5 +45,6 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
     override lazy val trustAnchors = sys.error("TBD")
     override lazy val roas = sys.error("TBD")
     override lazy val version = sys.error("TBD")
+    override val lastUpdateTime = new DateTime 
   }, "/*")
 }

@@ -35,14 +35,23 @@ import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
 import models.Roas
 import views.RoasView
+import org.joda.time.DateTime
+import net.ripe.rpki.validator.config.Main
 
 trait RoasController extends ApplicationController {
   def roas: Roas
   def version: Int
+  def lastUpdateTime: DateTime
 
   get("/roas") {
-    new RoasView(roas, version)
+    new RoasView(roas, version, lastUpdateTime)
   }
+  
+  get("/update-roas") {
+    Main.loadTrustAnchors()
+    redirect("/roas")
+  }
+  
   get("/roas.csv") {
     val dateFormatter = DateTimeFormat.forPattern("YYYY-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC)
     val Header = "URI,ASN,IP Prefix,Max Length,Not Before (UTC),Not After (UTC)\n"

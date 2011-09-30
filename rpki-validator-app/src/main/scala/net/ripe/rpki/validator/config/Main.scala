@@ -44,6 +44,7 @@ import scala.annotation.tailrec
 import scalaz.concurrent.Promise
 import scala.util.Random
 import net.ripe.rpki.validator.rtr.Pdu
+import org.joda.time.DateTime
 
 case class Database(trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
 
@@ -56,6 +57,8 @@ class Atomic[T](value: T) {
   val db: AtomicReference[T] = new AtomicReference(value)
 
   def get = db.get
+  
+  var lastUpdateTime: DateTime = new DateTime
 
   final def update(f: T => T) {
     var current = get
@@ -64,6 +67,7 @@ class Atomic[T](value: T) {
       current = get
       updated = f(current)
     }
+    lastUpdateTime = new DateTime
   }
 
 }
@@ -131,6 +135,7 @@ object Main {
       def trustAnchors = database.get.trustAnchors
       def roas = database.get.roas
       def version = database.get.version
+      def lastUpdateTime = database.lastUpdateTime
     }), "/*", FilterMapping.ALL)
     server.setHandler(root)
     server

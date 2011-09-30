@@ -38,8 +38,9 @@ import net.ripe.commons.certification.cms.roa.RoaCms
 import net.ripe.rpki.validator.models.TrustAnchor
 import net.ripe.rpki.validator.models.ValidatedRoa
 import net.ripe.certification.validator.util.TrustAnchorLocator
+import org.joda.time.DateTime
 
-class RoasView(roas: Roas, version: Int) extends View {
+class RoasView(roas: Roas, version: Int, lastUpdateTime: DateTime) extends View {
   def tab = Tabs.RoasTab
   def title = Text("Validated ROAs")
   def body = {
@@ -47,8 +48,7 @@ class RoasView(roas: Roas, version: Int) extends View {
     <div class="alert-message block-message info">
       {
         optional(ready.nonEmpty, <p>Validated ROAs from { listTrustAnchorNames(ready.keys.toSeq) }.</p>) ++
-        optional(loading.nonEmpty, <p>Still retrieving and validating ROAs from { listTrustAnchorNames(loading.keys.toSeq) }.</p>)
-        <p>Current serial of validated roa cache: <strong>{version}</strong>.</p> 
+          optional(loading.nonEmpty, <p>Still retrieving and validating ROAs from { listTrustAnchorNames(loading.keys.toSeq) }.</p>)
       }
       <div class="alert-actions">
         <a href="roas.csv" class="btn small">Download validated ROAs as CSV</a>
@@ -86,6 +86,15 @@ $(document).ready(function() {
     }).show();
 });
 // --></script>
+    <div class="alert-message block-message info">
+      {
+          <p>Last update time: <strong>{ lastUpdateTime.toString() }</strong></p>
+          <p>Current serial of validated roa cache: <strong>{ version }</strong>.</p>
+      }
+      <div class="alert-actions">
+        <a href="update-roas" class="btn small">Update now</a>
+      </div>
+    </div>
   }
 
   private def optional(condition: Boolean, body: => NodeSeq) = if (condition) body else NodeSeq.Empty
