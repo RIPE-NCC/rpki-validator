@@ -36,7 +36,7 @@ import java.nio.charset.Charset
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.ChannelBuffers
 import java.nio.ByteOrder
-import scala.util.Random
+
 import net.ripe.ipresource._
 import java.math.BigInteger
 
@@ -130,7 +130,7 @@ object EndOfDataPdu {
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.8
  */
-case class CacheResetPdu extends Pdu {
+case class CacheResetPdu() extends Pdu {
   override def pduType = PduTypes.CacheReset
   override def length = 8
 }
@@ -184,53 +184,18 @@ object Pdus {
     buffer.writeInt(pdu.length)
 
     pdu match {
-      case SerialNotifyPdu(_, serial) =>
-        buffer.writeInt(serial.toInt)
-
-      case SerialQueryPdu(_, serial) =>
-        buffer.writeInt(serial.toInt)
-
-      case errorPdu @ ErrorPdu(errorCode, causingPdu, errorText) =>
-        buffer.writeInt(causingPdu.length)
-        buffer.writeBytes(causingPdu)
-        buffer.writeInt(errorPdu.errorTextBytes.length)
-        buffer.writeBytes(errorPdu.errorTextBytes)
-      case ResetQueryPdu() =>
-      case CacheResponsePdu(_) =>
-      case IPv4PrefixAnnouncePdu(prefix, length, maxLength, asn) =>
-        buffer.writeByte(1)
-        buffer.writeByte(length)
-        buffer.writeByte(maxLength)
-        buffer.writeByte(0)
-        buffer.writeBytes(convertToPrependedByteArray(prefix.getValue(), 4))
-        buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
-      case IPv6PrefixAnnouncePdu(prefix, length, maxLength, asn) =>
-        buffer.writeByte(1)
-        buffer.writeByte(length)
-        buffer.writeByte(maxLength)
-        buffer.writeByte(0)
-        buffer.writeBytes(convertToPrependedByteArray(prefix.getValue(), 16))
-        buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
-      case EndOfDataPdu(_, serial) =>
-        buffer.writeInt(serial.toInt)
-
-      case CacheResetPdu() =>
+      case SerialNotifyPdu(_, serial) => buffer.writeInt(serial.toInt)
+      case SerialQueryPdu(_, serial) => buffer.writeInt(serial.toInt)
+      case errorPdu @ ErrorPdu(errorCode, causingPdu, errorText) => writeErrorPduPayload(buffer, errorPdu, causingPdu)
+      case ResetQueryPdu() => // no payload
+      case CacheResponsePdu(_) => // no payload (nonce is in header)
+      case IPv4PrefixAnnouncePdu(prefix, length, maxLength, asn) => writeIPv4PrefixAnnouncePduPayload(buffer, prefix, length, maxLength, asn)
+      case IPv6PrefixAnnouncePdu(prefix, length, maxLength, asn) => writeIPv6PrefixAnnouncePduPayload(buffer, prefix, length, maxLength, asn)
+      case EndOfDataPdu(_, serial) => buffer.writeInt(serial.toInt)
+      case CacheResetPdu() => // no payload
     }
 
     buffer.array()
-  }
-
-  def convertToPrependedByteArray(value: BigInteger, bytesNeeded: Int): Array[Byte] = {
-    var valueBytes = value.toByteArray()
-
-    var extraBytesNeeded = bytesNeeded - valueBytes.length
-    if (extraBytesNeeded > 0) {
-      var prependBytes = new Array[Byte](extraBytesNeeded)
-      prependBytes ++ valueBytes
-    } else {
-      valueBytes.drop(extraBytesNeeded * -1)
-    }
-
   }
 
   def fromByteArray(buffer: ChannelBuffer): Either[BadData, Pdu] = try {
@@ -243,79 +208,125 @@ object Pdus {
       Left(BadData(ErrorPdu.UnsupportedProtocolVersion, buffer.array))
     } else {
       pduType match {
-
-        case PduTypes.SerialNotify =>
-          val nonce = headerShort
-          val serial = buffer.readUnsignedInt()
-          Right(SerialNotifyPdu(nonce, serial))
-          
-        case PduTypes.SerialQuery =>
-          val nonce = headerShort
-          val serial = buffer.readUnsignedInt()
-          Right(SerialQueryPdu(nonce, serial))
-
-        case PduTypes.Error =>
-          val causingPduLength = buffer.readInt()
-          val causingPdu = buffer.readBytes(causingPduLength).array()
-          val errorTextLength = buffer.readInt()
-          val errorTextBytes = buffer.readBytes(errorTextLength)
-          val errorText = new String(buffer.array(), "UTF-8")
-          Right(ErrorPdu(headerShort, causingPdu, errorText))
-
-        case PduTypes.ResetQuery =>
-          Right(ResetQueryPdu())
-
-        case PduTypes.CacheResponse =>
-          val nonce = headerShort
-          Right(CacheResponsePdu(nonce))
-
-        case PduTypes.EndOfData =>
-          val nonce = headerShort
-          val serial = buffer.readUnsignedInt()
-          Right(EndOfDataPdu(nonce, serial))
-
-        case PduTypes.IPv4Prefix =>
-          buffer.readByte() match {
-            case 1 =>
-              val length = buffer.readByte()
-              val maxLenght = buffer.readByte()
-              buffer.skipBytes(1)
-              val prefix = new Ipv4Address(buffer.readUnsignedInt())
-              val asn = new Asn(buffer.readUnsignedInt())
-              Right(IPv4PrefixAnnouncePdu(prefix, length, maxLenght, asn))
-            case _ =>
-              // TODO: Support withdrawals
-              Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
-          }
-
-        case PduTypes.IPv6Prefix =>
-          buffer.readByte() match {
-            case 1 =>
-              val length = buffer.readByte()
-              val maxLenght = buffer.readByte()
-              buffer.skipBytes(1)
-              val ipv6Bytes: Array[Byte] = new Array[Byte](16)
-              buffer.getBytes(12, ipv6Bytes)
-              val prefix = new Ipv6Address(new BigInteger(1, ipv6Bytes)) // Careful, omit sign and bad things happen when calling equals
-
-              buffer.skipBytes(16)
-              val asn = new Asn(buffer.readUnsignedInt())
-              Right(IPv6PrefixAnnouncePdu(prefix, length, maxLenght, asn))
-            case _ =>
-              // TODO: Support withdrawals
-              Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
-          }
-
-        case PduTypes.CacheReset =>
-          Right(new CacheResetPdu())
-
-        case _ =>
-          Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
+        case PduTypes.SerialNotify => parseSerialNotifyPdu(buffer, headerShort)
+        case PduTypes.SerialQuery => parseSerialQueryPdu(buffer, headerShort)
+        case PduTypes.Error => parseErrorPdu(buffer, headerShort)
+        case PduTypes.ResetQuery => Right(ResetQueryPdu())
+        case PduTypes.CacheResponse => parseCacheResponsePdu(headerShort)
+        case PduTypes.EndOfData => parseEndOfDataPdu(buffer, headerShort)
+        case PduTypes.IPv4Prefix => parseIPv4PrefixPdu(buffer)
+        case PduTypes.IPv6Prefix => parseIPv6PrefixPdu(buffer)
+        case PduTypes.CacheReset => Right(new CacheResetPdu())
+        case _ => Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
       }
     }
   } catch {
     case e: IndexOutOfBoundsException =>
       Left(BadData(ErrorPdu.CorruptData, buffer.array()))
   }
+
+  private def convertToPrependedByteArray(value: BigInteger, bytesNeeded: Int): Array[Byte] = {
+    var valueBytes = value.toByteArray()
+
+    // sometimes we get extra zero bytes in front... strange... what am I missing? Sign bit?
+    while (valueBytes.head == 0) {
+      valueBytes = valueBytes.drop(1)
+    }
+
+    var extraBytesNeeded = bytesNeeded - valueBytes.length
+    var prependBytes = new Array[Byte](extraBytesNeeded)
+    prependBytes ++ valueBytes
+  }
+
+  private def writeErrorPduPayload(buffer: ChannelBuffer, errorPdu: ErrorPdu, causingPdu: Array[Byte]): Unit = {
+    buffer.writeInt(causingPdu.length)
+    buffer.writeBytes(causingPdu)
+    buffer.writeInt(errorPdu.errorTextBytes.length)
+    buffer.writeBytes(errorPdu.errorTextBytes)
+  }
+
+  private def writeIPv4PrefixAnnouncePduPayload(buffer: ChannelBuffer, prefix: Ipv4Address, length: Byte, maxLength: Byte, asn: Asn): Unit = {
+    buffer.writeByte(1)
+    buffer.writeByte(length)
+    buffer.writeByte(maxLength)
+    buffer.writeByte(0)
+    buffer.writeBytes(convertToPrependedByteArray(prefix.getValue(), 4))
+    buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
+  }
+
+  private def writeIPv6PrefixAnnouncePduPayload(buffer: ChannelBuffer, prefix: Ipv6Address, length: Byte, maxLength: Byte, asn: Asn): Unit = {
+    buffer.writeByte(1)
+    buffer.writeByte(length)
+    buffer.writeByte(maxLength)
+    buffer.writeByte(0)
+    buffer.writeBytes(convertToPrependedByteArray(prefix.getValue(), 16))
+    buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
+  }
+
+  private def parseSerialNotifyPdu(buffer: ChannelBuffer, headerShort: Int): Right[Nothing, SerialNotifyPdu] = {
+    val nonce = headerShort
+    val serial = buffer.readUnsignedInt()
+    Right(SerialNotifyPdu(nonce, serial))
+  }
+
+  private def parseSerialQueryPdu(buffer: ChannelBuffer, headerShort: Int): Right[Nothing, SerialQueryPdu] = {
+    val nonce = headerShort
+    val serial = buffer.readUnsignedInt()
+    Right(SerialQueryPdu(nonce, serial))
+  }
+
+  private def parseErrorPdu(buffer: ChannelBuffer, headerShort: Int): Right[Nothing, ErrorPdu] = {
+    val causingPduLength = buffer.readInt()
+    val causingPdu = buffer.readBytes(causingPduLength).array()
+    val errorTextLength = buffer.readInt()
+    val errorTextBytes = buffer.readBytes(errorTextLength)
+    val errorText = new String(buffer.array(), "UTF-8")
+    Right(ErrorPdu(headerShort, causingPdu, errorText))
+  }
+
+  private def parseCacheResponsePdu(headerShort: Int): Right[Nothing, CacheResponsePdu] = {
+    val nonce = headerShort
+    Right(CacheResponsePdu(nonce))
+  }
+
+  private def parseEndOfDataPdu(buffer: ChannelBuffer, headerShort: Int): Right[Nothing, EndOfDataPdu] = {
+    val nonce = headerShort
+    val serial = buffer.readUnsignedInt()
+    Right(EndOfDataPdu(nonce, serial))
+  }
+
+  private def parseIPv4PrefixPdu(buffer: ChannelBuffer): Either[BadData, Pdu] = {
+    buffer.readByte() match {
+      case 1 =>
+        val length = buffer.readByte()
+        val maxLenght = buffer.readByte()
+        buffer.skipBytes(1)
+        val prefix = new Ipv4Address(buffer.readUnsignedInt())
+        val asn = new Asn(buffer.readUnsignedInt())
+        Right(IPv4PrefixAnnouncePdu(prefix, length, maxLenght, asn))
+      case _ =>
+        // TODO: Support withdrawals
+        Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
+    }
+  }
+  private def parseIPv6PrefixPdu(buffer: ChannelBuffer): Either[BadData, Pdu] = {
+    buffer.readByte() match {
+      case 1 =>
+        val length = buffer.readByte()
+        val maxLenght = buffer.readByte()
+        buffer.skipBytes(1)
+        val ipv6Bytes: Array[Byte] = new Array[Byte](16)
+        buffer.getBytes(12, ipv6Bytes)
+        val prefix = new Ipv6Address(new BigInteger(1, ipv6Bytes)) // Careful, omit sign and bad things happen when calling equals
+
+        buffer.skipBytes(16)
+        val asn = new Asn(buffer.readUnsignedInt())
+        Right(IPv6PrefixAnnouncePdu(prefix, length, maxLenght, asn))
+      case _ =>
+        // TODO: Support withdrawals
+        Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
+    }
+  }
+
 }
 

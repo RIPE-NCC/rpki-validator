@@ -31,35 +31,35 @@ package net.ripe.rpki.validator
 package rtr
 
 import org.jboss.netty.bootstrap.ServerBootstrap
+import scala.collection.JavaConverters._
 import java.util.concurrent.Executors
-import org.jboss.netty.channel._
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
+import java.util.concurrent.TimeUnit
 import java.net.InetSocketAddress
-import grizzled.slf4j.Logger
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
 import org.jboss.netty.handler.codec.frame.CorruptedFrameException
 import org.jboss.netty.handler.codec.frame.TooLongFrameException
-import org.slf4j.MDC
-import net.ripe.rpki.validator.models.Roas
+import org.jboss.netty.handler.timeout.ReadTimeoutException
+import org.jboss.netty.channel._
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler
 import org.jboss.netty.util.Timer
 import org.jboss.netty.util.HashedWheelTimer
-import java.util.concurrent.TimeUnit
-import org.jboss.netty.handler.timeout.ReadTimeoutException
+import grizzled.slf4j.Logger
+import org.slf4j.MDC
+import net.ripe.rpki.validator.models.Roas
 import net.ripe.rpki.validator.config.Database
-import scala.collection.JavaConverters._
+import net.ripe.rpki.validator.config.UpdateListener
 import net.ripe.ipresource.IpResourceType
 import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Ipv6Address
-import net.ripe.rpki.validator.config.Listener
 
 object RTRServer {
   final val ProtocolVersion = 0
-  final val MAXIMUM_FRAME_LENGTH = 16777216
+  final val MAXIMUM_FRAME_LENGTH = 16777216 // 16MB Note: this should be big enough to contain all pdus when we respond with data 
 }
 
-class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends Listener {
+class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends UpdateListener {
   import TimeUnit._
 
   val logger = Logger[this.type]
@@ -93,7 +93,8 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
             /*lengthAdjustment*/ -8,
             /*initialBytesToStrip*/ 0),
           new PduEncoder,
-          new PduDecoder, serverHandler)
+          new PduDecoder,
+          serverHandler)
       }
     })
     bootstrap.setOption("child.keepAlive", true)
@@ -119,21 +120,26 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
 
 class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends SimpleChannelUpstreamHandler {
 
+  import scala.collection.mutable.HashMap
+  import java.net.SocketAddress
+
   val logger = Logger[this.type]
 
-  var childChannels = List[Channel]()
+  @volatile //?
+  var childChannelMap = new HashMap[SocketAddress, Channel]
 
   override def channelConnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
     MDC.put("contextName", context.getName())
     MDC.put("clientAddress", event.getChannel().getRemoteAddress().toString())
 
-    childChannels = childChannels ++ List(event.getChannel())
+    var childChannel = event.getChannel()
+    childChannelMap.put(childChannel.getRemoteAddress(), childChannel)
 
     super.channelConnected(context, event)
   }
 
   def notifyChildren(serial: Long) = {
-    childChannels.foreach {
+    childChannelMap.values.foreach {
       channel =>
         if (channel.isOpen()) {
           channel.write(new SerialNotifyPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply()))
@@ -145,6 +151,9 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
     super.channelClosed(context, event)
     MDC.remove("contextName")
     MDC.remove("clientAddress")
+
+    var childChannel = event.getChannel()
+    childChannelMap.remove(childChannel.getRemoteAddress())
   }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
@@ -172,47 +181,10 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
 
   private def processRequest(request: Either[BadData, Pdu]): List[Pdu] = {
     request match {
-
-      case Left(BadData(errorCode, content)) =>
-        List(ErrorPdu(errorCode, content, ""))
-
-      case Right(ResetQueryPdu()) =>
-        getCurrentCacheSerial.apply() match {
-          case 0 => List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
-          case _ =>
-            var responsePdus: List[Pdu] = List[Pdu]()
-            responsePdus = responsePdus ++ List(CacheResponsePdu(nonce = getCurrentNonce.apply()))
-            for {
-              (_, validatedRoas) <- getCurrentRoas.apply().all if validatedRoas.isDefined
-              validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
-              roa = validatedRoa.roa
-              prefix <- roa.getPrefixes().asScala
-            } {
-              var maxLength = prefix.getEffectiveMaximumLength()
-              var length = prefix.getPrefix().getPrefixLength()
-
-              prefix.getPrefix().getStart() match {
-                case ipv4: Ipv4Address =>
-                  // val ipv4PrefixStart: Ipv4Address, val prefixLength: Byte, val maxLength: Byte, val asn: Asn
-                  responsePdus = responsePdus ++ List(IPv4PrefixAnnouncePdu(ipv4, length.toByte, maxLength.toByte, roa.getAsn()))
-                case ipv6: Ipv6Address =>
-                  responsePdus = responsePdus ++ List(IPv6PrefixAnnouncePdu(ipv6, length.toByte, maxLength.toByte, roa.getAsn()))
-                case _ => assert(false)
-              }
-              logger.info("Prefix: " + prefix)
-            }
-            responsePdus ++ List(EndOfDataPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply()))
-        }
-
-      case Right(SerialQueryPdu(nonce, serial)) =>
-        if (nonce == getCurrentNonce.apply() && serial == getCurrentCacheSerial.apply()) {
-          List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
-        } else {
-          List(CacheResetPdu())
-        }
-
-      case Right(_) =>
-        List(ErrorPdu(ErrorPdu.InvalidRequest, Array.empty, ""))
+      case Left(BadData(errorCode, content)) => List(ErrorPdu(errorCode, content, ""))
+      case Right(ResetQueryPdu()) => processResetQuery
+      case Right(SerialQueryPdu(nonce, serial)) => processSerialQuery(nonce, serial)
+      case Right(_) => List(ErrorPdu(ErrorPdu.InvalidRequest, Array.empty, ""))
     }
   }
 
@@ -231,6 +203,42 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
 
       val channelFuture = event.getChannel().write(response)
       channelFuture.addListener(ChannelFutureListener.CLOSE)
+    }
+  }
+
+  private def processResetQuery: List[Pdu] = {
+    getCurrentCacheSerial.apply() match {
+      case 0 => List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
+      case _ =>
+        var responsePdus: List[Pdu] = List[Pdu]()
+        responsePdus = responsePdus ++ List(CacheResponsePdu(nonce = getCurrentNonce.apply()))
+        for {
+          (_, validatedRoas) <- getCurrentRoas.apply().all if validatedRoas.isDefined
+          validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
+          roa = validatedRoa.roa
+          prefix <- roa.getPrefixes().asScala
+        } {
+          var maxLength = prefix.getEffectiveMaximumLength()
+          var length = prefix.getPrefix().getPrefixLength()
+
+          prefix.getPrefix().getStart() match {
+            case ipv4: Ipv4Address => 
+              responsePdus = responsePdus ++ List(IPv4PrefixAnnouncePdu(ipv4, length.toByte, maxLength.toByte, roa.getAsn()))
+            case ipv6: Ipv6Address =>
+              responsePdus = responsePdus ++ List(IPv6PrefixAnnouncePdu(ipv6, length.toByte, maxLength.toByte, roa.getAsn()))
+            case _ => assert(false)
+          }
+          logger.info("Prefix: " + prefix)
+        }
+        responsePdus ++ List(EndOfDataPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply()))
+    }
+  }
+
+  private def processSerialQuery(nonce: Int, serial: Long) = {
+    if (nonce == getCurrentNonce.apply() && serial == getCurrentCacheSerial.apply()) {
+      List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
+    } else {
+      List(CacheResetPdu())
     }
   }
 }

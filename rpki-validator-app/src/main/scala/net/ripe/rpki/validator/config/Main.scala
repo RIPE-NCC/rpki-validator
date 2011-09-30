@@ -47,8 +47,8 @@ import net.ripe.rpki.validator.rtr.Pdu
 
 case class Database(trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
 
-  var nonce: Int = (new Random().nextInt() % 4096)
-
+  // Damn these signed Ints....
+  var nonce: Int = (new Random().nextInt() % 32768)
   if (nonce < 0) { nonce = nonce * -1 }
 
 }
@@ -68,10 +68,8 @@ class Atomic[T](value: T) {
 
 }
 
-trait Listener {
-
+trait UpdateListener {
   def notify(serial: Long)
-
 }
 
 object Main {
@@ -79,7 +77,7 @@ object Main {
   val logger = Logger[this.type]
 
   var database: Atomic[Database] = null
-  var listeners = List[Listener]()
+  var listeners = List[UpdateListener]()
 
   def main(args: Array[String]) {
     val trustAnchors = loadTrustAnchors()
@@ -90,7 +88,7 @@ object Main {
     runRtrServer()
   }
 
-  def registerListener(newListener: Listener) = {
+  def registerListener(newListener: UpdateListener) = {
     listeners = listeners ++ List(newListener)
   }
 

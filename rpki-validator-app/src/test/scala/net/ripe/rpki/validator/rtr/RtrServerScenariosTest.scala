@@ -57,7 +57,7 @@ import net.ripe.ipresource.Asn
 import net.ripe.ipresource.Ipv6Address
 
 @RunWith(classOf[JUnitRunner])
-class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
+class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
 
   val port = Port.any
 
@@ -171,7 +171,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
 
     var responsePdusBeforeNewRoas = client.getResponse(expectedNumber = 1)
     responsePdusBeforeNewRoas.size should equal(1)
-    responsePdusBeforeNewRoas.first match {
+    responsePdusBeforeNewRoas.head match {
       case ErrorPdu(errorCode, _, _) =>
         errorCode should equal(ErrorPdu.NoDataAvailable)
       case _ => fail("Should get no data response")
@@ -186,7 +186,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
     
     var responsePdusAfterCacheUpdate = client.getResponse(expectedNumber = 1)
     responsePdusAfterCacheUpdate.size should equal(1)
-    responsePdusAfterCacheUpdate.first match {
+    responsePdusAfterCacheUpdate.head match {
       case SerialNotifyPdu(nonce, serial) =>
       case _ => fail("Should get serial notify")
     }
@@ -197,7 +197,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
 
     var responsePdusAfterNewRoas = client.getResponse(expectedNumber = 1)
     responsePdusAfterNewRoas.size should equal(1)
-    responsePdusAfterNewRoas.first match {
+    responsePdusAfterNewRoas.head match {
       case CacheResetPdu() => // No content to check, we're good
       case _ => fail("Should get cache reset response")
     }
@@ -213,7 +213,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
     var responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.first
+    var response = responsePdus.head
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
@@ -227,7 +227,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
     var responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.first
+    var response = responsePdus.head
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
@@ -242,7 +242,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
     var responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.first
+    var response = responsePdus.head
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
@@ -256,7 +256,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
     var responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.first
+    var response = responsePdus.head
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
@@ -271,7 +271,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
     var responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.first
+    var response = responsePdus.head
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
@@ -287,7 +287,7 @@ class ScenarioSuiteTest extends FunSuite with BeforeAndAfterAll with BeforeAndAf
     var responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.first
+    var response = responsePdus.head
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]

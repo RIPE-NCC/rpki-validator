@@ -65,7 +65,6 @@ class PduEncoder extends OneToOneEncoder {
       responsePdus.foreach(pdu => length += pdu.length)
 
       val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, length)
-
       responsePdus.foreach(pdu => { buffer.writeBytes(Pdus.encode(pdu)) })
       buffer
 
