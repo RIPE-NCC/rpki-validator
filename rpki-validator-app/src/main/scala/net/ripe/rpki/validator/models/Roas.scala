@@ -43,6 +43,10 @@ import net.ripe.commons.certification.cms.roa.RoaCms
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import scalaz.concurrent.Promise
+import net.ripe.ipresource.UniqueIpResource
+import net.ripe.ipresource.Asn
+import org.apache.commons.lang.builder.HashCodeBuilder
+import scala.collection.mutable.HashSet
 
 case class ValidatedRoa(val roa: RoaCms, val uri: URI, val trustAnchor: TrustAnchorLocator)
 
@@ -66,6 +70,57 @@ class Roas(val all: Map[String, Option[Seq[ValidatedRoa]]]) {
   def update(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) = {
     new Roas(all.updated(tal.getCaName(), Some(validatedRoas)))
   }
+
+  def getUniqueValidatedPrefixes(): Array[ValidatedPrefix] = {
+
+    var uniquePrefixSet = new HashSet[ValidatedPrefix]
+
+    all.values.foreach {
+      _ match {
+        case None =>
+        case Some(sequence) => {
+          sequence.foreach {
+            validatedRoa =>
+              getValidatedPrefixes(validatedRoa).foreach {
+                validatedPrefix => uniquePrefixSet.add(validatedPrefix)
+              }
+          }
+        }
+      }
+    }
+    uniquePrefixSet.toArray
+  }
+  
+  
+  private def getValidatedPrefixes(validatedRoa: ValidatedRoa): List[ValidatedPrefix] = {
+
+    var prefixes = List[ValidatedPrefix]()
+
+    var asn = validatedRoa.roa.getAsn()
+    validatedRoa.roa.getPrefixes().asScala.foreach {
+      prefix =>
+        {
+          var maxLength = prefix.getEffectiveMaximumLength()
+          var ip = prefix.getPrefix().getStart()
+          var length = prefix.getPrefix().getPrefixLength()
+
+          var validatedPrefix = ValidatedPrefix(asn, ip, length, maxLength)
+
+          prefixes = prefixes ++ List(validatedPrefix)
+
+        }
+    }
+    prefixes
+  }
+
+}
+
+case class ValidatedPrefix(asn: Asn, ipaddress: UniqueIpResource, length: Int, maxLength: Int) {
+
+  override def hashCode(): Int = {
+    HashCodeBuilder.reflectionHashCode(this)
+  }
+
 }
 
 object Roas {

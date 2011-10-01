@@ -66,7 +66,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   var client: RTRClient = null
 
   var cache: Atomic[Database] = null
-  
+
   var nonce: Int = (new Random().nextInt() % 32768)
   if (nonce < 0) { nonce = nonce * -1 }
 
@@ -156,9 +156,9 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
         maxLength should equal(39)
         asn should equal(Asn.parse("AS65000"))
       case _ => fail("Should get IPv6 Announce Pdu")
-      
+
     }
-    
+
     var lastSerial: Long = 0
     iter.next() match {
       case EndOfDataPdu(responseNonce, serial) =>
@@ -169,33 +169,41 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     }
 
     client.isConnected should be(true)
-    
-    // Send serial, should get no data response
+
+    // Send serial, should get response with no new announcements/withdrawals
     client.sendPdu(SerialQueryPdu(nonce = nonce, serial = lastSerial))
 
-    var responsePdusBeforeNewRoas = client.getResponse(expectedNumber = 1)
-    responsePdusBeforeNewRoas.size should equal(1)
-    responsePdusBeforeNewRoas.head match {
-      case ErrorPdu(errorCode, _, _) =>
-        errorCode should equal(ErrorPdu.NoDataAvailable)
-      case _ => fail("Should get no data response")
+    var responsePdusBeforeNewRoas = client.getResponse(expectedNumber = 2)
+    responsePdusBeforeNewRoas.size should equal(2)
+
+    iter = responsePdusBeforeNewRoas.iterator
+    iter.next() match {
+      case CacheResponsePdu(responseNonce) => responseNonce should equal(nonce)
+      case _ => fail("Should get cache response")
     }
+
+    iter.next() match {
+      case EndOfDataPdu(responseNonce, serial) =>
+        responseNonce should equal(nonce)
+        serial should equal(lastSerial)
+      case _ => fail("Expected end of data")
+    }
+
     client.isConnected should be(true)
-    
+
     // Update ROAs, client should get notify
     cache.update { db =>
       db.copy(roas = db.roas.update(tal, roas), version = db.version + 1)
     }
     server.notify(cache.get.version)
-    
+
     var responsePdusAfterCacheUpdate = client.getResponse(expectedNumber = 1)
     responsePdusAfterCacheUpdate.size should equal(1)
     responsePdusAfterCacheUpdate.head match {
       case SerialNotifyPdu(nonce, serial) =>
       case _ => fail("Should get serial notify")
     }
-    
-    
+
     // Send serial, should get reset response (we don't support incremental updates yet)
     client.sendPdu(SerialQueryPdu(nonce = nonce, serial = lastSerial))
 
@@ -206,9 +214,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
       case _ => fail("Should get cache reset response")
     }
     client.isConnected should be(true)
-    
-    
-    
+
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.4

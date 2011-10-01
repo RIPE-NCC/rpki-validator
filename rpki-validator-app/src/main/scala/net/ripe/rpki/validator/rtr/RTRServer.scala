@@ -239,7 +239,7 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
 
   private def processSerialQuery(nonce: Int, serial: Long) = {
     if (nonce == getCurrentNonce.apply() && serial == getCurrentCacheSerial.apply()) {
-      List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
+      List(CacheResponsePdu(nonce = nonce), EndOfDataPdu(nonce = nonce, serial = serial))
     } else {
       List(CacheResetPdu())
     }
