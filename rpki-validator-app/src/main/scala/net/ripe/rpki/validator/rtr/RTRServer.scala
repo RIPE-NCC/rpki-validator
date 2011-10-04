@@ -57,10 +57,13 @@ import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Ipv6Address
 import net.ripe.rpki.validator.rtr.tracing.RTRTracing
 import net.ripe.rpki.validator.rtr.tracing.DataTracing
+import org.jboss.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
 
 object RTRServer {
   final val ProtocolVersion = 0
   final val MAXIMUM_FRAME_LENGTH = 16777216 // 16MB Note: this should be big enough to contain all pdus when we respond with data 
+  
+  var allChannels: ChannelGroup = new DefaultChannelGroup("rtr-server")
 }
 
 class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends UpdateListener {
@@ -116,7 +119,8 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
   }
 
   def stopServer() {
-    // TODO graceful: close all open channels asynchronously
+    val futureClose = RTRServer.allChannels.close();
+    futureClose.await(30, SECONDS)
     bootstrap.getFactory().releaseExternalResources()
   }
 }
@@ -143,32 +147,19 @@ class RTRLowLevelProtocolTracingHandler extends SimpleChannelHandler with RTRTra
 class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends SimpleChannelUpstreamHandler with Logging with RTRTracing {
   import scala.collection.mutable.HashMap
 
-  @volatile //?
-  var childChannelMap = new HashMap[SocketAddress, Channel]
-
-  override def channelConnected(context:ChannelHandlerContext, event:ChannelStateEvent) {
-    super.channelConnected(context, event)
-    logger.info("Client connected : "+ context.getChannel().getRemoteAddress())
-
-    var childChannel = event.getChannel()
-    childChannelMap.put(childChannel.getRemoteAddress(), childChannel)
-  }
   
+  override def channelOpen(context:ChannelHandlerContext, event:ChannelStateEvent) {
+    RTRServer.allChannels.add(event.getChannel())  // will be removed automatically on close
+    logger.info { "Client connected : "+ context.getChannel().getRemoteAddress() }
+  }
+
   override def channelDisconnected(context:ChannelHandlerContext, event:ChannelStateEvent) {
     super.channelDisconnected(context, event)
-    var childChannel = event.getChannel()
-    childChannelMap.remove(childChannel.getRemoteAddress())
-
-    logger.info("Client disconnected : "+ context.getChannel().getRemoteAddress())
+    logger.info { "Client disconnected : "+ context.getChannel().getRemoteAddress() }
   }
   
   def notifyChildren(serial: Long) = {
-    childChannelMap.values.foreach {
-      channel =>
-        if (channel.isOpen()) {
-          channel.write(new SerialNotifyPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply()))
-      }
-    }
+    RTRServer.allChannels.write(new SerialNotifyPdu(nonce = getCurrentNonce(), serial = getCurrentCacheSerial()))
   }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
