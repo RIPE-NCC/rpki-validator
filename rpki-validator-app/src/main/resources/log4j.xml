@@ -43,13 +43,28 @@
     <appender name="FILE" class="org.apache.log4j.FileAppender">
         <param name="File" value="log/validator.log" />
         <layout class="org.apache.log4j.PatternLayout">
-            <param name="ConversionPattern" value="%d %-5p %c{2} - %X{clientAddress}: %m%n" />
+            <param name="ConversionPattern" value="%d %-5p %c{2}: %m%n" />
+        </layout>
+    </appender>
+    <appender name="RTR_APPENDER" class="org.apache.log4j.FileAppender">
+        <param name="File" value="log/rtr_trace.log" />
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value="[%d] %m%n" />
         </layout>
     </appender>
 
 
     <logger name="net.ripe">
         <level value="INFO" />
+    </logger>
+
+    <logger name="RTR_PDU" additivity="false">
+        <level value="OFF" />
+        <appender-ref ref="RTR_APPENDER"/>
+    </logger>
+    <logger name="RTR_DATA" additivity="false">
+        <level value="OFF" />
+        <appender-ref ref="RTR_APPENDER"/>
     </logger>
 
     <root>

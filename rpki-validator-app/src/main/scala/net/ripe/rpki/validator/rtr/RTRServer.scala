@@ -35,24 +35,28 @@ import scala.collection.JavaConverters._
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.net.InetSocketAddress
+import grizzled.slf4j.Logger
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
 import org.jboss.netty.handler.codec.frame.CorruptedFrameException
 import org.jboss.netty.handler.codec.frame.TooLongFrameException
+import net.ripe.rpki.validator.models.Roas
 import org.jboss.netty.handler.timeout.ReadTimeoutException
 import org.jboss.netty.channel._
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler
 import org.jboss.netty.util.Timer
 import org.jboss.netty.util.HashedWheelTimer
-import grizzled.slf4j.Logger
-import org.slf4j.MDC
+import java.net.SocketAddress
+import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.models.Roas
 import net.ripe.rpki.validator.config.Database
 import net.ripe.rpki.validator.config.UpdateListener
 import net.ripe.ipresource.IpResourceType
 import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Ipv6Address
+import net.ripe.rpki.validator.rtr.tracing.RTRTracing
+import net.ripe.rpki.validator.rtr.tracing.DataTracing
 
 object RTRServer {
   final val ProtocolVersion = 0
@@ -74,13 +78,13 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
   }
 
   def startServer(): Unit = {
-
+    
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool(),
       Executors.newCachedThreadPool()))
 
     registerShutdownHook()
-
+    
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       override def getPipeline: ChannelPipeline = {
         Channels.pipeline(
@@ -91,6 +95,7 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
             /*lengthFieldLength*/ 4,
             /*lengthAdjustment*/ -8,
             /*initialBytesToStrip*/ 0),
+          new RTRLowLevelProtocolTracingHandler,
           new PduEncoder,
           new PduDecoder,
           serverHandler)
@@ -101,13 +106,12 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
     bootstrap.bind(listenAddress)
 
     logger.info("RTR server listening on " + listenAddress.toString)
-    logger.trace("RTR tracing enabled")
   }
 
   def registerShutdownHook() {
     sys.addShutdownHook({
-      stopServer()
-      logger.info("RTR server stopped")
+        stopServer()
+        logger.info("RTR server stopped")
     })
   }
 
@@ -117,55 +121,67 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
   }
 }
 
-class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends SimpleChannelUpstreamHandler {
+class RTRLowLevelProtocolTracingHandler extends SimpleChannelHandler with RTRTracing {
 
+  override def handleDownstream(ctx:ChannelHandlerContext, event:ChannelEvent) {
+    if (DataTracing.isEnabled) event match {
+      case e: MessageEvent => traceOutgoingData(Option(ctx.getChannel().getRemoteAddress()), e.getMessage())
+      case e => ()
+    }
+    super.handleDownstream(ctx, event)
+  }
+
+  override def handleUpstream(ctx: ChannelHandlerContext, event: ChannelEvent) {
+    if (DataTracing.isEnabled) event match {
+      case e: MessageEvent => traceIncomingData(Option(ctx.getChannel().getRemoteAddress()), e.getMessage())
+      case e => ()
+    }
+    super.handleUpstream(ctx, event);
+  }
+}
+
+class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends SimpleChannelUpstreamHandler with Logging with RTRTracing {
   import scala.collection.mutable.HashMap
-  import java.net.SocketAddress
-
-  val logger = Logger[this.type]
 
   @volatile //?
   var childChannelMap = new HashMap[SocketAddress, Channel]
 
-  override def channelConnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
-    MDC.put("contextName", context.getName())
-    MDC.put("clientAddress", event.getChannel().getRemoteAddress().toString())
+  override def channelConnected(context:ChannelHandlerContext, event:ChannelStateEvent) {
+    super.channelConnected(context, event)
+    logger.info("Client connected : "+ context.getChannel().getRemoteAddress())
 
     var childChannel = event.getChannel()
     childChannelMap.put(childChannel.getRemoteAddress(), childChannel)
-
-    super.channelConnected(context, event)
   }
+  
+  override def channelDisconnected(context:ChannelHandlerContext, event:ChannelStateEvent) {
+    super.channelDisconnected(context, event)
+    var childChannel = event.getChannel()
+    childChannelMap.remove(childChannel.getRemoteAddress())
 
+    logger.info("Client disconnected : "+ context.getChannel().getRemoteAddress())
+  }
+  
   def notifyChildren(serial: Long) = {
     childChannelMap.values.foreach {
       channel =>
         if (channel.isOpen()) {
           channel.write(new SerialNotifyPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply()))
-        }
+      }
     }
-  }
-
-  override def channelClosed(context: ChannelHandlerContext, event: ChannelStateEvent) {
-    super.channelClosed(context, event)
-    MDC.remove("contextName")
-    MDC.remove("clientAddress")
-
-    var childChannel = event.getChannel()
-    childChannelMap.remove(childChannel.getRemoteAddress())
   }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
     import org.jboss.netty.buffer.ChannelBuffers
 
-    if (logger.isTraceEnabled) {
-      val clientAddr = event.getRemoteAddress().asInstanceOf[InetSocketAddress]
-      logger.trace("RTR request received from " + clientAddr.getAddress.toString)
-    }
-
+    lazy val clientAddress = Option(context.getChannel().getRemoteAddress()) 
+    
     // decode and process
     val requestPdu = event.getMessage().asInstanceOf[Either[BadData, Pdu]]
+    traceIncomingPdu(clientAddress, requestPdu)
+    
     var responsePdus: List[Pdu] = processRequest(requestPdu)
+    traceOutgoingPdus(clientAddress, responsePdus)
 
     // respond
     val channelFuture = event.getChannel().write(responsePdus)
@@ -191,21 +207,21 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
     // Can anyone think of a nice way to test this? Without tons of mocking and overkill?
     // Otherwise I will assume the code below is doing too little to be able to contain bugs ;)
     logger.warn("Exception: " + event.getCause, event.getCause)
-
-    if (event.getChannel().isOpen()) {
-      val response: Pdu = event.getCause() match {
-        case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-        case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-        case cause: ReadTimeoutException => ErrorPdu(ErrorPdu.InternalError, Array.empty, "Connection timed out")
-        case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
-      }
-
-      try {
-        val channelFuture = event.getChannel().write(response)
-        channelFuture.addListener(ChannelFutureListener.CLOSE)
-      } catch {
-        case _ => event.getChannel().close()
-      }
+    
+    if(event.getChannel().isOpen()) {
+        val response: Pdu = event.getCause() match {
+          case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+          case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+          case cause: ReadTimeoutException => ErrorPdu(ErrorPdu.InternalError, Array.empty, "Connection timed out")
+          case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
+        }
+    
+        try {
+          val channelFuture = event.getChannel().write(response)
+          channelFuture.addListener(ChannelFutureListener.CLOSE)
+        } catch {
+          case _ => event.getChannel().close()
+        }
     }
   }
 

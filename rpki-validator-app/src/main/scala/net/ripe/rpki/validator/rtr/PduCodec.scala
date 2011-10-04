@@ -41,23 +41,18 @@ import java.net.SocketAddress
 import org.joda.time.DateTime
 
 object RtrPduLog {
-
   var pduLog = List[RtrPduLogEntry]()
 
   def log(entry: RtrPduLogEntry) {
     pduLog = pduLog ++ List(entry)
   }
-
 }
 
 case class RtrPduLogEntry(time: DateTime, childAddress: SocketAddress, data: Either[BadData, Pdu], sender: String)
 
 class PduDecoder extends OneToOneDecoder {
 
-  val logger = Logger[this.type]
-
   override def decode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = {
-    logger.trace("Getting the Array[Byte] from the channel buffer and converting to pdu")
     val buffer = msg.asInstanceOf[ChannelBuffer]
 
     var decoded = Pdus.fromByteArray(buffer)
@@ -93,17 +88,12 @@ class PduEncoder extends OneToOneEncoder {
     case pdu: Pdu =>
       val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, pdu.length)
       buffer.writeBytes(Pdus.encode(pdu))
-      
       RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), Right(pdu), "server"))
-
       buffer
-
+      
     case bytes: Array[Byte] =>
       val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, bytes.length)
       buffer.writeBytes(bytes)
-      logger.trace("bytes written %d bytes".format(bytes.length))
       buffer
   }
-
-
 }
