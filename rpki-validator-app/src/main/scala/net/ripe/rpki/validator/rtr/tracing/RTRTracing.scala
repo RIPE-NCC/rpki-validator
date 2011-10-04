@@ -101,7 +101,6 @@ private[tracing] object TracingUtil {
   }
 }
 
-// FIXME check thread-safety!!
 private[tracing] class RTRTracingBase(loggerName:String, appenderName:String) {
   import org.apache.log4j.{Level, FileAppender, Logger=>Log4jLogger}
   
@@ -111,7 +110,7 @@ private[tracing] class RTRTracingBase(loggerName:String, appenderName:String) {
       classLog.info(tracingEnabledMessage)
     logger
   }
-  val log4jTraceLogger = Log4jLogger.getLogger(loggerName)  
+  val log4jTraceLogger = Log4jLogger.getLogger(loggerName)      // need to access log4j for changing level
   val classLog = Logger[this.type]
 
   private val tracingEnabledMessage = {
@@ -124,7 +123,6 @@ private[tracing] class RTRTracingBase(loggerName:String, appenderName:String) {
   def isEnabled = traceLog.isTraceEnabled
   
   def enable() {
-    // need to access log4j for changing level
     log4jTraceLogger.setLevel(Level.TRACE)
     classLog.info(tracingEnabledMessage)
   }
