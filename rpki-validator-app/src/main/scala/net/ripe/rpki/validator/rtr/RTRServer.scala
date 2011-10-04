@@ -58,6 +58,7 @@ import net.ripe.ipresource.Ipv6Address
 import net.ripe.rpki.validator.rtr.tracing.RTRTracing
 import net.ripe.rpki.validator.rtr.tracing.DataTracing
 import org.jboss.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
+import org.jboss.netty.channel.ChannelHandler.Sharable
 
 object RTRServer {
   final val ProtocolVersion = 0
@@ -144,6 +145,7 @@ class RTRLowLevelProtocolTracingHandler extends SimpleChannelHandler with RTRTra
   }
 }
 
+@Sharable
 class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends SimpleChannelUpstreamHandler with Logging with RTRTracing {
   import scala.collection.mutable.HashMap
 
