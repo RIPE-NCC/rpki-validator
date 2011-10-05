@@ -57,13 +57,13 @@ import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Ipv6Address
 import net.ripe.rpki.validator.rtr.tracing.RTRTracing
 import net.ripe.rpki.validator.rtr.tracing.DataTracing
-import org.jboss.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
+import org.jboss.netty.channel.group.{ ChannelGroup, DefaultChannelGroup }
 import org.jboss.netty.channel.ChannelHandler.Sharable
 
 object RTRServer {
   final val ProtocolVersion = 0
   final val MAXIMUM_FRAME_LENGTH = 16777216 // 16MB Note: this should be big enough to contain all pdus when we respond with data 
-  
+
   var allChannels: ChannelGroup = new DefaultChannelGroup("rtr-server")
 }
 
@@ -82,13 +82,13 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
   }
 
   def startServer(): Unit = {
-    
+
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool(),
       Executors.newCachedThreadPool()))
 
     registerShutdownHook()
-    
+
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       override def getPipeline: ChannelPipeline = {
         Channels.pipeline(
@@ -114,8 +114,8 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
 
   def registerShutdownHook() {
     sys.addShutdownHook({
-        stopServer()
-        logger.info("RTR server stopped")
+      stopServer()
+      logger.info("RTR server stopped")
     })
   }
 
@@ -128,7 +128,7 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
 
 class RTRLowLevelProtocolTracingHandler extends SimpleChannelHandler with RTRTracing {
 
-  override def handleDownstream(ctx:ChannelHandlerContext, event:ChannelEvent) {
+  override def handleDownstream(ctx: ChannelHandlerContext, event: ChannelEvent) {
     if (DataTracing.isEnabled) event match {
       case e: MessageEvent => traceOutgoingData(Option(ctx.getChannel().getRemoteAddress()), e.getMessage())
       case e => ()
@@ -149,17 +149,16 @@ class RTRLowLevelProtocolTracingHandler extends SimpleChannelHandler with RTRTra
 class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends SimpleChannelUpstreamHandler with Logging with RTRTracing {
   import scala.collection.mutable.HashMap
 
-  
-  override def channelOpen(context:ChannelHandlerContext, event:ChannelStateEvent) {
-    RTRServer.allChannels.add(event.getChannel())  // will be removed automatically on close
-    logger.info { "Client connected : "+ context.getChannel().getRemoteAddress() }
+  override def channelOpen(context: ChannelHandlerContext, event: ChannelStateEvent) {
+    RTRServer.allChannels.add(event.getChannel()) // will be removed automatically on close
+    logger.info { "Client connected : " + context.getChannel().getRemoteAddress() }
   }
 
-  override def channelDisconnected(context:ChannelHandlerContext, event:ChannelStateEvent) {
+  override def channelDisconnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
     super.channelDisconnected(context, event)
-    logger.info { "Client disconnected : "+ context.getChannel().getRemoteAddress() }
+    logger.info { "Client disconnected : " + context.getChannel().getRemoteAddress() }
   }
-  
+
   def notifyChildren(serial: Long) = {
     RTRServer.allChannels.write(new SerialNotifyPdu(nonce = getCurrentNonce(), serial = getCurrentCacheSerial()))
   }
@@ -167,12 +166,12 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
     import org.jboss.netty.buffer.ChannelBuffers
 
-    lazy val clientAddress = Option(context.getChannel().getRemoteAddress()) 
-    
+    lazy val clientAddress = Option(context.getChannel().getRemoteAddress())
+
     // decode and process
     val requestPdu = event.getMessage().asInstanceOf[Either[BadData, Pdu]]
     traceIncomingPdu(clientAddress, requestPdu)
-    
+
     var responsePdus: Seq[Pdu] = processRequest(requestPdu)
     traceOutgoingPdus(clientAddress, responsePdus)
 
@@ -200,21 +199,21 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
     // Can anyone think of a nice way to test this? Without tons of mocking and overkill?
     // Otherwise I will assume the code below is doing too little to be able to contain bugs ;)
     logger.warn("Exception: " + event.getCause, event.getCause)
-    
-    if(event.getChannel().isOpen()) {
-        val response: Pdu = event.getCause() match {
-          case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-          case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-          case cause: ReadTimeoutException => ErrorPdu(ErrorPdu.InternalError, Array.empty, "Connection timed out")
-          case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
-        }
-    
-        try {
-          val channelFuture = event.getChannel().write(response)
-          channelFuture.addListener(ChannelFutureListener.CLOSE)
-        } catch {
-          case _ => event.getChannel().close()
-        }
+
+    if (event.getChannel().isOpen()) {
+      val response: Pdu = event.getCause() match {
+        case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+        case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+        case cause: ReadTimeoutException => ErrorPdu(ErrorPdu.InternalError, Array.empty, "Connection timed out")
+        case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
+      }
+
+      try {
+        val channelFuture = event.getChannel().write(response)
+        channelFuture.addListener(ChannelFutureListener.CLOSE)
+      } catch {
+        case _ => event.getChannel().close()
+      }
     }
   }
 
@@ -224,15 +223,8 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
       case _ =>
         var responsePdus: Vector[Pdu] = Vector.empty
         responsePdus = responsePdus :+ CacheResponsePdu(nonce = getCurrentNonce.apply())
-        val triples = for {
-          (_, validatedRoas) <- getCurrentRoas.apply().all if validatedRoas.isDefined
-          validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
-          roa = validatedRoa.roa
-          prefix <- roa.getPrefixes().asScala
-        } yield {
-          (prefix, roa.getAsn)
-        }
-        for ((prefix, asn) <- triples.toSeq.distinct) {
+
+        for ((prefix, asn) <- getDistinctRoaPrefixes) {
           var maxLength = prefix.getEffectiveMaximumLength()
           var length = prefix.getPrefix().getPrefixLength()
 
@@ -243,10 +235,23 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
               responsePdus = responsePdus :+ IPv6PrefixAnnouncePdu(ipv6, length.toByte, maxLength.toByte, asn)
             case _ => assert(false)
           }
+
           logger.info("Prefix: " + prefix)
         }
         responsePdus :+ EndOfDataPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply())
     }
+  }
+
+  protected[rtr] def getDistinctRoaPrefixes() = {
+    val pairs = for {
+      (_, validatedRoas) <- getCurrentRoas.apply().all.toSeq if validatedRoas.isDefined
+      validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
+      roa = validatedRoa.roa
+      prefix <- roa.getPrefixes().asScala
+    } yield {
+      (prefix, roa.getAsn)
+    }
+    pairs.distinct
   }
 
   private def processSerialQuery(nonce: Int, serial: Long) = {
