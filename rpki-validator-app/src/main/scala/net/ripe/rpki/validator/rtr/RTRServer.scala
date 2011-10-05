@@ -55,8 +55,6 @@ import net.ripe.rpki.validator.config.UpdateListener
 import net.ripe.ipresource.IpResourceType
 import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Ipv6Address
-import net.ripe.rpki.validator.rtr.tracing.RTRTracing
-import net.ripe.rpki.validator.rtr.tracing.DataTracing
 import org.jboss.netty.channel.group.{ ChannelGroup, DefaultChannelGroup }
 import org.jboss.netty.channel.ChannelHandler.Sharable
 
@@ -99,7 +97,6 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
             /*lengthFieldLength*/ 4,
             /*lengthAdjustment*/ -8,
             /*initialBytesToStrip*/ 0),
-          new RTRLowLevelProtocolTracingHandler,
           new PduEncoder,
           new PduDecoder,
           serverHandler)
@@ -126,27 +123,8 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
   }
 }
 
-class RTRLowLevelProtocolTracingHandler extends SimpleChannelHandler with RTRTracing {
-
-  override def handleDownstream(ctx: ChannelHandlerContext, event: ChannelEvent) {
-    if (DataTracing.isEnabled) event match {
-      case e: MessageEvent => traceOutgoingData(Option(ctx.getChannel().getRemoteAddress()), e.getMessage())
-      case e => ()
-    }
-    super.handleDownstream(ctx, event)
-  }
-
-  override def handleUpstream(ctx: ChannelHandlerContext, event: ChannelEvent) {
-    if (DataTracing.isEnabled) event match {
-      case e: MessageEvent => traceIncomingData(Option(ctx.getChannel().getRemoteAddress()), e.getMessage())
-      case e => ()
-    }
-    super.handleUpstream(ctx, event);
-  }
-}
-
 @Sharable
-class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends SimpleChannelUpstreamHandler with Logging with RTRTracing {
+class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Int) extends SimpleChannelUpstreamHandler with Logging {
   import scala.collection.mutable.HashMap
 
   override def channelOpen(context: ChannelHandlerContext, event: ChannelStateEvent) {
@@ -170,10 +148,7 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
 
     // decode and process
     val requestPdu = event.getMessage().asInstanceOf[Either[BadData, Pdu]]
-    traceIncomingPdu(clientAddress, requestPdu)
-
     var responsePdus: Seq[Pdu] = processRequest(requestPdu)
-    traceOutgoingPdus(clientAddress, responsePdus)
 
     // respond
     val channelFuture = event.getChannel().write(responsePdus)

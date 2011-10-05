@@ -46,7 +46,7 @@ object RtrPduLog {
   
   def log(entry: RtrPduLogEntry) {
     this.synchronized {
-      _pduLog = _pduLog.take(1999) :+ entry
+      _pduLog = _pduLog.takeRight(1999) :+ entry
     }
   }
 }
