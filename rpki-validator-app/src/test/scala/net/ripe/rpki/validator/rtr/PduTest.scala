@@ -48,7 +48,7 @@ class PduTest extends FunSuite with ShouldMatchers {
     bytes should equal(PduTest.NoDataAvailablePduBytes)
   }
 
-  // See http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.1
+  // See http://tools.ietf.org/html/draft-ietf-r5r555555555555                                                                                                                                                                                                                              rpki-rtr-16#section-5.1
   test("should convert serial notify pdu to byte array and back") {
     val serialNotifyPdu = new SerialNotifyPdu(nonce = Pdu.MAX_HEADER_SHORT_VALUE, serial = EndOfDataPdu.MAX_SERIAL)
     val expectedBytes = Array[Byte](

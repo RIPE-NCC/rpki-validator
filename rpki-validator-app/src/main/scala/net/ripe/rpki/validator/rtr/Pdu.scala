@@ -50,21 +50,7 @@ sealed trait Pdu {
   
   def toPrettyContentString(): String = {
     var bytes = Pdus.encode(this)
-    var prettyString = ""
-    var counter = 0
-    
-    bytes.foreach {
-      b => {
-        prettyString = prettyString + String.format("%02X", new java.lang.Byte(b))
-        counter = counter + 1
-        if (counter % 4 == 0) {
-          prettyString = prettyString + "\n"
-        } else {
-          prettyString = prettyString + " "
-        }
-      }
-    }
-    prettyString
+    bytes.map(_.formatted("%02X")).grouped(4).map(_.mkString(" ")).mkString("\n")
   }
 }
 

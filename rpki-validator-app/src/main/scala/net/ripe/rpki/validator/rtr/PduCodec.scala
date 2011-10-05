@@ -41,10 +41,13 @@ import java.net.SocketAddress
 import org.joda.time.DateTime
 
 object RtrPduLog {
-  var pduLog = List[RtrPduLogEntry]()
-
+  private var _pduLog = Vector[RtrPduLogEntry]()
+  def pduLog = this.synchronized { _pduLog }
+  
   def log(entry: RtrPduLogEntry) {
-    pduLog = pduLog ++ List(entry)
+    this.synchronized {
+      _pduLog = _pduLog.take(1999) :+ entry
+    }
   }
 }
 
@@ -69,7 +72,7 @@ class PduEncoder extends OneToOneEncoder {
 
   override def encode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = msg match {
 
-    case responsePdus: List[Pdu] =>
+    case responsePdus: Seq[Pdu] =>
       var length: Int = 0
       responsePdus.foreach(pdu => length += pdu.length)
 
@@ -78,7 +81,7 @@ class PduEncoder extends OneToOneEncoder {
         pdu =>
           {
             buffer.writeBytes(Pdus.encode(pdu))
-            
+
             // Hardcoded to "server" for now -> only the server sends lists of pdus
             RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), Right(pdu), "server"))
           }
@@ -90,7 +93,7 @@ class PduEncoder extends OneToOneEncoder {
       buffer.writeBytes(Pdus.encode(pdu))
       RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), Right(pdu), "server"))
       buffer
-      
+
     case bytes: Array[Byte] =>
       val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, bytes.length)
       buffer.writeBytes(bytes)

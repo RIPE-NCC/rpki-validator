@@ -34,15 +34,12 @@ import net.ripe.rpki.validator.rtr._
 
 class RtrLogView extends View {
 
-  def tab = Tabs.RoasTab
+  def tab = Tabs.RtrLogTab
   def title = Text("RPKI-RTR Activity Log")
   def body = {
     <div class="alert-message block-message info">
-      {
         <p>RPKI - RTR Activity log</p>
         <p>Log size: { RtrPduLog.pduLog.size } </p>
-
-      }
     </div>
     <table id="log-table" class="zebra-striped" style="display: none;">
       <thead>
@@ -60,16 +57,14 @@ class RtrLogView extends View {
             <td>{ entry.sender }</td>
             <td>{
               entry.data match {
-                case Left(badData: BadData) => "Bad Data"
-                case Right(pdu: Pdu) => pdu.pduType
-                case _ => "Could not process input"
+                case Left(badData) => "Bad Data"
+                case Right(pdu) => pdu.pduType
               }
             } </td>
             <td>{
               entry.data match {
-                case Left(badData: BadData) => logBinaryContent(badData.content)
-                case Right(pdu: Pdu) => <pre>{ pdu.toPrettyContentString }</pre>
-                case _ => "Could not process input"
+                case Left(badData) => logBinaryContent(badData.content)
+                case Right(pdu) => <pre>{ pdu.toPrettyContentString }</pre>
               }
             }</td>
           </tr>

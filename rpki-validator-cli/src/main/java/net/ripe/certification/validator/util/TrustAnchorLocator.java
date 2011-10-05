@@ -43,7 +43,9 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 
-
+/**
+ * Represents a Trust Anchor Locator as defined <a href="http://tools.ietf.org/html/draft-ietf-sidr-ta-07">here</a>
+ */
 public class TrustAnchorLocator {
 
     private final File file;

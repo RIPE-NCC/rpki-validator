@@ -72,19 +72,17 @@ trait UpdateListener {
 }
 
 object Main {
-  
-  // Damn these signed Ints....
-  var nonce: Int = (new Random().nextInt() % 32768)
-  if (nonce < 0) { nonce = nonce * -1 }
 
   val logger = Logger[this.type]
+  
+  private val nonce: Short = new Random().nextInt(65535).toShort
 
-  var database: Atomic[Database] = null
-  var listeners = List[UpdateListener]()
+  private var database: Atomic[Database] = null
+  private var listeners = List[UpdateListener]()
 
   def main(args: Array[String]) {
     val trustAnchors = loadTrustAnchors()
-    val roas = Roas.apply(trustAnchors)
+    val roas = Roas(trustAnchors)
     database = new Atomic(Database(trustAnchors, roas))
 
     runWebServer()

@@ -49,7 +49,7 @@ trait RTRTracing {
     }
   }
   
-  def traceOutgoingPdus(clientAddress: => Option[SocketAddress], pdus: List[Pdu]) {
+  def traceOutgoingPdus(clientAddress: => Option[SocketAddress], pdus: Seq[Pdu]) {
     if (PDUTracing.isEnabled)
       pdus.foreach(PDUTracing.trace(_))
   }

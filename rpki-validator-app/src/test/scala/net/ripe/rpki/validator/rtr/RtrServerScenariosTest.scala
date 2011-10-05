@@ -56,6 +56,10 @@ import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.Ipv6Address
 import scala.util.Random
+import net.ripe.commons.certification.ValidityPeriod
+import org.joda.time.DateTime
+
+import scala.collection.JavaConverters._
 
 @RunWith(classOf[JUnitRunner])
 class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
@@ -111,7 +115,16 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     var tal: TrustAnchorLocator = new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
 
     // TODO: use the method that allows explicit list of roa prefixes for testing
-    val roa: RoaCms = RoaCmsObjectMother.getRoaCms()
+
+    val prefixes = List[RoaPrefix](
+      RoaCmsObjectMother.TEST_IPV4_PREFIX_1,
+      RoaCmsObjectMother.TEST_IPV4_PREFIX_2,
+      RoaCmsObjectMother.TEST_IPV6_PREFIX,
+      RoaCmsObjectMother.TEST_IPV6_PREFIX) // List IPv6 Prefix twice. It should be filtered when response is sent 
+
+    val validityPeriod = new ValidityPeriod(new DateTime(), new DateTime().plusYears(1))
+
+    val roa: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes.asJava, validityPeriod, RoaCmsObjectMother.TEST_ASN)
     val roaUri: URI = URI.create("rsync://example.com/roa.roa")
 
     val validatedRoa: ValidatedRoa = new ValidatedRoa(roa, roaUri, tal)

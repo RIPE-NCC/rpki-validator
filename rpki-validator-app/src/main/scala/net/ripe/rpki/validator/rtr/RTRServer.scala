@@ -173,7 +173,7 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
     val requestPdu = event.getMessage().asInstanceOf[Either[BadData, Pdu]]
     traceIncomingPdu(clientAddress, requestPdu)
     
-    var responsePdus: List[Pdu] = processRequest(requestPdu)
+    var responsePdus: Seq[Pdu] = processRequest(requestPdu)
     traceOutgoingPdus(clientAddress, responsePdus)
 
     // respond
@@ -187,7 +187,7 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
 
   }
 
-  private def processRequest(request: Either[BadData, Pdu]): List[Pdu] = {
+  private def processRequest(request: Either[BadData, Pdu]): Seq[Pdu] = {
     request match {
       case Left(BadData(errorCode, content)) => List(ErrorPdu(errorCode, content, ""))
       case Right(ResetQueryPdu()) => processResetQuery
@@ -218,31 +218,34 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
     }
   }
 
-  private def processResetQuery: List[Pdu] = {
+  private def processResetQuery: Seq[Pdu] = {
     getCurrentCacheSerial.apply() match {
       case 0 => List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
       case _ =>
-        var responsePdus: List[Pdu] = List[Pdu]()
-        responsePdus = responsePdus ++ List(CacheResponsePdu(nonce = getCurrentNonce.apply()))
-        for {
+        var responsePdus: Vector[Pdu] = Vector.empty
+        responsePdus = responsePdus :+ CacheResponsePdu(nonce = getCurrentNonce.apply())
+        val triples = for {
           (_, validatedRoas) <- getCurrentRoas.apply().all if validatedRoas.isDefined
           validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
           roa = validatedRoa.roa
           prefix <- roa.getPrefixes().asScala
-        } {
+        } yield {
+          (prefix, roa.getAsn)
+        }
+        for ((prefix, asn) <- triples.toSeq.distinct) {
           var maxLength = prefix.getEffectiveMaximumLength()
           var length = prefix.getPrefix().getPrefixLength()
 
           prefix.getPrefix().getStart() match {
             case ipv4: Ipv4Address =>
-              responsePdus = responsePdus ++ List(IPv4PrefixAnnouncePdu(ipv4, length.toByte, maxLength.toByte, roa.getAsn()))
+              responsePdus = responsePdus :+ IPv4PrefixAnnouncePdu(ipv4, length.toByte, maxLength.toByte, asn)
             case ipv6: Ipv6Address =>
-              responsePdus = responsePdus ++ List(IPv6PrefixAnnouncePdu(ipv6, length.toByte, maxLength.toByte, roa.getAsn()))
+              responsePdus = responsePdus :+ IPv6PrefixAnnouncePdu(ipv6, length.toByte, maxLength.toByte, asn)
             case _ => assert(false)
           }
           logger.info("Prefix: " + prefix)
         }
-        responsePdus ++ List(EndOfDataPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply()))
+        responsePdus :+ EndOfDataPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply())
     }
   }
 
