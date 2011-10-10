@@ -30,16 +30,17 @@
 package net.ripe.certification.validator.util;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 
@@ -59,38 +60,57 @@ public class TrustAnchorLocator {
     private final List<URI> prefetchUris;
 
     public static TrustAnchorLocator fromFile(File file) throws TrustAnchorExtractorException {
-        FileInputStream input = null;
         try {
-            Properties p = new Properties();
-            input = FileUtils.openInputStream(file);
-            p.load(input);
-
-            String caName = p.getProperty("ca.name");
-            String loc = p.getProperty("certificate.location");
-            Validate.notEmpty(loc, "'certificate.location' must be provided");
-            URI location = new URI(loc);
-            String publicKeyInfo = p.getProperty("public.key.info");
-            String[] uris = p.getProperty("prefetch.uris", "").split(",");
-            List<URI> prefetchUris = new ArrayList<URI>(uris.length);
-            for (String uri : uris) {
-                uri = uri.trim();
-                if (StringUtils.isNotBlank(uri)) {
-                    if (!uri.endsWith("/")) {
-                        uri += "/";
-                    }
-                    prefetchUris.add(new URI(uri));
-                }
+            String contents = FileUtils.readFileToString(file, "UTF-8");
+            if (contents.trim().startsWith("rsync://")) {
+                return readStandardTrustAnchorLocator(file, contents);
+            } else {
+                return readExtendedTrustAnchorLocator(file, contents);
             }
-            return new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris);
         } catch (IllegalArgumentException e) {
             throw new TrustAnchorExtractorException("failed to load trust anchor locator " + file + ": " + e.getMessage(), e);
         } catch (IOException e) {
             throw new TrustAnchorExtractorException("failed to open trust anchor locator " + file + ": " + e.getMessage(), e);
         } catch (URISyntaxException e) {
             throw new TrustAnchorExtractorException("failed to load trust anchor locator " + file + ": " + e.getMessage(), e);
-        } finally {
-            IOUtils.closeQuietly(input);
         }
+    }
+
+    /**
+     * @see http://tools.ietf.org/html/draft-ietf-sidr-ta-07
+     */
+    private static TrustAnchorLocator readStandardTrustAnchorLocator(File file, String contents) throws URISyntaxException {
+        String caName = FilenameUtils.getBaseName(file.getName());
+        String[] lines = contents.trim().split("\\s*(\r\n|\n\r|\n|\r)\\s*");
+        URI location = new URI(lines[0]);
+        int i = 1;
+        while (lines[i].startsWith("rsync://"))
+            ++i;
+        String publicKeyInfo = StringUtils.join(Arrays.copyOfRange(lines, i, lines.length));
+        return new TrustAnchorLocator(file, caName, location, publicKeyInfo, new ArrayList<URI>());
+    }
+
+    private static TrustAnchorLocator readExtendedTrustAnchorLocator(File file, String contents) throws IOException, URISyntaxException {
+        Properties p = new Properties();
+        p.load(new StringReader(contents));
+
+        String caName = p.getProperty("ca.name");
+        String loc = p.getProperty("certificate.location");
+        Validate.notEmpty(loc, "'certificate.location' must be provided");
+        URI location = new URI(loc);
+        String publicKeyInfo = p.getProperty("public.key.info", "").replaceAll("\\s+", "");
+        String[] uris = p.getProperty("prefetch.uris", "").split(",");
+        List<URI> prefetchUris = new ArrayList<URI>(uris.length);
+        for (String uri : uris) {
+            uri = uri.trim();
+            if (StringUtils.isNotBlank(uri)) {
+                if (!uri.endsWith("/")) {
+                    uri += "/";
+                }
+                prefetchUris.add(new URI(uri));
+            }
+        }
+        return new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris);
     }
 
     public TrustAnchorLocator(File file, String caName, URI location, String publicKeyInfo, List<URI> prefetchUris) {

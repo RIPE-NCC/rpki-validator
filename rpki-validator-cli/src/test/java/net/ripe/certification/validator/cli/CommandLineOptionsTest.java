@@ -40,8 +40,8 @@ import org.junit.Test;
 
 public class CommandLineOptionsTest {
 
-    private static final String TEST1_TAL = "src/test/resources/test1.tal";
-    private static final String TEST2_TAL = "src/test/resources/test2.tal";
+    private static final String TEST1_TAL = "src/test/resources/rpki-extended-tal1.tal";
+    private static final String TEST2_TAL = "src/test/resources/rpki-extended-tal2.tal";
 
     private CommandLineOptions subject = new CommandLineOptions();
 
