@@ -75,7 +75,7 @@ object Main {
 
   val logger = Logger[this.type]
   
-  private val nonce: Short = new Random().nextInt(65535).toShort
+  private val nonce: Pdu.Nonce = Pdu.randomNonce()
 
   private var database: Atomic[Database] = null
   private var listeners = List[UpdateListener]()

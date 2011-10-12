@@ -61,8 +61,7 @@ class RtrServerTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter 
 
   var cache: Atomic[Database] = null
 
-  var nonce: Int = (new Random().nextInt() % 32768)
-  if (nonce < 0) { nonce = nonce * -1 }
+  var nonce: Short = new Random().nextInt(65536).toShort
 
   var handler: RTRServerHandler = null
 

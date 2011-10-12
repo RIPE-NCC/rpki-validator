@@ -36,18 +36,16 @@ import java.nio.charset.Charset
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.ChannelBuffers
 import java.nio.ByteOrder
-
 import net.ripe.ipresource._
 import java.math.BigInteger
+import scala.util.Random
 
 sealed trait Pdu {
   def protocolVersion: Byte = 0
   def pduType: Byte
-  def headerShort: Int = 0
+  def headerShort: Short = 0
   def length: Int
 
-  assert(headerShort <= Pdu.MAX_HEADER_SHORT_VALUE)
-  
   def toPrettyContentString(): String = {
     var bytes = Pdus.encode(this)
     bytes.map(_.formatted("%02X")).grouped(4).map(_.mkString(" ")).mkString("\n")
@@ -55,7 +53,8 @@ sealed trait Pdu {
 }
 
 object Pdu {
-  val MAX_HEADER_SHORT_VALUE = 65536 - 1
+  type Nonce = Short 
+  def randomNonce() = Random.nextInt(65536).toShort
 }
 
 case class BadData(errorCode: Int, content: Array[Byte])
@@ -63,24 +62,22 @@ case class BadData(errorCode: Int, content: Array[Byte])
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.1
  */
-case class SerialNotifyPdu(nonce: Int, serial: Long) extends Pdu {
+case class SerialNotifyPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
   override def pduType = PduTypes.SerialNotify
   override def headerShort = nonce
   override def length = 12
 
-  assert(nonce <= Pdu.MAX_HEADER_SHORT_VALUE)
   assert(serial <= EndOfDataPdu.MAX_SERIAL)
 }
 
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.2
  */
-case class SerialQueryPdu(nonce: Int, serial: Long) extends Pdu {
+case class SerialQueryPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
   override def pduType = PduTypes.SerialQuery
   override def headerShort = nonce
   override def length = 12
 
-  assert(nonce <= Pdu.MAX_HEADER_SHORT_VALUE)
   assert(serial <= EndOfDataPdu.MAX_SERIAL)
 }
 
@@ -95,7 +92,7 @@ case class ResetQueryPdu() extends Pdu {
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.4
  */
-case class CacheResponsePdu(nonce: Int) extends Pdu {
+case class CacheResponsePdu(nonce: Pdu.Nonce) extends Pdu {
   override def pduType = PduTypes.CacheResponse
   override def headerShort = nonce
   override def length = 8
@@ -120,9 +117,9 @@ case class IPv6PrefixAnnouncePdu(val ipv6PrefixStart: Ipv6Address, val prefixLen
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.7
  */
-case class EndOfDataPdu(nonce: Int, serial: Long) extends Pdu {
+case class EndOfDataPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
   override def pduType = PduTypes.EndOfData
-  override def headerShort: Int = nonce
+  override def headerShort: Short = nonce
   override def length = 12
 
   assert(serial <= EndOfDataPdu.MAX_SERIAL)
@@ -206,7 +203,7 @@ object Pdus {
   def fromByteArray(buffer: ChannelBuffer): Either[BadData, Pdu] = try {
     val protocol = buffer.readByte()
     val pduType = buffer.readByte()
-    val headerShort = buffer.readUnsignedShort()
+    val headerShort = buffer.readShort()
     val length = buffer.readInt()
 
     if (protocol != SupportedProtocol) {
@@ -268,19 +265,17 @@ object Pdus {
     buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
   }
 
-  private def parseSerialNotifyPdu(buffer: ChannelBuffer, headerShort: Int): Right[Nothing, SerialNotifyPdu] = {
-    val nonce = headerShort
+  private def parseSerialNotifyPdu(buffer: ChannelBuffer, nonce: Pdu.Nonce): Right[Nothing, SerialNotifyPdu] = {
     val serial = buffer.readUnsignedInt()
     Right(SerialNotifyPdu(nonce, serial))
   }
 
-  private def parseSerialQueryPdu(buffer: ChannelBuffer, headerShort: Int): Right[Nothing, SerialQueryPdu] = {
-    val nonce = headerShort
+  private def parseSerialQueryPdu(buffer: ChannelBuffer, nonce: Pdu.Nonce): Right[Nothing, SerialQueryPdu] = {
     val serial = buffer.readUnsignedInt()
     Right(SerialQueryPdu(nonce, serial))
   }
 
-  private def parseErrorPdu(buffer: ChannelBuffer, headerShort: Int): Right[Nothing, ErrorPdu] = {
+  private def parseErrorPdu(buffer: ChannelBuffer, headerShort: Short): Right[Nothing, ErrorPdu] = {
     val causingPduLength = buffer.readInt()
     val causingPdu = buffer.readBytes(causingPduLength).array()
     val errorTextLength = buffer.readInt()
@@ -289,13 +284,11 @@ object Pdus {
     Right(ErrorPdu(headerShort, causingPdu, errorText))
   }
 
-  private def parseCacheResponsePdu(headerShort: Int): Right[Nothing, CacheResponsePdu] = {
-    val nonce = headerShort
+  private def parseCacheResponsePdu(nonce: Pdu.Nonce): Right[Nothing, CacheResponsePdu] = {
     Right(CacheResponsePdu(nonce))
   }
 
-  private def parseEndOfDataPdu(buffer: ChannelBuffer, headerShort: Int): Right[Nothing, EndOfDataPdu] = {
-    val nonce = headerShort
+  private def parseEndOfDataPdu(buffer: ChannelBuffer, nonce: Pdu.Nonce): Right[Nothing, EndOfDataPdu] = {
     val serial = buffer.readUnsignedInt()
     Right(EndOfDataPdu(nonce, serial))
   }
