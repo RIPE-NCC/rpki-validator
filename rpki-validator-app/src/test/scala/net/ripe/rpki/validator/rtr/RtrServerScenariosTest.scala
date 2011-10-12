@@ -79,6 +79,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     cache = new Atomic(Database(trustAnchors, validatedRoas))
     server = new RTRServer(
       port = port,
+      noCloseOnError = false,
       getCurrentCacheSerial = { () => cache.get.version },
       getCurrentRoas = { () => cache.get.roas },
       getCurrentNonce = { () => nonce })
@@ -254,7 +255,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.InvalidRequest)
-//    client.isConnected should be(false)
+    client.isConnected should be(false)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -269,7 +270,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.UnsupportedPduType)
-//    client.isConnected should be(false)
+    client.isConnected should be(false)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -283,7 +284,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.UnsupportedProtocolVersion)
-//    client.isConnected should be(false)
+    client.isConnected should be(false)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -298,7 +299,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.CorruptData)
-//    client.isConnected should be(false)
+    client.isConnected should be(false)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -314,7 +315,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.CorruptData)
-//    client.isConnected should be(false)
+    client.isConnected should be(false)
   }
 
 }

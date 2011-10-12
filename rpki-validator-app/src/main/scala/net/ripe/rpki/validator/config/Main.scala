@@ -52,7 +52,7 @@ class Atomic[T](value: T) {
   val db: AtomicReference[T] = new AtomicReference(value)
 
   def get = db.get
-  
+
   var lastUpdateTime: DateTime = new DateTime
 
   final def update(f: T => T) {
@@ -74,19 +74,29 @@ trait UpdateListener {
 object Main {
 
   val logger = Logger[this.type]
-  
+
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
 
   private var database: Atomic[Database] = null
   private var listeners = List[UpdateListener]()
 
-  def main(args: Array[String]) {
+ def main(args: Array[String]): Unit = Options.parse(args) match {
+   case Right(options) => run(options)
+   case Left(message) => error(message)
+ }
+
+  private def run(options: Options): Unit = {
     val trustAnchors = loadTrustAnchors()
     val roas = Roas(trustAnchors)
     database = new Atomic(Database(trustAnchors, roas))
 
-    runWebServer()
-    runRtrServer()
+    runWebServer(options)
+    runRtrServer(options)
+  }
+  
+  private def error(message: String) = {
+    println(message)
+    sys.exit(1)
   }
 
   def registerListener(newListener: UpdateListener) = {
@@ -138,25 +148,26 @@ object Main {
     server
   }
 
-  private def runWebServer(): Unit = {
-    val port = 8080
-    val server = setup(new Server(port))
+  private def runWebServer(options: Options): Unit = {
+    val server = setup(new Server(options.httpPort))
 
     sys.addShutdownHook({
       server.stop()
       logger.info("Bye, bye...")
     })
     server.start()
-    logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + port + ". Hit CTRL+C to terminate.")
+    logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + options.httpPort + ". Hit CTRL+C to terminate.")
   }
 
-  private def runRtrServer(): Unit = {
+  private def runRtrServer(options: Options): Unit = {
     var rtrServer = new RTRServer(
-      port = 8282,
+      port = options.rtrPort,
+      noCloseOnError = options.noCloseOnError,
       getCurrentCacheSerial = { () => database.get.version },
       getCurrentRoas = { () => database.get.roas },
       getCurrentNonce = { () => Main.nonce })
     rtrServer.startServer()
     registerListener(rtrServer)
   }
+
 }

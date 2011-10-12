@@ -65,7 +65,7 @@ object RTRServer {
   var allChannels: ChannelGroup = new DefaultChannelGroup("rtr-server")
 }
 
-class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends UpdateListener {
+class RTRServer(port: Int, noCloseOnError: Boolean, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends UpdateListener {
   import TimeUnit._
 
   val logger = Logger[this.type]
@@ -73,7 +73,7 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
   var bootstrap: ServerBootstrap = _
   var timer: Timer = new HashedWheelTimer(5, SECONDS) // check for timer events every 5 secs
 
-  val serverHandler = new RTRServerHandler(getCurrentCacheSerial, getCurrentRoas, getCurrentNonce)
+  val serverHandler = new RTRServerHandler(noCloseOnError, getCurrentCacheSerial, getCurrentRoas, getCurrentNonce)
 
   def notify(serial: Long) = {
     serverHandler.notifyChildren(serial)
@@ -124,7 +124,7 @@ class RTRServer(port: Int, getCurrentCacheSerial: () => Int, getCurrentRoas: () 
 }
 
 @Sharable
-class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends SimpleChannelUpstreamHandler with Logging {
+class RTRServerHandler(noCloseOnError: Boolean = false, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends SimpleChannelUpstreamHandler with Logging {
   import scala.collection.mutable.HashMap
 
   override def channelOpen(context: ChannelHandlerContext, event: ChannelStateEvent) {
@@ -153,11 +153,13 @@ class RTRServerHandler(getCurrentCacheSerial: () => Int, getCurrentRoas: () => R
     // respond
     val channelFuture = event.getChannel().write(responsePdus)
 
-//    responsePdus.last match {
-//      case ErrorPdu(errorCode, _, _) if (ErrorPdu.isFatal(errorCode)) =>
-//        channelFuture.addListener(ChannelFutureListener.CLOSE)
-//      case _ =>
-//    }
+    if (!noCloseOnError) {
+      responsePdus.last match {
+        case ErrorPdu(errorCode, _, _) if (ErrorPdu.isFatal(errorCode)) =>
+          channelFuture.addListener(ChannelFutureListener.CLOSE)
+        case _ =>
+      }
+    }
 
   }
 

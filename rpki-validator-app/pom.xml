@@ -75,6 +75,13 @@
             <artifactId>commons-cli</artifactId>
             <version>1.2</version>
         </dependency>
+        
+        <dependency>
+            <groupId>org.clapper</groupId>
+            <artifactId>argot_${scala.version}</artifactId>
+            <version>0.3.5</version>
+        </dependency>
+        
         <dependency>
             <!-- http://software.clapper.org/grizzled-slf4j/ -->
             <groupId>org.clapper</groupId>
