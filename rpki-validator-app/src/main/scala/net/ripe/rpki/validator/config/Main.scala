@@ -163,6 +163,7 @@ object Main {
     var rtrServer = new RTRServer(
       port = options.rtrPort,
       noCloseOnError = options.noCloseOnError,
+      noNotify = options.noNotify,
       getCurrentCacheSerial = { () => database.get.version },
       getCurrentRoas = { () => database.get.roas },
       getCurrentNonce = { () => Main.nonce })

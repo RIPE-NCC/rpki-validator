@@ -80,6 +80,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     server = new RTRServer(
       port = port,
       noCloseOnError = false,
+      noNotify = false,
       getCurrentCacheSerial = { () => cache.get.version },
       getCurrentRoas = { () => cache.get.roas },
       getCurrentNonce = { () => nonce })

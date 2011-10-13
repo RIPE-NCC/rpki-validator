@@ -49,12 +49,13 @@ class Options(args: Array[String]) {
  
  private val rtrPortOption = parser.option[Int](List("r", "rtr-port"), "RTR-PORT", "The port the rtr-rpki tcp server will listen on. Default: " + Options.DEFAULT_RTR_PORT)
  private val httpPortOption = parser.option[Int](List("h", "http-port"), "HTTP-PORT", "The http port the for the User Interface. Default: " + Options.DEFAULT_HTTP_PORT)
-// private val noCloseOption = parser.flagOption[Boolean](List("c", "close-on-error"), "CLOSE-ON-ERROR", "Indicate whether the server should close connection on fatal errors. Default: " + Options.CLOSE_CONNECTION_ON_ERROR)
- private val noCloseOption = parser.flag[Boolean](List("n", "no-close-on-error"), "Stop the server from closing connections when it receives fatal errors")
+ private val noCloseOption = parser.flag[Boolean](List("n", "no-close-on-error"), "Stop the server from closing connections when it receives fatal errors.")
+ private val noNotifyOption = parser.flag[Boolean](List("s", "silent"), "Stop the server from sending notify messages when it has updates.")
  
  def rtrPort: Int = rtrPortOption.value.getOrElse(Options.DEFAULT_RTR_PORT)
  def httpPort: Int = httpPortOption.value.getOrElse(Options.DEFAULT_HTTP_PORT)
  def noCloseOnError: Boolean = noCloseOption.hasValue
+ def noNotify: Boolean = noCloseOption.hasValue
  
  parser.parse(args)
 }

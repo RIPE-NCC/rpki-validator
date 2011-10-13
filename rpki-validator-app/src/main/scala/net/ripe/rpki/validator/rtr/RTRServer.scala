@@ -65,7 +65,7 @@ object RTRServer {
   var allChannels: ChannelGroup = new DefaultChannelGroup("rtr-server")
 }
 
-class RTRServer(port: Int, noCloseOnError: Boolean, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends UpdateListener {
+class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends UpdateListener {
   import TimeUnit._
 
   val logger = Logger[this.type]
@@ -73,7 +73,7 @@ class RTRServer(port: Int, noCloseOnError: Boolean, getCurrentCacheSerial: () =>
   var bootstrap: ServerBootstrap = _
   var timer: Timer = new HashedWheelTimer(5, SECONDS) // check for timer events every 5 secs
 
-  val serverHandler = new RTRServerHandler(noCloseOnError, getCurrentCacheSerial, getCurrentRoas, getCurrentNonce)
+  val serverHandler = new RTRServerHandler(noCloseOnError, noNotify, getCurrentCacheSerial, getCurrentRoas, getCurrentNonce)
 
   def notify(serial: Long) = {
     serverHandler.notifyChildren(serial)
@@ -124,7 +124,8 @@ class RTRServer(port: Int, noCloseOnError: Boolean, getCurrentCacheSerial: () =>
 }
 
 @Sharable
-class RTRServerHandler(noCloseOnError: Boolean = false, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends SimpleChannelUpstreamHandler with Logging {
+class RTRServerHandler(noCloseOnError: Boolean = false, noNotify: Boolean = false, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends SimpleChannelUpstreamHandler with Logging {
+
   import scala.collection.mutable.HashMap
 
   override def channelOpen(context: ChannelHandlerContext, event: ChannelStateEvent) {
@@ -138,7 +139,9 @@ class RTRServerHandler(noCloseOnError: Boolean = false, getCurrentCacheSerial: (
   }
 
   def notifyChildren(serial: Long) = {
-    RTRServer.allChannels.write(new SerialNotifyPdu(nonce = getCurrentNonce(), serial = getCurrentCacheSerial()))
+    if (!noNotify) {
+      RTRServer.allChannels.write(new SerialNotifyPdu(nonce = getCurrentNonce(), serial = getCurrentCacheSerial()))
+    }
   }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
