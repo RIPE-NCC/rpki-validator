@@ -103,9 +103,8 @@ Known Issues
   When the validator has any updates, it will respond with a cache-reset, as described here:
   http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.3
 
-= We have found that Cisco routers require the -n and -s options. This is being worked on and
-  this will most likely be resolved in the near future.
-
+= We have found that some routers require the -n and -s options. This is due to interoperability
+  issues that are being worked on.
 
 If you find any other problems, please let us know.
 
