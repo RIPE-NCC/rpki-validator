@@ -27,34 +27,35 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.rtr
+package net.ripe.rpki.validator
+package rtr
 
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.FunSuite
-import org.scalatest.BeforeAndAfter
-import org.scalatest.matchers.ShouldMatchers
-import net.ripe.rpki.validator.lib.Port
-import net.ripe.rpki.validator.config.Atomic
-import net.ripe.rpki.validator.config.Database
-import net.ripe.rpki.validator.models.TrustAnchors
-import net.ripe.rpki.validator.models.TrustAnchor
-import net.ripe.rpki.validator.models.Roas
-import scala.util.Random
-import scala.collection.mutable.HashMap
-import net.ripe.rpki.validator.models.ValidatedRoa
-import org.scalatest.BeforeAndAfterAll
 import java.io.File
 import java.net.URI
-import net.ripe.certification.validator.util.TrustAnchorLocator
-import net.ripe.commons.certification.cms.roa.RoaPrefix
-import net.ripe.commons.certification.cms.roa.RoaCmsObjectMother
-import net.ripe.commons.certification.ValidityPeriod
-import org.joda.time.DateTime
-import net.ripe.commons.certification.cms.roa.RoaCms
+
 import scala.collection.JavaConverters._
+import scala.collection.mutable.HashMap
+import scala.util.Random
+
+import org.joda.time.DateTime
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.BeforeAndAfter
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.FunSuite
+
+import models._
+import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.commons.certification.cms.roa.RoaCms
+import net.ripe.commons.certification.cms.roa.RoaCmsObjectMother
+import net.ripe.commons.certification.cms.roa.RoaPrefix
+import net.ripe.commons.certification.ValidityPeriod
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
+import net.ripe.rpki.validator.config.Atomic
+import net.ripe.rpki.validator.config.Database
+import net.ripe.rpki.validator.models.ValidatedRoa
 
 @RunWith(classOf[JUnitRunner])
 class RtrServerTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
@@ -68,7 +69,7 @@ class RtrServerTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter 
   override def beforeAll() = {
     var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
     var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-    cache = new Atomic(Database(trustAnchors, validatedRoas))
+    cache = new Atomic(Database(Whitelist(), trustAnchors, validatedRoas))
 
     handler = new RTRServerHandler(
       getCurrentCacheSerial = { () => cache.get.version },
@@ -95,7 +96,7 @@ class RtrServerTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter 
       ROA_PREFIX_V6_1) // Duplicate prefix on same ROA should be filtered
 
     val prefixes2 = List[RoaPrefix](
-      ROA_PREFIX_V4_1, // Duplicate prefix on other ROA for SAME ASN should be filtered 
+      ROA_PREFIX_V4_1, // Duplicate prefix on other ROA for SAME ASN should be filtered
       ROA_PREFIX_V4_2) // but this should be added
 
     val prefixes3 = List[RoaPrefix](
@@ -140,5 +141,4 @@ class RtrServerTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter 
 
     new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
   }
-
 }

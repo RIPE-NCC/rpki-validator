@@ -27,27 +27,28 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.support
+package net.ripe.rpki.validator
+package models
 
-import org.junit.runner.RunWith
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.mock.MockitoSugar
-import org.scalatra.test.scalatest.ScalatraFunSuite
-import net.ripe.rpki.validator.config.WebFilter
-import org.scalatra.test.scalatest.ScalatraFeatureSpec
-import org.joda.time.DateTime
-import net.ripe.rpki.validator.models.WhitelistEntry
+import net.ripe.ipresource.IpRange
+import net.ripe.ipresource.Asn
+import scalaz._
+import Scalaz._
+import net.ripe.rpki.validator.lib.Validation.FieldError
 
-@RunWith(classOf[JUnitRunner])
-abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatchers with MockitoSugar {
-  addFilter(new WebFilter {
-    override def whitelist = sys.error("TODO")
-    override def addWhitelistEntry(entry: WhitelistEntry) = sys.error("TODO")
-    override lazy val trustAnchors = sys.error("TBD")
-    override lazy val roas = sys.error("TBD")
-    override lazy val version = sys.error("TBD")
-    override val lastUpdateTime = new DateTime
-  }, "/*")
+case class WhitelistEntry private (asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int])
+
+object WhitelistEntry {
+  def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): Validation[NonEmptyList[FieldError], WhitelistEntry] = {
+    val validMaxPrefixLengthRange = prefix.getPrefixLength() to prefix.getType().getBitSize()
+    maxPrefixLength match {
+      case Some(length) if !validMaxPrefixLengthRange.contains(length) =>
+        val message = "must be between %d and %d".format(validMaxPrefixLengthRange.start, validMaxPrefixLengthRange.end)
+        FieldError("maxprefixlen", message).failNel
+      case _ =>
+        WhitelistEntry(asn, prefix, maxPrefixLength).success
+    }
+  }
 }
+
+case class Whitelist(entries: Set[WhitelistEntry] = Set.empty)

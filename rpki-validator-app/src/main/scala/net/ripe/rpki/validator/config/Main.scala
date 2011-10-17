@@ -46,7 +46,11 @@ import scala.util.Random
 import net.ripe.rpki.validator.rtr.Pdu
 import org.joda.time.DateTime
 
-case class Database(trustAnchors: TrustAnchors, roas: Roas, version: Int = 0)
+case class Database(
+  whitelist: Whitelist,
+  trustAnchors: TrustAnchors,
+  roas: Roas,
+  version: Int = 0)
 
 class Atomic[T](value: T) {
   val db: AtomicReference[T] = new AtomicReference(value)
@@ -80,20 +84,20 @@ object Main {
   private var database: Atomic[Database] = null
   private var listeners = List[UpdateListener]()
 
- def main(args: Array[String]): Unit = Options.parse(args) match {
-   case Right(options) => run(options)
-   case Left(message) => error(message)
- }
+  def main(args: Array[String]): Unit = Options.parse(args) match {
+    case Right(options) => run(options)
+    case Left(message) => error(message)
+  }
 
   private def run(options: Options): Unit = {
     val trustAnchors = loadTrustAnchors()
     val roas = Roas(trustAnchors)
-    database = new Atomic(Database(trustAnchors, roas))
+    database = new Atomic(Database(Whitelist(), trustAnchors, roas))
 
     runWebServer(options)
     runRtrServer(options)
   }
-  
+
   private def error(message: String) = {
     println(message)
     sys.exit(1)
@@ -116,9 +120,7 @@ object Main {
         }
         val validatedRoas = Roas.fetchObjects(ta.locator, certificate)
         database.update { db =>
-          {
-            db.copy(roas = db.roas.update(ta.locator, validatedRoas), version = db.version + 1)
-          }
+          db.copy(roas = db.roas.update(ta.locator, validatedRoas), version = db.version + 1)
         }
         listeners.foreach {
           listener => listener.notify(database.get.version)
@@ -143,6 +145,12 @@ object Main {
       def roas = database.get.roas
       def version = database.get.version
       def lastUpdateTime = database.lastUpdateTime
+      def whitelist = database.get.whitelist
+      def addWhitelistEntry(entry: WhitelistEntry) {
+        database.update { db =>
+          db.copy(whitelist = db.whitelist.copy(entries = db.whitelist.entries + entry))
+        }
+      }
     }), "/*", FilterMapping.ALL)
     server.setHandler(root)
     server

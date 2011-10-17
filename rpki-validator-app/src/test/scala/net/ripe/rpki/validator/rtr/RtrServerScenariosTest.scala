@@ -76,7 +76,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   override def beforeAll() = {
     var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
     var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-    cache = new Atomic(Database(trustAnchors, validatedRoas))
+    cache = new Atomic(Database(Whitelist(), trustAnchors, validatedRoas))
     server = new RTRServer(
       port = port,
       noCloseOnError = false,
@@ -99,7 +99,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     cache.update {
       var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
       var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-      db => Database(trustAnchors, validatedRoas)
+      db => Database(Whitelist(), trustAnchors, validatedRoas)
     }
     client.close()
   }
@@ -121,7 +121,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
       RoaCmsObjectMother.TEST_IPV4_PREFIX_1,
       RoaCmsObjectMother.TEST_IPV4_PREFIX_2,
       RoaCmsObjectMother.TEST_IPV6_PREFIX,
-      RoaCmsObjectMother.TEST_IPV6_PREFIX) // List IPv6 Prefix twice. It should be filtered when response is sent 
+      RoaCmsObjectMother.TEST_IPV6_PREFIX) // List IPv6 Prefix twice. It should be filtered when response is sent
 
     val validityPeriod = new ValidityPeriod(new DateTime(), new DateTime().plusYears(1))
 

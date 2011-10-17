@@ -58,7 +58,9 @@ object Layouts {
           </div>
         </div>
         <div class="container">
-          <h1>{ view.title }</h1>
+          <div class="page-header">
+            <h1>{ view.title }</h1>
+          </div>
           { view.body }
           <footer>
             <p>Copyright © { (2009 to (new DateTime).getYear).mkString(", ") } the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted.</p>

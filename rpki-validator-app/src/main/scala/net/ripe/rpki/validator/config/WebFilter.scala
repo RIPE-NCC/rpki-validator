@@ -40,7 +40,8 @@ abstract class WebFilter extends ScalatraFilter
   with ApplicationController
   with RoasController
   with TrustAnchorsController
-  with RtrLogController {
+  with RtrLogController
+  with WhitelistController {
 
   private def renderView: PartialFunction[Any, Any] = {
     case view: View =>
