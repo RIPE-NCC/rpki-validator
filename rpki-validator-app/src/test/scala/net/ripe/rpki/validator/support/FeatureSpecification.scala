@@ -45,6 +45,7 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
   addFilter(new WebFilter {
     override def whitelist = sys.error("TODO")
     override def addWhitelistEntry(entry: WhitelistEntry) = sys.error("TODO")
+    override def removeWhitelistEntry(entry: WhitelistEntry) = sys.error("TODO")
     override lazy val trustAnchors = sys.error("TBD")
     override lazy val roas = sys.error("TBD")
     override lazy val version = sys.error("TBD")

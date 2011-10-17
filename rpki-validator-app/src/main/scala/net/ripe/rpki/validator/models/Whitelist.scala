@@ -34,21 +34,24 @@ import net.ripe.ipresource.IpRange
 import net.ripe.ipresource.Asn
 import scalaz._
 import Scalaz._
-import net.ripe.rpki.validator.lib.Validation.FieldError
+import lib.Validation._
 
 case class WhitelistEntry private (asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int])
 
 object WhitelistEntry {
-  def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): Validation[NonEmptyList[FieldError], WhitelistEntry] = {
+  def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): Validation[NonEmptyList[ErrorMessage], WhitelistEntry] = {
     val validMaxPrefixLengthRange = prefix.getPrefixLength() to prefix.getType().getBitSize()
     maxPrefixLength match {
       case Some(length) if !validMaxPrefixLengthRange.contains(length) =>
-        val message = "must be between %d and %d".format(validMaxPrefixLengthRange.start, validMaxPrefixLengthRange.end)
-        FieldError("maxprefixlen", message).failNel
+        val message = "maximum prefix length must be between %d and %d".format(validMaxPrefixLengthRange.start, validMaxPrefixLengthRange.end)
+        ErrorMessage(message).failNel
       case _ =>
         WhitelistEntry(asn, prefix, maxPrefixLength).success
     }
   }
 }
 
-case class Whitelist(entries: Set[WhitelistEntry] = Set.empty)
+case class Whitelist(entries: Set[WhitelistEntry] = Set.empty) {
+  def addEntry(entry: WhitelistEntry) = copy(entries + entry)
+  def removeEntry(entry: WhitelistEntry) = copy(entries - entry)
+}

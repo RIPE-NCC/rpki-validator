@@ -30,41 +30,64 @@
 package net.ripe.rpki.validator
 package controllers
 
-import org.scalatra.ScalatraKernel
-
-import scalaz._
-import Scalaz._
-import lib.Validation._
-import models._
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
+import org.scalatra.ScalatraKernel
+import org.scalatra.MethodOverride
+import scalaz._
+import Scalaz._
+
+import lib.Validation._
+import models._
 import views.WhitelistView
 
-trait WhitelistController extends ScalatraKernel {
+trait WhitelistController extends ScalatraKernel with MethodOverride {
   def whitelist: Whitelist
   def addWhitelistEntry(entry: WhitelistEntry): Unit
+  def removeWhitelistEntry(entry: WhitelistEntry): Unit
+  def entryExists(entry: WhitelistEntry): Boolean = whitelist.entries.contains(entry)
 
   get("/whitelist") {
     new WhitelistView(whitelist)
   }
 
   post("/whitelist") {
-    val asn = validateParameter("asn", required(parseAsn))
-    val prefix = validateParameter("prefix", required(parseIpPrefix))
-    val maxPrefixLength = validateParameter("maxprefixlen", optional(parseInt))
-
-    val entry = (asn |@| prefix |@| maxPrefixLength).apply(WhitelistEntry.validate).flatMap(identity)
-
-    entry match {
+    submittedEntry match {
       case Success(entry) =>
-        addWhitelistEntry(entry)
-        redirect("/whitelist")
+        if (entryExists(entry))
+          new WhitelistView(whitelist, params, Seq(ErrorMessage("entry already exists in the whitelist")))
+        else {
+          addWhitelistEntry(entry)
+          redirect("/whitelist")
+        }
       case Failure(errors) =>
         new WhitelistView(whitelist, params, errors.head :: errors.tail)
     }
   }
 
-  def validateParameter[A](name: String, f: Option[String] => Validation[String, A]): ValidationNEL[FieldError, A] =
-    f(params.get(name).filterNot(_.isEmpty)).fail.map(message => FieldError(name, message)).validation.liftFailNel
+  delete("/whitelist") {
+    submittedEntry match {
+      case Success(entry) =>
+        if (entryExists(entry)) {
+          removeWhitelistEntry(entry)
+          redirect("/whitelist")
+        } else {
+          new WhitelistView(whitelist, params, Seq(ErrorMessage("entry no longer exists in the whitelist")))
+        }
+      case Failure(errors) => // go away hacker!
+        new WhitelistView(whitelist, params, errors.head :: errors.tail)
+    }
+  }
+
+  private def submittedEntry: ValidationNEL[ErrorMessage, WhitelistEntry] = {
+    val asn = validateParameter("asn", required(parseAsn))
+    val prefix = validateParameter("prefix", required(parseIpPrefix))
+    val maxPrefixLength = validateParameter("maxPrefixLength", optional(parseInt))
+
+    (asn |@| prefix |@| maxPrefixLength).apply(WhitelistEntry.validate).flatMap(identity)
+  }
+
+  private def validateParameter[A](name: String, f: Option[String] => Validation[String, A]): ValidationNEL[ErrorMessage, A] =
+    f(params.get(name).filterNot(_.isEmpty)).fail.map(message => ErrorMessage(message, Some(name))).validation.liftFailNel
 
 }

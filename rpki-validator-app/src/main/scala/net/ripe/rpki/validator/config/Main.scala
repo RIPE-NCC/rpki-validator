@@ -50,7 +50,11 @@ case class Database(
   whitelist: Whitelist,
   trustAnchors: TrustAnchors,
   roas: Roas,
-  version: Int = 0)
+  version: Int = 0) {
+
+  def addWhitelistEntry(entry: WhitelistEntry) = copy(whitelist = whitelist.addEntry(entry))
+  def removeWhitelistEntry(entry: WhitelistEntry) = copy(whitelist = whitelist.removeEntry(entry))
+}
 
 class Atomic[T](value: T) {
   val db: AtomicReference[T] = new AtomicReference(value)
@@ -141,16 +145,13 @@ object Main {
     defaultServletHolder.setInitParameter("dirAllowed", "false")
     root.addServlet(defaultServletHolder, "/*")
     root.addFilter(new FilterHolder(new WebFilter {
-      def trustAnchors = database.get.trustAnchors
-      def roas = database.get.roas
-      def version = database.get.version
-      def lastUpdateTime = database.lastUpdateTime
-      def whitelist = database.get.whitelist
-      def addWhitelistEntry(entry: WhitelistEntry) {
-        database.update { db =>
-          db.copy(whitelist = db.whitelist.copy(entries = db.whitelist.entries + entry))
-        }
-      }
+      override def trustAnchors = database.get.trustAnchors
+      override def roas = database.get.roas
+      override def version = database.get.version
+      override def lastUpdateTime = database.lastUpdateTime
+      override def whitelist = database.get.whitelist
+      override def addWhitelistEntry(entry: WhitelistEntry) = database.update(_.addWhitelistEntry(entry))
+      override def removeWhitelistEntry(entry: WhitelistEntry) = database.update(_.removeWhitelistEntry(entry))
     }), "/*", FilterMapping.ALL)
     server.setHandler(root)
     server

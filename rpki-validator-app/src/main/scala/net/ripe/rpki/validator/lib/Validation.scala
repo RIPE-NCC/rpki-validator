@@ -36,7 +36,7 @@ import net.ripe.ipresource.IpRange
 
 object Validation {
 
-  case class FieldError(field: String, message: String)
+  case class ErrorMessage(message: String, fieldName: Option[String] = None)
 
   /**
    * Makes a validator handle optional input values by generating an error message.
