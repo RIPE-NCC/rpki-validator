@@ -36,7 +36,15 @@ import net.ripe.ipresource.IpRange
 
 object Validation {
 
+  /**
+   * Automatically convert a NonEmptyList to a normal List.
+   */
+  implicit def NonEmptyListToSeq[A](nel: NonEmptyList[A]): List[A] = nel.head :: nel.tail
+
   case class ErrorMessage(message: String, fieldName: Option[String] = None)
+
+  def liftFailErrorMessage[A](validation: Validation[String, A], fieldName: Option[String] = None): ValidationNEL[ErrorMessage, A] =
+    validation.fail.map(failure => ErrorMessage(failure, fieldName)).liftNel
 
   /**
    * Makes a validator handle optional input values by generating an error message.
@@ -89,5 +97,9 @@ object Validation {
     s.toInt.success
   } catch {
     case _: NumberFormatException => "not a number".fail
+  }
+
+  def containedIn(range: Range): Int => Validation[String, Int] = value => {
+    if (range.contains(value)) value.success else "must be between %d and %d".format(range.start, range.end).fail
   }
 }

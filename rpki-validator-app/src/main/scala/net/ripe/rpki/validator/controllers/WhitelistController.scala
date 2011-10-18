@@ -41,11 +41,11 @@ import lib.Validation._
 import models._
 import views.WhitelistView
 
-trait WhitelistController extends ScalatraKernel with MethodOverride {
-  def whitelist: Whitelist
-  def addWhitelistEntry(entry: WhitelistEntry): Unit
-  def removeWhitelistEntry(entry: WhitelistEntry): Unit
-  def entryExists(entry: WhitelistEntry): Boolean = whitelist.entries.contains(entry)
+trait WhitelistController extends ApplicationController with MethodOverride {
+  protected def whitelist: Whitelist
+  protected def addWhitelistEntry(entry: WhitelistEntry): Unit
+  protected def removeWhitelistEntry(entry: WhitelistEntry): Unit
+  protected def entryExists(entry: WhitelistEntry): Boolean = whitelist.entries.contains(entry)
 
   get("/whitelist") {
     new WhitelistView(whitelist)
@@ -61,7 +61,7 @@ trait WhitelistController extends ScalatraKernel with MethodOverride {
           redirect("/whitelist")
         }
       case Failure(errors) =>
-        new WhitelistView(whitelist, params, errors.head :: errors.tail)
+        new WhitelistView(whitelist, params, errors)
     }
   }
 
@@ -74,8 +74,9 @@ trait WhitelistController extends ScalatraKernel with MethodOverride {
         } else {
           new WhitelistView(whitelist, params, Seq(ErrorMessage("entry no longer exists in the whitelist")))
         }
-      case Failure(errors) => // go away hacker!
-        new WhitelistView(whitelist, params, errors.head :: errors.tail)
+      case Failure(errors) =>
+        // go away hacker!
+        new WhitelistView(whitelist, params, errors)
     }
   }
 
@@ -86,8 +87,5 @@ trait WhitelistController extends ScalatraKernel with MethodOverride {
 
     (asn |@| prefix |@| maxPrefixLength).apply(WhitelistEntry.validate).flatMap(identity)
   }
-
-  private def validateParameter[A](name: String, f: Option[String] => Validation[String, A]): ValidationNEL[ErrorMessage, A] =
-    f(params.get(name).filterNot(_.isEmpty)).fail.map(message => ErrorMessage(message, Some(name))).validation.liftFailNel
 
 }

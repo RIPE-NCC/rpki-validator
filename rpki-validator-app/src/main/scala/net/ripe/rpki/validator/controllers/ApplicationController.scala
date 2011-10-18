@@ -30,8 +30,10 @@
 package net.ripe.rpki.validator
 package controllers
 
-import org.scalatra.ScalatraKernel
 import scala.xml.Text
+import scalaz._, Scalaz._
+import org.scalatra.ScalatraKernel
+import lib.Validation._
 
 trait ApplicationController extends ScalatraKernel {
   get("/") {
@@ -40,5 +42,11 @@ trait ApplicationController extends ScalatraKernel {
       def title = Text("Welcome")
       def body = <p>Hello, World!</p>
     }
+  }
+
+  protected[this] def validateParameter[A](name: String, validator: Option[String] => Validation[String, A]): ValidationNEL[ErrorMessage, A] = {
+    val value = params.get(name).filterNot(_.isEmpty)
+    val result = validator(value)
+    liftFailErrorMessage(result, Some(name))
   }
 }

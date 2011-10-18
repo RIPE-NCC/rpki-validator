@@ -57,7 +57,7 @@ case class Database(
 }
 
 class Atomic[T](value: T) {
-  val db: AtomicReference[T] = new AtomicReference(value)
+  private val db: AtomicReference[T] = new AtomicReference(value)
 
   def get = db.get
 

@@ -36,17 +36,18 @@ import scalaz._
 import Scalaz._
 import lib.Validation._
 
-case class WhitelistEntry private (asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int])
+case class WhitelistEntry private (val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int])
 
 object WhitelistEntry {
-  def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): Validation[NonEmptyList[ErrorMessage], WhitelistEntry] = {
-    val validMaxPrefixLengthRange = prefix.getPrefixLength() to prefix.getType().getBitSize()
-    maxPrefixLength match {
-      case Some(length) if !validMaxPrefixLengthRange.contains(length) =>
-        val message = "maximum prefix length must be between %d and %d".format(validMaxPrefixLengthRange.start, validMaxPrefixLengthRange.end)
-        ErrorMessage(message).failNel
-      case _ =>
-        WhitelistEntry(asn, prefix, maxPrefixLength).success
+  def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): ValidationNEL[ErrorMessage, WhitelistEntry] = {
+    if (!prefix.isLegalPrefix()) {
+      ErrorMessage("must be a legal IPv4 or IPv6 prefix", Some("prefix")).failNel
+    } else {
+      val allowedPrefixLengthRange = prefix.getPrefixLength() to prefix.getType().getBitSize()
+      val validated = optional(containedIn(allowedPrefixLengthRange)).apply(maxPrefixLength) map { _ =>
+        new WhitelistEntry(asn, prefix, maxPrefixLength)
+      }
+      liftFailErrorMessage(validated, Some("maxPrefixLength"))
     }
   }
 }
