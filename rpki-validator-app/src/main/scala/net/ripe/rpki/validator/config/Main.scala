@@ -30,30 +30,75 @@
 package net.ripe.rpki.validator
 package config
 
-import grizzled.slf4j.Logger
 import org.eclipse.jetty.server.Server
 import org.apache.commons.io.FileUtils
-import java.io.File
 import scala.collection.JavaConverters._
 import net.ripe.certification.validator.util.TrustAnchorExtractor
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.validator.rtr.RTRServer
 import models._
 import java.util.concurrent.atomic.AtomicReference
-import scala.annotation.tailrec
 import scalaz.concurrent.Promise
-import scala.util.Random
 import net.ripe.rpki.validator.rtr.Pdu
 import org.joda.time.DateTime
+import net.liftweb.json.{Formats, Serializer, DefaultFormats, Serialization}
+import net.liftweb.json.JsonAST.{JInt, JString}
+import net.ripe.ipresource.{IpRange, Asn}
+import java.io.{IOException, File}
+import grizzled.slf4j.{Logging, Logger}
 
-case class Database(
-  whitelist: Whitelist,
-  trustAnchors: TrustAnchors,
-  roas: Roas,
-  version: Int = 0) {
+case class MemoryImage(whitelist: Whitelist, trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
 
   def addWhitelistEntry(entry: WhitelistEntry) = copy(whitelist = whitelist.addEntry(entry))
+
   def removeWhitelistEntry(entry: WhitelistEntry) = copy(whitelist = whitelist.removeEntry(entry))
+}
+
+case class PersistentData(schemaVersion: Int = 0, whitelist: Whitelist = Whitelist())
+
+class PersistentDataSerialiser {
+
+  object AsnSerialiser extends Serializer[Asn] {
+    def deserialize(implicit format: Formats) = {
+      case (_, JInt(i)) => new Asn(i.longValue())
+    }
+
+    def serialize(implicit format: Formats) = {
+      case asn: Asn => new JInt(new BigInt(asn.getValue()))
+    }
+  }
+
+  object IpRangeSerialiser extends Serializer[IpRange] {
+    def deserialize(implicit format: Formats) = {
+      case (_, JString(s)) => IpRange.parse(s)
+    }
+
+    def serialize(implicit format: Formats) = {
+      case range: IpRange => new JString(range.toString)
+    }
+  }
+
+  implicit val formats: Formats = DefaultFormats + AsnSerialiser + IpRangeSerialiser
+
+  def serialise(data: PersistentData) = Serialization.write(data)
+
+  def deserialise(json: String): PersistentData = Serialization.read[PersistentData](json)
+}
+
+object PersistentDataSerialiser extends PersistentDataSerialiser with Logging {
+  def write(data: PersistentData, file: File) {
+    val tempFile: File = File.createTempFile("rkpi", "dat", file.getParentFile)
+    FileUtils.writeStringToFile(tempFile, serialise(data), "UTF-8")
+    if (!tempFile.renameTo(file)) throw new IOException("Error writing file: " + file.getAbsolutePath)
+  }
+
+  def read(file: File): Option[PersistentData] = try {
+    val json: String = FileUtils.readFileToString(file, "UTF-8")
+    Some(deserialise(json))
+  } catch {
+    case e: IOException =>
+      warn("Error reading "+ file.getAbsolutePath + ": " + e.getMessage)
+      None
+  }
 }
 
 class Atomic[T](value: T) {
@@ -83,9 +128,11 @@ object Main {
 
   val logger = Logger[this.type]
 
+  val dataFile = new File(".", "rpki-config.json")
+
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
 
-  private var database: Atomic[Database] = null
+  private var database: Atomic[MemoryImage] = null
   private var listeners = List[UpdateListener]()
 
   def main(args: Array[String]): Unit = Options.parse(args) match {
@@ -96,7 +143,8 @@ object Main {
   private def run(options: Options): Unit = {
     val trustAnchors = loadTrustAnchors()
     val roas = Roas(trustAnchors)
-    database = new Atomic(Database(Whitelist(), trustAnchors, roas))
+    val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
+    database = new Atomic(MemoryImage(data.whitelist, trustAnchors, roas))
 
     runWebServer(options)
     runRtrServer(options)
@@ -112,19 +160,21 @@ object Main {
   }
 
   def loadTrustAnchors(): TrustAnchors = {
-    import java.{ util => ju }
+    import java.{util => ju}
     val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[ju.Collection[File]])
     val trustAnchors = TrustAnchors.load(tals.asScala, "tmp/tals")
     for (ta <- trustAnchors.all) {
       Promise {
         val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
         logger.info("Loaded trust anchor from location " + certificate.getLocation())
-        database.update { db =>
-          db.copy(trustAnchors = db.trustAnchors.update(ta.locator, certificate))
+        database.update {
+          db =>
+            db.copy(trustAnchors = db.trustAnchors.update(ta.locator, certificate))
         }
         val validatedRoas = Roas.fetchObjects(ta.locator, certificate)
-        database.update { db =>
-          db.copy(roas = db.roas.update(ta.locator, validatedRoas), version = db.version + 1)
+        database.update {
+          db =>
+            db.copy(roas = db.roas.update(ta.locator, validatedRoas), version = db.version + 1)
         }
         listeners.foreach {
           listener => listener.notify(database.get.version)
@@ -146,12 +196,24 @@ object Main {
     root.addServlet(defaultServletHolder, "/*")
     root.addFilter(new FilterHolder(new WebFilter {
       override def trustAnchors = database.get.trustAnchors
+
       override def roas = database.get.roas
+
       override def version = database.get.version
+
       override def lastUpdateTime = database.lastUpdateTime
+
       override def whitelist = database.get.whitelist
-      override def addWhitelistEntry(entry: WhitelistEntry) = database.update(_.addWhitelistEntry(entry))
-      override def removeWhitelistEntry(entry: WhitelistEntry) = database.update(_.removeWhitelistEntry(entry))
+
+      override def addWhitelistEntry(entry: WhitelistEntry) = database synchronized {
+        database.update(_.addWhitelistEntry(entry))
+        PersistentDataSerialiser.write(PersistentData(whitelist = database.get.whitelist), dataFile)
+      }
+
+      override def removeWhitelistEntry(entry: WhitelistEntry) = database synchronized {
+        database.update(_.removeWhitelistEntry(entry))
+        PersistentDataSerialiser.write(PersistentData(whitelist = database.get.whitelist), dataFile)
+      }
     }), "/*", FilterMapping.ALL)
     server.setHandler(root)
     server
@@ -169,13 +231,13 @@ object Main {
   }
 
   private def runRtrServer(options: Options): Unit = {
-    var rtrServer = new RTRServer(
-      port = options.rtrPort,
-      noCloseOnError = options.noCloseOnError,
-      noNotify = options.noNotify,
-      getCurrentCacheSerial = { () => database.get.version },
-      getCurrentRoas = { () => database.get.roas },
-      getCurrentNonce = { () => Main.nonce })
+    var rtrServer = new RTRServer(port = options.rtrPort, noCloseOnError = options.noCloseOnError, noNotify = options.noNotify, getCurrentCacheSerial = {
+      () => database.get.version
+    }, getCurrentRoas = {
+      () => database.get.roas
+    }, getCurrentNonce = {
+      () => Main.nonce
+    })
     rtrServer.startServer()
     registerListener(rtrServer)
   }

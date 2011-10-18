@@ -32,23 +32,15 @@ package net.ripe.rpki.validator.rtr
 import org.junit.runner.RunWith
 import org.scalatest.FunSuite
 import org.scalatest.junit.JUnitRunner
-import java.net.Socket
-import java.net.InetAddress
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.matchers.ShouldMatchers._
-import java.io.PrintWriter
-import java.io.DataOutputStream
 import org.scalatest.BeforeAndAfter
 import net.ripe.rpki.validator.lib.Port
-import net.ripe.rpki.validator.models.Roas
-import net.ripe.rpki.validator.models.TrustAnchors
 import net.ripe.rpki.validator.config.Atomic
-import net.ripe.rpki.validator.config.Database
+import net.ripe.rpki.validator.config.MemoryImage
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import java.io.File
 import java.net.URI
-import net.ripe.rpki.validator.models.ValidatedRoa
 import net.ripe.commons.certification.cms.roa._
 import net.ripe.rpki.validator.models._
 import scala.collection.mutable._
@@ -69,14 +61,14 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   var server: RTRServer = null
   var client: RTRClient = null
 
-  var cache: Atomic[Database] = null
+  var cache: Atomic[MemoryImage] = null
 
   var nonce: Short = new Random().nextInt(65536).toShort
 
   override def beforeAll() = {
     var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
     var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-    cache = new Atomic(Database(Whitelist(), trustAnchors, validatedRoas))
+    cache = new Atomic(MemoryImage(Whitelist(), trustAnchors, validatedRoas))
     server = new RTRServer(
       port = port,
       noCloseOnError = false,
@@ -99,7 +91,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     cache.update {
       var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
       var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-      db => Database(Whitelist(), trustAnchors, validatedRoas)
+      db => MemoryImage(Whitelist(), trustAnchors, validatedRoas)
     }
     client.close()
   }

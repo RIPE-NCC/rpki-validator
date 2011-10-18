@@ -36,23 +36,18 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.net.InetSocketAddress
 import grizzled.slf4j.Logger
-import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
 import org.jboss.netty.handler.codec.frame.CorruptedFrameException
 import org.jboss.netty.handler.codec.frame.TooLongFrameException
-import net.ripe.rpki.validator.models.Roas
 import org.jboss.netty.handler.timeout.ReadTimeoutException
 import org.jboss.netty.channel._
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler
 import org.jboss.netty.util.Timer
 import org.jboss.netty.util.HashedWheelTimer
-import java.net.SocketAddress
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.models.Roas
-import net.ripe.rpki.validator.config.Database
 import net.ripe.rpki.validator.config.UpdateListener
-import net.ripe.ipresource.IpResourceType
 import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Ipv6Address
 import org.jboss.netty.channel.group.{ ChannelGroup, DefaultChannelGroup }
@@ -126,8 +121,6 @@ class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurren
 @Sharable
 class RTRServerHandler(noCloseOnError: Boolean = false, noNotify: Boolean = false, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends SimpleChannelUpstreamHandler with Logging {
 
-  import scala.collection.mutable.HashMap
-
   override def channelOpen(context: ChannelHandlerContext, event: ChannelStateEvent) {
     RTRServer.allChannels.add(event.getChannel()) // will be removed automatically on close
     logger.info { "Client connected : " + context.getChannel().getRemoteAddress() }
@@ -145,8 +138,6 @@ class RTRServerHandler(noCloseOnError: Boolean = false, noNotify: Boolean = fals
   }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
-    import org.jboss.netty.buffer.ChannelBuffers
-
     lazy val clientAddress = Option(context.getChannel().getRemoteAddress())
 
     // decode and process

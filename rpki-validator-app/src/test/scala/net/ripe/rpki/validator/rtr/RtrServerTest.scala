@@ -54,13 +54,13 @@ import net.ripe.commons.certification.ValidityPeriod
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import net.ripe.rpki.validator.config.Atomic
-import net.ripe.rpki.validator.config.Database
+import net.ripe.rpki.validator.config.MemoryImage
 import net.ripe.rpki.validator.models.ValidatedRoa
 
 @RunWith(classOf[JUnitRunner])
 class RtrServerTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
 
-  var cache: Atomic[Database] = null
+  var cache: Atomic[MemoryImage] = null
 
   var nonce: Short = new Random().nextInt(65536).toShort
 
@@ -69,7 +69,7 @@ class RtrServerTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter 
   override def beforeAll() = {
     var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
     var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-    cache = new Atomic(Database(Whitelist(), trustAnchors, validatedRoas))
+    cache = new Atomic(MemoryImage(Whitelist(), trustAnchors, validatedRoas))
 
     handler = new RTRServerHandler(
       getCurrentCacheSerial = { () => cache.get.version },
