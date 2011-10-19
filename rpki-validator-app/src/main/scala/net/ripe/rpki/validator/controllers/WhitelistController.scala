@@ -43,9 +43,9 @@ import views.WhitelistView
 
 trait WhitelistController extends ApplicationController with MethodOverride {
   protected def whitelist: Whitelist
-  protected def addWhitelistEntry(entry: WhitelistEntry): Unit
-  protected def removeWhitelistEntry(entry: WhitelistEntry): Unit
-  protected def entryExists(entry: WhitelistEntry): Boolean = whitelist.entries.contains(entry)
+  protected def addWhitelistEntry(entry: RtrPrefix): Unit
+  protected def removeWhitelistEntry(entry: RtrPrefix): Unit
+  protected def entryExists(entry: RtrPrefix): Boolean = whitelist.entries.contains(entry)
 
   get("/whitelist") {
     new WhitelistView(whitelist)
@@ -80,12 +80,12 @@ trait WhitelistController extends ApplicationController with MethodOverride {
     }
   }
 
-  private def submittedEntry: ValidationNEL[ErrorMessage, WhitelistEntry] = {
+  private def submittedEntry: ValidationNEL[ErrorMessage, RtrPrefix] = {
     val asn = validateParameter("asn", required(parseAsn))
     val prefix = validateParameter("prefix", required(parseIpPrefix))
     val maxPrefixLength = validateParameter("maxPrefixLength", optional(parseInt))
 
-    (asn |@| prefix |@| maxPrefixLength).apply(WhitelistEntry.validate).flatMap(identity)
+    (asn |@| prefix |@| maxPrefixLength).apply(RtrPrefix.validate).flatMap(identity)
   }
 
 }

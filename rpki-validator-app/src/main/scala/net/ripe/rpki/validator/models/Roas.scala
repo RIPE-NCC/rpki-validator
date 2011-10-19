@@ -48,7 +48,7 @@ import net.ripe.ipresource.Asn
 import org.apache.commons.lang.builder.HashCodeBuilder
 import scala.collection.mutable.HashSet
 
-case class ValidatedRoa(val roa: RoaCms, val uri: URI, val trustAnchor: TrustAnchorLocator)
+case class ValidatedRoa(val roa: RoaCms, val uri: URI)
 
 class Roas(val all: Map[String, Option[Seq[ValidatedRoa]]]) {
 
@@ -175,7 +175,7 @@ object Roas {
       obj match {
         case roa: RoaCms =>
           logger.debug("Fetched ROA '" + uri + "'")
-          roas += new ValidatedRoa(roa, uri, trustAnchor)
+          roas += new ValidatedRoa(roa, uri)
         case _ =>
           logger.debug("Fetched '" + uri + "'")
       }

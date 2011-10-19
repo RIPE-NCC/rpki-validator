@@ -73,7 +73,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
       noCloseOnError = false,
       noNotify = false,
       getCurrentCacheSerial = { () => cache.get.version },
-      getCurrentRoas = { () => cache.get.roas },
+      getCurrentRtrPrefixes = { () => cache.get.getDistinctRtrPrefixes() },
       getCurrentNonce = { () => nonce })
     server.startServer()
   }
@@ -119,7 +119,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     val roa: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes.asJava, validityPeriod, RoaCmsObjectMother.TEST_ASN)
     val roaUri: URI = URI.create("rsync://example.com/roa.roa")
 
-    val validatedRoa: ValidatedRoa = new ValidatedRoa(roa, roaUri, tal)
+    val validatedRoa: ValidatedRoa = new ValidatedRoa(roa, roaUri)
 
     val roas = collection.mutable.Seq.apply[ValidatedRoa](validatedRoa)
 

@@ -30,6 +30,9 @@
 package net.ripe.rpki.validator
 package config
 
+import scala.collection.JavaConverters._
+import scala.collection.mutable
+import mutable.HashSet
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import org.joda.time.DateTime
@@ -44,9 +47,38 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
   def updateRoas(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) =
     copy(version = version + 1, roas = roas.update(tal, validatedRoas))
 
-  def addWhitelistEntry(entry: WhitelistEntry) = copy(version = version + 1, whitelist = whitelist.addEntry(entry))
+  def addWhitelistEntry(entry: RtrPrefix) = copy(version = version + 1, whitelist = whitelist.addEntry(entry))
 
-  def removeWhitelistEntry(entry: WhitelistEntry) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
+  def removeWhitelistEntry(entry: RtrPrefix) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
+
+  def getDistinctRtrPrefixes(): Set[RtrPrefix] = {
+    //val result: mutable.Set[RtrPrefix] = new HashSet[RtrPrefix]()
+
+    val result = for {
+      validatedRoas <- roas.all.values if validatedRoas.isDefined
+      validatedRoa <- validatedRoas.get
+      roa = validatedRoa.roa
+      roaPrefix <- roa.getPrefixes().asScala
+    } yield {
+      new RtrPrefix(roa.getAsn, roaPrefix.getPrefix,
+        if (roaPrefix.getMaximumLength == null) None else Some(roaPrefix.getMaximumLength))
+    }
+
+    Set.empty[RtrPrefix] ++ result
+  }
+
+
+//  {
+//    val pairs = for {
+//      (_, validatedRoas) <- getCurrentRoas.apply().all.toSeq if validatedRoas.isDefined
+//      validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
+//      roa = validatedRoa.roa
+//      prefix <- roa.getPrefixes().asScala
+//    } yield {
+//      (prefix, roa.getAsn)
+//    }
+//    pairs.distinct
+//  }
 
   def addFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.addFilter(filter))
 

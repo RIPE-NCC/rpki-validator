@@ -46,11 +46,10 @@ import org.jboss.netty.handler.timeout.ReadTimeoutHandler
 import org.jboss.netty.util.Timer
 import org.jboss.netty.util.HashedWheelTimer
 import grizzled.slf4j.Logging
-import net.ripe.rpki.validator.models.Roas
-import net.ripe.ipresource.Ipv4Address
-import net.ripe.ipresource.Ipv6Address
 import org.jboss.netty.channel.group.{ ChannelGroup, DefaultChannelGroup }
 import org.jboss.netty.channel.ChannelHandler.Sharable
+import models.{RtrPrefix, Roas}
+import net.ripe.ipresource.{Asn, IpRange, Ipv4Address, Ipv6Address}
 
 object RTRServer {
   final val ProtocolVersion = 0
@@ -59,7 +58,8 @@ object RTRServer {
   var allChannels: ChannelGroup = new DefaultChannelGroup("rtr-server")
 }
 
-class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) {
+class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurrentCacheSerial: () => Int,
+                getCurrentRtrPrefixes: () => Set[RtrPrefix], getCurrentNonce: () => Short) {
   import TimeUnit._
 
   val logger = Logger[this.type]
@@ -67,7 +67,7 @@ class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurren
   var bootstrap: ServerBootstrap = _
   var timer: Timer = new HashedWheelTimer(5, SECONDS) // check for timer events every 5 secs
 
-  val serverHandler = new RTRServerHandler(noCloseOnError, noNotify, getCurrentCacheSerial, getCurrentRoas, getCurrentNonce)
+  val serverHandler = new RTRServerHandler(noCloseOnError, noNotify, getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentNonce)
 
   def notify(serial: Long) = {
     serverHandler.notifyChildren(serial)
@@ -118,7 +118,12 @@ class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurren
 }
 
 @Sharable
-class RTRServerHandler(noCloseOnError: Boolean = false, noNotify: Boolean = false, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends SimpleChannelUpstreamHandler with Logging {
+class RTRServerHandler(noCloseOnError: Boolean = false,
+                       noNotify: Boolean = false,
+                       getCurrentCacheSerial: () => Int,
+                       getCurrentRtrPrefixes: () => Set[RtrPrefix],
+                       getCurrentNonce: () => Short
+                       ) extends SimpleChannelUpstreamHandler with Logging {
 
   override def channelOpen(context: ChannelHandlerContext, event: ChannelStateEvent) {
     RTRServer.allChannels.add(event.getChannel()) // will be removed automatically on close
@@ -194,35 +199,25 @@ class RTRServerHandler(noCloseOnError: Boolean = false, noNotify: Boolean = fals
         var responsePdus: Vector[Pdu] = Vector.empty
         responsePdus = responsePdus :+ CacheResponsePdu(nonce = getCurrentNonce.apply())
 
-        for ((prefix, asn) <- getDistinctRoaPrefixes) {
-          var maxLength = prefix.getEffectiveMaximumLength()
-          var length = prefix.getPrefix().getPrefixLength()
+        getCurrentRtrPrefixes().foreach { rtrPrefix =>
 
-          prefix.getPrefix().getStart() match {
+          val prefix: IpRange = rtrPrefix.prefix
+          val prefixLength: Int = prefix.getPrefixLength
+          val maxLength: Int = rtrPrefix.maxPrefixLength.getOrElse(prefixLength)
+          val asn: Asn = rtrPrefix.asn
+
+          prefix.getStart() match {
             case ipv4: Ipv4Address =>
-              responsePdus = responsePdus :+ IPv4PrefixAnnouncePdu(ipv4, length.toByte, maxLength.toByte, asn)
+              responsePdus = responsePdus :+ IPv4PrefixAnnouncePdu(ipv4, prefixLength.toByte, maxLength.toByte, asn)
             case ipv6: Ipv6Address =>
-              responsePdus = responsePdus :+ IPv6PrefixAnnouncePdu(ipv6, length.toByte, maxLength.toByte, asn)
+              responsePdus = responsePdus :+ IPv6PrefixAnnouncePdu(ipv6, prefixLength.toByte, maxLength.toByte, asn)
             case _ => assert(false)
           }
-
-          logger.info("Prefix: " + prefix)
         }
         responsePdus :+ EndOfDataPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply())
     }
   }
 
-  protected[rtr] def getDistinctRoaPrefixes() = {
-    val pairs = for {
-      (_, validatedRoas) <- getCurrentRoas.apply().all.toSeq if validatedRoas.isDefined
-      validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
-      roa = validatedRoa.roa
-      prefix <- roa.getPrefixes().asScala
-    } yield {
-      (prefix, roa.getAsn)
-    }
-    pairs.distinct
-  }
 
   private def processSerialQuery(nonce: Short, serial: Long) = {
     if (nonce == getCurrentNonce.apply() && serial == getCurrentCacheSerial.apply()) {

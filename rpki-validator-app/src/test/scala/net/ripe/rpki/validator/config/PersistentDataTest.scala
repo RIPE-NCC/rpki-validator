@@ -46,7 +46,8 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
 
   val data_empty: PersistentData = PersistentData(0, Filters(), Whitelist())
   val json_empty: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[]}}"""
-  val data_some: PersistentData = PersistentData(0, Filters(Set(IgnoreFilter(IpRange.parse("192.168.0.0/16")))), Whitelist(Set(WhitelistEntry.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), None).toOption.get)))
+  val data_some: PersistentData = PersistentData(0, Filters(Set(IgnoreFilter(IpRange.parse("192.168.0.0/16")))), 
+    Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), None).toOption.get)))
   val json_some: String = """{"schemaVersion":0,"filters":{"entries":[{"prefix":"192.168.0.0/16"}]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8"}]}}"""
 
   test("serialise empty Whitelist") {
@@ -60,7 +61,8 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
   }
 
   test("serialise Whitelist with maxPrefixLength") {
-    val data: PersistentData = PersistentData(0, Filters(), Whitelist(Set(WhitelistEntry.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)))
+    val data: PersistentData = PersistentData(0, Filters(), Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"), 
+      IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)))
     val json: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]}}"""
     serialiser.serialise(data) should equal(json)
     serialiser.deserialise(json) should equal(data)

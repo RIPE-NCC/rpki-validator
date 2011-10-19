@@ -136,8 +136,8 @@ object Main {
       override protected def removeFilter(filter: IgnoreFilter) = updateAndPersist { _.removeFilter(filter) }
 
       override protected def whitelist = memoryImage.get.whitelist
-      override protected def addWhitelistEntry(entry: WhitelistEntry) = updateAndPersist { _.addWhitelistEntry(entry) }
-      override protected def removeWhitelistEntry(entry: WhitelistEntry) = updateAndPersist { _.removeWhitelistEntry(entry) }
+      override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
+      override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
     }), "/*", FilterMapping.ALL)
     server.setHandler(root)
     server
@@ -157,8 +157,8 @@ object Main {
   private def runRtrServer(options: Options): Unit = {
     var rtrServer = new RTRServer(port = options.rtrPort, noCloseOnError = options.noCloseOnError, noNotify = options.noNotify, getCurrentCacheSerial = {
       () => memoryImage.get.version
-    }, getCurrentRoas = {
-      () => memoryImage.get.roas
+    }, getCurrentRtrPrefixes = {
+      () => memoryImage.get.getDistinctRtrPrefixes()
     }, getCurrentNonce = {
       () => Main.nonce
     })
