@@ -33,10 +33,11 @@ import org.clapper.argot._
 import org.clapper.argot.ArgotConverters._
 
 object Options {
-  
+
   val DEFAULT_RTR_PORT = 8282
   val DEFAULT_HTTP_PORT = 8080
-  
+  val DEFAULT_DATA_FILE_NAME = "data/configuration.json"
+
   def parse(args: Array[String]): Either[String, Options] = try {
     Right(new Options(args))
   } catch {
@@ -45,17 +46,19 @@ object Options {
 }
 
 class Options(args: Array[String]) {
- private val parser = new ArgotParser(programName = "rpki-validator")
- 
- private val rtrPortOption = parser.option[Int](List("r", "rtr-port"), "RTR-PORT", "The port the rtr-rpki tcp server will listen on. Default: " + Options.DEFAULT_RTR_PORT)
- private val httpPortOption = parser.option[Int](List("h", "http-port"), "HTTP-PORT", "The http port the for the User Interface. Default: " + Options.DEFAULT_HTTP_PORT)
- private val noCloseOption = parser.flag[Boolean](List("n", "no-close-on-error"), "Stop the server from closing connections when it receives fatal errors.")
- private val noNotifyOption = parser.flag[Boolean](List("s", "silent"), "Stop the server from sending notify messages when it has updates.")
- 
- def rtrPort: Int = rtrPortOption.value.getOrElse(Options.DEFAULT_RTR_PORT)
- def httpPort: Int = httpPortOption.value.getOrElse(Options.DEFAULT_HTTP_PORT)
- def noCloseOnError: Boolean = noCloseOption.hasValue
- def noNotify: Boolean = noCloseOption.hasValue
- 
- parser.parse(args)
+  private val parser = new ArgotParser(programName = "rpki-validator")
+
+  private val rtrPortOption = parser.option[Int](List("r", "rtr-port"), "RTR-PORT", "The port the rtr-rpki tcp server will listen on. Default: " + Options.DEFAULT_RTR_PORT)
+  private val httpPortOption = parser.option[Int](List("h", "http-port"), "HTTP-PORT", "The http port the for the User Interface. Default: " + Options.DEFAULT_HTTP_PORT)
+  private val noCloseOption = parser.flag[Boolean](List("n", "no-close-on-error"), "Stop the server from closing connections when it receives fatal errors.")
+  private val noNotifyOption = parser.flag[Boolean](List("s", "silent"), "Stop the server from sending notify messages when it has updates.")
+  private val dataFileNameOption = parser.option[String](List("f", "data-file"), "FILE", "Specify the data file used to load and store configuration. Default: " + Options.DEFAULT_DATA_FILE_NAME)
+
+  def rtrPort: Int = rtrPortOption.value.getOrElse(Options.DEFAULT_RTR_PORT)
+  def httpPort: Int = httpPortOption.value.getOrElse(Options.DEFAULT_HTTP_PORT)
+  def noCloseOnError: Boolean = noCloseOption.hasValue
+  def noNotify: Boolean = noCloseOption.hasValue
+  def dataFileName: String = dataFileNameOption.value.getOrElse(Options.DEFAULT_DATA_FILE_NAME)
+
+  parser.parse(args)
 }

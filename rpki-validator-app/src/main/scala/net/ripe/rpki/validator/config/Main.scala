@@ -86,6 +86,7 @@ class PersistentDataSerialiser {
 
 object PersistentDataSerialiser extends PersistentDataSerialiser with Logging {
   def write(data: PersistentData, file: File) {
+    file.getParentFile.mkdirs()
     val tempFile: File = File.createTempFile("rkpi", "dat", file.getParentFile)
     FileUtils.writeStringToFile(tempFile, serialise(data), "UTF-8")
     if (!tempFile.renameTo(file)) throw new IOException("Error writing file: " + file.getAbsolutePath)
@@ -128,8 +129,6 @@ object Main {
 
   val logger = Logger[this.type]
 
-  val dataFile = new File(".", "rpki-config.json")
-
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
 
   private var database: Atomic[MemoryImage] = null
@@ -143,10 +142,11 @@ object Main {
   private def run(options: Options): Unit = {
     val trustAnchors = loadTrustAnchors()
     val roas = Roas(trustAnchors)
+    val dataFile = new File(options.dataFileName).getCanonicalFile()
     val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
     database = new Atomic(MemoryImage(data.whitelist, trustAnchors, roas))
 
-    runWebServer(options)
+    runWebServer(options, dataFile)
     runRtrServer(options)
   }
 
@@ -184,7 +184,7 @@ object Main {
     trustAnchors
   }
 
-  def setup(server: Server): Server = {
+  def setup(server: Server, dataFile: File): Server = {
     import org.eclipse.jetty.servlet._
     import org.scalatra._
 
@@ -219,8 +219,8 @@ object Main {
     server
   }
 
-  private def runWebServer(options: Options): Unit = {
-    val server = setup(new Server(options.httpPort))
+  private def runWebServer(options: Options, dataFile: File): Unit = {
+    val server = setup(new Server(options.httpPort), dataFile)
 
     sys.addShutdownHook({
       server.stop()

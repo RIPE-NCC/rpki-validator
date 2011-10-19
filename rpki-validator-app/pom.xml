@@ -246,6 +246,7 @@
                     <header>LICENSE.txt</header>
                     <excludes>
                         <exclude>**/.*</exclude>
+                        <exclude>data/**</exclude>
                         <exclude>log/**</exclude>
                         <exclude>tmp/**</exclude>
                         <exclude>**/*.txt</exclude>

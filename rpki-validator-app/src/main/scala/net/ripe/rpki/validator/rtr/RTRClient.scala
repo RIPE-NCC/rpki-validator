@@ -78,7 +78,7 @@ class RTRClient(val port: Int) {
     channelFuture.getChannel().write(data)
     logger.trace("data sent")
   }
-  
+
   def getResponse(expectedNumber: Int = 1, timeOut: Int = 1000): List[Pdu] = {
     var waited: Int = 0
     while(receivedPdus.size < expectedNumber && waited < timeOut) {
