@@ -192,7 +192,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
       case _ => fail("Expected end of data")
     }
 
-    client.isConnected should be(true)
+    client should be ('connected)
 
     // Update ROAs, client should get notify
     cache.update { db => db.updateRoas(tal, roas) }
@@ -214,8 +214,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
       case CacheResetPdu() => // No content to check, we're good
       case _ => fail("Should get cache reset response")
     }
-    client.isConnected should be(true)
-
+    client should be ('connected)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.4
@@ -229,7 +228,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.NoDataAvailable)
-    client.isConnected should be(true)
+    client should be ('connected)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -243,7 +242,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.InvalidRequest)
-    client.isConnected should be(false)
+    client should not be ('connected)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -258,7 +257,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.UnsupportedPduType)
-    client.isConnected should be(false)
+    client should not be ('connected)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -272,7 +271,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.UnsupportedProtocolVersion)
-    client.isConnected should be(false)
+    client should not be ('connected)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -287,7 +286,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.CorruptData)
-    client.isConnected should be(false)
+    client should not be ('connected)
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
@@ -303,7 +302,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.CorruptData)
-    client.isConnected should be(false)
+    client should not be ('connected)
   }
 
 }
