@@ -40,17 +40,21 @@ import java.util.concurrent.atomic.AtomicReference
 import scalaz.concurrent.Promise
 import net.ripe.rpki.validator.rtr.Pdu
 import org.joda.time.DateTime
-import net.liftweb.json.{Formats, Serializer, DefaultFormats, Serialization}
-import net.liftweb.json.JsonAST.{JInt, JString}
-import net.ripe.ipresource.{IpRange, Asn}
-import java.io.{IOException, File}
-import grizzled.slf4j.{Logging, Logger}
+import net.liftweb.json.{ Formats, Serializer, DefaultFormats, Serialization }
+import net.liftweb.json.JsonAST.{ JInt, JString }
+import net.ripe.ipresource.{ IpRange, Asn }
+import java.io.{ IOException, File }
+import grizzled.slf4j.{ Logging, Logger }
+import net.ripe.certification.validator.util.TrustAnchorLocator
 
 case class MemoryImage(whitelist: Whitelist, trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
 
-  def addWhitelistEntry(entry: WhitelistEntry) = copy(whitelist = whitelist.addEntry(entry))
+  def updateRoas(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) =
+    copy(version = version + 1, roas = roas.update(tal, validatedRoas))
 
-  def removeWhitelistEntry(entry: WhitelistEntry) = copy(whitelist = whitelist.removeEntry(entry))
+  def addWhitelistEntry(entry: WhitelistEntry) = copy(version = version + 1, whitelist = whitelist.addEntry(entry))
+
+  def removeWhitelistEntry(entry: WhitelistEntry) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
 }
 
 case class PersistentData(schemaVersion: Int = 0, whitelist: Whitelist = Whitelist())
@@ -97,7 +101,7 @@ object PersistentDataSerialiser extends PersistentDataSerialiser with Logging {
     Some(deserialise(json))
   } catch {
     case e: IOException =>
-      warn("Error reading "+ file.getAbsolutePath + ": " + e.getMessage)
+      warn("Error reading " + file.getAbsolutePath + ": " + e.getMessage)
       None
   }
 }
@@ -160,7 +164,7 @@ object Main {
   }
 
   def loadTrustAnchors(): TrustAnchors = {
-    import java.{util => ju}
+    import java.{ util => ju }
     val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[ju.Collection[File]])
     val trustAnchors = TrustAnchors.load(tals.asScala, "tmp/tals")
     for (ta <- trustAnchors.all) {
@@ -173,8 +177,7 @@ object Main {
         }
         val validatedRoas = Roas.fetchObjects(ta.locator, certificate)
         database.update {
-          db =>
-            db.copy(roas = db.roas.update(ta.locator, validatedRoas), version = db.version + 1)
+          db => db.updateRoas(ta.locator, validatedRoas)
         }
         listeners.foreach {
           listener => listener.notify(database.get.version)

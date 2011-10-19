@@ -124,9 +124,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
 
     val roas = collection.mutable.Seq.apply[ValidatedRoa](validatedRoa)
 
-    cache.update { db =>
-      db.copy(roas = db.roas.update(tal, roas), version = db.version + 1)
-    }
+    cache.update { db => db.updateRoas(tal, roas) }
 
     client.sendPdu(ResetQueryPdu())
     var responsePdus = client.getResponse(expectedNumber = 5)
@@ -198,9 +196,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     client.isConnected should be(true)
 
     // Update ROAs, client should get notify
-    cache.update { db =>
-      db.copy(roas = db.roas.update(tal, roas), version = db.version + 1)
-    }
+    cache.update { db => db.updateRoas(tal, roas) }
     server.notify(cache.get.version)
 
     var responsePdusAfterCacheUpdate = client.getResponse(expectedNumber = 1)

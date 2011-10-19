@@ -89,15 +89,16 @@ class RTRClient(val port: Int) {
     receivedPdus = receivedPdus.drop(expectedNumber)
     result
   }
-  
+
   def getAllResponses(): List[Pdu] = {
     var number = receivedPdus.length
     var result = receivedPdus.take(number)
     receivedPdus = receivedPdus.drop(number)
     result
   }
-  
+
   def isConnected = {
+    Thread.sleep(5) // make sure the RTR server gets some time to disconnect the client in tests.
     channelFuture.getChannel().isConnected()
   }
 
