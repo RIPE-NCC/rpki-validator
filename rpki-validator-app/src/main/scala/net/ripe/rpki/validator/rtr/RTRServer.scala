@@ -47,7 +47,6 @@ import org.jboss.netty.util.Timer
 import org.jboss.netty.util.HashedWheelTimer
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.models.Roas
-import net.ripe.rpki.validator.config.UpdateListener
 import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Ipv6Address
 import org.jboss.netty.channel.group.{ ChannelGroup, DefaultChannelGroup }
@@ -55,12 +54,12 @@ import org.jboss.netty.channel.ChannelHandler.Sharable
 
 object RTRServer {
   final val ProtocolVersion = 0
-  final val MAXIMUM_FRAME_LENGTH = 16777216 // 16MB Note: this should be big enough to contain all pdus when we respond with data 
+  final val MAXIMUM_FRAME_LENGTH = 16777216 // 16MB Note: this should be big enough to contain all pdus when we respond with data
 
   var allChannels: ChannelGroup = new DefaultChannelGroup("rtr-server")
 }
 
-class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) extends UpdateListener {
+class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurrentCacheSerial: () => Int, getCurrentRoas: () => Roas, getCurrentNonce: () => Short) {
   import TimeUnit._
 
   val logger = Logger[this.type]

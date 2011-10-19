@@ -31,12 +31,15 @@ package net.ripe.rpki.validator
 package config
 
 import net.ripe.certification.validator.util.TrustAnchorLocator
-import models._
+import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import org.joda.time.DateTime
+import models._
 
 case class MemoryImage(whitelist: Whitelist, trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
-
   val lastUpdateTime: DateTime = new DateTime
+
+  def updateTrustAnchor(tal: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext) =
+    copy(trustAnchors = trustAnchors.update(tal, certificate))
 
   def updateRoas(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) =
     copy(version = version + 1, roas = roas.update(tal, validatedRoas))

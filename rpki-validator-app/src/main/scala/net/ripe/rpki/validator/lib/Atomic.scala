@@ -32,23 +32,24 @@ package lib
 
 import java.util.concurrent.atomic.AtomicReference
 
-class Atomic[T](initialValue: T) {
+class Atomic[T](initialValue: T, listener: T => Unit = (_: T) => ()) {
   /**
    * Reads the current value.
    */
-  def get = currentValue.get
+  def get = currentValue
 
   /**
-   * Atomically updates the current value. In case of a conflict, the update is retried.
+   * Atomically updates the current value and notifies the listener.
    */
   final def update(f: T => T) {
-    var current = get
-    var updated = f(current)
-    while (!currentValue.compareAndSet(current, updated)) {
-      current = get
-      updated = f(current)
+    synchronized {
+      val current = get
+      val updated = f(current)
+      currentValue = updated
+      listener(updated)
     }
   }
 
-  private val currentValue: AtomicReference[T] = new AtomicReference(initialValue)
+  @volatile
+  private var currentValue: T = initialValue
 }

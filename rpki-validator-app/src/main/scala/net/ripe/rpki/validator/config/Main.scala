@@ -43,7 +43,7 @@ import org.eclipse.jetty.servlet.ServletContextHandler
 import org.eclipse.jetty.servlet.ServletHolder
 
 import grizzled.slf4j.Logger
-import java.{util => ju}
+import java.{ util => ju }
 import net.ripe.certification.validator.util.TrustAnchorExtractor
 import scalaz.concurrent.Promise
 
@@ -52,18 +52,14 @@ import models._
 import net.ripe.rpki.validator.rtr.Pdu
 import net.ripe.rpki.validator.rtr.RTRServer
 
-trait UpdateListener {
-  def notify(serial: Long)
-}
-
 object Main {
 
   val logger = Logger[this.type]
 
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
 
-  private var database: Atomic[MemoryImage] = null
-  private var listeners = List[UpdateListener]()
+  private var memoryImage: Atomic[MemoryImage] = null
+  private var memoryImageListener: Option[MemoryImage => Unit] = None
 
   def main(args: Array[String]): Unit = Options.parse(args) match {
     case Right(options) => run(options)
@@ -75,7 +71,9 @@ object Main {
     val roas = Roas(trustAnchors)
     val dataFile = new File(options.dataFileName).getCanonicalFile()
     val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
-    database = new Atomic(MemoryImage(data.whitelist, trustAnchors, roas))
+    memoryImage = new Atomic(
+      MemoryImage(data.whitelist, trustAnchors, roas),
+      memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
 
     runWebServer(options, dataFile)
     runRtrServer(options)
@@ -86,10 +84,6 @@ object Main {
     sys.exit(1)
   }
 
-  def registerListener(newListener: UpdateListener) = {
-    listeners = listeners ++ List(newListener)
-  }
-
   def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
     val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[ju.Collection[File]])
@@ -98,16 +92,12 @@ object Main {
       Promise {
         val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
         logger.info("Loaded trust anchor from location " + certificate.getLocation())
-        database.update {
-          db =>
-            db.copy(trustAnchors = db.trustAnchors.update(ta.locator, certificate))
+        memoryImage.update {
+          db => db.updateTrustAnchor(ta.locator, certificate)
         }
         val validatedRoas = Roas.fetchObjects(ta.locator, certificate)
-        database.update {
+        memoryImage.update {
           db => db.updateRoas(ta.locator, validatedRoas)
-        }
-        listeners.foreach {
-          listener => listener.notify(database.get.version)
         }
       }
     }
@@ -125,24 +115,24 @@ object Main {
     defaultServletHolder.setInitParameter("dirAllowed", "false")
     root.addServlet(defaultServletHolder, "/*")
     root.addFilter(new FilterHolder(new WebFilter {
-      override def trustAnchors = database.get.trustAnchors
+      override def trustAnchors = memoryImage.get.trustAnchors
 
-      override def roas = database.get.roas
+      override def roas = memoryImage.get.roas
 
-      override def version = database.get.version
+      override def version = memoryImage.get.version
 
-      override def lastUpdateTime = database.get.lastUpdateTime
+      override def lastUpdateTime = memoryImage.get.lastUpdateTime
 
-      override def whitelist = database.get.whitelist
+      override def whitelist = memoryImage.get.whitelist
 
-      override def addWhitelistEntry(entry: WhitelistEntry) = database synchronized {
-        database.update(_.addWhitelistEntry(entry))
-        PersistentDataSerialiser.write(PersistentData(whitelist = database.get.whitelist), dataFile)
+      override def addWhitelistEntry(entry: WhitelistEntry) = memoryImage synchronized {
+        memoryImage.update(_.addWhitelistEntry(entry))
+        PersistentDataSerialiser.write(PersistentData(whitelist = memoryImage.get.whitelist), dataFile)
       }
 
-      override def removeWhitelistEntry(entry: WhitelistEntry) = database synchronized {
-        database.update(_.removeWhitelistEntry(entry))
-        PersistentDataSerialiser.write(PersistentData(whitelist = database.get.whitelist), dataFile)
+      override def removeWhitelistEntry(entry: WhitelistEntry) = memoryImage synchronized {
+        memoryImage.update(_.removeWhitelistEntry(entry))
+        PersistentDataSerialiser.write(PersistentData(whitelist = memoryImage.get.whitelist), dataFile)
       }
     }), "/*", FilterMapping.ALL)
     server.setHandler(root)
@@ -162,14 +152,14 @@ object Main {
 
   private def runRtrServer(options: Options): Unit = {
     var rtrServer = new RTRServer(port = options.rtrPort, noCloseOnError = options.noCloseOnError, noNotify = options.noNotify, getCurrentCacheSerial = {
-      () => database.get.version
+      () => memoryImage.get.version
     }, getCurrentRoas = {
-      () => database.get.roas
+      () => memoryImage.get.roas
     }, getCurrentNonce = {
       () => Main.nonce
     })
     rtrServer.startServer()
-    registerListener(rtrServer)
+    memoryImageListener = Some(memoryImage => rtrServer.notify(memoryImage.version))
   }
 
 }
