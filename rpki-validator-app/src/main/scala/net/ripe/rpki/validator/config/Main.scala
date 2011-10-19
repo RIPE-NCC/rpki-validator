@@ -30,100 +30,27 @@
 package net.ripe.rpki.validator
 package config
 
-import org.eclipse.jetty.server.Server
-import org.apache.commons.io.FileUtils
+import java.io.File
+
 import scala.collection.JavaConverters._
+
+import org.apache.commons.io.FileUtils
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.servlet.DefaultServlet
+import org.eclipse.jetty.servlet.FilterHolder
+import org.eclipse.jetty.servlet.FilterMapping
+import org.eclipse.jetty.servlet.ServletContextHandler
+import org.eclipse.jetty.servlet.ServletHolder
+
+import grizzled.slf4j.Logger
+import java.{util => ju}
 import net.ripe.certification.validator.util.TrustAnchorExtractor
-import net.ripe.rpki.validator.rtr.RTRServer
-import models._
-import java.util.concurrent.atomic.AtomicReference
 import scalaz.concurrent.Promise
+
+import lib._
+import models._
 import net.ripe.rpki.validator.rtr.Pdu
-import org.joda.time.DateTime
-import net.liftweb.json.{ Formats, Serializer, DefaultFormats, Serialization }
-import net.liftweb.json.JsonAST.{ JInt, JString }
-import net.ripe.ipresource.{ IpRange, Asn }
-import java.io.{ IOException, File }
-import grizzled.slf4j.{ Logging, Logger }
-import net.ripe.certification.validator.util.TrustAnchorLocator
-
-case class MemoryImage(whitelist: Whitelist, trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
-
-  def updateRoas(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) =
-    copy(version = version + 1, roas = roas.update(tal, validatedRoas))
-
-  def addWhitelistEntry(entry: WhitelistEntry) = copy(version = version + 1, whitelist = whitelist.addEntry(entry))
-
-  def removeWhitelistEntry(entry: WhitelistEntry) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
-}
-
-case class PersistentData(schemaVersion: Int = 0, whitelist: Whitelist = Whitelist())
-
-class PersistentDataSerialiser {
-
-  object AsnSerialiser extends Serializer[Asn] {
-    def deserialize(implicit format: Formats) = {
-      case (_, JInt(i)) => new Asn(i.longValue())
-    }
-
-    def serialize(implicit format: Formats) = {
-      case asn: Asn => new JInt(new BigInt(asn.getValue()))
-    }
-  }
-
-  object IpRangeSerialiser extends Serializer[IpRange] {
-    def deserialize(implicit format: Formats) = {
-      case (_, JString(s)) => IpRange.parse(s)
-    }
-
-    def serialize(implicit format: Formats) = {
-      case range: IpRange => new JString(range.toString)
-    }
-  }
-
-  implicit val formats: Formats = DefaultFormats + AsnSerialiser + IpRangeSerialiser
-
-  def serialise(data: PersistentData) = Serialization.write(data)
-
-  def deserialise(json: String): PersistentData = Serialization.read[PersistentData](json)
-}
-
-object PersistentDataSerialiser extends PersistentDataSerialiser with Logging {
-  def write(data: PersistentData, file: File) {
-    file.getParentFile.mkdirs()
-    val tempFile: File = File.createTempFile("rkpi", "dat", file.getParentFile)
-    FileUtils.writeStringToFile(tempFile, serialise(data), "UTF-8")
-    if (!tempFile.renameTo(file)) throw new IOException("Error writing file: " + file.getAbsolutePath)
-  }
-
-  def read(file: File): Option[PersistentData] = try {
-    val json: String = FileUtils.readFileToString(file, "UTF-8")
-    Some(deserialise(json))
-  } catch {
-    case e: IOException =>
-      warn("Error reading " + file.getAbsolutePath + ": " + e.getMessage)
-      None
-  }
-}
-
-class Atomic[T](value: T) {
-  private val db: AtomicReference[T] = new AtomicReference(value)
-
-  def get = db.get
-
-  var lastUpdateTime: DateTime = new DateTime
-
-  final def update(f: T => T) {
-    var current = get
-    var updated = f(current)
-    while (!db.compareAndSet(current, updated)) {
-      current = get
-      updated = f(current)
-    }
-    lastUpdateTime = new DateTime
-  }
-
-}
+import net.ripe.rpki.validator.rtr.RTRServer
 
 trait UpdateListener {
   def notify(serial: Long)
@@ -204,7 +131,7 @@ object Main {
 
       override def version = database.get.version
 
-      override def lastUpdateTime = database.lastUpdateTime
+      override def lastUpdateTime = database.get.lastUpdateTime
 
       override def whitelist = database.get.whitelist
 

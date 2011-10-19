@@ -46,6 +46,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
 
 import models._
+import lib._
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import net.ripe.commons.certification.cms.roa.RoaCms
 import net.ripe.commons.certification.cms.roa.RoaCmsObjectMother
@@ -53,7 +54,6 @@ import net.ripe.commons.certification.cms.roa.RoaPrefix
 import net.ripe.commons.certification.ValidityPeriod
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
-import net.ripe.rpki.validator.config.Atomic
 import net.ripe.rpki.validator.config.MemoryImage
 import net.ripe.rpki.validator.models.ValidatedRoa
 

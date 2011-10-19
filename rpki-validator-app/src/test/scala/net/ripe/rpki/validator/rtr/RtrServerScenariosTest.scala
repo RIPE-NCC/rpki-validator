@@ -35,9 +35,8 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfter
-import net.ripe.rpki.validator.lib.Port
-import net.ripe.rpki.validator.config.Atomic
-import net.ripe.rpki.validator.config.MemoryImage
+import net.ripe.rpki.validator.lib._
+import net.ripe.rpki.validator.config._
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import java.io.File
 import java.net.URI
