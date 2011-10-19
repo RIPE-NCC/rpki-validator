@@ -28,27 +28,60 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package config
+package controllers
 
-import net.ripe.certification.validator.util.TrustAnchorLocator
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import org.joda.time.DateTime
+import net.ripe.ipresource.IpRange
+import org.scalatra.ScalatraKernel
+import org.scalatra.MethodOverride
+import scalaz._
+import Scalaz._
+
+import lib.Validation._
 import models._
+import views.FiltersView
 
-case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
-  val lastUpdateTime: DateTime = new DateTime
+trait FiltersController extends ApplicationController with MethodOverride {
+  protected def filters: Filters
+  protected def addFilter(filter: IgnoreFilter): Unit
+  protected def removeFilter(filter: IgnoreFilter): Unit
+  protected def filterExists(filter: IgnoreFilter): Boolean = filters.entries.contains(filter)
 
-  def updateTrustAnchor(tal: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext) =
-    copy(trustAnchors = trustAnchors.update(tal, certificate))
+  private def baseUrl = views.Tabs.FiltersTab.url
 
-  def updateRoas(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) =
-    copy(version = version + 1, roas = roas.update(tal, validatedRoas))
+  get(baseUrl) {
+    new FiltersView(filters)
+  }
 
-  def addWhitelistEntry(entry: WhitelistEntry) = copy(version = version + 1, whitelist = whitelist.addEntry(entry))
+  post(baseUrl) {
+    submittedFilter match {
+      case Success(entry) =>
+        if (filterExists(entry))
+          new FiltersView(filters, params, Seq(ErrorMessage("filter already exists")))
+        else {
+          addFilter(entry)
+          redirect(baseUrl)
+        }
+      case Failure(errors) =>
+        new FiltersView(filters, params, errors)
+    }
+  }
 
-  def removeWhitelistEntry(entry: WhitelistEntry) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
+  delete(baseUrl) {
+    submittedFilter match {
+      case Success(entry) =>
+        if (filterExists(entry)) {
+          removeFilter(entry)
+          redirect(baseUrl)
+        } else {
+          new FiltersView(filters, params, Seq(ErrorMessage("filter no longer exists")))
+        }
+      case Failure(errors) =>
+        // go away hacker!
+        new FiltersView(filters, params, errors)
+    }
+  }
 
-  def addFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.addFilter(filter))
-
-  def removeFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.removeFilter(filter))
+  private def submittedFilter: ValidationNEL[ErrorMessage, IgnoreFilter] = {
+    validateParameter("prefix", required(parseIpPrefix)) map IgnoreFilter
+  }
 }

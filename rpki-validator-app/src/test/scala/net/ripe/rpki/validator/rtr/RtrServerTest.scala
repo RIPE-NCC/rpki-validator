@@ -69,7 +69,7 @@ class RtrServerTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter 
   override def beforeAll() = {
     var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
     var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-    cache = new Atomic(MemoryImage(Whitelist(), trustAnchors, validatedRoas))
+    cache = new Atomic(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedRoas))
 
     handler = new RTRServerHandler(
       getCurrentCacheSerial = { () => cache.get.version },

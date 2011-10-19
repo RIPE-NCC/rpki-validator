@@ -28,27 +28,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package config
+package models
 
-import net.ripe.certification.validator.util.TrustAnchorLocator
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import org.joda.time.DateTime
-import models._
+import net.ripe.ipresource.IpRange
 
-case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
-  val lastUpdateTime: DateTime = new DateTime
+case class IgnoreFilter(prefix: IpRange)
 
-  def updateTrustAnchor(tal: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext) =
-    copy(trustAnchors = trustAnchors.update(tal, certificate))
-
-  def updateRoas(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) =
-    copy(version = version + 1, roas = roas.update(tal, validatedRoas))
-
-  def addWhitelistEntry(entry: WhitelistEntry) = copy(version = version + 1, whitelist = whitelist.addEntry(entry))
-
-  def removeWhitelistEntry(entry: WhitelistEntry) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
-
-  def addFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.addFilter(filter))
-
-  def removeFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.removeFilter(filter))
+case class Filters(entries: Set[IgnoreFilter] = Set.empty) {
+  def addFilter(filter: IgnoreFilter) = copy(entries + filter)
+  def removeFilter(filter: IgnoreFilter) = copy(entries - filter)
 }

@@ -27,26 +27,27 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.config
+package net.ripe.rpki.validator
+package config
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import net.ripe.rpki.validator.models.{WhitelistEntry, Whitelist}
 import net.ripe.ipresource.{IpRange, Asn}
 import java.io.File
 import org.apache.commons.io.FileUtils
+import models._
 
 @RunWith(classOf[JUnitRunner])
 class PersistentDataTest extends FunSuite with ShouldMatchers {
 
   val serialiser = new PersistentDataSerialiser
 
-  val data_empty: PersistentData = PersistentData(0, Whitelist(Set.empty))
-  val json_empty: String = """{"schemaVersion":0,"whitelist":{"entries":[]}}"""
-  val data_some: PersistentData = PersistentData(0, Whitelist(Set(WhitelistEntry.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), None).toOption.get)))
-  val json_some: String = """{"schemaVersion":0,"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8"}]}}"""
+  val data_empty: PersistentData = PersistentData(0, Filters(), Whitelist())
+  val json_empty: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[]}}"""
+  val data_some: PersistentData = PersistentData(0, Filters(Set(IgnoreFilter(IpRange.parse("192.168.0.0/16")))), Whitelist(Set(WhitelistEntry.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), None).toOption.get)))
+  val json_some: String = """{"schemaVersion":0,"filters":{"entries":[{"prefix":"192.168.0.0/16"}]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8"}]}}"""
 
   test("serialise empty Whitelist") {
     serialiser.serialise(data_empty) should equal(json_empty)
@@ -59,8 +60,8 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
   }
 
   test("serialise Whitelist with maxPrefixLength") {
-    val data: PersistentData = PersistentData(0, Whitelist(Set(WhitelistEntry.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)))
-    val json: String = """{"schemaVersion":0,"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]}}"""
+    val data: PersistentData = PersistentData(0, Filters(), Whitelist(Set(WhitelistEntry.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)))
+    val json: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]}}"""
     serialiser.serialise(data) should equal(json)
     serialiser.deserialise(json) should equal(data)
   }

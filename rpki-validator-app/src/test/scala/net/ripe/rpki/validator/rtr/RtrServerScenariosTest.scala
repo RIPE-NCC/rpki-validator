@@ -67,7 +67,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   override def beforeAll() = {
     var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
     var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-    cache = new Atomic(MemoryImage(Whitelist(), trustAnchors, validatedRoas))
+    cache = new Atomic(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedRoas))
     server = new RTRServer(
       port = port,
       noCloseOnError = false,
@@ -90,7 +90,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     cache.update {
       var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
       var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-      db => MemoryImage(Whitelist(), trustAnchors, validatedRoas)
+      db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedRoas)
     }
     client.close()
   }

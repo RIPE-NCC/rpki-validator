@@ -72,7 +72,7 @@ object Main {
     val dataFile = new File(options.dataFileName).getCanonicalFile()
     val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
     memoryImage = new Atomic(
-      MemoryImage(data.whitelist, trustAnchors, roas),
+      MemoryImage(data.filters, data.whitelist, trustAnchors, roas),
       memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
 
     runWebServer(options, dataFile)
@@ -115,6 +115,14 @@ object Main {
     defaultServletHolder.setInitParameter("dirAllowed", "false")
     root.addServlet(defaultServletHolder, "/*")
     root.addFilter(new FilterHolder(new WebFilter {
+      private def updateAndPersist(f: MemoryImage => MemoryImage) {
+        memoryImage.update { memoryImage =>
+          val updated = f(memoryImage)
+          PersistentDataSerialiser.write(PersistentData(filters = updated.filters, whitelist = updated.whitelist), dataFile)
+          updated
+        }
+      }
+
       override def trustAnchors = memoryImage.get.trustAnchors
 
       override def roas = memoryImage.get.roas
@@ -123,17 +131,13 @@ object Main {
 
       override def lastUpdateTime = memoryImage.get.lastUpdateTime
 
-      override def whitelist = memoryImage.get.whitelist
+      override protected def filters = memoryImage.get.filters
+      override protected def addFilter(filter: IgnoreFilter) = updateAndPersist { _.addFilter(filter) }
+      override protected def removeFilter(filter: IgnoreFilter) = updateAndPersist { _.removeFilter(filter) }
 
-      override def addWhitelistEntry(entry: WhitelistEntry) = memoryImage synchronized {
-        memoryImage.update(_.addWhitelistEntry(entry))
-        PersistentDataSerialiser.write(PersistentData(whitelist = memoryImage.get.whitelist), dataFile)
-      }
-
-      override def removeWhitelistEntry(entry: WhitelistEntry) = memoryImage synchronized {
-        memoryImage.update(_.removeWhitelistEntry(entry))
-        PersistentDataSerialiser.write(PersistentData(whitelist = memoryImage.get.whitelist), dataFile)
-      }
+      override protected def whitelist = memoryImage.get.whitelist
+      override protected def addWhitelistEntry(entry: WhitelistEntry) = updateAndPersist { _.addWhitelistEntry(entry) }
+      override protected def removeWhitelistEntry(entry: WhitelistEntry) = updateAndPersist { _.removeWhitelistEntry(entry) }
     }), "/*", FilterMapping.ALL)
     server.setHandler(root)
     server

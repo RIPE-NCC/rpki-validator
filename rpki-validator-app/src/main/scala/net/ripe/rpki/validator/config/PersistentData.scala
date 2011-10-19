@@ -39,7 +39,7 @@ import net.ripe.ipresource.IpRange
 import grizzled.slf4j.Logging
 import models._
 
-case class PersistentData(schemaVersion: Int = 0, whitelist: Whitelist = Whitelist())
+case class PersistentData(schemaVersion: Int = 0, filters: Filters = Filters(), whitelist: Whitelist = Whitelist())
 
 class PersistentDataSerialiser {
 
