@@ -77,10 +77,12 @@ object Validation {
 
   def collapseWhitespace(s: String): Validation[Nothing, String] = s.replaceAll("\\s+", " ").trim.success
 
+  private def quote(s: String) = "'" + s + "'"
+
   def parseAsn(s: String): Validation[String, Asn] = try {
     Asn.parse(s).success
   } catch {
-    case _ => "not an ASN".fail
+    case _ => (quote(s) + " is not a valid ASN").fail
   }
 
   def parseIpPrefix(s: String): Validation[String, IpRange] = try {
@@ -88,18 +90,18 @@ object Validation {
     if (resource.isLegalPrefix)
       resource.success
     else
-      "not a IPv4 or IPv6 prefix".fail
+      (quote(s) + " is not a valid IPv4 or IPv6 prefix").fail
   } catch {
-    case _ => "not a IPv4 or IPv6 prefix".fail
+    case _ => (quote(s) + " is not a valid IPv4 or IPv6 prefix").fail
   }
 
   def parseInt(s: String): Validation[String, Int] = try {
     s.toInt.success
   } catch {
-    case _: NumberFormatException => "not a number".fail
+    case _: NumberFormatException => (quote(s) + " is not a number").fail
   }
 
   def containedIn(range: Range): Int => Validation[String, Int] = value => {
-    if (range.contains(value)) value.success else "must be between %d and %d".format(range.start, range.end).fail
+    if (range.contains(value)) value.success else "must be between %d and %d, was %d".format(range.start, range.end, value).fail
   }
 }
