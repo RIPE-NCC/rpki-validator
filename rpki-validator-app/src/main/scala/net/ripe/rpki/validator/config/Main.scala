@@ -75,6 +75,7 @@ object Main {
       MemoryImage(data.filters, data.whitelist, trustAnchors, roas),
       memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
 
+    runValidator(trustAnchors)
     runWebServer(options, dataFile)
     runRtrServer(options)
   }
@@ -87,7 +88,10 @@ object Main {
   def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
     val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[ju.Collection[File]])
-    val trustAnchors = TrustAnchors.load(tals.asScala, "tmp/tals")
+    TrustAnchors.load(tals.asScala, "tmp/tals")
+  }
+
+  def runValidator(trustAnchors: TrustAnchors) {
     for (ta <- trustAnchors.all) {
       Promise {
         val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
@@ -101,7 +105,6 @@ object Main {
         }
       }
     }
-    trustAnchors
   }
 
   def setup(server: Server, dataFile: File): Server = {
@@ -122,6 +125,8 @@ object Main {
           updated
         }
       }
+
+      override def runValidator() = Main.runValidator(trustAnchors)
 
       override def trustAnchors = memoryImage.get.trustAnchors
 
