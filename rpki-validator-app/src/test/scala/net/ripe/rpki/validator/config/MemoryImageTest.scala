@@ -48,23 +48,48 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
   var subject: MemoryImage = null
   var trustAnchors: TrustAnchors = null
   var validatedRoas: Roas = null
+  var tal: TrustAnchorLocator = null
+
+  val ASN1 = Asn.parse("AS65000")
+  val ASN2 = Asn.parse("AS65001")
+
+  val ROA_PREFIX_V4_1 = new RoaPrefix(IpRange.parse("10.64.0.0/12"), 24)
+  val ROA_PREFIX_V4_2 = new RoaPrefix(IpRange.parse("10.32.0.0/12"), null)
+  val ROA_PREFIX_V6_1 = new RoaPrefix(IpRange.parse("2001:0:200::/39"), null)
 
   override def beforeAll() = {
     trustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
+    tal = getTalForTesting()
   }
 
   test("Should find distinct ROA prefixes") {
 
-    val tal = getTalForTesting()
+    validatedRoas = getValidatedRoas()
 
-    // TODO: use the method that allows explicit list of roa prefixes for testing
+    subject = new MemoryImage(Filters(), Whitelist(), trustAnchors, validatedRoas)
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
 
-    val ASN1 = Asn.parse("AS65000")
-    val ASN2 = Asn.parse("AS65001")
+    distinctRoaPrefixes.size should equal(4)
+    distinctRoaPrefixes should contain (RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix, Option(ROA_PREFIX_V4_1.getMaximumLength)))
+    distinctRoaPrefixes should contain (RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix, None))
+    distinctRoaPrefixes should contain (RtrPrefix(ASN1, ROA_PREFIX_V6_1.getPrefix, None))
+    distinctRoaPrefixes should contain (RtrPrefix(ASN2, ROA_PREFIX_V4_1.getPrefix, Option(ROA_PREFIX_V4_1.getMaximumLength)))
+  }
 
-    val ROA_PREFIX_V4_1 = new RoaPrefix(IpRange.parse("10.64.0.0/12"), 24)
-    val ROA_PREFIX_V4_2 = new RoaPrefix(IpRange.parse("10.32.0.0/12"), null)
-    val ROA_PREFIX_V6_1 = new RoaPrefix(IpRange.parse("2001:0:200::/39"), null)
+
+  def getTalForTesting() = {
+    val file: File = new File("/tmp")
+    val caName = "test ca"
+    val location: URI = URI.create("rsync://example.com/")
+    val publicKeyInfo = "info"
+    val prefetchUris: java.util.List[URI] = new java.util.ArrayList[URI]()
+
+    new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
+  }
+
+  def getValidatedRoas() = {
+        // TODO: use the method that allows explicit list of roa prefixes for testing
+
 
     val prefixes1 = List[RoaPrefix](
         ROA_PREFIX_V4_1,
@@ -95,31 +120,10 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
     val roas = collection.mutable.Seq.apply[ValidatedRoa](validatedRoa1, validatedRoa2, validatedRoa3)
     val map: HashMap[String, Option[Seq[ValidatedRoa]]] = new HashMap[String, Option[Seq[ValidatedRoa]]]
     map.put(tal.getCaName, Option(roas))
-    validatedRoas = new Roas(map)
-
-
-//    val whitelist: Whitelist = Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), None).toOption.get))
-    val whitelist: Whitelist = Whitelist()
-
-    subject = new MemoryImage(Filters(), whitelist, trustAnchors, validatedRoas)
-
-    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
-
-    distinctRoaPrefixes.size should equal(4)
-    distinctRoaPrefixes should contain (RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix, Option(ROA_PREFIX_V4_1.getMaximumLength)))
-    distinctRoaPrefixes should contain (RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix, None))
-    distinctRoaPrefixes should contain (RtrPrefix(ASN1, ROA_PREFIX_V6_1.getPrefix, None))
-    distinctRoaPrefixes should contain (RtrPrefix(ASN2, ROA_PREFIX_V4_1.getPrefix, Option(ROA_PREFIX_V4_1.getMaximumLength)))
+    new Roas(map)
   }
 
-
-  def getTalForTesting() = {
-    val file: File = new File("/tmp")
-    val caName = "test ca"
-    val location: URI = URI.create("rsync://example.com/")
-    val publicKeyInfo = "info"
-    val prefetchUris: java.util.List[URI] = new java.util.ArrayList[URI]()
-
-    new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
+  def getWhitelist() {
+    Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), None).toOption.get))
   }
 }
