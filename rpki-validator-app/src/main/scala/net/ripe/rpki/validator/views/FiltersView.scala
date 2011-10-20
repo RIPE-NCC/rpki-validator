@@ -36,17 +36,17 @@ import scala.xml._
 import net.ripe.rpki.validator.rtr._
 import models._
 import scalaz.NonEmptyList
-import net.ripe.rpki.validator.lib.Validation.ErrorMessage
+import lib.Validation._
 
-class FiltersView(filters: Filters, params: Map[String, String] = Map.empty, errors: Seq[ErrorMessage] = Seq.empty) extends View with ViewHelpers {
+class FiltersView(filters: Filters, params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   private val fieldNameToText = Map("prefix" -> "Prefix")
 
   def tab = Tabs.FiltersTab
   def title = Text(tab.text)
   def body = {
+    <div>{ renderMessages(messages, fieldNameToText) }</div>
     <p>By adding a filter the validator will ignore any RPKI prefixes that overlap with the filter's prefix.</p>
     <h2>Add filter</h2>
-    <div>{ renderErrors(errors, fieldNameToText) }</div>
     <div class="well">
       <form method="POST" class="form-stacked">
         <fieldset>

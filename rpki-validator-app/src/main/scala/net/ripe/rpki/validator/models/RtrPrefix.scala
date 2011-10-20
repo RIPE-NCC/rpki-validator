@@ -40,7 +40,7 @@ import lib.Validation._
 case class RtrPrefix  (val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int])
 
 object RtrPrefix {
-  def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): ValidationNEL[ErrorMessage, RtrPrefix] = {
+  def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): ValidationNEL[FeedbackMessage, RtrPrefix] = {
     if (!prefix.isLegalPrefix()) {
       ErrorMessage("must be a legal IPv4 or IPv6 prefix", Some("prefix")).failNel
     } else {

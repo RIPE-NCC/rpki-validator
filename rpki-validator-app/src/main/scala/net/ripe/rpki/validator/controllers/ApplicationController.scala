@@ -32,10 +32,10 @@ package controllers
 
 import scala.xml.Text
 import scalaz._, Scalaz._
-import org.scalatra.ScalatraKernel
+import org.scalatra._
 import lib.Validation._
 
-trait ApplicationController extends ScalatraKernel {
+trait ApplicationController extends ScalatraKernel with FlashMapSupport with MethodOverride {
   get("/") {
     new views.View {
       def tab = views.Tabs.HomeTab
@@ -44,7 +44,14 @@ trait ApplicationController extends ScalatraKernel {
     }
   }
 
-  protected[this] def validateParameter[A](name: String, validator: Option[String] => Validation[String, A]): ValidationNEL[ErrorMessage, A] = {
+  protected[this] def feedbackMessages: Seq[FeedbackMessage] = flash.get("feedback").map(_.asInstanceOf[Seq[FeedbackMessage]]).getOrElse(Seq.empty)
+
+  protected[this] def redirectWithFeedbackMessages(url: String, messages: Seq[FeedbackMessage]) {
+    flash("feedback") = messages
+    redirect(url)
+  }
+
+  protected[this] def validateParameter[A](name: String, validator: Option[String] => Validation[String, A]): ValidationNEL[FeedbackMessage, A] = {
     val value = params.get(name).filterNot(_.isEmpty)
     val result = validator(value)
     liftFailErrorMessage(result, Some(name))

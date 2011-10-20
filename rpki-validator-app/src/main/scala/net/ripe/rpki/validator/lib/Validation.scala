@@ -41,10 +41,24 @@ object Validation {
    */
   implicit def NonEmptyListToSeq[A](nel: NonEmptyList[A]): List[A] = nel.head :: nel.tail
 
-  case class ErrorMessage(message: String, fieldName: Option[String] = None)
+  sealed trait MessageKind {
+    /**
+     * Factory method for feedback messages.
+     */
+    def apply(message: String, fieldName: Option[String] = None): FeedbackMessage = FeedbackMessage(this, message, fieldName)
+  }
 
-  def liftFailErrorMessage[A](validation: Validation[String, A], fieldName: Option[String] = None): ValidationNEL[ErrorMessage, A] =
-    validation.fail.map(failure => ErrorMessage(failure, fieldName)).liftNel
+  case object ErrorMessage extends MessageKind
+  case object InfoMessage extends MessageKind
+  case object SuccessMessage extends MessageKind
+  object MessageKind {
+    def all = Seq(ErrorMessage, InfoMessage, SuccessMessage)
+  }
+
+  case class FeedbackMessage(kind: MessageKind, message: String, fieldName: Option[String] = None)
+
+  def liftFailErrorMessage[A](validation: Validation[String, A], fieldName: Option[String] = None): ValidationNEL[FeedbackMessage, A] =
+    validation.fail.map(message => ErrorMessage(message, fieldName)).liftNel
 
   /**
    * Makes a validator handle optional input values by generating an error message.

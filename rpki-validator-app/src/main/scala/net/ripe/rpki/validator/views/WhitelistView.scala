@@ -33,20 +33,18 @@ package views
 import scalaz._
 import Scalaz._
 import scala.xml._
-import net.ripe.rpki.validator.rtr._
 import models._
-import scalaz.NonEmptyList
-import net.ripe.rpki.validator.lib.Validation.ErrorMessage
+import lib.Validation._
 
-class WhitelistView(whitelist: Whitelist, params: Map[String, String] = Map.empty, errors: Seq[ErrorMessage] = Seq.empty) extends View with ViewHelpers {
+class WhitelistView(whitelist: Whitelist, params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   private val fieldNameToText = Map("asn" -> "Origin", "prefix" -> "Prefix", "maxPrefixLength" -> "Maximum prefix length")
 
   def tab = Tabs.WhitelistTab
   def title = Text("Whitelist")
   def body = {
+    <div>{ renderMessages(messages, fieldNameToText) }</div>
     <p>By adding a whitelisted announcement the validator will ensure that all routers receive this announcement, irrespective of the actual validated ROAs.</p>
     <h2>Add entry</h2>
-    <div>{ renderErrors(errors, fieldNameToText) }</div>
     <div class="well">
       <form method="POST" class="form-stacked">
         <fieldset>

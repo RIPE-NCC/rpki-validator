@@ -41,36 +41,38 @@ import lib.Validation._
 import models._
 import views.WhitelistView
 
-trait WhitelistController extends ApplicationController with MethodOverride {
+trait WhitelistController extends ApplicationController {
   protected def whitelist: Whitelist
   protected def addWhitelistEntry(entry: RtrPrefix): Unit
   protected def removeWhitelistEntry(entry: RtrPrefix): Unit
   protected def entryExists(entry: RtrPrefix): Boolean = whitelist.entries.contains(entry)
 
-  get("/whitelist") {
-    new WhitelistView(whitelist)
+  private def baseUrl = views.Tabs.WhitelistTab.url
+
+  get(baseUrl) {
+    new WhitelistView(whitelist, messages = feedbackMessages)
   }
 
-  post("/whitelist") {
+  post(baseUrl) {
     submittedEntry match {
       case Success(entry) =>
         if (entryExists(entry))
           new WhitelistView(whitelist, params, Seq(ErrorMessage("entry already exists in the whitelist")))
         else {
           addWhitelistEntry(entry)
-          redirect("/whitelist")
+          redirectWithFeedbackMessages(baseUrl, Seq(SuccessMessage("The entry has been added to the whitelist.")))
         }
       case Failure(errors) =>
         new WhitelistView(whitelist, params, errors)
     }
   }
 
-  delete("/whitelist") {
+  delete(baseUrl) {
     submittedEntry match {
       case Success(entry) =>
         if (entryExists(entry)) {
           removeWhitelistEntry(entry)
-          redirect("/whitelist")
+          redirectWithFeedbackMessages(baseUrl, Seq(SuccessMessage("The entry has been removed from the whitelist.")))
         } else {
           new WhitelistView(whitelist, params, Seq(ErrorMessage("entry no longer exists in the whitelist")))
         }
@@ -80,7 +82,7 @@ trait WhitelistController extends ApplicationController with MethodOverride {
     }
   }
 
-  private def submittedEntry: ValidationNEL[ErrorMessage, RtrPrefix] = {
+  private def submittedEntry: ValidationNEL[FeedbackMessage, RtrPrefix] = {
     val asn = validateParameter("asn", required(parseAsn))
     val prefix = validateParameter("prefix", required(parseIpPrefix))
     val maxPrefixLength = validateParameter("maxPrefixLength", optional(parseInt))

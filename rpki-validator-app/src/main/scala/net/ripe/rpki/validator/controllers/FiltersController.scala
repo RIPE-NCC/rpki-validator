@@ -31,16 +31,13 @@ package net.ripe.rpki.validator
 package controllers
 
 import net.ripe.ipresource.IpRange
-import org.scalatra.ScalatraKernel
-import org.scalatra.MethodOverride
 import scalaz._
 import Scalaz._
-
 import lib.Validation._
 import models._
 import views.FiltersView
 
-trait FiltersController extends ApplicationController with MethodOverride {
+trait FiltersController extends ApplicationController {
   protected def filters: Filters
   protected def addFilter(filter: IgnoreFilter): Unit
   protected def removeFilter(filter: IgnoreFilter): Unit
@@ -49,7 +46,7 @@ trait FiltersController extends ApplicationController with MethodOverride {
   private def baseUrl = views.Tabs.FiltersTab.url
 
   get(baseUrl) {
-    new FiltersView(filters)
+    new FiltersView(filters, messages = feedbackMessages)
   }
 
   post(baseUrl) {
@@ -59,7 +56,7 @@ trait FiltersController extends ApplicationController with MethodOverride {
           new FiltersView(filters, params, Seq(ErrorMessage("filter already exists")))
         else {
           addFilter(entry)
-          redirect(baseUrl)
+          redirectWithFeedbackMessages(baseUrl, Seq(SuccessMessage("The prefix has been added to the filters.")))
         }
       case Failure(errors) =>
         new FiltersView(filters, params, errors)
@@ -71,7 +68,7 @@ trait FiltersController extends ApplicationController with MethodOverride {
       case Success(entry) =>
         if (filterExists(entry)) {
           removeFilter(entry)
-          redirect(baseUrl)
+          redirectWithFeedbackMessages(baseUrl, Seq(SuccessMessage("The prefix has been removed from the filters.")))
         } else {
           new FiltersView(filters, params, Seq(ErrorMessage("filter no longer exists")))
         }
@@ -81,7 +78,7 @@ trait FiltersController extends ApplicationController with MethodOverride {
     }
   }
 
-  private def submittedFilter: ValidationNEL[ErrorMessage, IgnoreFilter] = {
+  private def submittedFilter: ValidationNEL[FeedbackMessage, IgnoreFilter] = {
     validateParameter("prefix", required(parseIpPrefix)) map IgnoreFilter
   }
 }
