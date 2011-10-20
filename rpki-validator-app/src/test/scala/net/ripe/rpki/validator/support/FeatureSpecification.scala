@@ -31,6 +31,7 @@ package net.ripe.rpki.validator
 package support
 
 import org.junit.runner.RunWith
+
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers

@@ -38,28 +38,15 @@ import models._
 import scalaz.NonEmptyList
 import net.ripe.rpki.validator.lib.Validation.ErrorMessage
 
-class WhitelistView(whitelist: Whitelist, params: Map[String, String] = Map.empty, errors: Seq[ErrorMessage] = Seq.empty) extends View {
+class WhitelistView(whitelist: Whitelist, params: Map[String, String] = Map.empty, errors: Seq[ErrorMessage] = Seq.empty) extends View with ViewHelpers {
   private val fieldNameToText = Map("asn" -> "Origin", "prefix" -> "Prefix", "maxPrefixLength" -> "Maximum prefix length")
 
   def tab = Tabs.WhitelistTab
   def title = Text("Whitelist")
   def body = {
-    <div>
-      <h2>Add entry</h2>
-      <p>By adding a whitelisted announcement the validator will ensure that all routers receive this announcement, irrespective of the actual validated ROAs.</p>
-    </div>
-    <div>{
-      if (errors.nonEmpty) {
-        <div class="alert-message block-message error">
-          <strong>Please fix the following errors and resubmit the form</strong>
-          <ul>
-            {
-              for (error <- errors) yield <li>{ error.fieldName.map(name => fieldNameToText(name) + ": ").getOrElse("") + error.message }</li>
-            }
-          </ul>
-        </div>
-      }
-    }</div>
+    <p>By adding a whitelisted announcement the validator will ensure that all routers receive this announcement, irrespective of the actual validated ROAs.</p>
+    <h2>Add entry</h2>
+    <div>{ renderErrors(errors, fieldNameToText) }</div>
     <div class="well">
       <form method="POST" class="form-stacked">
         <fieldset>
@@ -85,7 +72,7 @@ class WhitelistView(whitelist: Whitelist, params: Map[String, String] = Map.empt
       </form>
     </div>
     <div>
-      <h2>Current entries</h2><br/>{
+      <h2>Current entries</h2>{
         if (whitelist.entries.isEmpty)
           <div class="alert-message block-message"><p>No whitelist entries defined.</p></div>
         else {

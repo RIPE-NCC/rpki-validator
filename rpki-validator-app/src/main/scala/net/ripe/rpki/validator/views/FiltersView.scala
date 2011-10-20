@@ -38,28 +38,15 @@ import models._
 import scalaz.NonEmptyList
 import net.ripe.rpki.validator.lib.Validation.ErrorMessage
 
-class FiltersView(filters: Filters, params: Map[String, String] = Map.empty, errors: Seq[ErrorMessage] = Seq.empty) extends View {
+class FiltersView(filters: Filters, params: Map[String, String] = Map.empty, errors: Seq[ErrorMessage] = Seq.empty) extends View with ViewHelpers {
   private val fieldNameToText = Map("prefix" -> "Prefix")
 
   def tab = Tabs.FiltersTab
   def title = Text(tab.text)
   def body = {
-    <div>
-      <h2>Add filter</h2>
-      <p>By adding a filter the validator will ignore any RPKI prefixes that overlap with the filter's prefix.</p>
-    </div>
-    <div>{
-      if (errors.nonEmpty) {
-        <div class="alert-message block-message error">
-          <strong>Please fix the following errors and resubmit the form</strong>
-          <ul>
-            {
-              for (error <- errors) yield <li>{ error.fieldName.map(name => fieldNameToText(name) + ": ").getOrElse("") + error.message }</li>
-            }
-          </ul>
-        </div>
-      }
-    }</div>
+    <p>By adding a filter the validator will ignore any RPKI prefixes that overlap with the filter's prefix.</p>
+    <h2>Add filter</h2>
+    <div>{ renderErrors(errors, fieldNameToText) }</div>
     <div class="well">
       <form method="POST" class="form-stacked">
         <fieldset>
@@ -77,7 +64,7 @@ class FiltersView(filters: Filters, params: Map[String, String] = Map.empty, err
       </form>
     </div>
     <div>
-      <h2>Current entries</h2><br/>{
+      <h2>Current filters</h2>{
         if (filters.entries.isEmpty)
           <div class="alert-message block-message"><p>No filters defined.</p></div>
         else {

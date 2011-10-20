@@ -52,6 +52,9 @@ td.warning {
 }
 
 /* Datatables */
+.dataTables_wrapper {
+	padding-top: 9px;
+}
 .paging_full_numbers {
 	height: 36px;
 	margin: 18px 0;
