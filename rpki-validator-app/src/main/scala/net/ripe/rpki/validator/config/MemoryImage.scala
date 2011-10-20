@@ -49,34 +49,8 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
 
   def removeWhitelistEntry(entry: RtrPrefix) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
 
-  def getDistinctRtrPrefixes(): Set[RtrPrefix] = {
-    //val result: mutable.Set[RtrPrefix] = new HashSet[RtrPrefix]()
-
-    val result = for {
-      validatedRoas <- roas.all.values if validatedRoas.isDefined
-      validatedRoa <- validatedRoas.get
-      roa = validatedRoa.roa
-      roaPrefix <- roa.getPrefixes().asScala
-    } yield {
-      new RtrPrefix(roa.getAsn, roaPrefix.getPrefix,
-        if (roaPrefix.getMaximumLength == null) None else Some(roaPrefix.getMaximumLength))
-    }
-
-    Set.empty[RtrPrefix] ++ whitelist.entries ++ result
-  }
-
-
-//  {
-//    val pairs = for {
-//      (_, validatedRoas) <- getCurrentRoas.apply().all.toSeq if validatedRoas.isDefined
-//      validatedRoa <- validatedRoas.get.sortBy(_.roa.getAsn().getValue())
-//      roa = validatedRoa.roa
-//      prefix <- roa.getPrefixes().asScala
-//    } yield {
-//      (prefix, roa.getAsn)
-//    }
-//    pairs.distinct
-//  }
+  def getDistinctRtrPrefixes(): Set[RtrPrefix] =
+    Set.empty[RtrPrefix] ++ whitelist.entries ++ filters.filter(roas.getValidatedRtrPrefixes)
 
   def addFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.addFilter(filter))
 

@@ -50,12 +50,21 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
   var validatedRoas: Roas = null
   var tal: TrustAnchorLocator = null
 
-  val ASN1 = Asn.parse("AS65000")
-  val ASN2 = Asn.parse("AS65001")
+  val ASN1 = new Asn(65000)
+  val ASN2 = new Asn(65001)
+  val ASN3 = new Asn(65003)
 
   val ROA_PREFIX_V4_1 = new RoaPrefix(IpRange.parse("10.64.0.0/12"), 24)
   val ROA_PREFIX_V4_2 = new RoaPrefix(IpRange.parse("10.32.0.0/12"), null)
   val ROA_PREFIX_V6_1 = new RoaPrefix(IpRange.parse("2001:0:200::/39"), null)
+  val WHITELIST_PREFIX_1: IpRange = IpRange.parse("10.0.0.0/8")
+  val UNUSED_PREFIX_FOR_FILTER = IpRange.parse("192.168.1.0/8")
+
+  val ASN1_TO_ROA_PREFIX_V4_2: RtrPrefix = RtrPrefix.validate(ASN1, ROA_PREFIX_V4_2.getPrefix, None).toOption.get
+  val ASN1_TO_ROA_PREFIX_V6_1: RtrPrefix = RtrPrefix.validate(ASN1, ROA_PREFIX_V6_1.getPrefix, None).toOption.get
+  val ASN1_TO_PREFIX_V4_1: RtrPrefix = RtrPrefix.validate(ASN1, ROA_PREFIX_V4_1.getPrefix, Option(ROA_PREFIX_V4_1.getMaximumLength)).toOption.get
+  val ASN2_TO_ROA_PREFIX_V4_1: RtrPrefix = RtrPrefix.validate(ASN2, ROA_PREFIX_V4_1.getPrefix, Option(ROA_PREFIX_V4_1.getMaximumLength)).toOption.get
+  val ASN3_TO_WHITELIST1: RtrPrefix = RtrPrefix.validate(ASN3, WHITELIST_PREFIX_1, None).toOption.get
 
   override def beforeAll() = {
     trustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
@@ -70,12 +79,79 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
     val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
 
     distinctRoaPrefixes.size should equal(4)
-    distinctRoaPrefixes should contain (RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix, Option(ROA_PREFIX_V4_1.getMaximumLength)))
-    distinctRoaPrefixes should contain (RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix, None))
-    distinctRoaPrefixes should contain (RtrPrefix(ASN1, ROA_PREFIX_V6_1.getPrefix, None))
-    distinctRoaPrefixes should contain (RtrPrefix(ASN2, ROA_PREFIX_V4_1.getPrefix, Option(ROA_PREFIX_V4_1.getMaximumLength)))
+    distinctRoaPrefixes should contain (ASN1_TO_PREFIX_V4_1)
+    distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V4_2)
+    distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V6_1)
+    distinctRoaPrefixes should contain (ASN2_TO_ROA_PREFIX_V4_1)
   }
 
+  test("Should list whitelist entries when no roas") {
+    subject = new MemoryImage(Filters(), getWhitelist(), trustAnchors, Roas(trustAnchors))
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+
+    distinctRoaPrefixes.size should equal(1)
+    distinctRoaPrefixes should contain (ASN3_TO_WHITELIST1)
+  }
+
+  test("Should mix whitelist entries with roas for same prefix") {
+    val whitelist = getWhitelist().addEntry(ASN1_TO_ROA_PREFIX_V4_2)
+
+    subject = new MemoryImage(Filters(), whitelist, trustAnchors, getValidatedRoas())
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+
+    distinctRoaPrefixes.size should equal(5)
+    distinctRoaPrefixes should contain (ASN1_TO_PREFIX_V4_1)
+    distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V4_2)
+    distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V6_1)
+    distinctRoaPrefixes should contain (ASN2_TO_ROA_PREFIX_V4_1)
+    distinctRoaPrefixes should contain (ASN3_TO_WHITELIST1)
+  }
+
+  test("Should mix whitelist entries with roas for same prefix and a filter") {
+    val whitelist = getWhitelist().addEntry(ASN1_TO_ROA_PREFIX_V4_2)
+
+    subject = new MemoryImage(getFilters(), whitelist, trustAnchors, getValidatedRoas())
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+
+    distinctRoaPrefixes.size should equal(4)
+    distinctRoaPrefixes should contain (ASN1_TO_PREFIX_V4_1)
+    distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V4_2)
+    distinctRoaPrefixes should contain (ASN2_TO_ROA_PREFIX_V4_1)
+    distinctRoaPrefixes should contain (ASN3_TO_WHITELIST1)
+  }
+
+  test("Should mix whitelist entries with roas for same prefix and more than one filter") {
+    val whitelist = getWhitelist().addEntry(ASN1_TO_ROA_PREFIX_V4_2)
+
+    val filters: Filters = getFilters().addFilter(new IgnoreFilter(UNUSED_PREFIX_FOR_FILTER))
+
+    subject = new MemoryImage(filters, whitelist, trustAnchors, getValidatedRoas())
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+
+    distinctRoaPrefixes.size should equal(4)
+    distinctRoaPrefixes should contain (ASN1_TO_PREFIX_V4_1)
+    distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V4_2)
+    distinctRoaPrefixes should contain (ASN2_TO_ROA_PREFIX_V4_1)
+    distinctRoaPrefixes should contain (ASN3_TO_WHITELIST1)
+  }
+
+  test("Should prevail whitelist entry over roa prefix filtered out by filter") {
+    val whitelist = getWhitelist().addEntry(ASN1_TO_ROA_PREFIX_V6_1)
+
+    subject = new MemoryImage(getFilters(), whitelist, trustAnchors, getValidatedRoas())
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+
+    distinctRoaPrefixes.size should equal(5)
+    distinctRoaPrefixes should contain (ASN1_TO_PREFIX_V4_1)
+    distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V4_2)
+    distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V6_1)
+    distinctRoaPrefixes should contain (ASN2_TO_ROA_PREFIX_V4_1)
+    distinctRoaPrefixes should contain (ASN3_TO_WHITELIST1)
+  }
+
+  def getFilters(): Filters = {
+    new Filters(Set(new IgnoreFilter(ROA_PREFIX_V6_1.getPrefix)))
+  }
 
   def getTalForTesting() = {
     val file: File = new File("/tmp")
@@ -88,8 +164,6 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
   }
 
   def getValidatedRoas() = {
-        // TODO: use the method that allows explicit list of roa prefixes for testing
-
 
     val prefixes1 = List[RoaPrefix](
         ROA_PREFIX_V4_1,
@@ -123,7 +197,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
     new Roas(map)
   }
 
-  def getWhitelist() {
-    Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), None).toOption.get))
+  def getWhitelist() = {
+    Whitelist(Set(ASN3_TO_WHITELIST1))
   }
 }

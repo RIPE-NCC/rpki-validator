@@ -37,7 +37,7 @@ import net.ripe.ipresource.{IpRange, Asn}
 import lib.Validation._
 
 
-case class RtrPrefix (val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int])
+case class RtrPrefix  (val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int])
 
 object RtrPrefix {
   def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): ValidationNEL[ErrorMessage, RtrPrefix] = {

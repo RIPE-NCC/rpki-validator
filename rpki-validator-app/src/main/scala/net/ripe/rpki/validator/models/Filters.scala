@@ -37,4 +37,22 @@ case class IgnoreFilter(prefix: IpRange)
 case class Filters(entries: Set[IgnoreFilter] = Set.empty) {
   def addFilter(filter: IgnoreFilter) = copy(entries + filter)
   def removeFilter(filter: IgnoreFilter) = copy(entries - filter)
+
+  def filter(input: Iterable[RtrPrefix]): Iterable[RtrPrefix] = {
+    for {
+      rtrPrefix <- input
+      if (! shouldBeFiltered(rtrPrefix))
+    } yield {
+      rtrPrefix
+    }
+  }
+
+  private def shouldBeFiltered(rtrPrefix: RtrPrefix) = {
+    val prefix = rtrPrefix.prefix
+    var result = false
+    entries.foreach(ignoreFilter => if (ignoreFilter.prefix.overlaps(prefix)) {
+      result = true
+    })
+    result
+  }
 }

@@ -67,6 +67,18 @@ class Roas(val all: Map[String, Option[Seq[ValidatedRoa]]]) {
 
   logger.trace(msg)
 
+  def getValidatedRtrPrefixes = {
+    for {
+      validatedRoas <- all.values if validatedRoas.isDefined
+      validatedRoa <- validatedRoas.get
+      roa = validatedRoa.roa
+      roaPrefix <- roa.getPrefixes().asScala
+    } yield {
+      new RtrPrefix(roa.getAsn, roaPrefix.getPrefix,
+        if (roaPrefix.getMaximumLength == null) None else Some(roaPrefix.getMaximumLength))
+    }
+  }
+
   def update(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) = {
     new Roas(all.updated(tal.getCaName(), Some(validatedRoas)))
   }
