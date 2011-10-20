@@ -36,29 +36,57 @@ import scala.xml.Text
 import scala.xml.NodeSeq
 import scala.collection.SortedMap
 import lib.DateAndTime._
-import models.TrustAnchors
+import lib.Validation._
+import models._
 
-class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime) extends View {
+class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   def tab = Tabs.TrustAnchorsTab
   def title = Text("Configured Trust Anchors")
   def body = {
+    <div>{ renderMessages(messages, identity) }</div>
     <table class="zebra-striped">
       <thead>
         <th>CA Name</th>
         <th>Subject</th>
         <th>Expires in</th>
-        <th>Location</th>
+        <th>Last updated</th>
+        <th>Next update in</th>
+        <th>
+          <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
+            {
+              if (trustAnchors.all.forall(_.status.isRunning))
+                <input type="submit" class="btn primary span2" value="update all" disabled="disabled"/>
+              else
+                <input type="submit" class="btn primary span2" value="update all"/>
+            }
+          </form>
+        </th>
       </thead>
       <tbody>{
         for (ta <- sortedTrustAnchors) yield {
           <tr>
             <td>{ ta.name }</td>{
-              if (ta.certificate.isDefined) {
-                <td>{ ta.certificate.get.getCertificate().getSubject() }</td>
-                <td>{ expiresIn(ta.certificate.get.getCertificate().getValidityPeriod().getNotValidAfter()) }</td>
-                <td>{ ta.certificate.get.getLocation() }</td>
-              } else {
-                <td colspan="3" class="info">Loading...</td>
+              ta.certificate match {
+                case Some(certificate) =>
+                  <td>{ certificate.getCertificate().getSubject() }</td>
+                  <td>{ expiresIn(certificate.getCertificate().getValidityPeriod().getNotValidAfter()) }</td>
+                case None =>
+                  <td></td>
+                  <td></td>
+              }
+            }<td>{ ta.lastUpdated.map(lastUpdated => periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago").getOrElse(NodeSeq.Empty) }</td>{
+              ta.status match {
+                case Running(description) =>
+                  <td>{ description }</td>
+                  <td><div class="span2" style="text-align: center;"><img src="/images/spinner.gif"/></div></td>
+                case Idle(nextUpdate) =>
+                  <td>{ if (now.isBefore(nextUpdate)) periodInWords(new Period(now, nextUpdate).withMillis(0), number = 2) else "any moment" }</td>
+                  <td>
+                    <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
+                      <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
+                      <input type="submit" class="btn span2" value="update"/>
+                    </form>
+                  </td>
               }
             }
           </tr>
@@ -69,8 +97,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime)
 
   private def expiresIn(notValidAfter: DateTime): NodeSeq = {
     if (now.isBefore(notValidAfter)) {
-      val period = keepMostSignificantPeriodFields(new Period(now, notValidAfter), number = 2)
-      Text(PeriodFormat.getDefault().print(period))
+      Text(periodInWords(new Period(now, notValidAfter)))
     } else {
       <strong>EXPIRED</strong>
     }

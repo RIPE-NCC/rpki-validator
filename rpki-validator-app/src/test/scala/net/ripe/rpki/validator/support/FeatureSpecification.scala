@@ -45,6 +45,7 @@ import models._
 @RunWith(classOf[JUnitRunner])
 abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatchers with MockitoSugar {
   addFilter(new WebFilter {
+    override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = sys.error("TODO")
     override protected def filters = sys.error("TODO")
     override protected def addFilter(filter: IgnoreFilter) = sys.error("TODO")
     override protected def removeFilter(filter: IgnoreFilter) = sys.error("TODO")

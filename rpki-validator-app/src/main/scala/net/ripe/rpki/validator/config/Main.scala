@@ -31,26 +31,19 @@ package net.ripe.rpki.validator
 package config
 
 import java.io.File
-
 import scala.collection.JavaConverters._
-
+import scala.concurrent.TaskRunners
+import scala.concurrent.ops._
 import org.apache.commons.io.FileUtils
 import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.servlet.DefaultServlet
-import org.eclipse.jetty.servlet.FilterHolder
-import org.eclipse.jetty.servlet.FilterMapping
-import org.eclipse.jetty.servlet.ServletContextHandler
-import org.eclipse.jetty.servlet.ServletHolder
-
+import org.eclipse.jetty.servlet._
 import grizzled.slf4j.Logger
-import java.{ util => ju }
 import net.ripe.certification.validator.util.TrustAnchorExtractor
-import scalaz.concurrent.Promise
-
 import lib._
 import models._
 import net.ripe.rpki.validator.rtr.Pdu
 import net.ripe.rpki.validator.rtr.RTRServer
+import org.joda.time.DateTime
 
 object Main {
 
@@ -75,7 +68,7 @@ object Main {
       MemoryImage(data.filters, data.whitelist, trustAnchors, roas),
       memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
 
-    runValidator(trustAnchors)
+    scheduleValidator()
     runWebServer(options, dataFile)
     runRtrServer(options)
   }
@@ -91,17 +84,32 @@ object Main {
     TrustAnchors.load(tals.asScala, "tmp/tals")
   }
 
-  def runValidator(trustAnchors: TrustAnchors) {
-    for (ta <- trustAnchors.all) {
-      Promise {
+  private def scheduleValidator() {
+    implicit val runner = TaskRunners.threadRunner
+    spawn {
+      Thread.currentThread().setName("validator-scheduler")
+      while (true) {
+        val trustAnchors = memoryImage.get.trustAnchors
+        val now = new DateTime
+        val needUpdating = for (ta <- trustAnchors.all; Idle(nextUpdate) = ta.status if now.isAfter(nextUpdate)) yield ta
+        runValidator(needUpdating)
+        Thread.sleep(10000L)
+      }
+    }
+  }
+
+  def runValidator(trustAnchors: Seq[TrustAnchor]) {
+    implicit val runner = TaskRunners.threadPoolRunner
+    for (ta <- trustAnchors; Idle(_) = ta.status) {
+      memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
+      spawn {
         val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
         logger.info("Loaded trust anchor from location " + certificate.getLocation())
-        memoryImage.update {
-          db => db.updateTrustAnchor(ta.locator, certificate)
-        }
+        memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating ROAs") }
+
         val validatedRoas = Roas.fetchObjects(ta.locator, certificate)
         memoryImage.update {
-          db => db.updateRoas(ta.locator, validatedRoas)
+          _.updateRoas(ta.locator, validatedRoas).finishedProcessingTrustAnchor(ta.locator, certificate)
         }
       }
     }
@@ -126,7 +134,9 @@ object Main {
         }
       }
 
-      override def runValidator() = Main.runValidator(trustAnchors)
+      override def runValidator() = Main.runValidator(trustAnchors.all)
+
+      override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = Main.runValidator(trustAnchors)
 
       override def trustAnchors = memoryImage.get.trustAnchors
 

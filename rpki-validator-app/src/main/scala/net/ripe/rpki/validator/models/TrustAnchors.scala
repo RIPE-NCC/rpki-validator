@@ -38,16 +38,40 @@ import net.ripe.commons.certification.x509cert.X509ResourceCertificate
 import net.ripe.certification.validator.util.TrustAnchorExtractor
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import scalaz.concurrent.Promise
+import org.joda.time.DateTime
 
-class TrustAnchor(val locator: TrustAnchorLocator, val certificate: Option[CertificateRepositoryObjectValidationContext]) {
+sealed trait ProcessingStatus {
+  def isIdle: Boolean
+  def isRunning: Boolean = !isIdle
+}
+case class Idle(nextUpdate: DateTime) extends ProcessingStatus {
+  def isIdle = true
+}
+case class Running(description: String) extends ProcessingStatus {
+  def isIdle = false
+}
+
+case class TrustAnchor(
+    locator: TrustAnchorLocator,
+    status: ProcessingStatus,
+    certificate: Option[CertificateRepositoryObjectValidationContext],
+    lastUpdated: Option[DateTime] = None) {
   def name: String = locator.getCaName()
   def prefetchUris: Seq[URI] = locator.getPrefetchUris().asScala
 }
 
 class TrustAnchors(val all: Seq[TrustAnchor]) {
-  def update(locator: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext): TrustAnchors = {
+  def startProcessing(locator: TrustAnchorLocator, description: String) = {
     new TrustAnchors(all.map { ta =>
-      if (ta.locator == locator) new TrustAnchor(locator, Some(certificate))
+      if (ta.locator == locator) ta.copy(status = Running(description))
+      else ta
+    })
+  }
+  def finishedProcessing(locator: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext): TrustAnchors = {
+    val now = new DateTime
+    val nextUpdate = now.plusHours(4)
+    new TrustAnchors(all.map { ta =>
+      if (ta.locator == locator) ta.copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = Some(certificate))
       else ta
     })
   }
@@ -55,11 +79,13 @@ class TrustAnchors(val all: Seq[TrustAnchor]) {
 
 object TrustAnchors extends Logging {
   def load(files: Seq[File], outputDirectory: String): TrustAnchors = {
+    val now = new DateTime
     info("Loading trust anchors...")
     val trustAnchors = for (file <- files) yield {
       val tal = TrustAnchorLocator.fromFile(file)
       new TrustAnchor(
         locator = tal,
+        status = Idle(now),
         certificate = None)
     }
     new TrustAnchors(trustAnchors)

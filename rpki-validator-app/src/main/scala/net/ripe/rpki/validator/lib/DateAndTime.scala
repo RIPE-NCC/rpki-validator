@@ -31,8 +31,13 @@ package net.ripe.rpki.validator
 package lib
 
 import org.joda.time._
+import org.joda.time.format.PeriodFormat
 
 object DateAndTime {
+  def periodInWords(period: Period, number: Int = 2): String = {
+    PeriodFormat.getDefault().print(keepMostSignificantPeriodFields(period, number))
+  }
+
   def keepMostSignificantPeriodFields(period: Period, number: Int): Period = {
     val values = period.getValues()
     val mostSignificantField = values.indexWhere(_ != 0)

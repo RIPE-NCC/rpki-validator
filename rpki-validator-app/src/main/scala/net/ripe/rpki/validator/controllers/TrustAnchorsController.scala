@@ -31,14 +31,29 @@ package net.ripe.rpki.validator
 package controllers
 
 import org.scalatra.ScalatraKernel
-import models.TrustAnchors
-import net.ripe.rpki.validator.config.Main
+import scalaz._, Scalaz._
+import models._
+import lib.Validation._
 
 trait TrustAnchorsController extends ApplicationController {
-  def trustAnchors: TrustAnchors
+  protected def trustAnchors: TrustAnchors
+  protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor])
 
   get("/trust-anchors") {
-    new views.TrustAnchorsView(trustAnchors)
+    new views.TrustAnchorsView(trustAnchors, messages = feedbackMessages)
   }
 
+  post("/trust-anchors/update") {
+    validateParameter("name", required(trustAnchorByName)) match {
+      case Success(trustAnchor) =>
+        startTrustAnchorValidation(Seq(trustAnchor))
+        redirectWithFeedbackMessages("/trust-anchors", Seq(InfoMessage("Started validation of trust anchor " + trustAnchor.name)))
+      case Failure(_) =>
+        startTrustAnchorValidation(trustAnchors.all)
+        redirectWithFeedbackMessages("/trust-anchors", Seq(InfoMessage("Started validation of all trust anchors.")))
+    }
+  }
+
+  private def trustAnchorByName(s: String): Validation[String, TrustAnchor] =
+    trustAnchors.all.find(_.name == s).map(_.success).getOrElse(("No trust anchor with name '" + s + "' found").fail)
 }
