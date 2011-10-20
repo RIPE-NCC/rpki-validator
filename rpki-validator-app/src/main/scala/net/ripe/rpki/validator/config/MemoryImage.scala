@@ -31,8 +31,6 @@ package net.ripe.rpki.validator
 package config
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
-import mutable.HashSet
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import org.joda.time.DateTime
@@ -64,7 +62,7 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
         if (roaPrefix.getMaximumLength == null) None else Some(roaPrefix.getMaximumLength))
     }
 
-    Set.empty[RtrPrefix] ++ result
+    Set.empty[RtrPrefix] ++ whitelist.entries ++ result
   }
 
 
