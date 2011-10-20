@@ -31,15 +31,18 @@ package net.ripe.rpki.validator.views
 
 import scala.xml._
 import net.ripe.rpki.validator.rtr._
+import org.joda.time.DateTime
 
-class RtrLogView extends View {
+class RtrLogView(version: Int, lastUpdateTime: DateTime) extends View {
 
   def tab = Tabs.RtrLogTab
   def title = Text("RPKI-RTR Activity Log")
   def body = {
     <div class="alert-message block-message info">
-        <p>RPKI - RTR Activity log</p>
-        <p>Log size: { RtrPduLog.pduLog.size } </p>
+      <p>RPKI - RTR Activity log</p>
+      <p>Log size: { RtrPduLog.pduLog.size } </p>
+      <p>Current serial of validated roa cache: <strong>{ version }</strong>.</p>
+      <p>Last cache update time: <strong>{ lastUpdateTime }</strong>.</p>
     </div>
     <table id="log-table" class="zebra-striped" style="display: none;">
       <thead>
@@ -78,7 +81,6 @@ $(document).ready(function() {
     }).show();
 });
 // --></script>
-
   }
 
   def logBinaryContent(content: Array[Byte]) = {
@@ -89,5 +91,4 @@ $(document).ready(function() {
       }
     }</pre>
   }
-
 }

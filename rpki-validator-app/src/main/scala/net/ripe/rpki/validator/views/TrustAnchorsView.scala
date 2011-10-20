@@ -78,7 +78,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
               ta.status match {
                 case Running(description) =>
                   <td>{ description }</td>
-                  <td><div class="span2" style="text-align: center;"><img src="/images/spinner.gif"/></div></td>
+                  <td style="text-align: center;"><img src="/images/spinner.gif"/></td>
                 case Idle(nextUpdate) =>
                   <td>{ if (now.isBefore(nextUpdate)) periodInWords(new Period(now, nextUpdate).withMillis(0), number = 2) else "any moment" }</td>
                   <td>

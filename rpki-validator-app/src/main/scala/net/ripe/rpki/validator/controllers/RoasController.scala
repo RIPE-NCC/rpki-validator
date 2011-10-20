@@ -39,18 +39,10 @@ import net.ripe.rpki.validator.config.Main
 import models._
 
 trait RoasController extends ApplicationController {
-  protected def runValidator(): Unit
   protected def roas: Roas
-  protected def version: Int
-  protected def lastUpdateTime: DateTime
 
   get("/roas") {
-    new RoasView(roas, version, lastUpdateTime)
-  }
-
-  get("/update-roas") {
-    runValidator()
-    redirect("/roas")
+    new RoasView(roas)
   }
 
   get("/roas.csv") {

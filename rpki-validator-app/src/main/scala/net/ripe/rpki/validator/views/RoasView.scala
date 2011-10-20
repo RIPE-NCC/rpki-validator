@@ -40,7 +40,7 @@ import net.ripe.rpki.validator.models.ValidatedRoa
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import org.joda.time.DateTime
 
-class RoasView(roas: Roas, version: Int, lastUpdateTime: DateTime) extends View {
+class RoasView(roas: Roas) extends View {
   def tab = Tabs.RoasTab
   def title = Text("Validated ROAs")
   def body = {
@@ -86,15 +86,6 @@ $(document).ready(function() {
     }).show();
 });
 // --></script>
-    <div class="alert-message block-message info">
-      {
-          <p>Last update time: <strong>{ lastUpdateTime.toString() }</strong></p>
-          <p>Current serial of validated roa cache: <strong>{ version }</strong>.</p>
-      }
-      <div class="alert-actions">
-        <a href="update-roas" class="btn small">Update now</a>
-      </div>
-    </div>
   }
 
   private def optional(condition: Boolean, body: => NodeSeq) = if (condition) body else NodeSeq.Empty

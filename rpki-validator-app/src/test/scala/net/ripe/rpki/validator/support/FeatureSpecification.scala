@@ -56,6 +56,5 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
     override lazy val roas = sys.error("TBD")
     override lazy val version = sys.error("TBD")
     override val lastUpdateTime = new DateTime
-    override protected def runValidator() = sys.error("TODO")
   }, "/*")
 }

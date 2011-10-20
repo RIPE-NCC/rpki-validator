@@ -134,8 +134,6 @@ object Main {
         }
       }
 
-      override def runValidator() = Main.runValidator(trustAnchors.all)
-
       override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = Main.runValidator(trustAnchors)
 
       override def trustAnchors = memoryImage.get.trustAnchors
