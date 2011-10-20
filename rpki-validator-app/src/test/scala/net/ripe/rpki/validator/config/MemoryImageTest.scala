@@ -43,6 +43,7 @@ import net.ripe.certification.validator.util.TrustAnchorLocator
 import collection.mutable.HashMap
 import net.ripe.rpki.validator.models._
 
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
 
   var subject: MemoryImage = null
@@ -58,7 +59,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
   val ROA_PREFIX_V4_2 = new RoaPrefix(IpRange.parse("10.32.0.0/12"), null)
   val ROA_PREFIX_V6_1 = new RoaPrefix(IpRange.parse("2001:0:200::/39"), null)
   val WHITELIST_PREFIX_1: IpRange = IpRange.parse("10.0.0.0/8")
-  val UNUSED_PREFIX_FOR_FILTER = IpRange.parse("192.168.1.0/8")
+  val UNUSED_PREFIX_FOR_FILTER = IpRange.parse("192.168.1.0/24")
 
   val ASN1_TO_ROA_PREFIX_V4_2: RtrPrefix = RtrPrefix.validate(ASN1, ROA_PREFIX_V4_2.getPrefix, None).toOption.get
   val ASN1_TO_ROA_PREFIX_V6_1: RtrPrefix = RtrPrefix.validate(ASN1, ROA_PREFIX_V6_1.getPrefix, None).toOption.get
