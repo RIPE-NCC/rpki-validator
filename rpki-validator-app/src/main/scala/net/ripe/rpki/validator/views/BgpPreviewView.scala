@@ -27,29 +27,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package config
+package net.ripe.rpki.validator.views
+import scala.xml.Text
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
+class BgpPreviewView extends View with ViewHelpers {
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with RoasController
-  with TrustAnchorsController
-  with RtrLogController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController {
+  def tab = Tabs.BgpPreviewTab
+  def title = Text("BGP Preview")
+  def body = { <div> Hello, BGP </div> }
 
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(Layouts.standard(view))
-  }
-
-  override protected def renderPipeline = renderView orElse super.renderPipeline
 }

@@ -28,28 +28,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package config
+package controllers
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
+import views.BgpPreviewView
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with RoasController
-  with TrustAnchorsController
-  with RtrLogController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController {
+trait BgpPreviewController extends ApplicationController {
 
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(Layouts.standard(view))
+  private def baseUrl = views.Tabs.BgpPreviewTab.url
+
+  get(baseUrl) {
+    new BgpPreviewView()
   }
 
-  override protected def renderPipeline = renderView orElse super.renderPipeline
 }

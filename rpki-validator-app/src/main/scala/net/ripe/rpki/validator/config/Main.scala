@@ -44,6 +44,10 @@ import models._
 import net.ripe.rpki.validator.rtr.Pdu
 import net.ripe.rpki.validator.rtr.RTRServer
 import org.joda.time.DateTime
+import scalaz.concurrent.Promise
+import net.ripe.rpki.validator.bgp.preview.BgpRisEntry
+import net.ripe.rpki.validator.bgp.preview.RisWhoisParser
+import org.joda.time.DateTime
 
 object Main {
 
@@ -68,8 +72,9 @@ object Main {
       MemoryImage(data.filters, data.whitelist, trustAnchors, roas),
       memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
 
+    val bgpInfoPromise = fetchCurrentBgpTable()
     scheduleValidator()
-    runWebServer(options, dataFile)
+    runWebServer(options, dataFile, bgpInfoPromise)
     runRtrServer(options)
   }
 
@@ -114,8 +119,15 @@ object Main {
       }
     }
   }
+  
+  def fetchCurrentBgpTable() = {
+    Promise {
+      RisWhoisParser.parseFile(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")) ++
+      RisWhoisParser.parseFile(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz"))
+    }
+  }
 
-  def setup(server: Server, dataFile: File): Server = {
+  def setup(server: Server, dataFile: File, bgpInfoPromise: Promise[Set[BgpRisEntry]]): Server = {
     import org.eclipse.jetty.servlet._
     import org.scalatra._
 
@@ -156,8 +168,8 @@ object Main {
     server
   }
 
-  private def runWebServer(options: Options, dataFile: File): Unit = {
-    val server = setup(new Server(options.httpPort), dataFile)
+  private def runWebServer(options: Options, dataFile: File, bgpInfoPromise: Promise[Set[BgpRisEntry]]): Unit = {
+    val server = setup(new Server(options.httpPort), dataFile, bgpInfoPromise)
 
     sys.addShutdownHook({
       server.stop()

@@ -27,29 +27,42 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package config
+package net.ripe.rpki.validator.bgp.preview
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
+import org.scalatest.FunSuite
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.ShouldMatchers
+import net.ripe.ipresource._
+import java.net.URL
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with RoasController
-  with TrustAnchorsController
-  with RtrLogController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController {
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+class RisWhoisTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
 
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(Layouts.standard(view))
+  test("should parse empty line") {
+    RisWhoisParser.parseLine("") should equal(None)
   }
 
-  override protected def renderPipeline = renderView orElse super.renderPipeline
+  test("should parse comment line") {
+    RisWhoisParser.parseLine("% this is some comment") should equal(None)
+  }
+
+  test("should parse IPv4 announcement") {
+    val entry = RisWhoisParser.parseLine("3333\t127.0.0.0/8\t201\n")
+    entry should equal(Some(new BgpRisEntry(origin = new Asn(3333), prefix = IpRange.parse("127.0.0.0/8"), visibility = 201)))
+  }
+
+  test("should parse IPv6 announcement") {
+    val entry = RisWhoisParser.parseLine("24490\t2001:254:8000::/33\t62\n")
+    entry should equal(Some(new BgpRisEntry(origin = new Asn(24490), prefix = IpRange.parse("2001:254:8000::/33"), visibility = 62)))
+  }
+  
+  test("should read remote file") {
+    val url = Thread.currentThread().getContextClassLoader().getResource("ris/riswhoisdump-head-1000.IPv4.gz")
+    
+    val entries = RisWhoisParser.parseFile(url)
+    entries.size should equal (42 * 2) /// and don't ask why! 
+    entries should contain (new BgpRisEntry(origin = new Asn(45528), prefix = IpRange.parse("1.22.120.0/24"), visibility = 105))
+  }
+
 }
