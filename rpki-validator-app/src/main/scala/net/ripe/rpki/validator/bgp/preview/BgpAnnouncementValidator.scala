@@ -31,6 +31,7 @@ package net.ripe.rpki.validator
 package bgp.preview
 
 import scalaz.concurrent.Promise
+
 import collection.JavaConversions._
 
 import net.ripe.commons.certification.validation.roa.RouteOriginValidationPolicy
@@ -47,64 +48,61 @@ object BgpAnnouncementValidator {
 
   val validationPolicy: RouteOriginValidationPolicy = new RouteOriginValidationPolicy()
 
-  val announcedRoutes = Promise {
+  val announcedRoutes: Promise[Set[AnnouncedRoute]] = Promise {
     val bgpEntries =
       RisWhoisParser.parseFile(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")) ++
         RisWhoisParser.parseFile(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz"))
 
-    for {
-      entry <- bgpEntries
-      if entry.visibility >= VISIBILITY_THRESHOLD
-    } yield {
-      new AnnouncedRoute(entry.origin, entry.prefix)
-    }
+    bgpEntries
+      .filter(_.visibility >= VISIBILITY_THRESHOLD)
+      .map(entry => new AnnouncedRoute(entry.origin, entry.prefix))
+      .toSet
   }
 
-  var rtrPrefixes: Set[net.ripe.commons.certification.validation.roa.RtrPrefix] = _
+//  var rtrPrefixes: List[net.ripe.commons.certification.validation.roa.RtrPrefix] = _
 
-  var validatedAnnouncements = Set.empty[ValidatedAnnouncement]
+  var validatedAnnouncements: Promise[Set[ValidatedAnnouncement]] = Promise{Set.empty[ValidatedAnnouncement]}
 
   def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]) = {
-    Promise {
-      rtrPrefixes = convertRtrPrefixesToJava(newRtrPrefixes)
+    validatedAnnouncements = Promise {
+      val rtrPrefixes = scala.collection.JavaConversions
+                  .seqAsJavaList(convertRtrPrefixesToJava(newRtrPrefixes))
 
-      validatedAnnouncements = for {
-          route <- announcedRoutes.get
+      val announcedRoutesSet: Set[AnnouncedRoute] = announcedRoutes.get
+      for {
+          route <- announcedRoutesSet
         } yield {
-          val routeValidityJava = validationPolicy.determineRouteValidityState(rtrPrefixes.toList, route)
-          
+          val routeValidityJava = validationPolicy.determineRouteValidityState(rtrPrefixes, route)
+
           var validity: AnnouncementValidity = null
-          
+
           if (routeValidityJava == RouteValidityState.VALID) {
-            validity = ValidAnnouncement()
+            validity = ValidAnnouncement
           }
           if (routeValidityJava == RouteValidityState.INVALID) {
-              validity = InvalidAnnouncement()
+              validity = InvalidAnnouncement
           }
           if (routeValidityJava == RouteValidityState.UNKNOWN) {
-              validity = UnknownAnnouncement()
+              validity = UnknownAnnouncement
           }
-          
-          new ValidatedAnnouncement(asn = route.getOriginAsn(), prefix = route.getPrefix(), validity)
+
+          new ValidatedAnnouncement(asn = route.getOriginAsn, prefix = route.getPrefix(), validity = validity)
         }
-
-      //        validationPolicy.determineRouteValidityState(rtrPrefixes.toList, announcedRoutes.get.toList)
-
     }
   }
 
   def convertRtrPrefixesToJava(rtrPrefixes: Set[RtrPrefix]) = {
-    for { prefix <- rtrPrefixes } yield {
+    (for { prefix <- rtrPrefixes } yield {
       new net.ripe.commons.certification.validation.roa.RtrPrefix(prefix.prefix, prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()), prefix.asn)
-    }
+    }).toList
   }
 
 }
 
 trait AnnouncementValidity
 
-case class ValidAnnouncement extends AnnouncementValidity
-case class InvalidAnnouncement extends AnnouncementValidity
-case class UnknownAnnouncement extends AnnouncementValidity
+case object ValidAnnouncement extends AnnouncementValidity
+case object InvalidAnnouncement extends AnnouncementValidity
+case object UnknownAnnouncement extends AnnouncementValidity
 
 case class ValidatedAnnouncement(asn: Asn, prefix: IpRange, validity: AnnouncementValidity)

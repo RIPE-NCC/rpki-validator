@@ -45,17 +45,15 @@ object RisWhoisParser {
 
   val regex = """^\s*([0-9]+)\s+([0-9a-fA-F.:/]+)\s+([0-9]+)\s*$""".r
   
-  def parseFile(url: URL) = {
+  def parseFile(url: URL): Iterator[BgpRisEntry] = {
     val reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(url.openStream())))
-    
-    val entries = for {
-      line <-Iterator.continually(reader.readLine()).takeWhile(_ != null)
-      entry <- parseLine(line)
-    } yield {
-      entry
-    }
-    
-    entries.toSet[BgpRisEntry]
+    Iterator.continually(reader.readLine()).takeWhile(_ != null).flatMap(parseLine(_))
+//    for {
+//      line <-Iterator.continually(reader.readLine()).takeWhile(_ != null)
+//      entry <- parseLine(line)
+//    } yield {
+//      entry
+//    }
   }
 
   

@@ -43,15 +43,14 @@ import net.ripe.ipresource.IpRange
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
 
-  
   test("should validate") {
     
-    var prefixes: Set[RtrPrefix] = Set.empty[RtrPrefix] + new RtrPrefix(asn = Asn.parse("AS65000"), prefix = IpRange.parse("192.168.0.0/16"), maxPrefixLength = None)
+    val prefixes: Set[RtrPrefix] = Set.empty[RtrPrefix] + new RtrPrefix(asn = Asn.parse("AS65000"),
+      prefix = IpRange.parse("192.168.0.0/16"), maxPrefixLength = None)
     System.err.println(BgpAnnouncementValidator.announcedRoutes.get.size) // wait to get the real announcements, refactor
     BgpAnnouncementValidator.updateRtrPrefixes(prefixes)
     
-    System.err.println(BgpAnnouncementValidator.validatedAnnouncements);
-    
+//    BgpAnnouncementValidator.validatedAnnouncements.get foreach { ann => System.err.println(ann.toString)};
   }
   
 }
