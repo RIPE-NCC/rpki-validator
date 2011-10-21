@@ -34,7 +34,16 @@ import scala.xml._
 import org.joda.time._
 
 object Layouts {
-  def standard(view: View): NodeSeq =
+  def none(view: View): NodeSeq = {
+    <html lang="en">
+      <head>
+        <meta charset="utf-8"/>
+      </head>
+      <body>{ view.body }</body>
+    </html>
+  }
+
+  def standard(view: View): NodeSeq = {
     <html lang="en">
       <head>
         <meta charset="utf-8"/>
@@ -69,4 +78,5 @@ object Layouts {
         </div>
       </body>
     </html>
+  }
 }

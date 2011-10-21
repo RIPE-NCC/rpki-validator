@@ -44,7 +44,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
   def title = Text("Configured Trust Anchors")
   def body = {
     <div>{ renderMessages(messages, identity) }</div>
-    <table class="zebra-striped">
+    <table id="trust-anchors" class="zebra-striped">
       <thead>
         <th>CA Name</th>
         <th>Subject</th>
@@ -93,6 +93,21 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
         }
       }</tbody>
     </table>
+    <script><!--
+$(function () {
+  var refresh = function() {
+    $.ajax({
+      url: "/trust-anchors",
+      dataType: "html",
+      success: function (data) {
+        var updatedTable = $(data).filter("#trust-anchors");
+        $("#trust-anchors").replaceWith(updatedTable);
+      }
+    });
+  };
+  setInterval(refresh, 10000);
+});
+//--></script>
   }
 
   private def expiresIn(notValidAfter: DateTime): NodeSeq = {

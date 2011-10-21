@@ -45,10 +45,12 @@ abstract class WebFilter extends ScalatraFilter
   with WhitelistController
   with BgpPreviewController {
 
+  private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
+
   private def renderView: PartialFunction[Any, Any] = {
     case view: View =>
       contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(Layouts.standard(view))
+      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view))
   }
 
   override protected def renderPipeline = renderView orElse super.renderPipeline
