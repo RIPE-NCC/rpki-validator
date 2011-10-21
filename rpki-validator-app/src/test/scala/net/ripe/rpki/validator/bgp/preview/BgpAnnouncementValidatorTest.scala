@@ -27,24 +27,31 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.views
-import scala.xml.Text
+package net.ripe.rpki.validator
+package bgp.preview
 
-class BgpPreviewView extends View with ViewHelpers {
+import org.scalatest.FunSuite
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.BeforeAndAfter
+import org.scalatest.matchers.ShouldMatchers
 
-  def tab = Tabs.BgpPreviewTab
-  def title = Text("BGP Preview")
-  def body = {
-    <div>
-      This page provides a preview of the likely rpki validity states your routers will
-	  associate with BGP announcements. This preview is based on:
-      <ul>
-        <li>BGP announcements that are widely (>5 peers) <a href="http://www.ris.ripe.net/dumps/">seen</a> by RIS</li>
-        <li>Validation rules defined in the <a href="http://tools.ietf.org/html/draft-ietf-sidr-roa-validation-10#section-2">IETF standard</a>.</li>
-        <li>The validated ROAs found by this validator after applying your filters and additional whitelist entries</li>
-      </ul>
-    </div>
+import models.RtrPrefix
 
+import net.ripe.ipresource.Asn
+import net.ripe.ipresource.IpRange
+
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
+
+  
+  test("should validate") {
+    
+    var prefixes: Set[RtrPrefix] = Set.empty[RtrPrefix] + new RtrPrefix(asn = Asn.parse("AS65000"), prefix = IpRange.parse("192.168.0.0/16"), maxPrefixLength = None)
+    System.err.println(BgpAnnouncementValidator.announcedRoutes.get.size) // wait to get the real announcements, refactor
+    BgpAnnouncementValidator.updateRtrPrefixes(prefixes)
+    
+    System.err.println(BgpAnnouncementValidator.validatedAnnouncements);
+    
   }
-
+  
 }

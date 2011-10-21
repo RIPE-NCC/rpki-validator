@@ -70,4 +70,3 @@ object RisWhoisParser {
 }
 
 case class BgpRisEntry(origin: Asn, prefix: IpRange, visibility: Int)
-
