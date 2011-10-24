@@ -30,17 +30,23 @@
 package net.ripe.rpki.validator
 package bgp.preview
 
+import scala.collection.JavaConverters._
+import scala.concurrent.SyncVar
+import scala.concurrent.ops._
 import scalaz.concurrent.Promise
-import collection.JavaConversions._
 import net.ripe.commons.certification.validation.roa.RouteOriginValidationPolicy
 import net.ripe.commons.certification.validation.roa.RouteValidityState
+import lib.Process._
 import models.RtrPrefix
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import net.ripe.commons.certification.validation.roa.AnnouncedRoute
 import scala.util.Random
+import grizzled.slf4j.Logging
 
-object BgpAnnouncementValidator {
+case class ValidatedAnnouncement(asn: Asn, prefix: IpRange, validity: RouteValidityState)
+
+object BgpAnnouncementValidator extends Logging {
 
   val VISIBILITY_THRESHOLD = 5
 
@@ -48,39 +54,42 @@ object BgpAnnouncementValidator {
 
   val announcedRoutes: Promise[Set[AnnouncedRoute]] = Promise {
     val bgpEntries =
-            RisWhoisParser.parseFile(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")) ++
-            RisWhoisParser.parseFile(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz"))
+      RisWhoisParser.parseFile(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")) ++
+        RisWhoisParser.parseFile(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz"))
 
-        bgpEntries
-          .filter(_.visibility >= VISIBILITY_THRESHOLD)
-          .map(entry => new AnnouncedRoute(entry.origin, entry.prefix))
-          .toSet
-      }
-
-
-  var validatedAnnouncements = Promise { Set.empty[ValidatedAnnouncement] }
-
-  def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]) = {
-
-    validatedAnnouncements = Promise {
-      var rtrPrefixes = convertRtrPrefixesToJava(newRtrPrefixes).toIndexedSeq
-
-      val routes = announcedRoutes.get
-
-      routes map (
-        route => {
-          val validity = validationPolicy.determineRouteValidityState(rtrPrefixes, route)
-          new ValidatedAnnouncement(asn = route.getOriginAsn(), prefix = route.getPrefix(), validity)
-        })
-    }
+    bgpEntries
+      .filter(_.visibility >= VISIBILITY_THRESHOLD)
+      .map(entry => new AnnouncedRoute(entry.origin, entry.prefix))
+      .toSet
   }
 
-  def convertRtrPrefixesToJava(rtrPrefixes: Set[RtrPrefix]) = {
+  @volatile
+  var validatedAnnouncements = Set.empty[ValidatedAnnouncement]
+
+  private val latestRtrPrefixes = new SyncVar[Set[RtrPrefix]]
+
+  def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]): Unit = latestRtrPrefixes.set(newRtrPrefixes)
+
+  spawnForever("bgp-validator") {
+    val newRtrPrefixes = latestRtrPrefixes.take()
+    val routes = announcedRoutes.get
+
+    info("Started validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
+
+    val rtrPrefixes = convertRtrPrefixesToJava(newRtrPrefixes).toIndexedSeq.asJava
+    validatedAnnouncements = routes.par.map(
+      route => {
+        val validity = validationPolicy.determineRouteValidityState(rtrPrefixes, route)
+        ValidatedAnnouncement(route.getOriginAsn(), route.getPrefix(), validity)
+      }).seq
+
+    info("Completed validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
+  }
+
+  private def convertRtrPrefixesToJava(rtrPrefixes: Set[RtrPrefix]) = {
     for { prefix <- rtrPrefixes } yield {
       new net.ripe.commons.certification.validation.roa.RtrPrefix(prefix.prefix, prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()), prefix.asn)
     }
   }
 
 }
-
-case class ValidatedAnnouncement(asn: Asn, prefix: IpRange, validity: RouteValidityState)

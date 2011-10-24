@@ -44,7 +44,8 @@ import net.ripe.certification.validator.util.TrustAnchorExtractor
 import rtr.Pdu
 import rtr.RTRServer
 import lib._
-import DateAndTime._
+import lib.DateAndTime._
+import lib.Process._
 import models._
 import bgp.preview._
 import net.ripe.rpki.validator.bgp.preview.BgpRisEntry
@@ -95,31 +96,17 @@ object Main {
   }
 
   private def scheduleValidator() {
-    implicit val runner = TaskRunners.threadRunner
-    spawn {
-      try {
-        Thread.currentThread().setName("validator-scheduler")
-        logger.info("Started validation scheduler")
+    spawnForever("validator-scheduler") {
+      val trustAnchors = memoryImage.get.trustAnchors
+      val now = new DateTime
+      val needUpdating = for {
+        ta <- trustAnchors.all if ta.status.isIdle
+        Idle(nextUpdate) = ta.status if nextUpdate <= now
+      } yield ta
 
-        while (!Thread.currentThread().isInterrupted()) {
-          val trustAnchors = memoryImage.get.trustAnchors
-          val now = new DateTime
-          val needUpdating = for {
-            ta <- trustAnchors.all if ta.status.isIdle
-            Idle(nextUpdate) = ta.status if nextUpdate <= now
-          } yield ta
+      runValidator(needUpdating)
 
-          runValidator(needUpdating)
-          logger.debug("Validation scheduler is sleeping...")
-          Thread.sleep(10000L)
-        }
-
-        logger.info("Validation scheduler terminating")
-      } catch {
-        case e: Exception =>
-          logger.error("Exception in validator scheduler, terminating", e)
-          throw e
-      }
+      Thread.sleep(10000L)
     }
   }
 
@@ -176,9 +163,9 @@ object Main {
       override protected def whitelist = memoryImage.get.whitelist
       override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
-      
-      override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements.get
-      
+
+      override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements
+
     }), "/*", FilterMapping.ALL)
 
     val requestLogHandler = {
@@ -221,7 +208,7 @@ object Main {
     rtrServer.startServer()
     registerMemoryImageListener((memoryImage => rtrServer.notify(memoryImage.version)))
   }
-  
+
   private def registerMemoryImageListener(function: MemoryImage => Unit) = {
     memoryImageListener = memoryImageListener + (function)
   }

@@ -62,7 +62,6 @@ class BgpPreviewView(validatedAnnouncements: Set[ValidatedAnnouncement]) extends
       </thead>
       <tbody>
         {
-          
           {validatedAnnouncements filter {
               case ValidatedAnnouncement(asn, prefix, validity) => {
                 validity != RouteValidityState.UNKNOWN
