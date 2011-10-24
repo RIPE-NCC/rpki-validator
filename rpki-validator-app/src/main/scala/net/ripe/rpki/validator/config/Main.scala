@@ -40,7 +40,6 @@ import org.eclipse.jetty.servlet._
 import grizzled.slf4j.Logger
 import org.joda.time.DateTime
 import scalaz.concurrent.Promise
-
 import net.ripe.certification.validator.util.TrustAnchorExtractor
 import rtr.Pdu
 import rtr.RTRServer
@@ -48,6 +47,12 @@ import lib._
 import DateAndTime._
 import models._
 import bgp.preview._
+import net.ripe.rpki.validator.bgp.preview.BgpRisEntry
+import net.ripe.rpki.validator.bgp.preview.RisWhoisParser
+import org.joda.time.DateTime
+import org.eclipse.jetty.server.handler.RequestLogHandler
+import org.eclipse.jetty.server.handler.HandlerCollection
+import org.eclipse.jetty.server.NCSARequestLog
 
 object Main {
 
@@ -172,7 +177,22 @@ object Main {
       override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
     }), "/*", FilterMapping.ALL)
-    server.setHandler(root)
+
+    val requestLogHandler = {
+      val handler = new RequestLogHandler()
+      val requestLog = new NCSARequestLog("./log/access.log")
+      requestLog.setRetainDays(90)
+      requestLog.setAppend(true)
+      requestLog.setExtended(false)
+      requestLog.setLogLatency(true)
+      handler.setRequestLog(requestLog)
+      handler
+    }
+
+    val handlers = new HandlerCollection()
+    handlers.addHandler(root)
+    handlers.addHandler(requestLogHandler)
+    server.setHandler(handlers)
     server
   }
 
