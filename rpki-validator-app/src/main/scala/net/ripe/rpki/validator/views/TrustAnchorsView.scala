@@ -68,19 +68,27 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
             <td>{ ta.name }</td>{
               ta.certificate match {
                 case Some(certificate) =>
+                  val notValidAfter = certificate.getCertificate().getValidityPeriod().getNotValidAfter()
                   <td>{ certificate.getCertificate().getSubject() }</td>
-                  <td>{ expiresIn(certificate.getCertificate().getValidityPeriod().getNotValidAfter()) }</td>
+                  <td><span title={ notValidAfter.toString() }>{ expiresIn(notValidAfter) }</span></td>
                 case None =>
                   <td></td>
                   <td></td>
               }
-            }<td>{ ta.lastUpdated.map(lastUpdated => periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago").getOrElse(NodeSeq.Empty) }</td>{
+            }{
+              ta.lastUpdated match {
+                case Some(lastUpdated) =>
+                  <td><span title={ lastUpdated.toString() }>{ periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago" }</span></td>
+                case None =>
+                  <td></td>
+              }
+            }{
               ta.status match {
                 case Running(description) =>
                   <td>{ description }</td>
                   <td style="text-align: center;"><img src="/images/spinner.gif"/></td>
                 case Idle(nextUpdate) =>
-                  <td>{ if (now.isBefore(nextUpdate)) periodInWords(new Period(now, nextUpdate).withMillis(0), number = 2) else "any moment" }</td>
+                  <td><span title={ nextUpdate.toString() }>{ if (now <= nextUpdate) periodInWords(new Period(now, nextUpdate), number = 1) else "any moment" }</span></td>
                   <td>
                     <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
                       <input type="hidden" name="name" value={ ta.locator.getCaName() }/>

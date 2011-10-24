@@ -51,4 +51,9 @@ object DateAndTime {
       result.toPeriod()
     }
   }
+
+  implicit object DateTimeOrdering extends Ordering[DateTime] {
+    override def compare(x: DateTime, y: DateTime) = x.compareTo(y)
+  }
+  implicit def DateTimeOrderingOps(underlying: DateTime)(implicit ord: Ordering[DateTime]): Ordering[DateTime]#Ops = new ord.Ops(underlying)
 }

@@ -39,7 +39,7 @@ import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.servlet._
 import grizzled.slf4j.Logger
 import net.ripe.certification.validator.util.TrustAnchorExtractor
-import lib._
+import lib._, DateAndTime._
 import models._
 import net.ripe.rpki.validator.rtr.Pdu
 import net.ripe.rpki.validator.rtr.RTRServer
@@ -91,13 +91,28 @@ object Main {
   private def scheduleValidator() {
     implicit val runner = TaskRunners.threadRunner
     spawn {
-      Thread.currentThread().setName("validator-scheduler")
-      while (true) {
-        val trustAnchors = memoryImage.get.trustAnchors
-        val now = new DateTime
-        val needUpdating = for (ta <- trustAnchors.all; Idle(nextUpdate) = ta.status if now.isAfter(nextUpdate)) yield ta
-        runValidator(needUpdating)
-        Thread.sleep(10000L)
+      try {
+        Thread.currentThread().setName("validator-scheduler")
+        logger.info("Started validation scheduler")
+
+        while (!Thread.currentThread().isInterrupted()) {
+          val trustAnchors = memoryImage.get.trustAnchors
+          val now = new DateTime
+          val needUpdating = for {
+            ta <- trustAnchors.all if ta.status.isIdle
+            Idle(nextUpdate) = ta.status if nextUpdate <= now
+          } yield ta
+
+          runValidator(needUpdating)
+          logger.debug("Validation scheduler is sleeping...")
+          Thread.sleep(10000L)
+        }
+
+        logger.info("Validation scheduler terminating")
+      } catch {
+        case e: Exception =>
+          logger.error("Exception in validator scheduler, terminating", e)
+          throw e
       }
     }
   }
