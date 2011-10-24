@@ -176,6 +176,9 @@ object Main {
       override protected def whitelist = memoryImage.get.whitelist
       override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
+      
+      override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements.get
+      
     }), "/*", FilterMapping.ALL)
 
     val requestLogHandler = {

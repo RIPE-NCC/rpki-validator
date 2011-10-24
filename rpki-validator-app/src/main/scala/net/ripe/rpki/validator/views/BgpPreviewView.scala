@@ -36,9 +36,8 @@ import bgp.preview._
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import net.ripe.ipresource.Asn
 
-class BgpPreviewView extends View with ViewHelpers {
+class BgpPreviewView(validatedAnnouncements: Set[ValidatedAnnouncement]) extends View with ViewHelpers {
 
-  val announcements = BgpAnnouncementValidator.getAnnouncements.get
   val MAX_RESULTS = 2000;
 
   def tab = Tabs.BgpPreviewTab
@@ -64,7 +63,7 @@ class BgpPreviewView extends View with ViewHelpers {
       <tbody>
         {
           
-          {announcements filter {
+          {validatedAnnouncements filter {
               case ValidatedAnnouncement(asn, prefix, validity) => {
                 validity != RouteValidityState.UNKNOWN
 //                asn.equals(Asn.parse("3333"))

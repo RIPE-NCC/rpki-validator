@@ -31,13 +31,16 @@ package net.ripe.rpki.validator
 package controllers
 
 import views.BgpPreviewView
+import bgp.preview.ValidatedAnnouncement
 
 trait BgpPreviewController extends ApplicationController {
 
+  protected def validatedAnnouncements: Set[ValidatedAnnouncement]
+  
   private def baseUrl = views.Tabs.BgpPreviewTab.url
 
   get(baseUrl) {
-    new BgpPreviewView()
+    new BgpPreviewView(validatedAnnouncements)
   }
 
 }

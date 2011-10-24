@@ -60,14 +60,10 @@ object BgpAnnouncementValidator {
 
   var validatedAnnouncements = Promise { Set.empty[ValidatedAnnouncement] }
 
-  def getAnnouncements = {
-    validatedAnnouncements
-  }
-
   def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]) = {
 
     validatedAnnouncements = Promise {
-      var rtrPrefixes = convertRtrPrefixesToJava(newRtrPrefixes).toList
+      var rtrPrefixes = convertRtrPrefixesToJava(newRtrPrefixes).toIndexedSeq
 
       val routes = announcedRoutes.get
 
