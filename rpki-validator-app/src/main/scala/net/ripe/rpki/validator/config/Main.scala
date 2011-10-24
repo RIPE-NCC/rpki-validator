@@ -61,7 +61,6 @@ object Main {
 
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
 
-  private var memoryImage: Atomic[MemoryImage] = null
   private var memoryImageListener = Set.empty[MemoryImage => Unit]
 
   def main(args: Array[String]): Unit = Options.parse(args) match {
@@ -74,14 +73,17 @@ object Main {
     val roas = Roas(trustAnchors)
     val dataFile = new File(options.dataFileName).getCanonicalFile()
     val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
-    memoryImage = new Atomic(
+    val memoryImage = new Atomic[MemoryImage](
       MemoryImage(data.filters, data.whitelist, trustAnchors, roas),
       memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
 
-    registerMemoryImageListener((memoryImage => BgpAnnouncementValidator.updateRtrPrefixes(memoryImage.getDistinctRtrPrefixes())))
-    scheduleValidator()
-    runWebServer(options, dataFile)
-    runRtrServer(options)
+    runWebServer(options, dataFile, memoryImage)
+    val rtrServer = runRtrServer(options, memoryImage)
+
+    registerMemoryImageListener(memoryImage => BgpAnnouncementValidator.updateRtrPrefixes(memoryImage.getDistinctRtrPrefixes()))
+    registerMemoryImageListener(memoryImage => rtrServer.notify(memoryImage.version))
+
+    scheduleValidator(memoryImage)
   }
 
   private def error(message: String) = {
@@ -95,7 +97,7 @@ object Main {
     TrustAnchors.load(tals.asScala, "tmp/tals")
   }
 
-  private def scheduleValidator() {
+  private def scheduleValidator(memoryImage: Atomic[MemoryImage]) {
     spawnForever("validator-scheduler") {
       val trustAnchors = memoryImage.get.trustAnchors
       val now = new DateTime
@@ -104,13 +106,13 @@ object Main {
         Idle(nextUpdate) = ta.status if nextUpdate <= now
       } yield ta
 
-      runValidator(needUpdating)
+      runValidator(memoryImage, needUpdating)
 
       Thread.sleep(10000L)
     }
   }
 
-  def runValidator(trustAnchors: Seq[TrustAnchor]) {
+  def runValidator(memoryImage: Atomic[MemoryImage], trustAnchors: Seq[TrustAnchor]) {
     implicit val runner = TaskRunners.threadPoolRunner
     for (ta <- trustAnchors; Idle(_) = ta.status) {
       memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
@@ -127,7 +129,7 @@ object Main {
     }
   }
 
-  def setup(server: Server, dataFile: File): Server = {
+  def setup(server: Server, dataFile: File, memoryImage: Atomic[MemoryImage]): Server = {
     import org.eclipse.jetty.servlet._
     import org.scalatra._
 
@@ -146,7 +148,7 @@ object Main {
         }
       }
 
-      override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = Main.runValidator(trustAnchors)
+      override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = Main.runValidator(memoryImage, trustAnchors)
 
       override def trustAnchors = memoryImage.get.trustAnchors
 
@@ -186,8 +188,8 @@ object Main {
     server
   }
 
-  private def runWebServer(options: Options, dataFile: File): Unit = {
-    val server = setup(new Server(options.httpPort), dataFile)
+  private def runWebServer(options: Options, dataFile: File, memoryImage: Atomic[MemoryImage]): Unit = {
+    val server = setup(new Server(options.httpPort), dataFile, memoryImage: Atomic[MemoryImage])
 
     sys.addShutdownHook({
       server.stop()
@@ -197,7 +199,7 @@ object Main {
     logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + options.httpPort + ". Hit CTRL+C to terminate.")
   }
 
-  private def runRtrServer(options: Options): Unit = {
+  private def runRtrServer(options: Options, memoryImage: Atomic[MemoryImage]): RTRServer = {
     var rtrServer = new RTRServer(port = options.rtrPort, noCloseOnError = options.noCloseOnError, noNotify = options.noNotify, getCurrentCacheSerial = {
       () => memoryImage.get.version
     }, getCurrentRtrPrefixes = {
@@ -206,7 +208,7 @@ object Main {
       () => Main.nonce
     })
     rtrServer.startServer()
-    registerMemoryImageListener((memoryImage => rtrServer.notify(memoryImage.version)))
+    rtrServer
   }
 
   private def registerMemoryImageListener(function: MemoryImage => Unit) = {
