@@ -64,7 +64,7 @@ object BgpAnnouncementValidator extends Logging {
   }
 
   @volatile
-  var validatedAnnouncements = Set.empty[ValidatedAnnouncement]
+  var validatedAnnouncements = IndexedSeq.empty[ValidatedAnnouncement]
 
   private val latestRtrPrefixes = new SyncVar[Set[RtrPrefix]]
 
@@ -81,7 +81,7 @@ object BgpAnnouncementValidator extends Logging {
       route => {
         val validity = validationPolicy.determineRouteValidityState(rtrPrefixes, route)
         ValidatedAnnouncement(route.getOriginAsn(), route.getPrefix(), validity)
-      }).seq
+      }).seq.toIndexedSeq
 
     info("Completed validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
   }

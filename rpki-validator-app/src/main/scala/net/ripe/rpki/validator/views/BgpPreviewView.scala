@@ -36,7 +36,7 @@ import bgp.preview._
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import net.ripe.ipresource.Asn
 
-class BgpPreviewView(validatedAnnouncements: Set[ValidatedAnnouncement]) extends View with ViewHelpers {
+class BgpPreviewView() extends View with ViewHelpers {
 
   val MAX_RESULTS = 2000;
 
@@ -61,31 +61,19 @@ class BgpPreviewView(validatedAnnouncements: Set[ValidatedAnnouncement]) extends
         </tr>
       </thead>
       <tbody>
-        {
-          {validatedAnnouncements filter {
-              case ValidatedAnnouncement(asn, prefix, validity) => {
-                validity != RouteValidityState.UNKNOWN
-//                asn.equals(Asn.parse("3333"))
-              }
-              case _ => false
-            }
-          }.take(MAX_RESULTS) map (announcement => {
-            <tr>
-              <td> { announcement.asn } </td>
-              <td> { announcement.prefix } </td>
-              <td> { announcement.validity } </td>
-            </tr>
-          })
-        }
       </tbody>
     </table>
     <script><!--
 $(document).ready(function() {
   $('#roas-table').dataTable({
-        "sPaginationType": "full_numbers"
+        "sPaginationType": "full_numbers",
+        "bProcessing": true,
+        "bServerSide": true,
+        "sAjaxSource": "bgp-preview-data"
     }).show();
 });
 // --></script>
   }
 
 }
+

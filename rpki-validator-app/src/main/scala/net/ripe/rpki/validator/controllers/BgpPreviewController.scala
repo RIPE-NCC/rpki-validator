@@ -32,15 +32,55 @@ package controllers
 
 import views.BgpPreviewView
 import bgp.preview.ValidatedAnnouncement
+import net.liftweb.json._
+import net.ripe.commons.certification.validation.roa.RouteValidityState
+import net.ripe.ipresource.Asn
+import net.ripe.ipresource.IpRange
 
 trait BgpPreviewController extends ApplicationController {
 
-  protected def validatedAnnouncements: Set[ValidatedAnnouncement]
-  
+  protected def validatedAnnouncements: IndexedSeq[ValidatedAnnouncement]
+
   private def baseUrl = views.Tabs.BgpPreviewTab.url
 
   get(baseUrl) {
-    new BgpPreviewView(validatedAnnouncements)
+    new BgpPreviewView()
+  }
+
+  get("/bgp-preview-data") {
+    implicit object AsnOrdering extends Ordering[Asn] {
+      override def compare(x: Asn, y: Asn) = x compareTo y
+    }
+    implicit object IpRangeOrdering extends Ordering[IpRange] {
+      override def compare(x: IpRange, y: IpRange) = x compareTo y
+    }
+
+    val iDisplayStart = params("iDisplayStart").toInt
+    val iDisplayLength = params("iDisplayLength").toInt
+    val sSearch = params("sSearch").toUpperCase()
+    val allRecords = validatedAnnouncements
+    val filteredRecords = allRecords.filter { announcement =>
+      sSearch.isEmpty || announcement.asn.toString.contains(sSearch) || announcement.prefix.toString.contains(sSearch) || announcement.validity.toString.equals(sSearch)
+    }
+    val sortedRecords = params("iSortCol_0") match {
+      case "0" => filteredRecords.sortBy(_.asn)
+      case "1" => filteredRecords.sortBy(_.prefix)
+      case "2" => filteredRecords.sortBy(_.validity)
+      case _ => filteredRecords
+    }
+    val orderedRecords = params("sSortDir_0") match {
+      case "desc" => sortedRecords.reverse
+      case _ => sortedRecords
+    }
+    val displayRecords = orderedRecords.drop(iDisplayStart).take(iDisplayLength)
+
+    compact(render(JObject(List(
+      JField("sEcho", JInt(params("sEcho").toInt)),
+      JField("iTotalRecords", JInt(allRecords.size)),
+      JField("iTotalDisplayRecords", JInt(filteredRecords.size)),
+      JField("aaData", JArray(displayRecords.map { announcement =>
+        JArray(List(JString(announcement.asn.getValue().toString()), JString(announcement.prefix.toString()), JString(announcement.validity.toString())))
+      }.toList))))))
   }
 
 }
