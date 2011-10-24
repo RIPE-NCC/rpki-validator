@@ -38,16 +38,16 @@ import org.apache.commons.io.FileUtils
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.servlet._
 import grizzled.slf4j.Logger
-import net.ripe.certification.validator.util.TrustAnchorExtractor
-import lib._, DateAndTime._
-import models._
-import net.ripe.rpki.validator.rtr.Pdu
-import net.ripe.rpki.validator.rtr.RTRServer
 import org.joda.time.DateTime
 import scalaz.concurrent.Promise
-import net.ripe.rpki.validator.bgp.preview.BgpRisEntry
-import net.ripe.rpki.validator.bgp.preview.RisWhoisParser
-import org.joda.time.DateTime
+
+import net.ripe.certification.validator.util.TrustAnchorExtractor
+import rtr.Pdu
+import rtr.RTRServer
+import lib._
+import DateAndTime._
+import models._
+import bgp.preview._
 
 object Main {
 
@@ -56,7 +56,7 @@ object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
 
   private var memoryImage: Atomic[MemoryImage] = null
-  private var memoryImageListener: Option[MemoryImage => Unit] = None
+  private var memoryImageListener = Set.empty[MemoryImage => Unit]
 
   def main(args: Array[String]): Unit = Options.parse(args) match {
     case Right(options) => run(options)
@@ -72,6 +72,7 @@ object Main {
       MemoryImage(data.filters, data.whitelist, trustAnchors, roas),
       memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
 
+    registerMemoryImageListener((memoryImage => BgpAnnouncementValidator.updateRtrPrefixes(memoryImage.getDistinctRtrPrefixes())))
     scheduleValidator()
     runWebServer(options, dataFile)
     runRtrServer(options)
@@ -195,7 +196,11 @@ object Main {
       () => Main.nonce
     })
     rtrServer.startServer()
-    memoryImageListener = Some(memoryImage => rtrServer.notify(memoryImage.version))
+    registerMemoryImageListener((memoryImage => rtrServer.notify(memoryImage.version)))
+  }
+  
+  private def registerMemoryImageListener(function: MemoryImage => Unit) = {
+    memoryImageListener = memoryImageListener + (function)
   }
 
 }

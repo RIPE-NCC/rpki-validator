@@ -27,10 +27,19 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.views
+package net.ripe.rpki.validator
+package views
+
 import scala.xml.Text
+import scala.util.Random
+import bgp.preview._
+import net.ripe.commons.certification.validation.roa.RouteValidityState
+import net.ripe.ipresource.Asn
 
 class BgpPreviewView extends View with ViewHelpers {
+
+  val announcements = BgpAnnouncementValidator.getAnnouncements.get
+  val MAX_RESULTS = 2000;
 
   def tab = Tabs.BgpPreviewTab
   def title = Text("BGP Preview")
@@ -44,7 +53,41 @@ class BgpPreviewView extends View with ViewHelpers {
         <li>The validated ROAs found by this validator after applying your filters and additional whitelist entries</li>
       </ul>
     </div>
-
+    <table id="roas-table" class="zebra-striped" style="display: none;">
+      <thead>
+        <tr>
+          <th>ASN</th>
+          <th>Prefix</th>
+          <th>Validity</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          
+          {announcements filter {
+              case ValidatedAnnouncement(asn, prefix, validity) => {
+                validity != RouteValidityState.UNKNOWN
+//                asn.equals(Asn.parse("3333"))
+              }
+              case _ => false
+            }
+          }.take(MAX_RESULTS) map (announcement => {
+            <tr>
+              <td> { announcement.asn } </td>
+              <td> { announcement.prefix } </td>
+              <td> { announcement.validity } </td>
+            </tr>
+          })
+        }
+      </tbody>
+    </table>
+    <script><!--
+$(document).ready(function() {
+  $('#roas-table').dataTable({
+        "sPaginationType": "full_numbers"
+    }).show();
+});
+// --></script>
   }
 
 }
