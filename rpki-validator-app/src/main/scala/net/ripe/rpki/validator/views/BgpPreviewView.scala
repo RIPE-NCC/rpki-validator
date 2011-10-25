@@ -52,7 +52,7 @@ class BgpPreviewView() extends View with ViewHelpers {
         <li>The validated ROAs found by this validator after applying your filters and additional whitelist entries</li>
       </ul>
     </div>
-    <table id="roas-table" class="zebra-striped" style="display: none;">
+    <table id="bgp-preview-table" class="zebra-striped" style="display: none;">
       <thead>
         <tr>
           <th>ASN</th>
@@ -65,7 +65,7 @@ class BgpPreviewView() extends View with ViewHelpers {
     </table>
     <script><!--
 $(document).ready(function() {
-  $('#roas-table').dataTable({
+  $('#bgp-preview-table').dataTable({
         "sPaginationType": "full_numbers",
         "bProcessing": true,
         "bServerSide": true,

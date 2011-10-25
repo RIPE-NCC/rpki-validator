@@ -37,12 +37,21 @@ import views.RoasView
 import org.joda.time.DateTime
 import net.ripe.rpki.validator.config.Main
 import models._
+import net.ripe.rpki.validator.views.RoaTableData
 
 trait RoasController extends ApplicationController {
   protected def roas: Roas
 
   get("/roas") {
     new RoasView(roas)
+  }
+
+  get("/roas-data") {
+    new RoaTableData(roas) {
+      override def getParam(name: String) = {
+        params(name)
+      }
+    }.renderRecords()
   }
 
   get("/roas.csv") {
@@ -74,4 +83,5 @@ trait RoasController extends ApplicationController {
 
     ()
   }
+
 }

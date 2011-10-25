@@ -48,7 +48,7 @@ class RoasView(roas: Roas) extends View {
     <div class="alert-message block-message info">
       {
         optional(ready.nonEmpty, <p>Validated ROAs from { listTrustAnchorNames(ready.keys.toSeq) }.</p>) ++
-          optional(loading.nonEmpty, <p>Still retrieving and validating ROAs from { listTrustAnchorNames(loading.keys.toSeq) }.</p>)
+        optional(loading.nonEmpty, <p>Still retrieving and validating ROAs from { listTrustAnchorNames(loading.keys.toSeq) }.</p>)
       }
       <div class="alert-actions">
         <a href="roas.csv" class="btn small">Download validated ROAs as CSV</a>
@@ -63,26 +63,16 @@ class RoasView(roas: Roas) extends View {
           <th>Trust Anchor</th>
         </tr>
       </thead>
-      <tbody>{
-        for {
-          (talName, Some(roas)) <- ready
-          validated <- roas
-          roa = validated.roa
-          prefix <- roa.getPrefixes().asScala
-        } yield {
-          <tr>
-            <td>{ roa.getAsn().getValue() }</td>
-            <td>{ prefix.getPrefix() }</td>
-            <td>{ prefix.getEffectiveMaximumLength() } </td>
-            <td>{ talName }</td>
-          </tr>
-        }
-      }</tbody>
+      <tbody>
+      </tbody>
     </table>
     <script><!--
 $(document).ready(function() {
   $('#roas-table').dataTable({
-        "sPaginationType": "full_numbers"
+        "sPaginationType": "full_numbers",
+        "bProcessing": true,
+        "bServerSide": true,
+        "sAjaxSource": "roas-data"
     }).show();
 });
 // --></script>

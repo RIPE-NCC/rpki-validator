@@ -28,48 +28,46 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package controllers
+package views
 
-import support.ControllerTestCase
-import net.ripe.rpki.validator.bgp.preview.AnnouncedRoute
-import net.ripe.rpki.validator.bgp.preview.ValidatedAnnouncement
+import models.Roas
+import models.RtrPrefix
+import lib.DataTablesBacking
+import scala.collection.JavaConverters._
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
-import net.ripe.commons.certification.validation.roa.RouteValidityState
 
-class BgpPreviewControllerTest extends ControllerTestCase {
+abstract class RoaTableData(roas: Roas) extends DataTablesBacking[RoaTableRecord] {
 
-  val announce1 = ValidatedAnnouncement(AnnouncedRoute(asn = new Asn(65001), prefix = IpRange.parse("10.0.0.0/24")), validity = RouteValidityState.VALID)
-  val announce2 = ValidatedAnnouncement(AnnouncedRoute(asn = new Asn(650012), prefix = IpRange.parse("10.0.1.0/24")), validity = RouteValidityState.INVALID)
-  val announce3 = ValidatedAnnouncement(AnnouncedRoute(asn = new Asn(65003), prefix = IpRange.parse("10.0.2.0/24")), validity = RouteValidityState.UNKNOWN)
-
-  val testAnnouncements: IndexedSeq[ValidatedAnnouncement] = IndexedSeq[ValidatedAnnouncement](announce1, announce2, announce3)
-
-  override def controller = new ControllerFilter with BgpPreviewController {
-
-    override def validatedAnnouncements: IndexedSeq[ValidatedAnnouncement] = testAnnouncements
-
+  override def getAllRecords() = {
+    val (ready, loading) = roas.all.partition(_._2.isDefined)
+    val records = for {
+      (talName, Some(roas)) <- ready
+      validatedRoa <- roas
+      roa = validatedRoa.roa
+      roaPrefix <- roa.getPrefixes().asScala
+    } yield {
+      new RoaTableRecord(
+          asn = roa.getAsn(),
+          prefix = roaPrefix.getPrefix(),
+          maxPrefixLength = roaPrefix.getEffectiveMaximumLength(),
+          trustAnchorName = talName)
+    }
+    records.toIndexedSeq
   }
 
-  test("Should filter overlapping IP resources") {
-
-    val sSearch = "10.0.0.0/23"
-
-    val filteredAnnouncements = controller.filterRecords(testAnnouncements, sSearch)
-
-    filteredAnnouncements should contain(announce1)
-    filteredAnnouncements should contain(announce2)
-    filteredAnnouncements should have length (2)
+  override def filterRecords(records: IndexedSeq[RoaTableRecord], searchCriterium: Any) = {
+    records
   }
 
-  test("Should filter by ASN") {
-    val sSearch = "AS65001"
+  protected def sortRecords(records: IndexedSeq[RoaTableRecord], sortColumn: Int) = {
+    records
+  }
 
-    val filteredAnnouncements = controller.filterRecords(testAnnouncements, sSearch)
-
-    filteredAnnouncements should contain(announce1)
-    filteredAnnouncements should have length (1)
-
+  protected def getValuesForRecord(record: RoaTableRecord) = {
+    List(record.asn.toString(), record.prefix.toString(), record.maxPrefixLength.toString(), record.trustAnchorName)
   }
 
 }
+
+case class RoaTableRecord(asn: Asn, prefix: IpRange, maxPrefixLength: Int, trustAnchorName: String)

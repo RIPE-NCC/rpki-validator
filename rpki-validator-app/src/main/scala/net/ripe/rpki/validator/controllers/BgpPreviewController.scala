@@ -30,13 +30,14 @@
 package net.ripe.rpki.validator
 package controllers
 
-import net.liftweb.json._
 import net.ripe.commons.certification.validation.roa.RouteValidityState
-import lib.NumberResources._
+
 import bgp.preview.ValidatedAnnouncement
 import views.BgpPreviewView
 import net.ripe.ipresource.IpRange
 import net.ripe.ipresource.Asn
+import net.ripe.rpki.validator.lib.DataTablesBacking
+import net.ripe.rpki.validator.views.BgpPreviewTableData
 
 trait BgpPreviewController extends ApplicationController {
 
@@ -49,79 +50,13 @@ trait BgpPreviewController extends ApplicationController {
   }
 
   get("/bgp-preview-data") {
-    val iDisplayStart = params("iDisplayStart").toInt
-    val iDisplayLength = params("iDisplayLength").toInt
-    val sSearch = params("sSearch").toUpperCase()
-    val allRecords = validatedAnnouncements
-
-    val filteredRecords = filterRecords(allRecords, sSearch)
-
-    val sortedRecords = params("iSortCol_0") match {
-      case "0" => filteredRecords.sortBy(_.asn)
-      case "1" => filteredRecords.sortBy(_.prefix)
-      case "2" => filteredRecords.sortBy(_.validity)
-      case _ => filteredRecords
-    }
-    val orderedRecords = params("sSortDir_0") match {
-      case "desc" => sortedRecords.reverse
-      case _ => sortedRecords
-    }
-    val displayRecords = orderedRecords.drop(iDisplayStart).take(iDisplayLength)
-
-    compact(render(JObject(List(
-      JField("sEcho", JInt(params("sEcho").toInt)),
-      JField("iTotalRecords", JInt(allRecords.size)),
-      JField("iTotalDisplayRecords", JInt(filteredRecords.size)),
-      JField("aaData", JArray(displayRecords.map { announcement =>
-        JArray(List(JString(announcement.asn.getValue().toString()), JString(announcement.prefix.toString()), JString(announcement.validity.toString())))
-      }.toList))))))
-  }
-
-  def filterRecords(inputRecords: IndexedSeq[ValidatedAnnouncement], sSearch: String): IndexedSeq[ValidatedAnnouncement] = {
-
-    parseAsPrefix(sSearch) match {
-      case range: IpRange => filterByIpRange(inputRecords, range)
-      case asn: Asn => filterByAsn(inputRecords, asn)
-      case _ => filterByString(inputRecords, sSearch)
-    }
-
-  }
-
-  def filterByIpRange(inputRecords: IndexedSeq[ValidatedAnnouncement], range: IpRange) = {
-    inputRecords.filter {
-      announcement => announcement.prefix.overlaps(range)
-    }
-  }
-  
-  def filterByAsn(inputRecords: IndexedSeq[ValidatedAnnouncement], asn: Asn) = {
-      inputRecords.filter {
-          announcement => announcement.asn.equals(asn)
+    new BgpPreviewTableData(validatedAnnouncements) {
+      override def getParam(name: String) = {
+        params(name)
       }
+    }.renderRecords()
   }
 
-  def filterByString(inputRecords: IndexedSeq[ValidatedAnnouncement], sSearch: String) = {
-    inputRecords.filter {
-      announcement =>
-        {
-          sSearch.isEmpty || announcement.asn.toString.contains(sSearch) || announcement.prefix.toString.contains(sSearch) || announcement.validity.toString.equals(sSearch)
-        }
-    }
-  }
 
-  def parseAsPrefix(input: String): Any = {
-    try {
-      IpRange.parse(input)
-    } catch {
-      case _ => try {
-        if(input.toLowerCase().startsWith("as")) {
-            Asn.parse(input)
-        } else {
-          None
-        }
-      } catch {
-        case _ => None
-      }
-    }
-  }
 
 }
