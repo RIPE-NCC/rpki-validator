@@ -55,9 +55,9 @@ class BgpPreviewView() extends View with ViewHelpers {
     <table id="bgp-preview-table" class="zebra-striped" style="display: none;">
       <thead>
         <tr>
-          <th>ASN</th>
+          <th width="200px">ASN</th>
           <th>Prefix</th>
-          <th>Validity</th>
+          <th width="200px">Validity</th>
         </tr>
       </thead>
       <tbody>
@@ -71,6 +71,15 @@ $(document).ready(function() {
         "bServerSide": true,
         "sAjaxSource": "bgp-preview-data"
     }).show();
+  $('[rel=popover]').popover({
+    "width": 300,
+    "live": true,
+    "html": true,
+    "placement": "below",
+    "offset": 10
+  }).live('click', function (e) {
+    e.preventDefault();
+  });
 });
 // --></script>
   }

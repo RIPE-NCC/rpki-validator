@@ -51,6 +51,9 @@ td.warning {
 	background-color: #FDF5D9 !important;
 }
 
+.popover .inner {
+	width: 500px;
+}
 /* Datatables */
 .dataTables_wrapper {
 	padding-top: 9px;

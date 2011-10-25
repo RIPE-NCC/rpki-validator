@@ -39,6 +39,7 @@ import lib.NumberResources._
 
 case class RtrPrefix(val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int]) {
   val interval = NumberResourceInterval(prefix.getStart(), prefix.getEnd())
+  def effectiveMaxPrefixLength = maxPrefixLength.getOrElse(prefix.getPrefixLength())
 }
 
 object RtrPrefix {

@@ -53,6 +53,8 @@ object Layouts {
         <script src="/javascript/datatables/1.8.2/jquery.js"/>
         <script src="/javascript/datatables/1.8.2/jquery.dataTables.min.js"/>
         <script src="http://twitter.github.com/bootstrap/1.3.0/bootstrap-alerts.js"/>
+        <script src="http://twitter.github.com/bootstrap/1.3.0/bootstrap-twipsy.js"/>
+        <script src="http://twitter.github.com/bootstrap/1.3.0/bootstrap-popover.js"/>
       </head>
       <body>
         <div class="topbar">
