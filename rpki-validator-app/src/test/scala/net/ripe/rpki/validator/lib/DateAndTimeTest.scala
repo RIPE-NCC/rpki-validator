@@ -34,6 +34,7 @@ import org.joda.time.Period
 
 import support.TestCase
 
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class DateAndTimeTest extends TestCase {
   import DateAndTime._
 

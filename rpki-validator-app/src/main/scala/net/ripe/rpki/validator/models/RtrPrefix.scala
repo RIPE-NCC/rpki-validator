@@ -33,11 +33,13 @@ package models
 import scalaz._
 import Scalaz._
 
-import net.ripe.ipresource.{IpRange, Asn}
+import net.ripe.ipresource.{ IpRange, Asn }
 import lib.Validation._
+import lib.NumberResources._
 
-
-case class RtrPrefix  (val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int])
+case class RtrPrefix(val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int]) {
+  val interval = NumberResourceInterval(prefix.getStart(), prefix.getEnd())
+}
 
 object RtrPrefix {
   def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): ValidationNEL[FeedbackMessage, RtrPrefix] = {
@@ -51,5 +53,10 @@ object RtrPrefix {
       liftFailErrorMessage(validated, Some("maxPrefixLength"))
     }
   }
+
+  implicit object RtrPrefixReducer extends Reducer[RtrPrefix, NumberResourceInterval] {
+    override def unit(prefix: RtrPrefix) = prefix.interval
+  }
+
 }
 

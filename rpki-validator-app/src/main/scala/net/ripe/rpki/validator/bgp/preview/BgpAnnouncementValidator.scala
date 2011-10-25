@@ -33,24 +33,27 @@ package bgp.preview
 import scala.collection.JavaConverters._
 import scala.concurrent.SyncVar
 import scala.concurrent.ops._
+import scalaz.Reducer
 import scalaz.concurrent.Promise
-import net.ripe.commons.certification.validation.roa.RouteOriginValidationPolicy
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import lib.Process._
+import lib.NumberResources._
 import models.RtrPrefix
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
-import net.ripe.commons.certification.validation.roa.AnnouncedRoute
-import scala.util.Random
 import grizzled.slf4j.Logging
 
-case class ValidatedAnnouncement(asn: Asn, prefix: IpRange, validity: RouteValidityState)
+case class AnnouncedRoute(asn: Asn, prefix: IpRange) {
+  val interval = NumberResourceInterval(prefix.getStart(), prefix.getEnd())
+}
+case class ValidatedAnnouncement(route: AnnouncedRoute, validity: RouteValidityState) {
+  def asn = route.asn
+  def prefix = route.prefix
+}
 
 object BgpAnnouncementValidator extends Logging {
 
   val VISIBILITY_THRESHOLD = 5
-
-  val validationPolicy: RouteOriginValidationPolicy = new RouteOriginValidationPolicy()
 
   val announcedRoutes: Promise[Set[AnnouncedRoute]] = Promise {
     val bgpEntries =
@@ -59,7 +62,7 @@ object BgpAnnouncementValidator extends Logging {
 
     bgpEntries
       .filter(_.visibility >= VISIBILITY_THRESHOLD)
-      .map(entry => new AnnouncedRoute(entry.origin, entry.prefix))
+      .map(entry => AnnouncedRoute(entry.origin, entry.prefix))
       .toSet
   }
 
@@ -71,25 +74,28 @@ object BgpAnnouncementValidator extends Logging {
   def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]): Unit = latestRtrPrefixes.set(newRtrPrefixes)
 
   spawnForever("bgp-validator") {
+    def validPrefix(prefix: RtrPrefix, announced: AnnouncedRoute): Boolean = {
+      prefix.asn == announced.asn &&
+        prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()) >= announced.prefix.getPrefixLength()
+    }
+
     val newRtrPrefixes = latestRtrPrefixes.take()
     val routes = announcedRoutes.get
 
     info("Started validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
+    val prefixTree = NumberResourceIntervalTree(newRtrPrefixes.toSeq: _*)
 
-    val rtrPrefixes = convertRtrPrefixesToJava(newRtrPrefixes).toIndexedSeq.asJava
     validatedAnnouncements = routes.par.map(
       route => {
-        val validity = validationPolicy.determineRouteValidityState(rtrPrefixes, route)
-        ValidatedAnnouncement(route.getOriginAsn(), route.getPrefix(), validity)
+        val matchingPrefixes = prefixTree.filterContaining(route.interval)
+        val validity = {
+          if (matchingPrefixes.isEmpty) RouteValidityState.UNKNOWN
+          else if (matchingPrefixes.exists(validPrefix(_, route))) RouteValidityState.VALID
+          else RouteValidityState.INVALID
+        }
+        ValidatedAnnouncement(route, validity)
       }).seq.toIndexedSeq
 
     info("Completed validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
   }
-
-  private def convertRtrPrefixesToJava(rtrPrefixes: Set[RtrPrefix]) = {
-    for { prefix <- rtrPrefixes } yield {
-      new net.ripe.commons.certification.validation.roa.RtrPrefix(prefix.prefix, prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()), prefix.asn)
-    }
-  }
-
 }

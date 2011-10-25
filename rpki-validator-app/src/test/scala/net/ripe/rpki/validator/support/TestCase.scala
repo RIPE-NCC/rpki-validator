@@ -30,10 +30,8 @@
 package net.ripe.rpki.validator
 package support
 
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 
-@RunWith(classOf[JUnitRunner])
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 abstract class TestCase extends FunSuite with ShouldMatchers
