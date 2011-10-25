@@ -36,6 +36,7 @@ import lib.DataTablesBacking
 import scala.collection.JavaConverters._
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
+import lib.NumberResources._
 
 abstract class RoaTableData(roas: Roas) extends DataTablesBacking[RoaTableRecord] {
 
@@ -57,17 +58,53 @@ abstract class RoaTableData(roas: Roas) extends DataTablesBacking[RoaTableRecord
   }
 
   override def filterRecords(records: IndexedSeq[RoaTableRecord], searchCriterium: Any) = {
-    records
+    searchCriterium match {
+      case iprange: IpRange => filterByIpRange(records, iprange)
+      case asn: Asn => filterByAsn(records, asn)
+      case searchString: String => filterByString(records, searchString)
+      case _ => records
+    }
   }
 
-  protected def sortRecords(records: IndexedSeq[RoaTableRecord], sortColumn: Int) = {
-    records
+  override def sortRecords(records: IndexedSeq[RoaTableRecord], sortColumn: Int) = {
+    sortColumn match {
+      case 0 => records.sortBy(_.asn)
+      case 1 => records.sortBy(_.prefix)
+      case 2 => records.sortBy(_.maxPrefixLength)
+      case 3 => records.sortBy(_.trustAnchorName)
+      case _ => records
+    }
   }
 
-  protected def getValuesForRecord(record: RoaTableRecord) = {
+  override def getValuesForRecord(record: RoaTableRecord) = {
     List(record.asn.toString(), record.prefix.toString(), record.maxPrefixLength.toString(), record.trustAnchorName)
   }
 
+  private def filterByIpRange(records: IndexedSeq[RoaTableRecord], iprange: IpRange) = {
+    records.filter {
+      record => record.prefix.overlaps(iprange)
+    }
+  }
+  private def filterByAsn(records: IndexedSeq[RoaTableRecord], asn: Asn) = {
+    records.filter {
+      record => record.asn.equals(asn)
+    }
+    
+  }
+  
+  private def filterByString(records: IndexedSeq[RoaTableRecord], searchString: String) = {
+    records.filter {
+      record => {
+        searchString.isEmpty() || 
+        record.asn.toString().contains(searchString) || 
+        record.prefix.toString().contains(searchString) || 
+        record.maxPrefixLength.toString().contains(searchString) ||
+        record.trustAnchorName.contains(searchString)
+      }
+    }
+  }
+
+  
 }
 
 case class RoaTableRecord(asn: Asn, prefix: IpRange, maxPrefixLength: Int, trustAnchorName: String)
