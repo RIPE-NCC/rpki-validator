@@ -60,7 +60,7 @@ class RisWhoisTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter w
   test("should read remote file") {
     val url = Thread.currentThread().getContextClassLoader().getResource("ris/riswhoisdump-head-1000.IPv4.gz")
     
-    val entries = RisWhoisParser.parseFile(url).toList
+    val entries = RisWhoisParser.parseFromUrl(url).toList
     entries.size should equal (42 * 2) /// and don't ask why! 
     entries should contain (new BgpRisEntry(origin = new Asn(45528), prefix = IpRange.parse("1.22.120.0/24"), visibility = 105))
   }

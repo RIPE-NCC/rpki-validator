@@ -54,8 +54,8 @@ object BgpAnnouncementValidator extends Logging {
 
   val announcedRoutes: Promise[Set[AnnouncedRoute]] = Promise {
     val bgpEntries =
-      RisWhoisParser.parseFile(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")) ++
-        RisWhoisParser.parseFile(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz"))
+      RisWhoisParser.parseFromUrl(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")) ++
+        RisWhoisParser.parseFromUrl(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz"))
 
     bgpEntries
       .filter(_.visibility >= VISIBILITY_THRESHOLD)
