@@ -49,7 +49,6 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
 
   var subject: MemoryImage = null
   var trustAnchors: TrustAnchors = null
-  var validatedRoas: Roas = null
 
   override def beforeAll() = {
     trustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
@@ -57,7 +56,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
 
   test("Should find distinct ROA prefixes") {
 
-    subject = new MemoryImage(Filters(), Whitelist(), trustAnchors, validatedRoas)
+    subject = new MemoryImage(Filters(), Whitelist(), trustAnchors, ROAS)
     val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
 
     distinctRoaPrefixes.size should equal(4)
