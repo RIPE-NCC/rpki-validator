@@ -46,9 +46,14 @@ import grizzled.slf4j.Logging
 case class AnnouncedRoute(asn: Asn, prefix: IpRange) {
   val interval = NumberResourceInterval(prefix.getStart(), prefix.getEnd())
 }
-case class ValidatedAnnouncement(route: AnnouncedRoute, validity: RouteValidityState) {
+case class ValidatedAnnouncement(route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix]) {
   def asn = route.asn
   def prefix = route.prefix
+  def validity = {
+    if (validates.nonEmpty) RouteValidityState.VALID
+    else if (invalidates.nonEmpty) RouteValidityState.INVALID
+    else RouteValidityState.UNKNOWN
+  }
 }
 
 object BgpAnnouncementValidator extends Logging {
@@ -74,7 +79,7 @@ object BgpAnnouncementValidator extends Logging {
   def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]): Unit = latestRtrPrefixes.set(newRtrPrefixes)
 
   spawnForever("bgp-validator") {
-    def validPrefix(prefix: RtrPrefix, announced: AnnouncedRoute): Boolean = {
+    def validatesAnnouncedRoute(prefix: RtrPrefix, announced: AnnouncedRoute): Boolean = {
       prefix.asn == announced.asn &&
         prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()) >= announced.prefix.getPrefixLength()
     }
@@ -88,12 +93,8 @@ object BgpAnnouncementValidator extends Logging {
     validatedAnnouncements = routes.par.map(
       route => {
         val matchingPrefixes = prefixTree.filterContaining(route.interval)
-        val validity = {
-          if (matchingPrefixes.isEmpty) RouteValidityState.UNKNOWN
-          else if (matchingPrefixes.exists(validPrefix(_, route))) RouteValidityState.VALID
-          else RouteValidityState.INVALID
-        }
-        ValidatedAnnouncement(route, validity)
+        val (validates, invalidates) = matchingPrefixes.partition(validatesAnnouncedRoute(_, route))
+        ValidatedAnnouncement(route, validates, invalidates)
       }).seq.toIndexedSeq
 
     info("Completed validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")

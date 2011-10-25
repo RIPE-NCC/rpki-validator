@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package controllers
 
-import support.ControllerTestCase
 import net.ripe.rpki.validator.bgp.preview.ValidatedAnnouncement
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
@@ -42,13 +41,15 @@ import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.ShouldMatchers
 import net.ripe.rpki.validator.views.BgpPreviewTableData
 import net.ripe.rpki.validator.bgp.preview.AnnouncedRoute
+import net.ripe.rpki.validator.models.RtrPrefix
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class BgpPreviewTableDataTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
+class BgpPreviewControllerTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
+  import lib.NumberResourcesTest._
 
-  val announce1 = ValidatedAnnouncement(AnnouncedRoute(asn = new Asn(65001), prefix = IpRange.parse("10.0.0.0/24")), validity = RouteValidityState.VALID)
-  val announce2 = ValidatedAnnouncement(AnnouncedRoute(asn = new Asn(650012), prefix = IpRange.parse("10.0.1.0/24")), validity = RouteValidityState.INVALID)
-  val announce3 = ValidatedAnnouncement(AnnouncedRoute(asn = new Asn(65003), prefix = IpRange.parse("10.0.2.0/24")), validity = RouteValidityState.UNKNOWN)
+  val announce1 = ValidatedAnnouncement(AnnouncedRoute(65001, "10.0.0.0/24"), validates = Seq(RtrPrefix(65001, "10.0.0.0/24", None)), invalidates = Seq.empty)
+  val announce2 = ValidatedAnnouncement(AnnouncedRoute(65002, "10.0.1.0/24"), validates = Seq.empty, invalidates = Seq(RtrPrefix(0, "10.0.1.0/24", None)))
+  val announce3 = ValidatedAnnouncement(AnnouncedRoute(65003, "10.0.2.0/24"), validates = Seq.empty, invalidates = Seq.empty)
 
   val testAnnouncements: IndexedSeq[ValidatedAnnouncement] = IndexedSeq[ValidatedAnnouncement](announce1, announce2, announce3)
 

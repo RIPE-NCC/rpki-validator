@@ -34,15 +34,18 @@ import org.scalatest.Spec
 import org.scalatest.matchers.ShouldMatchers
 import net.ripe.ipresource._
 import net.ripe.rpki.validator.models.RtrPrefix
+import NumberResources._
 
-@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class NumberResourcesTest extends Spec with ShouldMatchers {
-  import NumberResources._
-
+object NumberResourcesTest {
   implicit def LongToAsn(asn: Long): Asn = new Asn(asn)
   implicit def StringToPrefix(s: String): IpRange = IpRange.parse(s)
   implicit def IpRangeToInterval(range: IpRange) = NumberResourceInterval(range.getStart(), range.getEnd())
   implicit def StringToInterval(s: String): NumberResourceInterval = IpRangeToInterval(StringToPrefix(s))
+}
+
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+class NumberResourcesTest extends Spec with ShouldMatchers {
+  import NumberResourcesTest._
 
   val Prefix_10_8 = IpRange.parse("10/8")
   val Prefix_10_9 = IpRange.parse("10/9")
