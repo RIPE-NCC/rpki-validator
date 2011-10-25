@@ -30,12 +30,11 @@
 package net.ripe.rpki.validator
 package controllers
 
-import views.BgpPreviewView
-import bgp.preview.ValidatedAnnouncement
 import net.liftweb.json._
 import net.ripe.commons.certification.validation.roa.RouteValidityState
-import net.ripe.ipresource.Asn
-import net.ripe.ipresource.IpRange
+import lib.NumberResources._
+import bgp.preview.ValidatedAnnouncement
+import views.BgpPreviewView
 
 trait BgpPreviewController extends ApplicationController {
 
@@ -48,13 +47,6 @@ trait BgpPreviewController extends ApplicationController {
   }
 
   get("/bgp-preview-data") {
-    implicit object AsnOrdering extends Ordering[Asn] {
-      override def compare(x: Asn, y: Asn) = x compareTo y
-    }
-    implicit object IpRangeOrdering extends Ordering[IpRange] {
-      override def compare(x: IpRange, y: IpRange) = x compareTo y
-    }
-
     val iDisplayStart = params("iDisplayStart").toInt
     val iDisplayLength = params("iDisplayLength").toInt
     val sSearch = params("sSearch").toUpperCase()
