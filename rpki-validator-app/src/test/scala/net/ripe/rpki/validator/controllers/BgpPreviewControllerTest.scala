@@ -30,24 +30,45 @@
 package net.ripe.rpki.validator
 package controllers
 
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
-import org.scalatra.ScalatraFilter
 import support.ControllerTestCase
+import net.ripe.rpki.validator.bgp.preview.ValidatedAnnouncement
+import net.ripe.ipresource.Asn
+import net.ripe.ipresource.IpRange
+import net.ripe.commons.certification.validation.roa.RouteValidityState
 
-import models._
+class BgpPreviewControllerTest extends ControllerTestCase {
 
-@RunWith(classOf[JUnitRunner])
-class TrustAnchorControllersTest extends ControllerTestCase {
-  override def controller = new ControllerFilter with TrustAnchorsController {
-    override def trustAnchors = new TrustAnchors(Seq.empty)
-    override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = sys.error("TODO")
+  val announce1 = new ValidatedAnnouncement(asn = new Asn(65001), prefix = IpRange.parse("10.0.0.0/24"), validity = RouteValidityState.VALID)
+  val announce2 = new ValidatedAnnouncement(asn = new Asn(650012), prefix = IpRange.parse("10.0.1.0/24"), validity = RouteValidityState.INVALID)
+  val announce3 = new ValidatedAnnouncement(asn = new Asn(65003), prefix = IpRange.parse("10.0.2.0/24"), validity = RouteValidityState.UNKNOWN)
+
+  val testAnnouncements: IndexedSeq[ValidatedAnnouncement] = IndexedSeq[ValidatedAnnouncement](announce1, announce2, announce3)
+
+  override def controller = new ControllerFilter with BgpPreviewController {
+
+    override def validatedAnnouncements: IndexedSeq[ValidatedAnnouncement] = testAnnouncements
+
   }
 
-  test("list trust anchors") {
-    get("/trust-anchors") {
-      response.status should equal(200)
-      result.isInstanceOf[views.TrustAnchorsView] should be(true)
-    }
+  test("Should filter overlapping IP resources") {
+
+    val sSearch = "10.0.0.0/23"
+
+    val filteredAnnouncements = controller.filterRecords(testAnnouncements, sSearch)
+
+    filteredAnnouncements should contain(announce1)
+    filteredAnnouncements should contain(announce2)
+    filteredAnnouncements should have length (2)
   }
+  
+  test("Should filter by ASN") {
+    val sSearch = "AS65001"
+      
+    val filteredAnnouncements = controller.filterRecords(testAnnouncements, sSearch)
+
+    filteredAnnouncements should contain(announce1)
+    filteredAnnouncements should have length (1)
+    
+  }
+
 }
