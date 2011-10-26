@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package views
 
-import lib.DataTablesBacking
 import lib.NumberResources._
 import bgp.preview.ValidatedAnnouncement
 import net.ripe.ipresource.IpRange
@@ -38,13 +37,17 @@ import net.ripe.ipresource.Asn
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import scala.xml.NodeSeq
 
-abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[ValidatedAnnouncement]) extends DataTablesBacking[ValidatedAnnouncement] {
+abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[ValidatedAnnouncement]) extends DataTableJsonView[ValidatedAnnouncement] {
 
+  private object RouteValidityStateOrdering extends Ordering[RouteValidityState] {
+    override def compare(x: RouteValidityState, y: RouteValidityState) = x.toString compareTo y.toString
+  }
   private def validityClass(validity: RouteValidityState) = validity match {
     case RouteValidityState.UNKNOWN => "label"
     case RouteValidityState.INVALID => "label warning"
     case RouteValidityState.VALID => "label notice"
   }
+  
   override def getValuesForRecord(record: ValidatedAnnouncement) = {
     record match {
       case announcement: ValidatedAnnouncement =>
@@ -75,43 +78,25 @@ abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[ValidatedA
     }
   }
 
-  override def filterRecords(inputRecords: IndexedSeq[ValidatedAnnouncement], searchCriterium: Any): IndexedSeq[ValidatedAnnouncement] = {
-    searchCriterium match {
-      case range: IpRange => filterByIpRange(inputRecords, range)
-      case asn: Asn => filterByAsn(inputRecords, asn)
-      case searchString: String => filterByString(inputRecords, searchString)
-    }
+  override def filter(searchCriterium: Any): ValidatedAnnouncement => Boolean = searchCriterium match {
+    case range: IpRange => (record => record.prefix.overlaps(range))
+    case asn: Asn => (record => record.asn == asn)
+    case searchString: String => 
+      (record => 
+        searchString.isEmpty ||
+        record.asn.toString.contains(searchString) ||
+        record.prefix.toString.contains(searchString) ||
+        record.validity.toString.equals(searchString))
   }
-
-  override def sortRecords(inputRecords: IndexedSeq[ValidatedAnnouncement], sortColumn: Int) = {
+  
+  override def ordering(sortColumn: Int) = {
     sortColumn match {
-      case 0 => inputRecords.sortBy(_.asn)
-      case 1 => inputRecords.sortBy(_.prefix)
-      case 2 => inputRecords.sortBy(_.validity)
-      case _ => inputRecords
+      case 0 => AsnOrdering.on(_.asn)
+      case 1 => IpRangeOrdering.on(_.prefix)
+      case 2 => RouteValidityStateOrdering.on(_.validity)
+      case _ => sys.error("unknown sort column " + sortColumn)
     }
   }
 
   override def getAllRecords() = validatedAnnouncements
-
-  private def filterByIpRange(inputRecords: IndexedSeq[ValidatedAnnouncement], range: IpRange) = {
-    inputRecords.filter {
-      announcement => announcement.prefix.overlaps(range)
-    }
-  }
-
-  private def filterByAsn(inputRecords: IndexedSeq[ValidatedAnnouncement], asn: Asn) = {
-    inputRecords.filter {
-      announcement => announcement.asn.equals(asn)
-    }
-  }
-
-  private def filterByString(inputRecords: IndexedSeq[ValidatedAnnouncement], sSearch: String) = {
-    inputRecords.filter {
-      announcement =>
-        {
-          sSearch.isEmpty || announcement.asn.toString.contains(sSearch) || announcement.prefix.toString.contains(sSearch) || announcement.validity.toString.equals(sSearch)
-        }
-    }
-  }
 }

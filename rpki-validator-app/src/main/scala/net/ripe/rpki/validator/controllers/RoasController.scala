@@ -51,7 +51,7 @@ trait RoasController extends ApplicationController {
       override def getParam(name: String) = {
         params(name)
       }
-    }.renderRecords()
+    }
   }
 
   get("/roas.csv") {

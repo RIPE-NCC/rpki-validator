@@ -35,6 +35,7 @@ import scala.xml.Xhtml
 import controllers._
 import views.View
 import views.Layouts
+import net.ripe.rpki.validator.views.DataTableJsonView
 
 abstract class WebFilter extends ScalatraFilter
   with ApplicationController
@@ -51,6 +52,9 @@ abstract class WebFilter extends ScalatraFilter
     case view: View =>
       contentType = "text/html"
       "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view))
+    case view: DataTableJsonView[_] =>
+      contentType = "application/json"
+      view.renderJson
   }
 
   override protected def renderPipeline = renderView orElse super.renderPipeline

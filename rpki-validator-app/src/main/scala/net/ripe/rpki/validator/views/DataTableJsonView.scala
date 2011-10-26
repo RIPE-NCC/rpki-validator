@@ -28,48 +28,42 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package lib
+package views
 
-import org.scalatra.ScalatraKernel
 import net.liftweb.json._
 import net.ripe.ipresource.IpRange
 import net.ripe.ipresource.Asn
 
 import scala.NotDefinedError
 
-trait DataTablesBacking[R <: Any] {
+trait DataTableJsonView[R <: Any] {
 
   protected def getParam(name: String): String
   protected def getAllRecords(): IndexedSeq[R]
-  protected def filterRecords(records: IndexedSeq[R], searchCriterium: Any): IndexedSeq[R]
-  protected def sortRecords(records: IndexedSeq[R], sortColumn: Int): IndexedSeq[R]
+  protected def filter(searchCriterium: Any): R => Boolean
+  protected def ordering(sortColumn: Int): Ordering[R]
   protected def getValuesForRecord(record: R): List[String]
 
-  val iDisplayStart = getParam("iDisplayStart").toInt
-  val iDisplayLength = getParam("iDisplayLength").toInt
-  val sSearch = getParam("sSearch").toUpperCase()
+  private val iDisplayStart = getParam("iDisplayStart").toInt
+  private val iDisplayLength = getParam("iDisplayLength").toInt
+  private val sSearch = getParam("sSearch").trim().toUpperCase()
 
-  val sortCol = getParam("iSortCol_0").toInt
-  val sortOrder = getParam("sSortDir_0")
+  private val sortCol = getParam("iSortCol_0").toInt
+  private val sortOrder = getParam("sSortDir_0")
 
   def searchCriterium = {
     try {
       IpRange.parse(sSearch)
     } catch {
       case _ => try {
-        if (sSearch.startsWith("AS")) {
-          Asn.parse(sSearch)
-        } else {
-          sSearch
-        }
+        Asn.parse(sSearch)
       } catch {
         case _ => sSearch
       }
     }
   }
 
-  def renderRecords() = {
-
+  def renderJson: String = {
     val allRecords = getAllRecords
     val filteredRecords = filterRecords(allRecords, searchCriterium)
     val sortedRecords = sortRecords(filteredRecords, sortCol)
@@ -89,26 +83,30 @@ trait DataTablesBacking[R <: Any] {
       case _ => records
     }
   }
-  
+
   private def paginate(records: IndexedSeq[R]) = {
     records.drop(iDisplayStart).take(iDisplayLength)
   }
 
   private def makeJArray(records: IndexedSeq[R]): JArray = {
     JArray(
-      records.map {
-        record =>
-          {
-            JArray(makeJStringListForRecord(record))
-          }
+      records.map { record =>
+        JArray(makeJStringListForRecord(record))
       }.toList)
   }
 
   private def makeJStringListForRecord(record: R): List[JValue] = {
     val strings = getValuesForRecord(record)
-    strings.map {
-      string => JString(string)
+    strings.map { string =>
+      JString(string)
     }
   }
-
+  
+  private[views] def filterRecords(allRecords: IndexedSeq[R], searchCriterium: Any): IndexedSeq[R] = {
+    allRecords.filter(filter(searchCriterium))
+  }
+  
+  private[views] def sortRecords(filteredRecords: IndexedSeq[R], sortColumn: Int): IndexedSeq[R] = {
+    filteredRecords.sorted(ordering(sortColumn))
+  }
 }

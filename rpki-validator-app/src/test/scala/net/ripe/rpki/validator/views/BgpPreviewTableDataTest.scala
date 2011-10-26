@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package controllers
+package views
 
 import net.ripe.rpki.validator.bgp.preview.ValidatedAnnouncement
 import net.ripe.ipresource.Asn
@@ -36,15 +36,12 @@ import net.ripe.ipresource.IpRange
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import scala.collection.mutable.HashMap
 import org.scalatest.FunSuite
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.ShouldMatchers
-import net.ripe.rpki.validator.views.BgpPreviewTableData
 import net.ripe.rpki.validator.bgp.preview.AnnouncedRoute
 import net.ripe.rpki.validator.models.RtrPrefix
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class BgpPreviewControllerTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
+class BgpPreviewControllerTest extends FunSuite with ShouldMatchers {
   import lib.NumberResourcesTest._
 
   val announce1 = ValidatedAnnouncement(AnnouncedRoute(65001, "10.0.0.0/24"), validates = Seq(RtrPrefix(65001, "10.0.0.0/24", None)), invalidates = Seq.empty)

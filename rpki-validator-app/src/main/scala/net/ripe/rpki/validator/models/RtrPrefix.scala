@@ -55,6 +55,9 @@ object RtrPrefix {
     }
   }
 
+  /**
+   * Takes an RtrPrefix and returns the associated IP range.
+   */
   implicit object RtrPrefixReducer extends Reducer[RtrPrefix, NumberResourceInterval] {
     override def unit(prefix: RtrPrefix) = prefix.interval
   }

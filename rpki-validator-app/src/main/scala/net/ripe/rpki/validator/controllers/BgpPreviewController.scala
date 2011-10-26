@@ -34,10 +34,7 @@ import net.ripe.commons.certification.validation.roa.RouteValidityState
 
 import bgp.preview.ValidatedAnnouncement
 import views.BgpPreviewView
-import net.ripe.ipresource.IpRange
-import net.ripe.ipresource.Asn
-import net.ripe.rpki.validator.lib.DataTablesBacking
-import net.ripe.rpki.validator.views.BgpPreviewTableData
+import views.BgpPreviewTableData
 
 trait BgpPreviewController extends ApplicationController {
 
@@ -54,7 +51,7 @@ trait BgpPreviewController extends ApplicationController {
       override def getParam(name: String) = {
         params(name)
       }
-    }.renderRecords()
+    }
   }
 
 

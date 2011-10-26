@@ -32,13 +32,12 @@ package views
 
 import models.Roas
 import models.RtrPrefix
-import lib.DataTablesBacking
 import scala.collection.JavaConverters._
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import lib.NumberResources._
 
-abstract class RoaTableData(roas: Roas) extends DataTablesBacking[RoaTableRecord] {
+abstract class RoaTableData(roas: Roas) extends DataTableJsonView[RoaTableRecord] {
 
   override def getAllRecords() = {
     val (ready, loading) = roas.all.partition(_._2.isDefined)
@@ -49,62 +48,42 @@ abstract class RoaTableData(roas: Roas) extends DataTablesBacking[RoaTableRecord
       roaPrefix <- roa.getPrefixes().asScala
     } yield {
       new RoaTableRecord(
-          asn = roa.getAsn(),
-          prefix = roaPrefix.getPrefix(),
-          maxPrefixLength = roaPrefix.getEffectiveMaximumLength(),
-          trustAnchorName = talName)
+        asn = roa.getAsn(),
+        prefix = roaPrefix.getPrefix(),
+        maxPrefixLength = roaPrefix.getEffectiveMaximumLength(),
+        trustAnchorName = talName)
     }
     records.toIndexedSeq
   }
 
-  override def filterRecords(records: IndexedSeq[RoaTableRecord], searchCriterium: Any) = {
+  override def filter(searchCriterium: Any): RoaTableRecord => Boolean = {
     searchCriterium match {
-      case iprange: IpRange => filterByIpRange(records, iprange)
-      case asn: Asn => filterByAsn(records, asn)
-      case searchString: String => filterByString(records, searchString)
-      case _ => records
+      case iprange: IpRange => _.prefix.overlaps(iprange)
+      case asn: Asn => _.asn == asn
+      case searchString: String =>
+        (record =>
+          searchString.isEmpty() ||
+            record.asn.toString().contains(searchString) ||
+            record.prefix.toString().contains(searchString) ||
+            record.maxPrefixLength.toString().contains(searchString) ||
+            record.trustAnchorName.toUpperCase().contains(searchString))
+      case _ => _ => true
     }
   }
 
-  override def sortRecords(records: IndexedSeq[RoaTableRecord], sortColumn: Int) = {
+  override def ordering(sortColumn: Int) = {
     sortColumn match {
-      case 0 => records.sortBy(_.asn)
-      case 1 => records.sortBy(_.prefix)
-      case 2 => records.sortBy(_.maxPrefixLength)
-      case 3 => records.sortBy(_.trustAnchorName)
-      case _ => records
+      case 0 => AsnOrdering.on(_.asn)
+      case 1 => IpRangeOrdering.on(_.prefix)
+      case 2 => implicitly[Ordering[Int]].on(_.maxPrefixLength)
+      case 3 => implicitly[Ordering[String]].on(_.trustAnchorName)
+      case _ => sys.error("unknown sort column: " + sortColumn)
     }
   }
 
   override def getValuesForRecord(record: RoaTableRecord) = {
-    List(record.asn.toString(), record.prefix.toString(), record.maxPrefixLength.toString(), record.trustAnchorName)
+    List(record.asn.getValue().toString(), record.prefix.toString(), record.maxPrefixLength.toString(), record.trustAnchorName)
   }
-
-  private def filterByIpRange(records: IndexedSeq[RoaTableRecord], iprange: IpRange) = {
-    records.filter {
-      record => record.prefix.overlaps(iprange)
-    }
-  }
-  private def filterByAsn(records: IndexedSeq[RoaTableRecord], asn: Asn) = {
-    records.filter {
-      record => record.asn.equals(asn)
-    }
-    
-  }
-  
-  private def filterByString(records: IndexedSeq[RoaTableRecord], searchString: String) = {
-    records.filter {
-      record => {
-        searchString.isEmpty() || 
-        record.asn.toString().contains(searchString) || 
-        record.prefix.toString().contains(searchString) || 
-        record.maxPrefixLength.toString().contains(searchString) ||
-        record.trustAnchorName.contains(searchString)
-      }
-    }
-  }
-
-  
 }
 
 case class RoaTableRecord(asn: Asn, prefix: IpRange, maxPrefixLength: Int, trustAnchorName: String)
