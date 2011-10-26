@@ -31,8 +31,9 @@ package net.ripe.rpki.validator.lib
 
 import scala.collection.mutable.Builder
 import scalaz.FingerTree
-import scalaz.Node
+import scalaz.Finger
 import scalaz.Monoid
+import scalaz.Node
 import scalaz.Reducer
 import net.ripe.ipresource._
 import net.ripe.rpki.validator.models.RtrPrefix
@@ -66,31 +67,28 @@ object NumberResources {
 
   implicit object NumberResourceIntervalMonoid extends Monoid[NumberResourceInterval] {
     override val zero = NumberResourceInterval(MaximumNumberResource, MinimumNumberResource)
-    override def append(s1: NumberResourceInterval, s2: => NumberResourceInterval) =
-      NumberResourceInterval(s1.start min s2.start, s1.end max s2.end)
+    override def append(s1: NumberResourceInterval, s2: => NumberResourceInterval) = {
+      val other = s2
+      NumberResourceInterval(s1.start min other.start, s1.end max other.end)
+    }
   }
 
-  class NumberResourceIntervalTree[A](tree: FingerTree[NumberResourceInterval, A]) {
+  class NumberResourceIntervalTree[A] private (tree: FingerTree[NumberResourceInterval, A])(implicit measurer: Reducer[A, NumberResourceInterval]) {
     def isEmpty = tree.isEmpty
 
-    def filterContaining(range: NumberResourceInterval)(implicit reducer: Reducer[A, NumberResourceInterval]): IndexedSeq[A] = {
-      implicit def NodeReducer[A] = new Reducer[Node[NumberResourceInterval, A], NumberResourceInterval] {
-        override def unit(node: Node[NumberResourceInterval, A]) = node.measure
-      }
+    def filterContaining(range: NumberResourceInterval): IndexedSeq[A] = {
+      def loop[A](tree: FingerTree[NumberResourceInterval, A])(collect: A => Unit)(implicit measurer: Reducer[A, NumberResourceInterval]) {
+        def collectIfMatches(value: A) = if (measurer.unit(value) contains range) collect(value)
 
-      def loop[A](tree: FingerTree[NumberResourceInterval, A])(collect: A => Unit)(implicit reducer: Reducer[A, NumberResourceInterval]) {
-        def collectIfMatches(value: A) = if (reducer.unit(value) contains range) collect(value)
+        def collectFinger(finger: Finger[NumberResourceInterval, A]) = if (finger.measure contains range) finger.foreach(collectIfMatches)
+
         tree.fold(
           empty = _ => (),
           single = (_, value) => collectIfMatches(value),
-          deep = (r, prefix, interior, suffix) => if (r contains range) {
-            if (prefix.measure contains range) {
-              prefix.foreach(collectIfMatches)
-            }
-            loop(interior)(_.foreach(collectIfMatches))
-            if (suffix.measure contains range) {
-              suffix.foreach(collectIfMatches)
-            }
+          deep = (measure, prefix, interior, suffix) => if (measure contains range) {
+            collectFinger(prefix)
+            loop(interior)(_.foreach(collectIfMatches))(FingerTree.NodeMeasure)
+            collectFinger(suffix)
           })
       }
 
@@ -101,13 +99,13 @@ object NumberResources {
   }
 
   object NumberResourceIntervalTree {
-    def apply[A](a: A*)(implicit reducer: Reducer[A, NumberResourceInterval]) = {
-      val values = a.sortBy(reducer.unit(_))
-      new NumberResourceIntervalTree(values.foldLeft(FingerTree.empty[NumberResourceInterval, A])(_ :+ _))
+    def apply[A](elems: A*)(implicit measurer: Reducer[A, NumberResourceInterval]): NumberResourceIntervalTree[A] = {
+      new NumberResourceIntervalTree(elems.sortBy(measurer.unit).foldLeft(FingerTree.empty)(_ :+ _))
     }
 
-    def empty[A](implicit reducer: Reducer[A, NumberResourceInterval]) =
-      new NumberResourceIntervalTree(FingerTree.empty[NumberResourceInterval, A])
+    def empty[A](implicit measurer: Reducer[A, NumberResourceInterval]): NumberResourceIntervalTree[A] = {
+      new NumberResourceIntervalTree(FingerTree.empty)
+    }
   }
 
 }
