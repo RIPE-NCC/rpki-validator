@@ -38,14 +38,18 @@ import models._
 import scalaz.NonEmptyList
 import lib.Validation._
 
-class FiltersView(filters: Filters, params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
+class FiltersView(filters: Filters, getCurrentRtrPrefixes: () => Iterable[RtrPrefix], params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   private val fieldNameToText = Map("prefix" -> "Prefix")
 
+  val currentRtrPrefixes = getCurrentRtrPrefixes()
+  
   def tab = Tabs.FiltersTab
   def title = Text(tab.text)
   def body = {
     <div>{ renderMessages(messages, fieldNameToText) }</div>
+    <div class="alert-message block-message info">
     <p>By adding a filter the validator will ignore any RPKI prefixes that overlap with the filter's prefix.</p>
+    </div>
     <h2>Add filter</h2>
     <div class="well">
       <form method="POST" class="form-stacked">
@@ -71,17 +75,44 @@ class FiltersView(filters: Filters, params: Map[String, String] = Map.empty, mes
           <table id="filters-table" class="zebra-striped" style="display: none;">
             <thead>
               <tr>
-                <th>Prefix</th><th>&nbsp;</th>
+                <th>Prefix</th><th>Filtered ROA prefixes</th><th>&nbsp;</th>
               </tr>
             </thead>
             <tbody>{
-              for (entry <- filters.entries) yield {
+              for (filter <- filters.entries) yield {
+                val filteredOut = currentRtrPrefixes.filter(filter.shouldIgnore(_))
+                def filteredOutDetails = {
+                  <table>
+                    <thead>
+                      <tr><th>ASN</th><th>Prefix</th><th>Maximum Length</th></tr>
+                    </thead>
+                    {
+                      for { rtrPrefix <- filteredOut } yield {
+                        <tr>
+                          <td> { rtrPrefix.asn.getValue().toString() } </td>
+                          <td> { rtrPrefix.prefix.toString() } </td>
+                          <td> { if (rtrPrefix.maxPrefixLength.isDefined) {
+                                 rtrPrefix.maxPrefixLength.get.toString()
+                               } else {
+                                 rtrPrefix.prefix.getPrefixLength().toString()
+                               } 
+                          }
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </table>
+                }
+
                 <tr>
-                  <td>{ entry.prefix }</td>
+                  <td>{ filter.prefix }</td>
+                  <td>
+                    <span rel="popover" data-content={ Xhtml.toXhtml(filteredOutDetails) } data-original-title="Details">{ filteredOut.size + " prefix(es)" }</span>
+                  </td>
                   <td>
                     <form method="POST" action="/filters" style="padding:0;margin:0;">
                       <input type="hidden" name="_method" value="DELETE"/>
-                      <input type="hidden" name="prefix" value={ entry.prefix.toString }/>
+                      <input type="hidden" name="prefix" value={ filter.prefix.toString }/>
                       <input type="submit" class="btn" value="delete"/>
                     </form>
                   </td>
@@ -94,10 +125,18 @@ $(document).ready(function() {
   $('#filters-table').dataTable({
       "sPaginationType": "full_numbers",
       "aoColumns": [
-        null,
+        null, null,
         { "bSortable": false }
       ]
     }).show();
+  $('[rel=popover]').popover({
+    "live": true,
+    "html": true,
+    "placement": "below",
+    "offset": 10
+  }).live('click', function (e) {
+    e.preventDefault();
+  });
 });
 // --></script>
         }

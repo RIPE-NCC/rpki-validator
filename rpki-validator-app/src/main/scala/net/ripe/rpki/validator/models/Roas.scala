@@ -42,30 +42,12 @@ import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.roa.RoaCms
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import scalaz.concurrent.Promise
 import net.ripe.ipresource.UniqueIpResource
 import net.ripe.ipresource.Asn
-import org.apache.commons.lang.builder.HashCodeBuilder
-import scala.collection.mutable.HashSet
 
 case class ValidatedRoa(val roa: RoaCms, val uri: URI)
 
 class Roas(val all: Map[String, Option[Seq[ValidatedRoa]]]) {
-
-  val logger = Logger[this.type]
-
-  var msg: String = "Creating new Roas object with tals: "
-  all.keys.foreach {
-    key =>
-      msg = msg + key + " with number of validated Roas: "
-      all.get(key).get match {
-        case None => msg = msg + "none"
-        case Some(roas) => msg = msg + roas.size
-      }
-      msg = msg + "\n"
-  }
-
-  logger.trace(msg)
 
   def getValidatedRtrPrefixes = {
     for {
@@ -83,57 +65,9 @@ class Roas(val all: Map[String, Option[Seq[ValidatedRoa]]]) {
     new Roas(all.updated(tal.getCaName(), Some(validatedRoas)))
   }
 
-  def getUniqueValidatedPrefixes(): Array[ValidatedPrefix] = {
-
-    var uniquePrefixSet = new HashSet[ValidatedPrefix]
-
-    all.values.foreach {
-      _ match {
-        case None =>
-        case Some(sequence) => {
-          sequence.foreach {
-            validatedRoa =>
-              getValidatedPrefixes(validatedRoa).foreach {
-                validatedPrefix => uniquePrefixSet.add(validatedPrefix)
-              }
-          }
-        }
-      }
-    }
-    uniquePrefixSet.toArray
-  }
-  
-  
-  private def getValidatedPrefixes(validatedRoa: ValidatedRoa): List[ValidatedPrefix] = {
-
-    var prefixes = List[ValidatedPrefix]()
-
-    var asn = validatedRoa.roa.getAsn()
-    validatedRoa.roa.getPrefixes().asScala.foreach {
-      prefix =>
-        {
-          var maxLength = prefix.getEffectiveMaximumLength()
-          var ip = prefix.getPrefix().getStart()
-          var length = prefix.getPrefix().getPrefixLength()
-
-          var validatedPrefix = ValidatedPrefix(asn, ip, length, maxLength)
-
-          prefixes = prefixes ++ List(validatedPrefix)
-
-        }
-    }
-    prefixes
-  }
-
 }
 
-case class ValidatedPrefix(asn: Asn, ipaddress: UniqueIpResource, length: Int, maxLength: Int) {
-
-  override def hashCode(): Int = {
-    HashCodeBuilder.reflectionHashCode(this)
-  }
-
-}
+case class ValidatedPrefix(asn: Asn, ipaddress: UniqueIpResource, length: Int, maxLength: Int)
 
 object Roas {
   private val logger = Logger[this.type]

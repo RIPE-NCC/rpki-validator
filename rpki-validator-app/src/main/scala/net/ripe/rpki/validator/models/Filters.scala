@@ -32,27 +32,15 @@ package models
 
 import net.ripe.ipresource.IpRange
 
-case class IgnoreFilter(prefix: IpRange)
+case class IgnoreFilter(prefix: IpRange) {
+  def shouldIgnore(rtrPrefix: RtrPrefix): Boolean = prefix.overlaps(rtrPrefix.prefix)
+}
 
 case class Filters(entries: Set[IgnoreFilter] = Set.empty) {
   def addFilter(filter: IgnoreFilter) = copy(entries + filter)
   def removeFilter(filter: IgnoreFilter) = copy(entries - filter)
 
-  def filter(input: Iterable[RtrPrefix]): Iterable[RtrPrefix] = {
-    for {
-      rtrPrefix <- input
-      if (! shouldBeFiltered(rtrPrefix))
-    } yield {
-      rtrPrefix
-    }
-  }
+  def filter(input: Iterable[RtrPrefix]): Iterable[RtrPrefix] = input.filterNot(shouldIgnore(_))
 
-  private def shouldBeFiltered(rtrPrefix: RtrPrefix) = {
-    val prefix = rtrPrefix.prefix
-    var result = false
-    entries.foreach(ignoreFilter => if (ignoreFilter.prefix.overlaps(prefix)) {
-      result = true
-    })
-    result
-  }
+  private def shouldIgnore(rtrPrefix: RtrPrefix) = entries.exists(_.shouldIgnore(rtrPrefix)) 
 }

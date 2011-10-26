@@ -43,14 +43,21 @@ class BgpPreviewView() extends View with ViewHelpers {
   def tab = Tabs.BgpPreviewTab
   def title = Text("BGP Preview")
   def body = {
-    <div>
-      This page provides a preview of the likely rpki validity states your routers will
+    <div class="alert-message block-message info">
+      <p>
+      This page provides a <strong>preview</strong> of the likely rpki validity states your routers will
 	  associate with BGP announcements. This preview is based on:
+      </p>
       <ul>
         <li>BGP announcements that are widely (>5 peers) <a href="http://www.ris.ripe.net/dumps/">seen</a> by RIS</li>
         <li>Validation rules defined in the <a href="http://tools.ietf.org/html/draft-ietf-sidr-roa-validation-10#section-2">IETF standard</a>.</li>
         <li>The validated ROAs found by this validator after applying your filters and additional whitelist entries</li>
       </ul>
+      <br />
+      <p>
+      Please note that the actual validation of announcements is done in your routers and that the announcements that your
+      routers see may differ from the announcements used here.
+      </p>
     </div>
     <table id="bgp-preview-table" class="zebra-striped" style="display: none;">
       <thead>
@@ -72,7 +79,6 @@ $(document).ready(function() {
         "sAjaxSource": "bgp-preview-data"
     }).show();
   $('[rel=popover]').popover({
-    "width": 300,
     "live": true,
     "html": true,
     "placement": "below",

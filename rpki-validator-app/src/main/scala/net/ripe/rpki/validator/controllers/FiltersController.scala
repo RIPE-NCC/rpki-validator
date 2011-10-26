@@ -38,28 +38,32 @@ import models._
 import views.FiltersView
 
 trait FiltersController extends ApplicationController {
+  
   protected def filters: Filters
   protected def addFilter(filter: IgnoreFilter): Unit
   protected def removeFilter(filter: IgnoreFilter): Unit
   protected def filterExists(filter: IgnoreFilter): Boolean = filters.entries.contains(filter)
+  protected def roas: Roas
 
   private def baseUrl = views.Tabs.FiltersTab.url
+  
+  private def getCurrentRtrPrefixes(): Iterable[RtrPrefix] = roas.getValidatedRtrPrefixes
 
   get(baseUrl) {
-    new FiltersView(filters, messages = feedbackMessages)
+    new FiltersView(filters, getCurrentRtrPrefixes, messages = feedbackMessages)
   }
 
   post(baseUrl) {
     submittedFilter match {
       case Success(entry) =>
         if (filterExists(entry))
-          new FiltersView(filters, params, Seq(ErrorMessage("filter already exists")))
+          new FiltersView(filters, getCurrentRtrPrefixes, params, Seq(ErrorMessage("filter already exists")))
         else {
           addFilter(entry)
           redirectWithFeedbackMessages(baseUrl, Seq(SuccessMessage("The prefix has been added to the filters.")))
         }
       case Failure(errors) =>
-        new FiltersView(filters, params, errors)
+        new FiltersView(filters, getCurrentRtrPrefixes, params, errors)
     }
   }
 
@@ -70,15 +74,16 @@ trait FiltersController extends ApplicationController {
           removeFilter(entry)
           redirectWithFeedbackMessages(baseUrl, Seq(SuccessMessage("The prefix has been removed from the filters.")))
         } else {
-          new FiltersView(filters, params, Seq(ErrorMessage("filter no longer exists")))
+          new FiltersView(filters, getCurrentRtrPrefixes, params, Seq(ErrorMessage("filter no longer exists")))
         }
       case Failure(errors) =>
         // go away hacker!
-        new FiltersView(filters, params, errors)
+        new FiltersView(filters, getCurrentRtrPrefixes, params, errors)
     }
   }
 
   private def submittedFilter: ValidationNEL[FeedbackMessage, IgnoreFilter] = {
     validateParameter("prefix", required(parseIpPrefix)) map IgnoreFilter
   }
+  
 }

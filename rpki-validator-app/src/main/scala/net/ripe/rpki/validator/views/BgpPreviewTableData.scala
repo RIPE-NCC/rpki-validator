@@ -36,6 +36,7 @@ import net.ripe.ipresource.IpRange
 import net.ripe.ipresource.Asn
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import scala.xml.NodeSeq
+import scala.xml.Xhtml
 
 abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[ValidatedAnnouncement]) extends DataTableJsonView[ValidatedAnnouncement] {
 
@@ -47,48 +48,45 @@ abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[ValidatedA
     case RouteValidityState.INVALID => "label warning"
     case RouteValidityState.VALID => "label notice"
   }
-  
-  override def getValuesForRecord(record: ValidatedAnnouncement) = {
-    record match {
-      case announcement: ValidatedAnnouncement =>
-        def reason =
-          <table>
-            <thead>
-              <tr><th>ASN</th><th>Prefix</th><th>Length</th><th>Result</th></tr>
-            </thead>
-            <tbody>{
-              for (prefix <- announcement.validates) yield {
-                <tr><td>{ prefix.asn.getValue() }</td><td>{ prefix.prefix }</td><td>{ prefix.effectiveMaxPrefixLength }</td><td>VALID</td></tr>
-              }
-            }{
-              for (prefix <- announcement.invalidates) yield {
-                <tr><td>{ prefix.asn.getValue() }</td><td>{ prefix.prefix }</td><td>{ prefix.effectiveMaxPrefixLength }</td><td>INVALID</td></tr>
-              }
-            }</tbody>
-          </table>
-        val validity = if (announcement.validity == RouteValidityState.UNKNOWN) {
-          <span class={ validityClass(announcement.validity) }>{ announcement.validity }</span>
-        } else {
-          <span class={ validityClass(announcement.validity) } rel="popover" data-content={ reason.toString } data-original-title="Details">{ announcement.validity }</span>
-        }
-        List(
-          announcement.asn.getValue().toString(),
-          announcement.prefix.toString(),
-          validity.toString())
+
+  override def getValuesForRecord(announcement: ValidatedAnnouncement) = {
+    def reason =
+      <table>
+        <thead>
+          <tr><th>ASN</th><th>Prefix</th><th>Length</th><th>Result</th></tr>
+        </thead>
+        <tbody>{
+          for (prefix <- announcement.validates) yield {
+            <tr><td>{ prefix.asn.getValue() }</td><td>{ prefix.prefix }</td><td>{ prefix.effectiveMaxPrefixLength }</td><td>VALID</td></tr>
+          }
+        }{
+          for (prefix <- announcement.invalidates) yield {
+            <tr><td>{ prefix.asn.getValue() }</td><td>{ prefix.prefix }</td><td>{ prefix.effectiveMaxPrefixLength }</td><td>INVALID</td></tr>
+          }
+        }</tbody>
+      </table>
+    val validity = if (announcement.validity == RouteValidityState.UNKNOWN) {
+      <span class={ validityClass(announcement.validity) }>{ announcement.validity }</span>
+    } else {
+      <span class={ validityClass(announcement.validity) } rel="popover" data-content={ Xhtml.toXhtml(reason) } data-original-title="Details">{ announcement.validity }</span>
     }
+    List(
+      announcement.asn.getValue().toString(),
+      announcement.prefix.toString(),
+      Xhtml.toXhtml(validity))
   }
 
   override def filter(searchCriterium: Any): ValidatedAnnouncement => Boolean = searchCriterium match {
     case range: IpRange => (record => record.prefix.overlaps(range))
     case asn: Asn => (record => record.asn == asn)
-    case searchString: String => 
-      (record => 
+    case searchString: String =>
+      (record =>
         searchString.isEmpty ||
-        record.asn.toString.contains(searchString) ||
-        record.prefix.toString.contains(searchString) ||
-        record.validity.toString.equals(searchString))
+          record.asn.toString.contains(searchString) ||
+          record.prefix.toString.contains(searchString) ||
+          record.validity.toString.equals(searchString))
   }
-  
+
   override def ordering(sortColumn: Int) = {
     sortColumn match {
       case 0 => AsnOrdering.on(_.asn)

@@ -43,7 +43,17 @@ class WhitelistView(whitelist: Whitelist, params: Map[String, String] = Map.empt
   def title = Text("Whitelist")
   def body = {
     <div>{ renderMessages(messages, fieldNameToText) }</div>
-    <p>By adding a whitelisted announcement the validator will ensure that all routers receive this announcement, irrespective of the actual validated ROAs.</p>
+    <div class="alert-message block-message info">
+    <p>
+        By adding a whitelisted announcement the validator will ensure that all routers receive this announcement in addition
+        to any actual validated ROAs for the same prefix.
+    </p>
+    <p>
+        Please note that whitelisting a prefix for just one ASN will invalidate announcements for this prefix from other ASNs,
+        if no ROAs already exist for this ASN and prefix. In this case you need to create an additional whitelist entry if you
+        want to authorize the other ASN as well. 
+    </p>
+    </div>
     <h2>Add entry</h2>
     <div class="well">
       <form method="POST" class="form-stacked">
