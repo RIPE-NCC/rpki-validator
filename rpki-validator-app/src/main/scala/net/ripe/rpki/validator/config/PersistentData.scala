@@ -30,14 +30,13 @@
 package net.ripe.rpki.validator
 package config
 
-import java.io.File
-import java.io.IOException
 import org.apache.commons.io.FileUtils
 import net.liftweb.json._
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import grizzled.slf4j.Logging
 import models._
+import java.io.{FileNotFoundException, File, IOException}
 
 case class PersistentData(schemaVersion: Int = 0, filters: Filters = Filters(), whitelist: Whitelist = Whitelist())
 
@@ -82,6 +81,9 @@ object PersistentDataSerialiser extends PersistentDataSerialiser with Logging {
     val json: String = FileUtils.readFileToString(file, "UTF-8")
     Some(deserialise(json))
   } catch {
+    case e: FileNotFoundException =>
+      info("Config file does not exist: "+ e.getLocalizedMessage)
+      None
     case e: IOException =>
       warn("Error reading " + file.getAbsolutePath + ": " + e.getMessage)
       None
