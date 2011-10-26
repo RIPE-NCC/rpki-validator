@@ -57,7 +57,7 @@ class Options(args: Array[String]) {
   def rtrPort: Int = rtrPortOption.value.getOrElse(Options.DEFAULT_RTR_PORT)
   def httpPort: Int = httpPortOption.value.getOrElse(Options.DEFAULT_HTTP_PORT)
   def noCloseOnError: Boolean = noCloseOption.hasValue
-  def noNotify: Boolean = noCloseOption.hasValue
+  def noNotify: Boolean = noNotifyOption.hasValue
   def dataFileName: String = dataFileNameOption.value.getOrElse(Options.DEFAULT_DATA_FILE_NAME)
 
   parser.parse(args)
