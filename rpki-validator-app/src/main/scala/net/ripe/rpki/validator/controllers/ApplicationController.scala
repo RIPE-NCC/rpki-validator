@@ -31,17 +31,15 @@ package net.ripe.rpki.validator
 package controllers
 
 import scala.xml.Text
-import scalaz._, Scalaz._
+import scalaz._,Scalaz._
+
 import org.scalatra._
 import lib.Validation._
+import views.HomeView
 
 trait ApplicationController extends ScalatraKernel with FlashMapSupport with MethodOverride {
   get("/") {
-    new views.View {
-      def tab = views.Tabs.HomeTab
-      def title = Text("Welcome")
-      def body = <p>Hello, World!</p>
-    }
+    new HomeView()
   }
 
   protected[this] def feedbackMessages: Seq[FeedbackMessage] = flash.get("feedback").map(_.asInstanceOf[Seq[FeedbackMessage]]).getOrElse(Seq.empty)

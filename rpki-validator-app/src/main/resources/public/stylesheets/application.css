@@ -143,3 +143,49 @@ td.warning {
 	background: url('../images/sort_desc_disabled.png') no-repeat center
 		right;
 }
+
+#feedbackButton {
+    position:fixed;
+    top:250px;
+    left:-5px;
+    cursor:pointer;
+}
+
+.stepTitle {
+  text-align:center;
+  cursor:pointer;
+  border: 1px solid #C6EDF9;
+  border-radius: 10px 10px 10px 10px;
+}
+.stepTitle a:focus {
+    outline: none; 
+}
+.stepTitle h3 {
+  padding:10px;
+}
+.stepTitle.selected {
+  background-color: #DDF4FB;
+  background-image: -moz-linear-gradient(#DDF4FB, #C6EDF9);
+    background-repeat: repeat-x;  
+}
+.stepDescription {
+  padding:10px;
+  padding-top:20px;
+  display:none;border: 1px solid #C6EDF9;
+  border-radius: 10px 10px 10px 10px;
+}
+.stepDescription.selected {
+  display:block;
+}
+.stepDescription ul li {
+  color:#000;
+ }
+.stepOverhead {
+  text-align:center;
+}
+.stepArrow {
+  text-align:center;
+}
+.stepArrow.selected {
+  background: url(/images/stepPointer.png) no-repeat center bottom;
+}

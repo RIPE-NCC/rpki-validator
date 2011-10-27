@@ -166,7 +166,7 @@ object Main {
       override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
 
-      override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements
+      override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements.get
 
     }), "/*", FilterMapping.ALL)
 
@@ -193,7 +193,7 @@ object Main {
 
     sys.addShutdownHook({
       server.stop()
-      logger.info("Bye, bye...")
+      logger.info("Terminating...")
     })
     server.start()
     logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + options.httpPort + ". Hit CTRL+C to terminate.")

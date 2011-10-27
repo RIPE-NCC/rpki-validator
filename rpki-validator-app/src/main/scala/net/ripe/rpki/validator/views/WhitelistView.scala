@@ -35,8 +35,10 @@ import Scalaz._
 import scala.xml._
 import models._
 import lib.Validation._
+import bgp.preview.ValidatedAnnouncement
+import net.ripe.commons.certification.validation.roa.RouteValidityState
 
-class WhitelistView(whitelist: Whitelist, params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
+class WhitelistView(whitelist: Whitelist, validatedAnnouncements: IndexedSeq[ValidatedAnnouncement], params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   private val fieldNameToText = Map("asn" -> "Origin", "prefix" -> "Prefix", "maxPrefixLength" -> "Maximum prefix length")
 
   def tab = Tabs.WhitelistTab
@@ -44,15 +46,17 @@ class WhitelistView(whitelist: Whitelist, params: Map[String, String] = Map.empt
   def body = {
     <div>{ renderMessages(messages, fieldNameToText) }</div>
     <div class="alert-message block-message info">
-    <p>
-        By adding a whitelisted announcement the validator will ensure that all routers receive this announcement in addition
-        to any actual validated ROAs for the same prefix.
-    </p>
-    <p>
-        Please note that whitelisting a prefix for just one ASN will invalidate announcements for this prefix from other ASNs,
-        if no ROAs already exist for this ASN and prefix. In this case you need to create an additional whitelist entry if you
-        want to authorize the other ASN as well. 
-    </p>
+      <p>
+        By adding a whitelist entry you can manually authorize an ASN to announce a prefix in addition to validated ROAs
+        from the repository.
+      </p>
+      <p>
+        Please note that whitelist entries may <strong>invalidate</strong> announcements for this prefix from other ASNs,
+        just like ROAs. This may be intentional (you are whitelisting ASN A, ASN B is hijacking), or not (ASN B should also
+        be authorized, or you made a mistake). When you create a whitelist entry here, make sure to check the table below
+        for a report on prefixes validated / invalidated by this entry and verify that no unintentional side effects occured.
+        E.g. create an additional entry for another ASN, or delete this entry and re-create it as needed.
+      </p>
     </div>
     <h2>Add entry</h2>
     <div class="well">
@@ -87,15 +91,48 @@ class WhitelistView(whitelist: Whitelist, params: Map[String, String] = Map.empt
           <table id="whitelist-table" class="zebra-striped" style="display: none;">
             <thead>
               <tr>
-                <th>Origin</th><th>Prefix</th><th>Maximum Prefix Length</th><th>&nbsp;</th>
+                <th>Origin</th><th>Prefix</th><th>Maximum Prefix Length</th><th>Validates</th><th>Invalidates</th><th>&nbsp;</th>
               </tr>
             </thead>
             <tbody>{
               for (entry <- whitelist.entries) yield {
+
+                val affectedAnnouncements = validatedAnnouncements.filter { announcement =>
+                  entry.prefix.contains(announcement.prefix)
+                }
+
+                // Will work because we only match on affected announcements and will have no unknowns
+                var (validated, invalidated) = affectedAnnouncements.partition(_.validity == RouteValidityState.VALID)
+                
+                // Validates only matches on asn
+                validated = validated.filter { _.asn == entry.asn }
+
+                def makeDetailsTable(announcements: Seq[ValidatedAnnouncement]) = {
+                  <table>
+                    <thead>
+                      <tr><th>ASN</th><th>Prefix</th></tr>
+                    </thead>
+                    {
+                      for { announcement <- announcements } yield {
+                        <tr>
+                          <td> { announcement.asn.getValue().toString() } </td>
+                          <td> { announcement.prefix.toString() } </td>
+                        </tr>
+                      }
+                    }
+                  </table>
+                }
+
                 <tr>
                   <td>{ entry.asn.getValue() }</td>
                   <td>{ entry.prefix }</td>
                   <td>{ entry.maxPrefixLength.getOrElse("") }</td>
+                  <td>
+                    <span rel="popover" data-content={ Xhtml.toXhtml(makeDetailsTable(validated)) } data-original-title="Details">{ validated.size + " prefix(es)" }</span>
+                  </td>
+                  <td>
+                    <span rel="popover" data-content={ Xhtml.toXhtml(makeDetailsTable(invalidated)) } data-original-title="Details">{ invalidated.size + " prefix(es)" }</span>
+                  </td>
                   <td>
                     <form method="POST" action="/whitelist" style="padding:0;margin:0;">
                       <input type="hidden" name="_method" value="DELETE"/>
@@ -117,9 +154,19 @@ $(document).ready(function() {
         { "sType": "numeric" },
         null,
         { "sType": "numeric" },
+        { "bSortable": false },
+        { "bSortable": false },
         { "bSortable": false }
       ]
     }).show();
+  $('[rel=popover]').popover({
+    "live": true,
+    "html": true,
+    "placement": "below",
+    "offset": 10
+  }).live('click', function (e) {
+    e.preventDefault();
+  });
 });
 // --></script>
         }

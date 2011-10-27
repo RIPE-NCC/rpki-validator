@@ -55,6 +55,16 @@ object Layouts {
         <script src="http://twitter.github.com/bootstrap/1.3.0/bootstrap-alerts.js"/>
         <script src="http://twitter.github.com/bootstrap/1.3.0/bootstrap-twipsy.js"/>
         <script src="http://twitter.github.com/bootstrap/1.3.0/bootstrap-popover.js"/>
+        <script type="text/javascript" charset="utf-8"><!--
+            $(document).ready(function(){
+                $("#feedbackButton").hover(function(){
+                        $(this).css("left","0px");
+                }, function(){
+                        $(this).css("left","-5px");
+                });
+             });
+        // --></script>
+
       </head>
       <body>
         <div class="topbar">
@@ -78,6 +88,10 @@ object Layouts {
             <p>Copyright © { (2009 to (new DateTime).getYear).mkString(", ") } the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted.</p>
           </footer>
         </div>
+        <div id="feedbackButton">
+           <a href="mailto:certification@ripe.net?subject=RPKI Validator Feedback"><img src="/images/feedback.png" width="41" height="111" alt="Feedback" /></a>
+        </div>
+
       </body>
     </html>
   }

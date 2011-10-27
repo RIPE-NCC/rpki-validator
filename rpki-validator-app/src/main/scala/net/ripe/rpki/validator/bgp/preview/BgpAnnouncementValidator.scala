@@ -72,31 +72,30 @@ object BgpAnnouncementValidator extends Logging {
   }
 
   @volatile
-  var validatedAnnouncements = IndexedSeq.empty[ValidatedAnnouncement]
+  var validatedAnnouncements = Promise(IndexedSeq.empty[ValidatedAnnouncement])
 
   private val latestRtrPrefixes = new SyncVar[Set[RtrPrefix]]
 
-  def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]): Unit = latestRtrPrefixes.set(newRtrPrefixes)
+  def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]): Unit = {
+    validatedAnnouncements = Promise({
+      val routes = announcedRoutes.get
 
-  spawnForever("bgp-validator") {
-    def validatesAnnouncedRoute(prefix: RtrPrefix, announced: AnnouncedRoute): Boolean = {
-      prefix.asn == announced.asn &&
-        prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()) >= announced.prefix.getPrefixLength()
-    }
+      info("Started validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
+      val prefixTree = NumberResourceIntervalTree(newRtrPrefixes.toSeq: _*)
 
-    val newRtrPrefixes = latestRtrPrefixes.take()
-    val routes = announcedRoutes.get
+      routes.par.map(
+        route => {
+          val matchingPrefixes = prefixTree.filterContaining(route.interval)
+          val (validates, invalidates) = matchingPrefixes.partition(validatesAnnouncedRoute(_, route))
+          ValidatedAnnouncement(route, validates, invalidates)
+        }).seq.toIndexedSeq
+    })
 
-    info("Started validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
-    val prefixTree = NumberResourceIntervalTree(newRtrPrefixes.toSeq: _*)
+    info("Completed validating " + validatedAnnouncements.get.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
+  }
 
-    validatedAnnouncements = routes.par.map(
-      route => {
-        val matchingPrefixes = prefixTree.filterContaining(route.interval)
-        val (validates, invalidates) = matchingPrefixes.partition(validatesAnnouncedRoute(_, route))
-        ValidatedAnnouncement(route, validates, invalidates)
-      }).seq.toIndexedSeq
-
-    info("Completed validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
+  private def validatesAnnouncedRoute(prefix: RtrPrefix, announced: AnnouncedRoute): Boolean = {
+    prefix.asn == announced.asn &&
+      prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()) >= announced.prefix.getPrefixLength()
   }
 }

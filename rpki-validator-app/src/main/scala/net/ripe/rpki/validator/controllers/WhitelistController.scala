@@ -36,34 +36,37 @@ import org.scalatra.ScalatraKernel
 import org.scalatra.MethodOverride
 import scalaz._
 import Scalaz._
-
 import lib.Validation._
 import models._
 import views.WhitelistView
+import net.ripe.rpki.validator.bgp.preview.ValidatedAnnouncement
 
 trait WhitelistController extends ApplicationController {
   protected def whitelist: Whitelist
   protected def addWhitelistEntry(entry: RtrPrefix): Unit
   protected def removeWhitelistEntry(entry: RtrPrefix): Unit
   protected def entryExists(entry: RtrPrefix): Boolean = whitelist.entries.contains(entry)
+  
+  protected def validatedAnnouncements: IndexedSeq[ValidatedAnnouncement]
 
   private def baseUrl = views.Tabs.WhitelistTab.url
 
+
   get(baseUrl) {
-    new WhitelistView(whitelist, messages = feedbackMessages)
+    new WhitelistView(whitelist, validatedAnnouncements, messages = feedbackMessages)
   }
 
   post(baseUrl) {
     submittedEntry match {
       case Success(entry) =>
         if (entryExists(entry))
-          new WhitelistView(whitelist, params, Seq(ErrorMessage("entry already exists in the whitelist")))
+          new WhitelistView(whitelist, validatedAnnouncements, params, Seq(ErrorMessage("entry already exists in the whitelist")))
         else {
           addWhitelistEntry(entry)
           redirectWithFeedbackMessages(baseUrl, Seq(SuccessMessage("The entry has been added to the whitelist.")))
         }
       case Failure(errors) =>
-        new WhitelistView(whitelist, params, errors)
+        new WhitelistView(whitelist, validatedAnnouncements, params, errors)
     }
   }
 
@@ -74,11 +77,11 @@ trait WhitelistController extends ApplicationController {
           removeWhitelistEntry(entry)
           redirectWithFeedbackMessages(baseUrl, Seq(SuccessMessage("The entry has been removed from the whitelist.")))
         } else {
-          new WhitelistView(whitelist, params, Seq(ErrorMessage("entry no longer exists in the whitelist")))
+          new WhitelistView(whitelist, validatedAnnouncements, params, Seq(ErrorMessage("entry no longer exists in the whitelist")))
         }
       case Failure(errors) =>
         // go away hacker!
-        new WhitelistView(whitelist, params, errors)
+        new WhitelistView(whitelist, validatedAnnouncements, params, errors)
     }
   }
 
