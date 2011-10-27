@@ -35,7 +35,7 @@ object Tabs {
   val HomeTab = Tab("Home", "/")
   val TrustAnchorsTab = Tab("Trust Anchors", "/trust-anchors")
   val RoasTab = Tab("ROAs", "/roas")
-  val FiltersTab = Tab("Filters", "/filters")
+  val FiltersTab = Tab("Ignore Filters", "/filters")
   val WhitelistTab = Tab("Whitelist", "/whitelist")
   val BgpPreviewTab = Tab("BGP Preview", "/bgp-preview")
   val RtrLogTab = Tab("rpki-rtr log", "/rtr-log")

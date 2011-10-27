@@ -79,36 +79,46 @@ class HomeView extends View with ViewHelpers {
                           Public Key Infrastructure (PKI) system. This validator is intended for the validation
                           of Resource PKI (RPKI) systems. It is pre-configured with Trust Anchors for four
                           RIRs who are running such systems now.
-                        </p> 
+                        </p>
+                        <br />
+                        <p>
+                          If you would like to add or change which Trust Anchors are used by this
+                          validator, please see the README.txt file for details.
+                        </p>
                     </div>
                     <div id="roas" class="stepDescription">
                         <p>
                           Route Origin Attestations (ROAs) are used in the RPKI to authorise specific ASNs
-                          to announce prefixes. Only the holder of the prefix can sign a ROA.
+                          to originate prefixes. Only the legitimate holder of the prefix can create a valid ROA.
                         </p>
                         <p>
                           It should be noted that ROAs are intended to be positive attestations, but the presence of
                           a ROA for an ASN and prefix combination implies that announcements for this prefix from
-                          <strong>other</strong> ASNs, or for <strong>more specific</strong> prefixes should be considered
+                          <strong>other</strong> origin ASNs, or for <strong>more specific</strong> prefixes should be considered
                           invalid.
                         </p>
-                        <br />
                         <p>
                           More than one ROA may exist for the same prefix, and as long as one of
                           them matches the announcement it is considered valid. The announcement validation rules
-                          are defined in an IETF standard, and will be explained in the router section.
+                          are defined in an IETF standard, and will be explained in more detail in the 'Router' section.
                         </p>
                     </div>
                     <div id="ignoreFilters" class="stepDescription">
                         <p>
-                          Because ROAs may invalidate announcements, and you as an operator may disagree, this validation
+                          Because ROAs may invalidate certain announcements, and you as an operator may disagree, this validation
                           tools allows you to <strong>ignore</strong> all ROAs that would otherwise affect certain prefixes.
+                        </p>
+                        <p>
+                          If you use this option it will be as though no ROAs exist for this prefix.
                         </p>
                     </div>
                     <div id="whitelist" class="stepDescription">
                         <p>
                           Continuing this thought you may actually want to add your own whitelist entries for announcement
                           that don't have a corresponding ROA, but in your mind should have.
+                        </p>
+                        <p>
+                          If you use this option it will be as though a ROAs exist for this announcement.
                         </p>
                     </div>
                     <div id="router" class="stepDescription">
@@ -129,22 +139,22 @@ class HomeView extends View with ViewHelpers {
         Once your router receives the <strong>Route Origin Attestations</strong>
         it can now use this information to determine the validity outcome of the origin
         AS in BGP announcements. To do this your router will match an announcement to
-        each attestations in this way:
+        each attestation in this way:
       </p>
       <br />
       <table>
         <tr>
-          <td>Annoucement&quot;s</td>
-          <td>AS matches Attestation</td>
-          <td>AS differs from Attestation</td>
+          <td>Annoucement has</td>
+          <td>an origin AS matching the attestation</td>
+          <td>an origin AS that differs from the attestation</td>
         </tr>
         <tr>
-          <td>Prefix matches Attestation</td>
+          <td>a prefix matching the attestation</td>
           <td>VALID</td>
           <td>INVALID</td>
         </tr>
         <tr>
-          <td>Prefix more specific</td>
+          <td>a prefix that is more specific than the attestation</td>
           <td>INVALID</td>
           <td>INVALID</td>
         </tr>
@@ -199,7 +209,7 @@ class HomeView extends View with ViewHelpers {
       <p>
           However, to help you analyse what your router will most likely see we have created the <a href="/bgp-preview">BGP Preview</a>
           page. On this page we mimic the announcement validation process described above using a dump of announcements that are widely (>5 peers)
-          <a href="http://www.ris.ripe.net/dumps/">seen</a> by RIS.
+          <a href="http://www.ris.ripe.net/dumps/">seen</a> by the RIPE NCC RIS Route Collectors.
       </p>
       <p>
           This page is provided for two main reasons:

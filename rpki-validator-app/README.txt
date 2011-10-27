@@ -19,6 +19,11 @@ Requirements
   You can check which version of Java you have by running:
   $ java -version
   
+- At least 1GB of free memory
+
+  For performance this tool keeps a lot of data in memory. This also helps multi-threading,
+  allowing the tool to work faster by doing tasks in paralel.
+  
 
 Usage
 -----
@@ -66,7 +71,19 @@ If you compare these files to the Trust Anchor format defined here:
 http://tools.ietf.org/html/draft-ietf-sidr-ta-07
 
 You will notice that the format used here is slightly different. We are using key-value
-pairs to allow specifying some additional stuff, most importantly 
+pairs to allow specifying some additional stuff. Make sure that you enter a value for ca.name.
+The certificate.location and public.key.info correspond to the location and subjectPublicKeyInfo
+fields in the standard. The prefecth.uris field is optional. You may specify a comma separated
+list of rsync URIs for directories here, that will be 'pre-fetched'. This helps performance
+for repositories that have a flat structure (children not published under parents).
+
+Example:  
+
+  ca.name = AfriNIC RPKI Root
+  certificate.location = rsync://rpki.afrinic.net/repository/AfriNIC.cer
+  public.key.info = MIIBI..... etc 1 LINE
+  prefetch.uris = rsync://rpki.afrinic.net/member_repository/
+ 
 
 
 Known Issues

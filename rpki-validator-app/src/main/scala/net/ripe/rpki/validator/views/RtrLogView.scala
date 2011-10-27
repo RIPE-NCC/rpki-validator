@@ -36,7 +36,7 @@ import org.joda.time.DateTime
 class RtrLogView(version: Int, lastUpdateTime: DateTime) extends View {
 
   def tab = Tabs.RtrLogTab
-  def title = Text("RPKI-RTR Activity Log")
+  def title = Text("RPKI-RTR Debug Log")
   def body = {
     <div class="alert-message block-message info">
       <p>RPKI - RTR Activity log</p>

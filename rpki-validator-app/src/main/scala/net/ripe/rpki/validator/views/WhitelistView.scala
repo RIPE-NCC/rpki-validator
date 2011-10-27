@@ -53,7 +53,7 @@ class WhitelistView(whitelist: Whitelist, validatedAnnouncements: IndexedSeq[Val
       <p>
         Please note that whitelist entries may <strong>invalidate</strong> announcements for this prefix from other ASNs,
         just like ROAs. This may be intentional (you are whitelisting ASN A, ASN B is hijacking), or not (ASN B should also
-        be authorized, or you made a mistake). When you create a whitelist entry here, make sure to check the table below
+        be authorised, or you made a mistake). When you create a whitelist entry here, make sure to check the table below
         for a report on prefixes validated / invalidated by this entry and verify that no unintentional side effects occured.
         E.g. create an additional entry for another ASN, or delete this entry and re-create it as needed.
       </p>
