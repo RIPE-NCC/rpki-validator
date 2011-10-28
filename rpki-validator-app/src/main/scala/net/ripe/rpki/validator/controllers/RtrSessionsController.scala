@@ -27,36 +27,20 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+
 package net.ripe.rpki.validator
-package config
+package controllers
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
-import net.ripe.rpki.validator.views.DataTableJsonView
+import views._
+import rtr.RtrSessionData
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with RoasController
-  with TrustAnchorsController
-  with RtrLogController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController
-  with RtrSessionsController {
+trait RtrSessionsController extends ApplicationController {
 
-  private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
+  private def baseUrl = views.Tabs.RtrSessionsTab.url
 
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view))
-    case view: DataTableJsonView[_] =>
-      contentType = "application/json"
-      view.renderJson
+  protected def sessionData: Iterable[RtrSessionData]
+
+  get(baseUrl) {
+    new RtrSessionsView(sessionData)
   }
-
-  override protected def renderPipeline = renderView orElse super.renderPipeline
 }

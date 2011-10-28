@@ -53,7 +53,7 @@ sealed trait Pdu {
 }
 
 object Pdu {
-  type Nonce = Short 
+  type Nonce = Short
   def randomNonce() = Random.nextInt(65536).toShort
 }
 

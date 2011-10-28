@@ -27,36 +27,46 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package config
+package net.ripe.rpki.validator.rtr
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
-import net.ripe.rpki.validator.views.DataTableJsonView
+import collection.mutable.HashMap
+import net.ripe.rpki.validator.models.RtrPrefix
+import java.lang.Throwable
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with RoasController
-  with TrustAnchorsController
-  with RtrLogController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController
-  with RtrSessionsController {
 
-  private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
+class RtrSessions[T] (
+                       getCurrentCacheSerial: () => Int,
+                       getCurrentRtrPrefixes: () => Set[RtrPrefix],
+                       getCurrentNonce: () => Pdu.Nonce) {
 
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view))
-    case view: DataTableJsonView[_] =>
-      contentType = "application/json"
-      view.renderJson
+
+  private val handlers = HashMap[T, RtrSessionHandler[T]]()
+
+  def allClientData = handlers.values.map(_.sessionData)
+
+  def connect(id: T) {
+    val handler = handlers.getOrElseUpdate(id, new RtrSessionHandler[T](id, getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentNonce))
+    handler.connect
   }
 
-  override protected def renderPipeline = renderView orElse super.renderPipeline
+  def disconnect(id: T) {
+    handlerFor(id).disconnect
+  }
+
+  def serialNotify(serial: Long) = {
+    val pdu = new SerialNotifyPdu(getCurrentNonce(), serial)
+    handlers.values.foreach(_.serialNotify(pdu))
+    pdu
+  }
+
+  def responseForRequest(id: T, request: Either[BadData, Pdu]) = {
+    handlerFor(id).processRequest(request)
+  }
+
+  def determineErrorPdu(id: T, cause: Throwable): Pdu = {
+    handlerFor(id).determineErrorPdu(cause)
+  }
+
+  
+  private def handlerFor(id: T) = handlers.get(id).get
 }

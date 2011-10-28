@@ -45,6 +45,14 @@
             <artifactId>scala-library</artifactId>
             <version>${scala.version}</version>
         </dependency>
+	    <dependency>
+            <!-- library for code completion and other nice stuff in mvn scala:console -->
+            <groupId>org.scala-lang</groupId>
+            <artifactId>jline</artifactId>
+            <version>${scala.version}</version>
+            <!-- is there a better scope for this? -->
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.scalatra</groupId>
             <artifactId>scalatra_${scala.version}</artifactId>

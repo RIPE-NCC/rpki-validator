@@ -31,15 +31,9 @@ package net.ripe.rpki.validator
 package rtr
 
 import org.jboss.netty.bootstrap.ServerBootstrap
-import scala.collection.JavaConverters._
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.net.InetSocketAddress
-import grizzled.slf4j.Logger
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
-import org.jboss.netty.handler.codec.frame.CorruptedFrameException
-import org.jboss.netty.handler.codec.frame.TooLongFrameException
-import org.jboss.netty.handler.timeout.ReadTimeoutException
 import org.jboss.netty.channel._
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler
@@ -48,32 +42,38 @@ import org.jboss.netty.util.HashedWheelTimer
 import grizzled.slf4j.Logging
 import org.jboss.netty.channel.group.{ ChannelGroup, DefaultChannelGroup }
 import org.jboss.netty.channel.ChannelHandler.Sharable
-import models.{RtrPrefix, Roas}
-import net.ripe.ipresource.{Asn, IpRange, Ipv4Address, Ipv6Address}
+import models.RtrPrefix
+import java.net.{SocketAddress, InetSocketAddress}
+
 
 object RTRServer {
   final val ProtocolVersion = 0
   final val MAXIMUM_FRAME_LENGTH = 16777216 // 16MB Note: this should be big enough to contain all pdus when we respond with data
 
-  var allChannels: ChannelGroup = new DefaultChannelGroup("rtr-server")
+  val allChannels: ChannelGroup = new DefaultChannelGroup("rtr-server")
 }
 
 class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurrentCacheSerial: () => Int,
-                getCurrentRtrPrefixes: () => Set[RtrPrefix], getCurrentNonce: () => Short) {
-  import TimeUnit._
+                getCurrentRtrPrefixes: () => Set[RtrPrefix], getCurrentNonce: () => Pdu.Nonce)
+  extends Logging {
 
-  val logger = Logger[this.type]
+  import TimeUnit._
 
   var bootstrap: ServerBootstrap = _
   var timer: Timer = new HashedWheelTimer(5, SECONDS) // check for timer events every 5 secs
 
-  val serverHandler = new RTRServerHandler(noCloseOnError, noNotify, getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentNonce)
+  val rtrSessions = new RtrSessions[SocketAddress](getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentNonce)
+
+  val serverHandler = new RTRServerHandler(noCloseOnError, rtrSessions)
 
   def notify(serial: Long) = {
-    serverHandler.notifyChildren(serial)
+    if (!noNotify) {
+      info("Sending Notify with serial %s to all clients".format(serial))
+      serverHandler.notifyChildren(rtrSessions.serialNotify(serial))
+    }
   }
-
-  def startServer(): Unit = {
+    
+  def startServer() {
 
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool(),
@@ -118,35 +118,31 @@ class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurren
 }
 
 @Sharable
-class RTRServerHandler(noCloseOnError: Boolean = false,
-                       noNotify: Boolean = false,
-                       getCurrentCacheSerial: () => Int,
-                       getCurrentRtrPrefixes: () => Set[RtrPrefix],
-                       getCurrentNonce: () => Short
-                       ) extends SimpleChannelUpstreamHandler with Logging {
+class RTRServerHandler(noCloseOnError: Boolean = false, clients: RtrSessions[SocketAddress])
+  extends SimpleChannelUpstreamHandler with Logging {
 
   override def channelOpen(context: ChannelHandlerContext, event: ChannelStateEvent) {
     RTRServer.allChannels.add(event.getChannel()) // will be removed automatically on close
-    logger.info { "Client connected : " + context.getChannel().getRemoteAddress() }
+    val remoteAddress: SocketAddress = context.getChannel().getRemoteAddress()
+    clients.connect(remoteAddress)
+    logger.info("Client connected : " + remoteAddress)
   }
 
   override def channelDisconnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
     super.channelDisconnected(context, event)
-    logger.info { "Client disconnected : " + context.getChannel().getRemoteAddress() }
+    val socketAddress = context.getChannel().getRemoteAddress()
+    clients.disconnect(socketAddress);
+    info("Client disconnected : " + socketAddress)
   }
 
-  def notifyChildren(serial: Long) = {
-    if (!noNotify) {
-      RTRServer.allChannels.write(new SerialNotifyPdu(nonce = getCurrentNonce(), serial = getCurrentCacheSerial()))
-    }
-  }
+  def notifyChildren(pdu: Pdu) = RTRServer.allChannels.write(pdu)
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
-    lazy val clientAddress = Option(context.getChannel().getRemoteAddress())
-
+    val clientAddress = context.getChannel().getRemoteAddress()
+    
     // decode and process
     val requestPdu = event.getMessage().asInstanceOf[Either[BadData, Pdu]]
-    var responsePdus: Seq[Pdu] = processRequest(requestPdu)
+    val responsePdus: Seq[Pdu] = clients.responseForRequest(clientAddress, requestPdu)
 
     // respond
     val channelFuture = event.getChannel().write(responsePdus)
@@ -158,30 +154,15 @@ class RTRServerHandler(noCloseOnError: Boolean = false,
         case _ =>
       }
     }
-
-  }
-
-  private def processRequest(request: Either[BadData, Pdu]): Seq[Pdu] = {
-    request match {
-      case Left(BadData(errorCode, content)) => List(ErrorPdu(errorCode, content, ""))
-      case Right(ResetQueryPdu()) => processResetQuery
-      case Right(SerialQueryPdu(nonce, serial)) => processSerialQuery(nonce, serial)
-      case Right(_) => List(ErrorPdu(ErrorPdu.InvalidRequest, Array.empty, ""))
-    }
   }
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {
     // Can anyone think of a nice way to test this? Without tons of mocking and overkill?
     // Otherwise I will assume the code below is doing too little to be able to contain bugs ;)
-    logger.warn("Exception: " + event.getCause, event.getCause)
+    logger.warn(event.getCause)
 
     if (event.getChannel().isOpen()) {
-      val response: Pdu = event.getCause() match {
-        case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-        case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-        case cause: ReadTimeoutException => ErrorPdu(ErrorPdu.InternalError, Array.empty, "Connection timed out")
-        case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
-      }
+      val response: Pdu = clients.determineErrorPdu(context.getChannel.getRemoteAddress, event.getCause)
 
       try {
         val channelFuture = event.getChannel().write(response)
@@ -192,38 +173,4 @@ class RTRServerHandler(noCloseOnError: Boolean = false,
     }
   }
 
-  private def processResetQuery: Seq[Pdu] = {
-    getCurrentCacheSerial.apply() match {
-      case 0 => List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
-      case _ =>
-        var responsePdus: Vector[Pdu] = Vector.empty
-        responsePdus = responsePdus :+ CacheResponsePdu(nonce = getCurrentNonce.apply())
-
-        getCurrentRtrPrefixes().foreach { rtrPrefix =>
-
-          val prefix: IpRange = rtrPrefix.prefix
-          val prefixLength: Int = prefix.getPrefixLength
-          val maxLength: Int = rtrPrefix.maxPrefixLength.getOrElse(prefixLength)
-          val asn: Asn = rtrPrefix.asn
-
-          prefix.getStart() match {
-            case ipv4: Ipv4Address =>
-              responsePdus = responsePdus :+ IPv4PrefixAnnouncePdu(ipv4, prefixLength.toByte, maxLength.toByte, asn)
-            case ipv6: Ipv6Address =>
-              responsePdus = responsePdus :+ IPv6PrefixAnnouncePdu(ipv6, prefixLength.toByte, maxLength.toByte, asn)
-            case _ => assert(false)
-          }
-        }
-        responsePdus :+ EndOfDataPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply())
-    }
-  }
-
-
-  private def processSerialQuery(nonce: Short, serial: Long) = {
-    if (nonce == getCurrentNonce.apply() && serial == getCurrentCacheSerial.apply()) {
-      List(CacheResponsePdu(nonce = nonce), EndOfDataPdu(nonce = nonce, serial = serial))
-    } else {
-      List(CacheResetPdu())
-    }
-  }
 }

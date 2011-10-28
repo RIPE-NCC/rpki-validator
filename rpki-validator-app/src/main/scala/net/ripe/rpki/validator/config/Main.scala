@@ -36,10 +36,12 @@ import scala.concurrent.TaskRunners
 import scala.concurrent.ops._
 import org.apache.commons.io.FileUtils
 import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.servlet._
-import grizzled.slf4j.Logger
+import org.eclipse.jetty.server.handler.RequestLogHandler
+import org.eclipse.jetty.server.handler.HandlerCollection
+import org.eclipse.jetty.server.NCSARequestLog
 import org.joda.time.DateTime
-import scalaz.concurrent.Promise
+import grizzled.slf4j.Logger
+
 import net.ripe.certification.validator.util.TrustAnchorExtractor
 import rtr.Pdu
 import rtr.RTRServer
@@ -48,12 +50,6 @@ import lib.DateAndTime._
 import lib.Process._
 import models._
 import bgp.preview._
-import net.ripe.rpki.validator.bgp.preview.BgpRisEntry
-import net.ripe.rpki.validator.bgp.preview.RisWhoisParser
-import org.joda.time.DateTime
-import org.eclipse.jetty.server.handler.RequestLogHandler
-import org.eclipse.jetty.server.handler.HandlerCollection
-import org.eclipse.jetty.server.NCSARequestLog
 
 object Main {
 
@@ -77,8 +73,8 @@ object Main {
       MemoryImage(data.filters, data.whitelist, trustAnchors, roas),
       memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
 
-    runWebServer(options, dataFile, memoryImage)
     val rtrServer = runRtrServer(options, memoryImage)
+    runWebServer(options, dataFile, memoryImage, rtrServer)
 
     registerMemoryImageListener(memoryImage => BgpAnnouncementValidator.updateRtrPrefixes(memoryImage.getDistinctRtrPrefixes()))
     registerMemoryImageListener(memoryImage => rtrServer.notify(memoryImage.version))
@@ -129,7 +125,7 @@ object Main {
     }
   }
 
-  def setup(server: Server, dataFile: File, memoryImage: Atomic[MemoryImage]): Server = {
+  def setup(server: Server, dataFile: File, memoryImage: Atomic[MemoryImage], rtrServer: RTRServer): Server = {
     import org.eclipse.jetty.servlet._
     import org.scalatra._
 
@@ -168,6 +164,7 @@ object Main {
 
       override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements.get
 
+      protected def sessionData = rtrServer.rtrSessions.allClientData
     }), "/*", FilterMapping.ALL)
 
     val requestLogHandler = {
@@ -188,8 +185,8 @@ object Main {
     server
   }
 
-  private def runWebServer(options: Options, dataFile: File, memoryImage: Atomic[MemoryImage]): Unit = {
-    val server = setup(new Server(options.httpPort), dataFile, memoryImage: Atomic[MemoryImage])
+  private def runWebServer(options: Options, dataFile: File, memoryImage: Atomic[MemoryImage], rtrServer: RTRServer) {
+    val server = setup(new Server(options.httpPort), dataFile, memoryImage: Atomic[MemoryImage], rtrServer)
 
     sys.addShutdownHook({
       server.stop()
@@ -200,13 +197,17 @@ object Main {
   }
 
   private def runRtrServer(options: Options, memoryImage: Atomic[MemoryImage]): RTRServer = {
-    var rtrServer = new RTRServer(port = options.rtrPort, noCloseOnError = options.noCloseOnError, noNotify = options.noNotify, getCurrentCacheSerial = {
-      () => memoryImage.get.version
-    }, getCurrentRtrPrefixes = {
-      () => memoryImage.get.getDistinctRtrPrefixes()
-    }, getCurrentNonce = {
-      () => Main.nonce
-    })
+    val rtrServer = new RTRServer(port = options.rtrPort, noCloseOnError = options.noCloseOnError,
+      noNotify = options.noNotify,
+      getCurrentCacheSerial = {
+        () => memoryImage.get.version
+      },
+      getCurrentRtrPrefixes = {
+        () => memoryImage.get.getDistinctRtrPrefixes()
+      },
+      getCurrentNonce = {
+        () => Main.nonce
+      })
     rtrServer.startServer()
     rtrServer
   }

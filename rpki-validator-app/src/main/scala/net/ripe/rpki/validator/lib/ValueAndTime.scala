@@ -27,36 +27,18 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package config
+package net.ripe.rpki.validator.lib
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
-import net.ripe.rpki.validator.views.DataTableJsonView
+import DateAndTime._
+import org.joda.time.{DateTime, Period}
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with RoasController
-  with TrustAnchorsController
-  with RtrLogController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController
-  with RtrSessionsController {
+abstract class ValueAndTime[T](var value: T) {
+  var time: DateTime = new DateTime()
 
-  private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
-
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view))
-    case view: DataTableJsonView[_] =>
-      contentType = "application/json"
-      view.renderJson
+  def apply(x: T) {
+    value = x
+    time = new DateTime()
   }
 
-  override protected def renderPipeline = renderView orElse super.renderPipeline
+  override def toString = value.toString + " [" + periodInWords(new Period(time, new DateTime())) + " ago]"
 }

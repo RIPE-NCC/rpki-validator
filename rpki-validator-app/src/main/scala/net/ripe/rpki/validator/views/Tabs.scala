@@ -38,7 +38,8 @@ object Tabs {
   val FiltersTab = Tab("Ignore Filters", "/filters")
   val WhitelistTab = Tab("Whitelist", "/whitelist")
   val BgpPreviewTab = Tab("BGP Preview", "/bgp-preview")
+  val RtrSessionsTab = Tab("RTR Sessions", "/rtr-sessions")
   val RtrLogTab = Tab("rpki-rtr log", "/rtr-log")
 
-  def all = Seq(HomeTab, TrustAnchorsTab, RoasTab, FiltersTab, WhitelistTab, BgpPreviewTab, RtrLogTab)
+  def all = Seq(HomeTab, TrustAnchorsTab, RoasTab, FiltersTab, WhitelistTab, BgpPreviewTab, RtrSessionsTab, RtrLogTab)
 }
