@@ -48,13 +48,13 @@ object Layouts {
       <head>
         <meta charset="utf-8"/>
         <title>RPKI Validator - { view.title }</title>
-        <link rel="stylesheet" href="http://twitter.github.com/bootstrap/1.3.0/bootstrap.css"/>
+        <link rel="stylesheet" href="/stylesheets/bootstrap/1.3.0/bootstrap.css"/>
         <link rel="stylesheet" href="/stylesheets/application.css"/>
         <script src="/javascript/datatables/1.8.2/jquery.js"/>
         <script src="/javascript/datatables/1.8.2/jquery.dataTables.min.js"/>
-        <script src="http://twitter.github.com/bootstrap/1.3.0/bootstrap-alerts.js"/>
-        <script src="http://twitter.github.com/bootstrap/1.3.0/bootstrap-twipsy.js"/>
-        <script src="http://twitter.github.com/bootstrap/1.3.0/bootstrap-popover.js"/>
+        <script src="/javascript/bootstrap/1.3.0/bootstrap-alerts.js"/>
+        <script src="/javascript/bootstrap/1.3.0/bootstrap-twipsy.js"/>
+        <script src="/javascript/bootstrap/1.3.0/bootstrap-popover.js"/>
         <script type="text/javascript" charset="utf-8"><!--
             $(document).ready(function(){
                 $("#feedbackButton").hover(function(){
@@ -70,7 +70,7 @@ object Layouts {
         <div class="topbar">
           <div class="fill">
             <div class="container">
-              <a class="brand" href="#">RPKI Validator</a>
+              <a class="brand" href="/">RPKI Validator</a>
               <ul class="nav">{
                 for (tab <- Tabs.all) yield {
                   <li class={ if (tab == view.tab) "active" else "" }><a href={ tab.url }>{ tab.text }</a></li>

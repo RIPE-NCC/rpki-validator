@@ -261,6 +261,8 @@
                         <exclude>**/*.tal</exclude>
                         <exclude>pom.xslt</exclude>
                         <exclude>src/main/resources/public/javascript/datatables/**</exclude>
+                        <exclude>src/main/resources/public/javascript/bootstrap/**</exclude>
+                        <exclude>src/main/resources/public/stylesheets/bootstrap/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>

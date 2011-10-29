@@ -81,7 +81,7 @@ $(document).ready(function() {
   $('[rel=popover]').popover({
     "live": true,
     "html": true,
-    "placement": "below",
+    "placement": "above",
     "offset": 10
   }).live('click', function (e) {
     e.preventDefault();
