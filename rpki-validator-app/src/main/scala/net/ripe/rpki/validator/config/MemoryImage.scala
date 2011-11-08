@@ -36,7 +36,7 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 import org.joda.time.DateTime
 import models._
 
-case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, roas: Roas, version: Int = 0) {
+case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, version: Int = 0) {
   val lastUpdateTime: DateTime = new DateTime
 
   def startProcessingTrustAnchor(tal: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(tal, description))
@@ -44,15 +44,15 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
   def finishedProcessingTrustAnchor(tal: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext) =
     copy(trustAnchors = trustAnchors.finishedProcessing(tal, certificate))
 
-  def updateRoas(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) =
-    copy(version = version + 1, roas = roas.update(tal, validatedRoas))
+  def updateValidatedObjects(tal: TrustAnchorLocator, newValidatedObjects: Seq[ValidatedObject]) =
+    copy(version = version + 1, validatedObjects = validatedObjects.update(tal, newValidatedObjects))
 
   def addWhitelistEntry(entry: RtrPrefix) = copy(version = version + 1, whitelist = whitelist.addEntry(entry))
 
   def removeWhitelistEntry(entry: RtrPrefix) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
 
   def getDistinctRtrPrefixes(): Set[RtrPrefix] =
-    Set.empty[RtrPrefix] ++ whitelist.entries ++ filters.filter(roas.getValidatedRtrPrefixes)
+    Set.empty[RtrPrefix] ++ whitelist.entries ++ filters.filter(validatedObjects.getValidatedRtrPrefixes)
 
   def addFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.addFilter(filter))
 

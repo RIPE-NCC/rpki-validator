@@ -29,18 +29,9 @@
  */
 package net.ripe.rpki.validator.config
 
-import scala.collection.JavaConverters._
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
 import org.scalatest.matchers.ShouldMatchers
-import net.ripe.ipresource.{IpRange, Asn}
-import net.ripe.commons.certification.ValidityPeriod
-import org.joda.time.DateTime
-import net.ripe.commons.certification.cms.roa.{RoaCmsObjectMother, RoaCms, RoaPrefix}
-import java.net.URI
 import scala.Predef._
-import java.io.File
-import net.ripe.certification.validator.util.TrustAnchorLocator
-import collection.mutable.HashMap
 import net.ripe.rpki.validator.models._
 import net.ripe.rpki.validator.testing.TestingObjectMother._
 
@@ -67,7 +58,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
   }
 
   test("Should list whitelist entries when no roas") {
-    subject = new MemoryImage(Filters(), WHITELIST, trustAnchors, Roas(trustAnchors))
+    subject = new MemoryImage(Filters(), WHITELIST, trustAnchors, ValidatedObjects(trustAnchors))
     val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
 
     distinctRoaPrefixes.size should equal(1)

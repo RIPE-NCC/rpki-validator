@@ -37,7 +37,7 @@ import net.ripe.ipresource.{ IpRange, Asn }
 import lib.Validation._
 import lib.NumberResources._
 
-case class RtrPrefix(val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int]) {
+case class RtrPrefix(val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int], trustAnchorName: Option[String] = None) {
   val interval = NumberResourceInterval(prefix.getStart(), prefix.getEnd())
   def effectiveMaxPrefixLength = maxPrefixLength.getOrElse(prefix.getPrefixLength())
 }

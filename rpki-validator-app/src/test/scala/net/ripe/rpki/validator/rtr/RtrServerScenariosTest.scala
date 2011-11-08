@@ -51,6 +51,7 @@ import net.ripe.commons.certification.ValidityPeriod
 import org.joda.time.DateTime
 
 import scala.collection.JavaConverters._
+import net.ripe.commons.certification.validation.ValidationResult
 
 @RunWith(classOf[JUnitRunner])
 class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
@@ -65,9 +66,9 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   var nonce: Short = new Random().nextInt(65536).toShort
 
   override def beforeAll() = {
-    var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
-    var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-    cache = new Atomic(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedRoas))
+    val trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
+    val validatedObjects: ValidatedObjects = new ValidatedObjects(new HashMap[String, Seq[ValidatedObject]])
+    cache = new Atomic(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects))
     server = new RTRServer(
       port = port,
       noCloseOnError = false,
@@ -88,9 +89,9 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
 
   after {
     cache.update {
-      var trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
-      var validatedRoas: Roas = new Roas(new HashMap[String, Option[Seq[ValidatedRoa]]])
-      db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedRoas)
+      val trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
+      val validatedObjects: ValidatedObjects = new ValidatedObjects(new HashMap[String, Seq[ValidatedObject]])
+      db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects)
     }
     client.close()
   }
@@ -119,11 +120,11 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     val roa: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes.asJava, validityPeriod, RoaCmsObjectMother.TEST_ASN)
     val roaUri: URI = URI.create("rsync://example.com/roa.roa")
 
-    val validatedRoa: ValidatedRoa = new ValidatedRoa(roa, roaUri)
+    val validatedRoa: ValidRoa = new ValidRoa(roaUri, new ValidationResult(), roa)
 
-    val roas = collection.mutable.Seq.apply[ValidatedRoa](validatedRoa)
+    val roas = collection.mutable.Seq.apply[ValidRoa](validatedRoa)
 
-    cache.update { db => db.updateRoas(tal, roas) }
+    cache.update { db => db.updateValidatedObjects(tal, roas) }
 
     client.sendPdu(ResetQueryPdu())
     var responsePdus = client.getResponse(expectedNumber = 5)
@@ -195,7 +196,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     client should be ('connected)
 
     // Update ROAs, client should get notify
-    cache.update { db => db.updateRoas(tal, roas) }
+    cache.update { db => db.updateValidatedObjects(tal, roas) }
     server.notify(cache.get.version)
 
     var responsePdusAfterCacheUpdate = client.getResponse(expectedNumber = 1)

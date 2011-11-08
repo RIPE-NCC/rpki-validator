@@ -44,8 +44,9 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
 
   val data_empty: PersistentData = PersistentData(0, Filters(), Whitelist())
   val json_empty: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[]}}"""
-  val data_some: PersistentData = PersistentData(0, Filters(Set(IgnoreFilter(IpRange.parse("192.168.0.0/16")))),
-    Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), None).toOption.get)))
+  val data_some: PersistentData = PersistentData(0,
+      Filters(Set(IgnoreFilter(IpRange.parse("192.168.0.0/16")))),
+      Whitelist(Set(RtrPrefix(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), None))))
   val json_some: String = """{"schemaVersion":0,"filters":{"entries":[{"prefix":"192.168.0.0/16"}]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8"}]}}"""
 
   test("serialise empty Whitelist") {

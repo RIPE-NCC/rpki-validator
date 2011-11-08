@@ -27,58 +27,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package controllers
+package net.ripe.rpki.validator.lib
 
-import scala.collection.JavaConverters._
-import org.joda.time.DateTimeZone
-import org.joda.time.format.DateTimeFormat
-import views.RoasView
-import org.joda.time.DateTime
-import net.ripe.rpki.validator.config.Main
-import models._
-import net.ripe.rpki.validator.views.RoaTableData
 
-trait RoasController extends ApplicationController {
-  protected def validatedObjects: ValidatedObjects
-
-  get("/roas") {
-    new RoasView(validatedObjects)
+object Java {
+  def toOption(i: java.lang.Integer): Option[Int] = {
+    if (i == null) None else Some(i)
   }
-
-  get("/roas-data") {
-    new RoaTableData(validatedObjects) {
-      override def getParam(name: String) = params(name)
-    }
-  }
-
-  get("/roas.csv") {
-    val dateFormatter = DateTimeFormat.forPattern("YYYY-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC)
-    val Header = "URI,ASN,IP Prefix,Max Length,Not Before (UTC),Not After (UTC)\n"
-    val RowFormat = "\"%s\",%s,%s,%s,%s,%s\n"
-
-    contentType = "text/csv"
-    response.addHeader("Content-Disposition", "attachment; filename=roas.csv")
-    response.addHeader("Pragma", "public")
-    response.addHeader("Cache-Control", "no-cache")
-
-    val writer = response.getWriter()
-    writer.print(Header)
-    for {
-      (_, validatedRoas) <- validatedObjects.all
-      ValidRoa(uri, _, roa) <- validatedRoas
-      prefix <- roa.getPrefixes().asScala
-    } {
-      writer.print(RowFormat.format(
-        uri,
-        roa.getAsn(),
-        prefix.getPrefix(),
-        Option(prefix.getMaximumLength()).getOrElse(""),
-        dateFormatter.print(roa.getNotValidBefore()),
-        dateFormatter.print(roa.getNotValidAfter())))
-    }
-
-    ()
-  }
-
 }

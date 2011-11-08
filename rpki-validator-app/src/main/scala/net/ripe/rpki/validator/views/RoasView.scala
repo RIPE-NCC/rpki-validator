@@ -30,21 +30,14 @@
 package net.ripe.rpki.validator
 package views
 
-import scala.collection.JavaConverters._
 import scala.xml._
-import models.Roas
-import scalaz.concurrent.Promise
-import net.ripe.commons.certification.cms.roa.RoaCms
-import net.ripe.rpki.validator.models.TrustAnchor
-import net.ripe.rpki.validator.models.ValidatedRoa
-import net.ripe.certification.validator.util.TrustAnchorLocator
-import org.joda.time.DateTime
+import models.ValidatedObjects
 
-class RoasView(roas: Roas) extends View {
+class RoasView(validatedObjects: ValidatedObjects) extends View {
   def tab = Tabs.RoasTab
   def title = Text("Validated ROAs")
   def body = {
-    val (ready, loading) = roas.all.partition(_._2.isDefined)
+    val (loading, ready) = validatedObjects.all.partition(_._2.isEmpty)
     <div class="alert-message block-message info">
       {
         optional(ready.nonEmpty, <p>Validated ROAs from { listTrustAnchorNames(ready.keys.toSeq) }.</p>) ++

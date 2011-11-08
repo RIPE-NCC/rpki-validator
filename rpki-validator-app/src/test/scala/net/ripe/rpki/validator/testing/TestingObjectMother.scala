@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package testing
 
-import models.RtrPrefix
 import net.ripe.ipresource.Asn
 import net.ripe.commons.certification.cms.roa.RoaPrefix
 import net.ripe.ipresource.IpRange
@@ -39,15 +38,12 @@ import org.joda.time.DateTime
 import net.ripe.commons.certification.cms.roa.RoaCms
 import net.ripe.commons.certification.cms.roa.RoaCmsObjectMother
 import java.net.URI
-import net.ripe.rpki.validator.models.ValidatedRoa
 import scala.collection.JavaConverters._
-import net.ripe.rpki.validator.models.Roas
 import java.io.File
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import scala.collection.mutable.HashMap
-import net.ripe.rpki.validator.models.Filters
-import net.ripe.rpki.validator.models.Whitelist
-import net.ripe.rpki.validator.models.IgnoreFilter
+import net.ripe.commons.certification.validation.ValidationResult
+import models._
 
 object TestingObjectMother {
 
@@ -61,11 +57,11 @@ object TestingObjectMother {
   val WHITELIST_PREFIX_1: IpRange = IpRange.parse("10.0.0.0/8")
   val UNUSED_PREFIX_FOR_FILTER = IpRange.parse("192.168.1.0/24")
 
-  val ASN1_TO_ROA_PREFIX_V4_1: RtrPrefix = RtrPrefix.validate(ASN1, ROA_PREFIX_V4_1.getPrefix, Option(ROA_PREFIX_V4_1.getMaximumLength)).toOption.get
-  val ASN1_TO_ROA_PREFIX_V4_2: RtrPrefix = RtrPrefix.validate(ASN1, ROA_PREFIX_V4_2.getPrefix, None).toOption.get
-  val ASN1_TO_ROA_PREFIX_V6_1: RtrPrefix = RtrPrefix.validate(ASN1, ROA_PREFIX_V6_1.getPrefix, None).toOption.get
-  val ASN2_TO_ROA_PREFIX_V4_1: RtrPrefix = RtrPrefix.validate(ASN2, ROA_PREFIX_V4_1.getPrefix, Option(ROA_PREFIX_V4_1.getMaximumLength)).toOption.get
-  val ASN3_TO_WHITELIST1: RtrPrefix = RtrPrefix.validate(ASN3, WHITELIST_PREFIX_1, None).toOption.get
+  val ASN1_TO_ROA_PREFIX_V4_1: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix, Some(ROA_PREFIX_V4_1.getMaximumLength), Some("test ca"))
+  val ASN1_TO_ROA_PREFIX_V4_2: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix, None, Some("test ca"))
+  val ASN1_TO_ROA_PREFIX_V6_1: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V6_1.getPrefix, None, Some("test ca"))
+  val ASN2_TO_ROA_PREFIX_V4_1: RtrPrefix = RtrPrefix(ASN2, ROA_PREFIX_V4_1.getPrefix, Some(ROA_PREFIX_V4_1.getMaximumLength), Some("test ca"))
+  val ASN3_TO_WHITELIST1: RtrPrefix = RtrPrefix(ASN3, WHITELIST_PREFIX_1, None, Some("test ca"))
 
   def TAL = {
     val file: File = new File("/tmp")
@@ -95,20 +91,20 @@ object TestingObjectMother {
 
     val roa1: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes1.asJava, validityPeriod, ASN1)
     val roa1Uri: URI = URI.create("rsync://example.com/roa1.roa")
-    val validatedRoa1: ValidatedRoa = new ValidatedRoa(roa1, roa1Uri)
+    val validatedRoa1: ValidRoa = new ValidRoa(roa1Uri, new ValidationResult(), roa1)
 
     val roa2: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes2.asJava, validityPeriod, ASN2)
     val roa2Uri: URI = URI.create("rsync://example.com/roa2.roa")
-    val validatedRoa2: ValidatedRoa = new ValidatedRoa(roa2, roa2Uri)
+    val validatedRoa2: ValidRoa = new ValidRoa(roa2Uri, new ValidationResult(), roa2)
 
     val roa3: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes3.asJava, validityPeriod, ASN1)
     val roa3Uri: URI = URI.create("rsync://example.com/roa3.roa")
-    val validatedRoa3: ValidatedRoa = new ValidatedRoa(roa3, roa3Uri)
+    val validatedRoa3: ValidRoa = new ValidRoa(roa3Uri, new ValidationResult(), roa3)
     
-    val roas = collection.mutable.Seq.apply[ValidatedRoa](validatedRoa1, validatedRoa2, validatedRoa3)
-    val map: HashMap[String, Option[Seq[ValidatedRoa]]] = new HashMap[String, Option[Seq[ValidatedRoa]]]
-    map.put(TAL.getCaName, Option(roas))
-    new Roas(map)
+    val roas = collection.mutable.Seq.apply[ValidRoa](validatedRoa1, validatedRoa2, validatedRoa3)
+    val map = new HashMap[String, Seq[ValidatedObject]]
+    map.put(TAL.getCaName, roas)
+    new ValidatedObjects(map)
   }
   
   

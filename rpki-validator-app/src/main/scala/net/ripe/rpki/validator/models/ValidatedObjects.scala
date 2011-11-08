@@ -30,6 +30,8 @@
 package net.ripe.rpki.validator
 package models
 
+import lib.Java
+
 import scala.collection._
 import scala.collection.JavaConverters._
 import java.io.File
@@ -42,41 +44,47 @@ import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.roa.RoaCms
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.ipresource.UniqueIpResource
-import net.ripe.ipresource.Asn
 
-case class ValidatedRoa(val roa: RoaCms, val uri: URI)
+trait ValidatedObject {
+  val uri: URI
+  val result: ValidationResult
+  def isValid: Boolean = ! result.hasFailures
+}
 
-class Roas(val all: Map[String, Option[Seq[ValidatedRoa]]]) {
+case class InvalidObject(uri: URI, result: ValidationResult) extends ValidatedObject
+
+case class ValidObject(uri: URI, result: ValidationResult, repositoryObject: CertificateRepositoryObject)
+    extends ValidatedObject
+
+case class ValidRoa(uri: URI, result: ValidationResult, roa: RoaCms) extends ValidatedObject
+
+class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
 
   def getValidatedRtrPrefixes = {
+      
     for {
-      validatedRoas <- all.values if validatedRoas.isDefined
-      validatedRoa <- validatedRoas.get
-      roa = validatedRoa.roa
+      (trustAnchorName, validatedObjects) <- all
+      ValidRoa(_, _, roa) <- validatedObjects
       roaPrefix <- roa.getPrefixes().asScala
     } yield {
-      new RtrPrefix(roa.getAsn, roaPrefix.getPrefix,
-        if (roaPrefix.getMaximumLength == null) None else Some(roaPrefix.getMaximumLength))
+      new RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(trustAnchorName))
     }
   }
-
-  def update(tal: TrustAnchorLocator, validatedRoas: Seq[ValidatedRoa]) = {
-    new Roas(all.updated(tal.getCaName(), Some(validatedRoas)))
+  
+  def update(tal: TrustAnchorLocator, validatedObjects: Seq[ValidatedObject]) = {
+    new ValidatedObjects(all.updated(tal.getCaName(), validatedObjects))
   }
 
 }
 
-case class ValidatedPrefix(asn: Asn, ipaddress: UniqueIpResource, length: Int, maxLength: Int)
-
-object Roas {
+object ValidatedObjects {
   private val logger = Logger[this.type]
 
-  def apply(trustAnchors: TrustAnchors): Roas = {
-    new Roas(trustAnchors.all.map(ta => ta.locator.getCaName() -> None)(breakOut))
+  def apply(trustAnchors: TrustAnchors): ValidatedObjects = {
+    new ValidatedObjects(trustAnchors.all.map(ta => ta.locator.getCaName() -> Seq.empty[ValidatedObject])(breakOut))
   }
 
-  def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext): Seq[ValidatedRoa] = {
+  def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext) = {
     import net.ripe.commons.certification.rsync.Rsync
 
     val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(new File("tmp/cache/" + trustAnchor.getFile().getName())));
@@ -85,8 +93,8 @@ object Roas {
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
     validatingFetcher.setOuterMostDecorator(cachingFetcher);
 
-    val roas = collection.mutable.Buffer.empty[ValidatedRoa]
-    notifyingFetcher.addCallback(new RoaCollector(trustAnchor, roas))
+    val objects = collection.mutable.Buffer.empty[ValidatedObject]
+    notifyingFetcher.addCallback(new RoaCollector(trustAnchor, objects))
 
     trustAnchor.getPrefetchUris().asScala.foreach { prefetchUri =>
       logger.info("Prefetching '" + prefetchUri + "'")
@@ -99,12 +107,12 @@ object Roas {
     walker.addTrustAnchor(certificate)
     logger.info("Started validating " + trustAnchor.getCaName())
     walker.execute()
-    logger.info("Finished validating " + trustAnchor.getCaName() + ", fetched " + roas.size + " valid ROAs")
+    logger.info("Finished validating " + trustAnchor.getCaName() + ", fetched " + objects.size + " valid ROAs")
 
-    roas.toIndexedSeq
+    objects.toIndexedSeq
   }
 
-  private class RoaCollector(trustAnchor: TrustAnchorLocator, roas: collection.mutable.Buffer[ValidatedRoa]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
+  private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Buffer[ValidatedObject]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
     override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
       logger.warn("Failed to prefetch '" + uri + "'")
     }
@@ -114,6 +122,7 @@ object Roas {
     }
 
     override def afterFetchFailure(uri: URI, result: ValidationResult) {
+      objects += new InvalidObject(uri, result)
       logger.warn("Failed to validate '" + uri + "': " + result.getFailuresForCurrentLocation().asScala.map(_.toString()).mkString(", "))
     }
 
@@ -121,8 +130,9 @@ object Roas {
       obj match {
         case roa: RoaCms =>
           logger.debug("Fetched ROA '" + uri + "'")
-          roas += new ValidatedRoa(roa, uri)
+          objects += new ValidRoa(uri, result, roa)
         case _ =>
+          objects += new ValidObject(uri, result, obj)
           logger.debug("Fetched '" + uri + "'")
       }
     }

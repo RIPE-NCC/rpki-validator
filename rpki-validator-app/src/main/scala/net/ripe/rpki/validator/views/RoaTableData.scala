@@ -30,33 +30,17 @@
 package net.ripe.rpki.validator
 package views
 
-import models.Roas
+import models.ValidatedObjects
 import models.RtrPrefix
-import scala.collection.JavaConverters._
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import lib.NumberResources._
 
-abstract class RoaTableData(roas: Roas) extends DataTableJsonView[RoaTableRecord] {
+abstract class RoaTableData(validatedObjects: ValidatedObjects) extends DataTableJsonView[RtrPrefix] {
 
-  override def getAllRecords() = {
-    val (ready, loading) = roas.all.partition(_._2.isDefined)
-    val records = for {
-      (talName, Some(roas)) <- ready
-      validatedRoa <- roas
-      roa = validatedRoa.roa
-      roaPrefix <- roa.getPrefixes().asScala
-    } yield {
-      new RoaTableRecord(
-        asn = roa.getAsn(),
-        prefix = roaPrefix.getPrefix(),
-        maxPrefixLength = roaPrefix.getEffectiveMaximumLength(),
-        trustAnchorName = talName)
-    }
-    records.toIndexedSeq
-  }
+  override def getAllRecords() = validatedObjects.getValidatedRtrPrefixes.toIndexedSeq
 
-  override def filter(searchCriterium: Any): RoaTableRecord => Boolean = {
+  override def filter(searchCriterium: Any): RtrPrefix => Boolean = {
     searchCriterium match {
       case iprange: IpRange => _.prefix.overlaps(iprange)
       case asn: Asn => _.asn == asn
@@ -66,7 +50,7 @@ abstract class RoaTableData(roas: Roas) extends DataTableJsonView[RoaTableRecord
             record.asn.toString().contains(searchString) ||
             record.prefix.toString().contains(searchString) ||
             record.maxPrefixLength.toString().contains(searchString) ||
-            record.trustAnchorName.toUpperCase().contains(searchString))
+            record.trustAnchorName.get.toUpperCase().contains(searchString))
       case _ => _ => true
     }
   }
@@ -75,15 +59,14 @@ abstract class RoaTableData(roas: Roas) extends DataTableJsonView[RoaTableRecord
     sortColumn match {
       case 0 => AsnOrdering.on(_.asn)
       case 1 => IpRangeOrdering.on(_.prefix)
-      case 2 => implicitly[Ordering[Int]].on(_.maxPrefixLength)
-      case 3 => implicitly[Ordering[String]].on(_.trustAnchorName)
+      case 2 => implicitly[Ordering[Int]].on(_.effectiveMaxPrefixLength)
+      case 3 => implicitly[Ordering[String]].on(_.trustAnchorName.get)
       case _ => sys.error("unknown sort column: " + sortColumn)
     }
   }
 
-  override def getValuesForRecord(record: RoaTableRecord) = {
-    List(record.asn.getValue().toString(), record.prefix.toString(), record.maxPrefixLength.toString(), record.trustAnchorName)
+  override def getValuesForRecord(record: RtrPrefix) = {
+    List(record.asn.getValue().toString(), record.prefix.toString(), record.effectiveMaxPrefixLength.toString(),
+      record.trustAnchorName.getOrElse(""))
   }
 }
-
-case class RoaTableRecord(asn: Asn, prefix: IpRange, maxPrefixLength: Int, trustAnchorName: String)

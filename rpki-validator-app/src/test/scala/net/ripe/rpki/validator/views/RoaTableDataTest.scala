@@ -33,21 +33,22 @@ package views
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 
-import models.Roas
 import testing.TestingObjectMother._
+import models.RtrPrefix
+import lib.Java
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class RoaTableDataTest extends FunSuite with ShouldMatchers {
 
-  val ROA_TABLE_RECORD_1 = RoaTableRecord(ASN1, ROA_PREFIX_V4_1.getPrefix(), ROA_PREFIX_V4_1.getEffectiveMaximumLength(), TAL.getCaName())
-  val ROA_TABLE_RECORD_2 = RoaTableRecord(ASN1, ROA_PREFIX_V4_2.getPrefix(), ROA_PREFIX_V4_2.getEffectiveMaximumLength(), TAL.getCaName())
-  val ROA_TABLE_RECORD_3 = RoaTableRecord(ASN1, ROA_PREFIX_V6_1.getPrefix(), ROA_PREFIX_V6_1.getEffectiveMaximumLength(), TAL.getCaName())
-  val ROA_TABLE_RECORD_4 = RoaTableRecord(ASN2, ROA_PREFIX_V4_1.getPrefix(), ROA_PREFIX_V4_1.getEffectiveMaximumLength(), TAL.getCaName())
+  val ROA_TABLE_RECORD_1 = RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix(), Java.toOption(ROA_PREFIX_V4_1.getMaximumLength), Option(TAL.getCaName()))
+  val ROA_TABLE_RECORD_2 = RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix(), Java.toOption(ROA_PREFIX_V4_2.getMaximumLength), Option(TAL.getCaName()))
+  val ROA_TABLE_RECORD_3 = RtrPrefix(ASN1, ROA_PREFIX_V6_1.getPrefix(), Java.toOption(ROA_PREFIX_V6_1.getMaximumLength), Option(TAL.getCaName()))
+  val ROA_TABLE_RECORD_4 = RtrPrefix(ASN2, ROA_PREFIX_V4_1.getPrefix(), Java.toOption(ROA_PREFIX_V4_1.getMaximumLength), Option(TAL.getCaName()))
 
   val subject = new RoaTableData(ROAS) {
     override def getParam(name: String) = "1"
   }
-
+  
   test("should get roas") {
     val records = subject.getAllRecords()
     records should have length 6 // NOTE: There are duplicates
@@ -98,10 +99,10 @@ class RoaTableDataTest extends FunSuite with ShouldMatchers {
   test("should sort by effective max length") {
     val sorted = subject.sortRecords(subject.getAllRecords().distinct, 2)
     sorted should have length 4
-    sorted(0).maxPrefixLength should equal (ROA_PREFIX_V4_2.getEffectiveMaximumLength())
-    sorted(1).maxPrefixLength should equal (ROA_PREFIX_V4_1.getEffectiveMaximumLength())
-    sorted(2).maxPrefixLength should equal (ROA_PREFIX_V4_1.getEffectiveMaximumLength())
-    sorted(3).maxPrefixLength should equal (ROA_PREFIX_V6_1.getEffectiveMaximumLength())
+    sorted(0).effectiveMaxPrefixLength should equal (ROA_PREFIX_V4_2.getEffectiveMaximumLength())
+    sorted(1).effectiveMaxPrefixLength should equal (ROA_PREFIX_V4_1.getEffectiveMaximumLength())
+    sorted(2).effectiveMaxPrefixLength should equal (ROA_PREFIX_V4_1.getEffectiveMaximumLength())
+    sorted(3).effectiveMaxPrefixLength should equal (ROA_PREFIX_V6_1.getEffectiveMaximumLength())
   }
   
 

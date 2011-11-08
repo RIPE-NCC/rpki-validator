@@ -66,7 +66,7 @@ object Main {
 
   private def run(options: Options): Unit = {
     val trustAnchors = loadTrustAnchors()
-    val roas = Roas(trustAnchors)
+    val roas = ValidatedObjects(trustAnchors)
     val dataFile = new File(options.dataFileName).getCanonicalFile()
     val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
     val memoryImage = new Atomic[MemoryImage](
@@ -117,9 +117,9 @@ object Main {
         logger.info("Loaded trust anchor from location " + certificate.getLocation())
         memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating ROAs") }
 
-        val validatedRoas = Roas.fetchObjects(ta.locator, certificate)
+        val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate)
         memoryImage.update {
-          _.updateRoas(ta.locator, validatedRoas).finishedProcessingTrustAnchor(ta.locator, certificate)
+          _.updateValidatedObjects(ta.locator, validatedObjects).finishedProcessingTrustAnchor(ta.locator, certificate)
         }
       }
     }
@@ -148,7 +148,7 @@ object Main {
 
       override def trustAnchors = memoryImage.get.trustAnchors
 
-      override def roas = memoryImage.get.roas
+      override def validatedObjects = memoryImage.get.validatedObjects
 
       override def version = memoryImage.get.version
 

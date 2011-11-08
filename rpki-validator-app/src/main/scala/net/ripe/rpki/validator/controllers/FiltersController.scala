@@ -43,11 +43,11 @@ trait FiltersController extends ApplicationController {
   protected def addFilter(filter: IgnoreFilter): Unit
   protected def removeFilter(filter: IgnoreFilter): Unit
   protected def filterExists(filter: IgnoreFilter): Boolean = filters.entries.contains(filter)
-  protected def roas: Roas
+  protected def validatedObjects: ValidatedObjects
 
   private def baseUrl = views.Tabs.FiltersTab.url
   
-  private def getCurrentRtrPrefixes(): Iterable[RtrPrefix] = roas.getValidatedRtrPrefixes
+  private def getCurrentRtrPrefixes(): Iterable[RtrPrefix] = validatedObjects.getValidatedRtrPrefixes
 
   get(baseUrl) {
     new FiltersView(filters, getCurrentRtrPrefixes, messages = feedbackMessages)
