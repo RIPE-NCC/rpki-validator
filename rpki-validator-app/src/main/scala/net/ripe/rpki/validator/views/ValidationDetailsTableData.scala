@@ -35,8 +35,9 @@ import models.ValidatedObject
 import java.net.URI
 import net.ripe.commons.certification.validation.ValidationCheck
 import scala.collection.JavaConverters._
+import grizzled.slf4j.Logging
 
-abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] {
+abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] with Logging {
   
   override def getAllRecords() = records
 
@@ -45,9 +46,9 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
       case searchString: String =>
         (record => {
             searchString.isEmpty() ||
-            record.uri.toString().contains(searchString) ||
-            record.isValid.toString().contains(searchString) ||
-            record.check.getKey().contains(searchString)})
+            record.uri.toString().toUpperCase().contains(searchString) ||
+            record.isValid.toString().toUpperCase().contains(searchString) ||
+            record.check.getKey().toUpperCase().contains(searchString)})
       case _ => _ => true
     }
   }
