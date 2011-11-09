@@ -88,11 +88,40 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
   get("/validation-details") {
     new ValidationDetailsView()
   }
-
+  
   get("/validation-details-data") {
+    new ValidationDetailsTableData(getValidationDetails) {
+      override def getParam(name: String) = params(name)
+    }
+  }
+  
+  get("/validation-details.csv") {
 
-    info("Starting to convert validated objects to details")
-    
+    contentType = "text/csv"
+    response.addHeader("Content-Disposition", "attachment; filename=validation-details-data.csv")
+    response.addHeader("Pragma", "public")
+    response.addHeader("Cache-Control", "no-cache")
+
+    val Header = "URI, Object Validity, Check, Check Validity\n"
+    val RowFormat = "\"%s\",%s,%s,%s\n"
+
+    val writer = response.getWriter()
+    writer.print(Header)
+
+    val records = getValidationDetails
+
+    records.foreach {
+      record =>
+        writer.print(RowFormat.format(
+          record.uri,
+          record.isValid,
+          record.check.getKey,
+          record.check.isOk
+      ))
+    }
+  }
+
+  def getValidationDetails = {
     val records = for {
       validatedObjects <- validatedObjects.all.values.par
       validatedObject <- validatedObjects
@@ -100,12 +129,7 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
     } yield {
       ValidatedObjectDetail(validatedObject.uri, validatedObject.isValid, check)
     }
-
-    info("Done converting validated objects to details (" + records.size + ")")
-    
-    new ValidationDetailsTableData(records.seq.toIndexedSeq) {
-      override def getParam(name: String) = params(name)
-    }
+    records.seq.toIndexedSeq
   }
 
 }

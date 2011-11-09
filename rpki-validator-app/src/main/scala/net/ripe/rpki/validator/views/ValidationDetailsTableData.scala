@@ -48,6 +48,7 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
             searchString.isEmpty() ||
             record.uri.toString().toUpperCase().contains(searchString) ||
             record.isValid.toString().toUpperCase().contains(searchString) ||
+            record.check.isOk.toString().toUpperCase().contains(searchString) ||
             record.check.getKey().toUpperCase().contains(searchString)})
       case _ => _ => true
     }
@@ -58,12 +59,13 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
       case 0 => implicitly[Ordering[URI]].on(_.uri)
       case 1 => implicitly[Ordering[Boolean]].on(_.isValid)
       case 2 => implicitly[Ordering[String]].on(_.check.getKey())
+      case 3 => implicitly[Ordering[Boolean]].on(_.check.isOk)
       case _ => sys.error("unknown sort column: " + sortColumn)
     }
   }
 
   override def getValuesForRecord(record: ValidatedObjectDetail) = {
-    List(record.uri.toString(), record.check.isOk().toString(), record.check.getKey())
+    List(record.uri.toString(), record.isValid.toString, record.check.getKey(), record.check.isOk().toString())
   }
   
 }

@@ -42,8 +42,9 @@ class ValidationDetailsView() extends View {
       <thead>
         <tr>
           <th>URI</th>
-          <th>Valid</th>
+          <th>Object Valid</th>
           <th>Check</th>
+          <th>Check Valid</th>
         </tr>
       </thead>
       <tbody>
