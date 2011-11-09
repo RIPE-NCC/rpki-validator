@@ -44,6 +44,7 @@ import net.ripe.certification.validator.util.TrustAnchorLocator
 import scala.collection.mutable.HashMap
 import net.ripe.commons.certification.validation.ValidationResult
 import models._
+import net.ripe.commons.certification.validation.ValidationCheck
 
 object TestingObjectMother {
 
@@ -91,15 +92,15 @@ object TestingObjectMother {
 
     val roa1: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes1.asJava, validityPeriod, ASN1)
     val roa1Uri: URI = URI.create("rsync://example.com/roa1.roa")
-    val validatedRoa1: ValidRoa = new ValidRoa(roa1Uri, new ValidationResult(), roa1)
+    val validatedRoa1: ValidRoa = new ValidRoa(roa1Uri, Set.empty[ValidationCheck], roa1)
 
     val roa2: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes2.asJava, validityPeriod, ASN2)
     val roa2Uri: URI = URI.create("rsync://example.com/roa2.roa")
-    val validatedRoa2: ValidRoa = new ValidRoa(roa2Uri, new ValidationResult(), roa2)
+    val validatedRoa2: ValidRoa = new ValidRoa(roa2Uri, Set.empty[ValidationCheck], roa2)
 
     val roa3: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes3.asJava, validityPeriod, ASN1)
     val roa3Uri: URI = URI.create("rsync://example.com/roa3.roa")
-    val validatedRoa3: ValidRoa = new ValidRoa(roa3Uri, new ValidationResult(), roa3)
+    val validatedRoa3: ValidRoa = new ValidRoa(roa3Uri, Set.empty[ValidationCheck], roa3)
     
     val roas = collection.mutable.Seq.apply[ValidRoa](validatedRoa1, validatedRoa2, validatedRoa3)
     val map = new HashMap[String, Seq[ValidatedObject]]

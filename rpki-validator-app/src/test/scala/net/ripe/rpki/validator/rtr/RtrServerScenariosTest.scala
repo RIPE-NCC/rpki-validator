@@ -49,9 +49,9 @@ import net.ripe.ipresource.Ipv6Address
 import scala.util.Random
 import net.ripe.commons.certification.ValidityPeriod
 import org.joda.time.DateTime
-
 import scala.collection.JavaConverters._
 import net.ripe.commons.certification.validation.ValidationResult
+import net.ripe.commons.certification.validation.ValidationCheck
 
 @RunWith(classOf[JUnitRunner])
 class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
@@ -120,7 +120,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     val roa: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes.asJava, validityPeriod, RoaCmsObjectMother.TEST_ASN)
     val roaUri: URI = URI.create("rsync://example.com/roa.roa")
 
-    val validatedRoa: ValidRoa = new ValidRoa(roaUri, new ValidationResult(), roa)
+    val validatedRoa: ValidRoa = new ValidRoa(roaUri, Set.empty[ValidationCheck], roa)
 
     val roas = collection.mutable.Seq.apply[ValidRoa](validatedRoa)
 

@@ -31,7 +31,6 @@ package net.ripe.rpki.validator
 package models
 
 import lib.Java
-
 import scala.collection._
 import scala.collection.JavaConverters._
 import java.io.File
@@ -44,19 +43,25 @@ import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.roa.RoaCms
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.commons.certification.validation.ValidationCheck
 
-trait ValidatedObject {
+sealed trait ValidatedObject {
   val uri: URI
-  val result: ValidationResult
-  def isValid: Boolean = ! result.hasFailures
+  val checks: Set[ValidationCheck]
+  val isValid: Boolean
 }
 
-case class InvalidObject(uri: URI, result: ValidationResult) extends ValidatedObject
+case class InvalidObject(uri: URI, checks: Set[ValidationCheck]) extends ValidatedObject {
+  override val isValid = false
+}
 
-case class ValidObject(uri: URI, result: ValidationResult, repositoryObject: CertificateRepositoryObject)
-    extends ValidatedObject
+case class ValidObject(uri: URI, checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) extends ValidatedObject {
+  override val isValid = true
+}
 
-case class ValidRoa(uri: URI, result: ValidationResult, roa: RoaCms) extends ValidatedObject
+case class ValidRoa(uri: URI, checks: Set[ValidationCheck], roa: RoaCms) extends ValidatedObject {
+  override val isValid = true
+}
 
 class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
 
@@ -67,7 +72,7 @@ class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
       ValidRoa(_, _, roa) <- validatedObjects
       roaPrefix <- roa.getPrefixes().asScala
     } yield {
-      new RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(trustAnchorName))
+      RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(trustAnchorName))
     }
   }
   
@@ -107,7 +112,7 @@ object ValidatedObjects {
     walker.addTrustAnchor(certificate)
     logger.info("Started validating " + trustAnchor.getCaName())
     walker.execute()
-    logger.info("Finished validating " + trustAnchor.getCaName() + ", fetched " + objects.size + " valid ROAs")
+    logger.info("Finished validating " + trustAnchor.getCaName() + ", fetched " + objects.size + " valid Objects")
 
     objects.toIndexedSeq
   }
@@ -122,18 +127,18 @@ object ValidatedObjects {
     }
 
     override def afterFetchFailure(uri: URI, result: ValidationResult) {
-      objects += new InvalidObject(uri, result)
+      objects += new InvalidObject(uri, result.getResults(uri.toString()).asScala)
       logger.warn("Failed to validate '" + uri + "': " + result.getFailuresForCurrentLocation().asScala.map(_.toString()).mkString(", "))
     }
 
     override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
       obj match {
         case roa: RoaCms =>
-          logger.debug("Fetched ROA '" + uri + "'")
-          objects += new ValidRoa(uri, result, roa)
+          logger.info("Validated ROA '" + uri + "'")
+          objects += new ValidRoa(uri, result.getResults(uri.toString()).asScala, roa)
         case _ =>
-          objects += new ValidObject(uri, result, obj)
-          logger.debug("Fetched '" + uri + "'")
+          objects += new ValidObject(uri, result.getResults(uri.toString()).asScala, obj)
+          logger.info("Validated OBJECT '" + uri + "'")
       }
     }
   }

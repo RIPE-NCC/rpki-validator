@@ -28,57 +28,43 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package controllers
+package views
 
+import models.ValidatedObjects
+import models.ValidatedObject
+import java.net.URI
+import net.ripe.commons.certification.validation.ValidationCheck
 import scala.collection.JavaConverters._
-import org.joda.time.DateTimeZone
-import org.joda.time.format.DateTimeFormat
-import views.RoasView
-import org.joda.time.DateTime
-import net.ripe.rpki.validator.config.Main
-import models._
-import net.ripe.rpki.validator.views.RoaTableData
 
-trait RoasController extends ApplicationController {
-  protected def validatedObjects: ValidatedObjects
+abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] {
+  
+  override def getAllRecords() = records
 
-  get("/roas") {
-    new RoasView(validatedObjects)
-  }
-
-  get("/roas-data") {
-    new RoaTableData(validatedObjects) {
-      override def getParam(name: String) = params(name)
+  override def filter(searchCriterium: Any): ValidatedObjectDetail => Boolean = {
+    searchCriterium match {
+      case searchString: String =>
+        (record => {
+            searchString.isEmpty() ||
+            record.uri.toString().contains(searchString) ||
+            record.isValid.toString().contains(searchString) ||
+            record.check.getKey().contains(searchString)})
+      case _ => _ => true
     }
   }
 
-  get("/roas.csv") {
-    val dateFormatter = DateTimeFormat.forPattern("YYYY-MM-dd HH:mm:ss").withZone(DateTimeZone.UTC)
-    val Header = "URI,ASN,IP Prefix,Max Length,Not Before (UTC),Not After (UTC)\n"
-    val RowFormat = "\"%s\",%s,%s,%s,%s,%s\n"
-
-    contentType = "text/csv"
-    response.addHeader("Content-Disposition", "attachment; filename=roas.csv")
-    response.addHeader("Pragma", "public")
-    response.addHeader("Cache-Control", "no-cache")
-
-    val writer = response.getWriter()
-    writer.print(Header)
-    for {
-      (_, validatedRoas) <- validatedObjects.all
-      ValidRoa(uri, _, roa) <- validatedRoas
-      prefix <- roa.getPrefixes().asScala
-    } {
-      writer.print(RowFormat.format(
-        uri,
-        roa.getAsn(),
-        prefix.getPrefix(),
-        Option(prefix.getMaximumLength()).getOrElse(""),
-        dateFormatter.print(roa.getNotValidBefore()),
-        dateFormatter.print(roa.getNotValidAfter())))
+  override def ordering(sortColumn: Int) = {
+    sortColumn match {
+      case 0 => implicitly[Ordering[URI]].on(_.uri)
+      case 1 => implicitly[Ordering[Boolean]].on(_.isValid)
+      case 2 => implicitly[Ordering[String]].on(_.check.getKey())
+      case _ => sys.error("unknown sort column: " + sortColumn)
     }
-
-    ()
   }
 
+  override def getValuesForRecord(record: ValidatedObjectDetail) = {
+    List(record.uri.toString(), record.check.isOk().toString(), record.check.getKey())
+  }
+  
 }
+
+case class ValidatedObjectDetail(val uri: URI, val isValid: Boolean, val check: ValidationCheck)

@@ -28,35 +28,37 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package config
+package views
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
-import net.ripe.rpki.validator.views.DataTableJsonView
+import models.ValidatedObjects
+import scala.xml.Text
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with ValidatedObjectsController
-  with TrustAnchorsController
-  with RtrLogController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController
-  with RtrSessionsController {
+class ValidationDetailsView() extends View {
 
-  private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
-
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view))
-    case view: DataTableJsonView[_] =>
-      contentType = "application/json"
-      view.renderJson
+  def tab = Tabs.RoasTab
+  def title = Text("Validation Details")
+  def body = {
+    <table id="validation-details-table" class="zebra-striped" style="display: none;">
+      <thead>
+        <tr>
+          <th>URI</th>
+          <th>Valid</th>
+          <th>Check</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+    <script><!--
+$(document).ready(function() {
+  $('#validation-details-table').dataTable({
+        "sPaginationType": "full_numbers",
+        "bProcessing": true,
+        "bServerSide": true,
+        "sAjaxSource": "validation-details-data"
+    }).show();
+});
+// --></script>
   }
 
-  override protected def renderPipeline = renderView orElse super.renderPipeline
 }
