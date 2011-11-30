@@ -110,7 +110,7 @@ object Main {
 
   def runValidator(memoryImage: Atomic[MemoryImage], trustAnchors: Seq[TrustAnchor]) {
     implicit val runner = TaskRunners.threadPoolRunner
-    for (ta <- trustAnchors; Idle(_) = ta.status) {
+    for (ta <- trustAnchors; if ta.status.isIdle) {
       memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
       spawn {
         val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
