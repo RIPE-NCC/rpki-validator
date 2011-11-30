@@ -41,10 +41,15 @@ import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 
+import static  net.ripe.commons.certification.validation.ValidationString.VALIDATOR_INTERNAL_ERROR;
+
 import org.apache.commons.lang.Validate;
+import org.apache.log4j.Logger;
 
 
 public class ValidatingCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {
+    
+    private static final Logger log = Logger.getLogger(ValidatingCertificateRepositoryObjectFetcher.class);
 
     private final CertificateRepositoryObjectFetcher fetcher;
 
@@ -110,8 +115,15 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
         Validate.notNull(context);
         Validate.notNull(result);
 
-        ManifestCms manifestCms = fetcher.getManifest(uri, context, result);
-        return (ManifestCms) processCertificateRepositoryObject(uri, context, result, manifestCms);
+        try{
+            ManifestCms manifestCms = fetcher.getManifest(uri, context, result);
+            return (ManifestCms) processCertificateRepositoryObject(uri, context, result, manifestCms);
+        } catch (Exception e) {
+            log.error("There was an exception trying to get manifest: " + uri.toString(), e);
+            result.isTrue(false, VALIDATOR_INTERNAL_ERROR);
+            return null;
+        }
+
     }
 
     @Override
@@ -120,8 +132,14 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
         Validate.notNull(context);
         Validate.notNull(result);
 
+        try {
         CertificateRepositoryObject certificateRepositoryObject = fetcher.getObject(uri, context, fileContentSpecification, result);
         return processCertificateRepositoryObject(uri, context, result, certificateRepositoryObject);
+        } catch (Exception e) {
+            log.error("There was an exception trying to get object for uri: " + uri.toString(), e);
+            result.isTrue(false, VALIDATOR_INTERNAL_ERROR);
+            return null;
+        }
     }
 
     @Override

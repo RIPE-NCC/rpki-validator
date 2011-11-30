@@ -1,0 +1,13 @@
+$Id: README 3593 2010-12-31 16:57:06Z sra $
+
+These are SAMPLE trust anchors for testing rcynic.  Any resemblance
+between these files and real trust anchors living, dead, or wandering
+the night in ghostly torment is purely coincidental.
+
+Remember: it's only a trust anchor if a replying party says it is.
+You're the relying party, so it's your call.
+
+The .cer files (if any) are self-signed X.509 trust anchors.
+
+The .tal files are "trust anchor locators", formerly known as
+"indirect trust anchors" -- see draft-ietf-sidr-ta.

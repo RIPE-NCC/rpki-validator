@@ -1,0 +1,4 @@
+ca.name = BBN Conformance Repo
+certificate.location = rsync://rpki.bbn.com/conformance/root.cer
+public.key.info = MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2nitfCo+r5U/FN/TMJ8yBP+Dy2JdxAh/dmaTatpW3xfqhyBUguKCajzrpmCLdAobw5XX0l1A9TeflUCLMJmjivIHI3G8D2GKrtC2ARgydzZObW4K4pXinD1Kyvs+L1+0+w301Hv4h1hphzUZOH4CZABg1pkUpjSj1YxQOVL3NFygqW7rK1mBCs2b9dylo82q/xgIr6g9m64Mxd++DNV0pbxe1kzKfXMpvS4yvJOYlBlfknTvJh9zxBzD8U00fKDlUIy1z4MBZFbOLci2Z4JbFAOx/onBC0cHYoXHa49FB7fsrPdVCBGPoYsz8paxp44syoVGxceE68JrT0C8nrkJRQIDAQAB
+prefetch.uris = rsync://rpki.bbn.com/conformance/

@@ -33,9 +33,9 @@ package views
 import models.ValidatedObjects
 import models.ValidatedObject
 import java.net.URI
-import net.ripe.commons.certification.validation.ValidationCheck
 import scala.collection.JavaConverters._
 import grizzled.slf4j.Logging
+import net.ripe.commons.certification.validation.{ValidationMessage, ValidationCheck}
 
 abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] with Logging {
   
@@ -49,6 +49,7 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
             record.uri.toString().toUpperCase().contains(searchString) ||
             record.isValid.toString().toUpperCase().contains(searchString) ||
             record.check.isOk.toString().toUpperCase().contains(searchString) ||
+            ValidationMessage.getMessage(record.check).contains(searchString) ||
             record.check.getKey().toUpperCase().contains(searchString)})
       case _ => _ => true
     }
@@ -59,13 +60,13 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
       case 0 => implicitly[Ordering[URI]].on(_.uri)
       case 1 => implicitly[Ordering[Boolean]].on(_.isValid)
       case 2 => implicitly[Ordering[String]].on(_.check.getKey())
-      case 3 => implicitly[Ordering[Boolean]].on(_.check.isOk)
+      case 4 => implicitly[Ordering[Boolean]].on(_.check.isOk)
       case _ => sys.error("unknown sort column: " + sortColumn)
     }
   }
 
   override def getValuesForRecord(record: ValidatedObjectDetail) = {
-    List(record.uri.toString(), record.isValid.toString, record.check.getKey(), record.check.isOk().toString())
+    List(record.uri.toString(), record.isValid.toString, record.check.getKey(), ValidationMessage.getMessage(record.check), record.check.isOk().toString())
   }
   
 }
