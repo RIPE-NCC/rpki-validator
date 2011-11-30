@@ -41,6 +41,7 @@ import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.server.NCSARequestLog
 import org.joda.time.DateTime
 import grizzled.slf4j.Logger
+import scalaz.{Success, Failure}
 
 import net.ripe.certification.validator.util.TrustAnchorExtractor
 import rtr.Pdu
@@ -99,7 +100,7 @@ object Main {
       val now = new DateTime
       val needUpdating = for {
         ta <- trustAnchors.all if ta.status.isIdle
-        Idle(nextUpdate) = ta.status if nextUpdate <= now
+        Idle(nextUpdate, _) = ta.status if nextUpdate <= now
       } yield ta
 
       runValidator(memoryImage, needUpdating)
@@ -113,13 +114,22 @@ object Main {
     for (ta <- trustAnchors; if ta.status.isIdle) {
       memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
       spawn {
-        val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
-        logger.info("Loaded trust anchor from location " + certificate.getLocation())
-        memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating ROAs") }
+        try {
+          val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
+          logger.info("Loaded trust anchor from location " + certificate.getLocation())
+          memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating ROAs") }
 
-        val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate)
-        memoryImage.update {
-          _.updateValidatedObjects(ta.locator, validatedObjects).finishedProcessingTrustAnchor(ta.locator, certificate)
+          val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate)
+          memoryImage.update {
+            _.updateValidatedObjects(ta.locator, validatedObjects).finishedProcessingTrustAnchor(ta.locator, Success(certificate))
+          }
+        } catch {
+          case e: Exception =>
+            logger.error("Error while validating trust anchor " + ta.locator.getCertificateLocation() + ": " + e, e)
+            val message = if (e.getMessage != null) e.getMessage else e.toString
+            memoryImage.update {
+              _.finishedProcessingTrustAnchor(ta.locator, Failure(message))
+            }
         }
       }
     }

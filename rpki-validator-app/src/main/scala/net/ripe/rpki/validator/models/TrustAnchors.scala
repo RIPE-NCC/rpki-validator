@@ -39,12 +39,13 @@ import net.ripe.certification.validator.util.TrustAnchorExtractor
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import scalaz.concurrent.Promise
 import org.joda.time.DateTime
+import scalaz.{Validation, Failure, Success}
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
   def isRunning: Boolean = !isIdle
 }
-case class Idle(nextUpdate: DateTime) extends ProcessingStatus {
+case class Idle(nextUpdate: DateTime, errorMessage: Option[String] = None) extends ProcessingStatus {
   def isIdle = true
 }
 case class Running(description: String) extends ProcessingStatus {
@@ -52,10 +53,10 @@ case class Running(description: String) extends ProcessingStatus {
 }
 
 case class TrustAnchor(
-    locator: TrustAnchorLocator,
-    status: ProcessingStatus,
-    certificate: Option[CertificateRepositoryObjectValidationContext],
-    lastUpdated: Option[DateTime] = None) {
+  locator: TrustAnchorLocator,
+  status: ProcessingStatus,
+  certificate: Option[CertificateRepositoryObjectValidationContext],
+  lastUpdated: Option[DateTime] = None) {
   def name: String = locator.getCaName()
   def prefetchUris: Seq[URI] = locator.getPrefetchUris().asScala
 }
@@ -67,12 +68,19 @@ class TrustAnchors(val all: Seq[TrustAnchor]) {
       else ta
     })
   }
-  def finishedProcessing(locator: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext): TrustAnchors = {
+  def finishedProcessing(locator: TrustAnchorLocator, result: Validation[String, CertificateRepositoryObjectValidationContext]): TrustAnchors = {
     val now = new DateTime
-    val nextUpdate = now.plusHours(4)
     new TrustAnchors(all.map { ta =>
-      if (ta.locator == locator) ta.copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = Some(certificate))
-      else ta
+      if (ta.locator == locator) {
+        result match {
+          case Success(certificate) =>
+            val nextUpdate = now.plusHours(4)
+            ta.copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = Some(certificate))
+          case Failure(errorMessage) =>
+            val nextUpdate = now.plusHours(1)
+            ta.copy(lastUpdated = Some(now), status = Idle(nextUpdate, Some(errorMessage)))
+        }
+      } else ta
     })
   }
 }

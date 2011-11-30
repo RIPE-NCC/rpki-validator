@@ -87,8 +87,12 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
                 case Running(description) =>
                   <td>{ description }</td>
                   <td style="text-align: center;"><img src="/images/spinner.gif"/></td>
-                case Idle(nextUpdate) =>
-                  <td><span title={ nextUpdate.toString() }>{ if (now <= nextUpdate) periodInWords(new Period(now, nextUpdate), number = 1) else "any moment" }</span></td>
+                case Idle(nextUpdate, errorMessage) =>
+                  <td><span title={ nextUpdate.toString() }>{
+                      if (now <= nextUpdate) periodInWords(new Period(now, nextUpdate), number = 1) else "any moment"
+                    }</span>{
+                      errorMessage.map(text => <span rel="twipsy" data-original-title={text}>&nbsp;<img align="center" src="/images/warningS.png" /></span>).getOrElse(NodeSeq.Empty)
+                    }</td>
                   <td>
                     <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
                       <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
@@ -103,6 +107,9 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
     </table>
     <script><!--
 $(function () {
+  $('[rel=twipsy]').twipsy({
+    "live": true
+  });
   var refresh = function() {
     $.ajax({
       url: "/trust-anchors",

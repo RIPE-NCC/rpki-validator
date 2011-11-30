@@ -35,14 +35,15 @@ import net.ripe.certification.validator.util.TrustAnchorLocator
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import org.joda.time.DateTime
 import models._
+import scalaz.Validation
 
 case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, version: Int = 0) {
   val lastUpdateTime: DateTime = new DateTime
 
   def startProcessingTrustAnchor(tal: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(tal, description))
 
-  def finishedProcessingTrustAnchor(tal: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext) =
-    copy(trustAnchors = trustAnchors.finishedProcessing(tal, certificate))
+  def finishedProcessingTrustAnchor(tal: TrustAnchorLocator, result: Validation[String, CertificateRepositoryObjectValidationContext]) =
+    copy(trustAnchors = trustAnchors.finishedProcessing(tal, result))
 
   def updateValidatedObjects(tal: TrustAnchorLocator, newValidatedObjects: Seq[ValidatedObject]) =
     copy(version = version + 1, validatedObjects = validatedObjects.update(tal, newValidatedObjects))
