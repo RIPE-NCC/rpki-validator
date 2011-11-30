@@ -184,7 +184,7 @@
                     <configurationDirectory>conf</configurationDirectory>
                     <configurationSourceDirectory>conf</configurationSourceDirectory>
                     <copyConfigurationDirectory>false</copyConfigurationDirectory>
-                    <extraJvmArguments>-Xms512m -Xmx1024m</extraJvmArguments>
+                    <extraJvmArguments>-Xms128m -Xmx256m</extraJvmArguments>
                     <programs>
                         <program>
                             <mainClass>${main.class}</mainClass>

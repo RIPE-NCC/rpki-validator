@@ -43,8 +43,11 @@ import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import grizzled.slf4j.Logging
 
-case class AnnouncedRoute(asn: Asn, prefix: IpRange) {
-  val interval = NumberResourceInterval(prefix.getStart(), prefix.getEnd())
+case class AnnouncedRoute private (asn: Asn, interval: NumberResourceInterval) {
+  def prefix = interval.start.upTo(interval.end).asInstanceOf[IpRange]
+}
+object AnnouncedRoute {
+  def apply(asn: Asn, prefix: IpRange) = new AnnouncedRoute(asn, NumberResourceInterval(prefix.getStart, prefix.getEnd))
 }
 case class ValidatedAnnouncement(route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix]) {
   def asn = route.asn
@@ -60,7 +63,7 @@ object BgpAnnouncementValidator extends Logging {
 
   val VISIBILITY_THRESHOLD = 5
 
-  val announcedRoutes: Promise[Set[AnnouncedRoute]] = Promise {
+  val announcedRoutes: Promise[Traversable[AnnouncedRoute]] = Promise {
     val bgpEntries =
       RisWhoisParser.parseFromUrl(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")) ++
         RisWhoisParser.parseFromUrl(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz"))
@@ -68,7 +71,7 @@ object BgpAnnouncementValidator extends Logging {
     bgpEntries
       .filter(_.visibility >= VISIBILITY_THRESHOLD)
       .map(entry => AnnouncedRoute(entry.origin, entry.prefix))
-      .toSet
+      .toArray.distinct
   }
 
   @volatile

@@ -40,25 +40,39 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStreamReader
 import java.net.URL
+import scala.collection._
+
+case class BgpRisEntry(origin: Asn, prefix: IpRange, visibility: Int)
 
 object RisWhoisParser {
 
   val regex = """^\s*([0-9]+)\s+([0-9a-fA-F.:/]+)\s+([0-9]+)\s*$""".r
-  
+
   def parseFromUrl(url: URL): Iterator[BgpRisEntry] = {
+    val identityMap = new ObjectIdentityMap
     val reader = new BufferedReader(new InputStreamReader(new GZIPInputStream(url.openStream())))
-    Iterator.continually(reader.readLine()).takeWhile(_ != null).flatMap(parseLine(_))
+    Iterator.continually(reader.readLine()).takeWhile(_ != null).flatMap(parseLine(_)).map(makeResourcesUnique(identityMap, _))
   }
 
-  
+  private def makeResourcesUnique(identityMap: ObjectIdentityMap, entry: BgpRisEntry) = {
+    import identityMap._
+    val asn = makeUnique(entry.origin)
+    val prefix = (makeUnique(entry.prefix.getStart) upTo makeUnique(entry.prefix.getEnd)).asInstanceOf[IpRange]
+    entry.copy(origin = asn, prefix = prefix)
+  }
+
   def parseLine(content: String): Option[BgpRisEntry] = {
     content match {
-      case regex(asn, ipprefix, visibility) => Some(new BgpRisEntry(origin = Asn.parse(asn), prefix = IpRange.parse(ipprefix), visibility = Integer.parseInt(visibility)))
+      case regex(asn, ipprefix, visibility) =>
+        Some(new BgpRisEntry(origin = Asn.parse(asn), prefix = IpRange.parse(ipprefix), visibility = Integer.parseInt(visibility)))
       case _ => None
     }
   }
-  
-  
-}
 
-case class BgpRisEntry(origin: Asn, prefix: IpRange, visibility: Int)
+  private[this] class ObjectIdentityMap {
+    private val identityMap = mutable.Map.empty[AnyRef, AnyRef]
+
+    def makeUnique[A <: AnyRef](a: A): A = identityMap.getOrElseUpdate(a, a).asInstanceOf[A]
+  }
+
+}
