@@ -257,8 +257,9 @@
                         <exclude>data/**</exclude>
                         <exclude>log/**</exclude>
                         <exclude>tmp/**</exclude>
-                        <exclude>**/*.txt</exclude>
+                        <exclude>**/*.jmx</exclude>
                         <exclude>**/*.tal</exclude>
+                        <exclude>**/*.txt</exclude>
                         <exclude>pom.xslt</exclude>
                         <exclude>src/main/resources/public/javascript/datatables/**</exclude>
                         <exclude>src/main/resources/public/javascript/bootstrap/**</exclude>
