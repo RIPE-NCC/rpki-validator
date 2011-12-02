@@ -41,7 +41,7 @@ import org.joda.time.format.ISODateTimeFormat
 class RtrSessionsView(sessions: Iterable[RtrSessionData], now: DateTime = new DateTime) extends View with ViewHelpers {
 
   def tab = Tabs.RtrSessionsTab
-  def title = Text("RTR Sessions")
+  def title = Text("Router Sessions")
 
   def body = {
     <table class="zebra-striped">
