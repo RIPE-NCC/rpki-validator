@@ -36,7 +36,7 @@ class WelcomePageSpec extends FeatureSpecification {
   feature("Welcome page") {
     scenario("home") {
       get("/") {
-        response.body should include("Quick overview of BGP Origin validation")
+        response.body should include("Quick Overview of BGP Origin Validation")
       }
     }
   }

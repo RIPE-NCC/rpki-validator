@@ -189,3 +189,7 @@ td.warning {
 .stepArrow.selected {
   background: url(/images/stepPointer.png) no-repeat center bottom;
 }
+
+.footer_table {
+  border:0px;
+}

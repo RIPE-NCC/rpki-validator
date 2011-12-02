@@ -85,7 +85,13 @@ object Layouts {
           </div>
           { view.body }
           <footer>
-            <p>Copyright © { (2009 to (new DateTime).getYear).mkString(", ") } the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted.</p>
+          	<table class="footer_table">
+          		<tr>
+          			<td><img src="/images/ncc-logo.png" /></td>
+          			<td><p> Copyright © { (2009 to (new DateTime).getYear).mkString(", ") } the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted.</p></td>
+          		</tr>
+          	</table>
+            
           </footer>
         </div>
         <div id="feedbackButton">

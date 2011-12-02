@@ -35,7 +35,7 @@ import scala.xml.Text
 class HomeView extends View with ViewHelpers {
 
   def tab = views.Tabs.HomeTab
-  def title = Text("Quick overview of BGP Origin validation")
+  def title = Text("Quick Overview of BGP Origin Validation")
   def body = {
     
     
@@ -77,12 +77,12 @@ class HomeView extends View with ViewHelpers {
                         <p>
                           Trust Anchors are the entry points used for validation in any
                           Public Key Infrastructure (PKI) system. This validator is intended for the validation
-                          of Resource PKI (RPKI) systems. It is pre-configured with Trust Anchors for four
+                          of Resource PKI (RPKI) systems. It is pre-configured with Trust Anchors for all the
                           RIRs who are running such systems now.
                         </p>
                         <br />
                         <p>
-                          If you would like to add or change which Trust Anchors are used by this
+                          If you would like to add or change the Trust Anchors that are used by this
                           validator, please see the README.txt file for details.
                         </p>
                     </div>
@@ -94,39 +94,39 @@ class HomeView extends View with ViewHelpers {
                         <p>
                           It should be noted that ROAs are intended to be positive attestations, but the presence of
                           a ROA for an ASN and prefix combination implies that announcements for this prefix from
-                          <strong>other</strong> origin ASNs, or for <strong>more specific</strong> prefixes should be considered
+                          <strong>other</strong> origin ASNs, or for <strong>more specific</strong> prefixes, should be considered
                           invalid.
                         </p>
                         <p>
-                          More than one ROA may exist for the same prefix, and as long as one of
-                          them matches the announcement it is considered valid. The announcement validation rules
-                          are defined in an IETF standard, and will be explained in more detail in the 'Router' section.
+                          More than one ROA may exist for the same prefix, and, as long as one of
+                          them matches the announcement, it is considered valid. The announcement validation rules
+                          are defined in an IETF standard and are explained in more detail in the Router section.
                         </p>
                     </div>
                     <div id="ignoreFilters" class="stepDescription">
                         <p>
-                          Because ROAs may invalidate certain announcements, and you as an operator may disagree, this validation
-                          tools allows you to <strong>ignore</strong> all ROAs that would otherwise affect certain prefixes.
+                          Because ROAs may invalidate certain announcements, and you as an operator may disagree with that invalidation,
+	  				      this validator tool allows you to <strong>ignore</strong> all ROAs that would otherwise affect certain prefixes.
                         </p>
                         <p>
-                          If you use this option it will be as though no ROAs exist for this prefix.
+                          If you use this option, it will be as though no ROAs exist for this prefix.
                         </p>
                     </div>
                     <div id="whitelist" class="stepDescription">
                         <p>
-                          Continuing this thought you may actually want to add your own whitelist entries for announcement
-                          that don't have a corresponding ROA, but in your mind should have.
+                          You may actually want to add your own whitelist entries for announcements
+                          that don't have a corresponding ROA but that you think should have.
                         </p>
                         <p>
-                          If you use this option it will be as though a ROAs exist for this announcement.
+                          If you use this option, it will be as though a ROAs exist for this announcement.
                         </p>
                     </div>
                     <div id="router" class="stepDescription">
                         <p>
-                            <h3>RPKI RTR</h3>
+                            <h3>RPKI/Router</h3>
       <p>
           You can configure your router to connect to this validator so that it can receive a full set
-          of <strong>Route Origin Attestations</strong>
+          of <strong>Route Origin Attestations</strong> (ROAs)
           based on all the ROAs that were validated, minus your ignore list entries, plus your own whitelist entries.
       </p>
       <p>
@@ -136,9 +136,9 @@ class HomeView extends View with ViewHelpers {
       <br/>
       <h3>Announcement Validation in the Router</h3>
       <p>
-        Once your router receives the <strong>Route Origin Attestations</strong>
-        it can now use this information to determine the validity outcome of the origin
-        AS in BGP announcements. To do this your router will match an announcement to
+        Once your router receives the ROAs,
+        it can use this information to determine the validity outcome of the origin
+        AS in BGP announcements. To do this, your router will match an announcement to
         each attestation in this way:
       </p>
       <br />
@@ -159,45 +159,45 @@ class HomeView extends View with ViewHelpers {
           <td>INVALID</td>
         </tr>
       </table>
-      In all other cases no conclusive decision can be made and the resulting status is 'UNKNOWN'
+      In all other cases, no conclusive decision can be made and the resulting status is 'UNKNOWN'
       <br />
       <br />
       <p>
-          The final judgement whether an announcement should be considered valid, invalid or unknown
+          The final judgement on whether an announcement should be considered valid, invalid or unknown
           depends on <strong>all</strong> relevant attestations using the following reasoning:
       </p>
 
       <p>
         <table>
-          <tr><td>at least 1 VALID</td><td>VALID</td></tr>
-          <tr><td>no VALIDS, at least 1 INVALID</td><td>INVALID</td></tr>
-          <tr><td>none of the above</td><td>UNKNOWN</td></tr>
+          <tr><td>At least one VALID</td><td>VALID</td></tr>
+          <tr><td>No VALIDS, at least one INVALID</td><td>INVALID</td></tr>
+          <tr><td>None of the above</td><td>UNKNOWN</td></tr>
         </table>
         <span rel="popover" data-content={
               <div>
-                  <p>Consider the following Attestations</p>
+                  <p>Consider the following attestations</p>
                   <table>
                       <tr><td>&nbsp;</td><td>ASN</td><td>Prefix</td><td>Max Length</td></tr>
                       <tr><td>A</td><td>65001</td><td>10.0.0.0/16</td><td>20</td></tr>
                       <tr><td>B</td><td>65002</td><td>10.0.1.0/24</td><td>24</td></tr>
                   </table>
-                  <p>Then the following Announcements would get validation statuses:</p>
+                  <p>Then the following announcements would get validation statuses:</p>
                   <table>
                       <tr><td>ASN</td><td>Prefix</td><td>Status</td><td>Reason</td></tr>
-                      <tr><td>65001</td><td>10.0.0.0/16</td><td>VALID</td><td>matches A</td></tr>
-                      <tr><td>65001</td><td>10.0.0.0/24</td><td>INVALID</td><td>no valid matches, more specific than A</td></tr>
-                      <tr><td>65002</td><td>10.0.1.0/24</td><td>VALID</td><td>matches B (A invalidates, B wins)</td></tr>
-                      <tr><td>65004</td><td>10.0.2.0/20</td><td>INVALID</td><td>no valid matches, different AS from A</td></tr>
-                      <tr><td>65004</td><td>192.168.0.0/24</td><td>UNKNOWN</td><td>no matches</td></tr>
+                      <tr><td>65001</td><td>10.0.0.0/16</td><td>VALID</td><td>Matches A</td></tr>
+                      <tr><td>65001</td><td>10.0.0.0/24</td><td>INVALID</td><td>No valid matches, and is more specific than A</td></tr>
+                      <tr><td>65002</td><td>10.0.1.0/24</td><td>VALID</td><td>Matches B (A invalidates, B wins)</td></tr>
+                      <tr><td>65004</td><td>10.0.2.0/20</td><td>INVALID</td><td>No valid matches, and is different AS from A</td></tr>
+                      <tr><td>65004</td><td>192.168.0.0/24</td><td>UNKNOWN</td><td>No matches</td></tr>
                   </table>
                   </div>
-            } data-original-title="Example"><a href="#">See an example....</a></span>
+            } data-original-title="Example"><a href="#">See an example ...</a></span>
       </p>
       <br />
       <p>
-          This information is now available to your router and can be used to make automatically change the preference
-          of route announcements. The way this is configured differs between vendors of course. The advice in the IETF
-          standards is to prefer valid, over unknown, over invalid. But it's up to you as an operator to decide if and
+          This information is now available to your router and can be used to automatically change the preference
+          of route announcements. The way this is configured differs between vendors, of course. The advice in the IETF
+          standards is to prefer valid over unknown, and valid and unknown over invalid. But it's up to you as an operator to decide if and
           how you want to use this information.
       </p>
       <br />
@@ -207,15 +207,16 @@ class HomeView extends View with ViewHelpers {
           the actual BGP announcements, so only the router can make this assessment.
       </p>
       <p>
-          However, to help you analyse what your router will most likely see we have created the <a href="/bgp-preview">BGP Preview</a>
-          page. On this page we mimic the announcement validation process described above using a dump of announcements that are widely (>5 peers)
+          However, to help you analyse what your router will most likely see, we have created the <a href="/bgp-preview">BGP Preview</a>
+          page. On this page, we mimic the announcement validation process described above using a dump of announcements that are widely (>5 peers)
           <a href="http://www.ris.ripe.net/dumps/">seen</a> by the RIPE NCC RIS Route Collectors.
       </p>
       <p>
-          This page is provided for two main reasons:
+          This page is mainly provided for two reasons:
           <ul>
-            <li>to help you set up your own ignore filters and whitelist entries</li>
-            <li>to help you analyse BGP announcement validatity outside of your router, this is useful if you prefer a more manual approach and don't want your router to take automated decisions using this..</li>
+            <li>To help you set up your own ignore filters and whitelist entries</li>
+            <li>To help you analyse BGP announcement validity outside of your router. This is useful if you prefer a 
+                more manual approach and don't want your router to make automated decisions.</li>
           </ul>
       </p>
 
