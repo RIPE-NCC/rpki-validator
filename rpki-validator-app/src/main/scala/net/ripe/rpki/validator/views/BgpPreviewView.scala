@@ -49,7 +49,7 @@ class BgpPreviewView() extends View with ViewHelpers {
 	  associate with BGP announcements. This preview is based on:
       </p>
       <ul>
-        <li>BGP announcements that are widely (>5 peers) <a href="http://www.ris.ripe.net/dumps/">seen</a> by RIS</li>
+        <li>BGP announcements that are widely (>5 peers) <a href="http://www.ris.ripe.net/dumps/">seen</a> by the RIPE NCC RIS Route Collectors.</li>
         <li>Validation rules defined in the <a href="http://tools.ietf.org/html/draft-ietf-sidr-roa-validation-10#section-2">IETF standard</a>.</li>
         <li>The validated ROAs found by this validator after applying your filters and additional whitelist entries</li>
       </ul>
