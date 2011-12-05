@@ -173,6 +173,8 @@ object Main {
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
 
       override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements.get
+      
+      override protected def getRtrPrefixes = memoryImage.get.getDistinctRtrPrefixes()
 
       protected def sessionData = rtrServer.rtrSessions.allClientData
     }), "/*", FilterMapping.ALL)

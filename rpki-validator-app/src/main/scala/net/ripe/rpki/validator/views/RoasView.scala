@@ -43,9 +43,6 @@ class RoasView(validatedObjects: ValidatedObjects) extends View {
         optional(ready.nonEmpty, <p>Validated ROAs from { listTrustAnchorNames(ready.keys.toSeq) }.</p>) ++
         optional(loading.nonEmpty, <p>Still retrieving and validating ROAs from { listTrustAnchorNames(loading.keys.toSeq) }.</p>)
       }
-      <div class="alert-actions">
-        <a href="roas.csv" class="btn small">Download validated ROAs as CSV</a>
-      </div>
     </div>
     <table id="roas-table" class="zebra-striped" style="display: none;">
       <thead>

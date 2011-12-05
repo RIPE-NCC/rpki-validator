@@ -189,7 +189,13 @@ td.warning {
 .stepArrow.selected {
   background: url(/images/stepPointer.png) no-repeat center bottom;
 }
-
-.footer_table {
-  border:0px;
+.copyright {
+  color:#999;
+  font-size:11px;
+  text-align:center;
+  line-height:25px;
+}
+.copyright img { 
+  margin-right:12px;
+  margin-top:-4px;
 }

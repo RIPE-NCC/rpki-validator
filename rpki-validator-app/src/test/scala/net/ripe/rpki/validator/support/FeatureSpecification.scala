@@ -53,6 +53,7 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
     override protected def addWhitelistEntry(entry: RtrPrefix) = sys.error("TODO")
     override protected def removeWhitelistEntry(entry: RtrPrefix) = sys.error("TODO")
     override protected def validatedAnnouncements = sys.error("TODO")
+    override protected def getRtrPrefixes = sys.error("TODO")
     override protected def sessionData = sys.error("TBD")
     override lazy val trustAnchors = sys.error("TBD")
     override lazy val validatedObjects = sys.error("TBD")

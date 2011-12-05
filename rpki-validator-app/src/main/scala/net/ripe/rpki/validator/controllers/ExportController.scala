@@ -28,36 +28,41 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package config
+package controllers
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
-import net.ripe.rpki.validator.views.DataTableJsonView
+import views.ExportView
+import models.RtrPrefix
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with ValidatedObjectsController
-  with TrustAnchorsController
-  with RtrLogController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController
-  with ExportController
-  with RtrSessionsController {
+trait ExportController extends ApplicationController {
 
-  private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
+  protected def getRtrPrefixes: Set[RtrPrefix]
 
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view))
-    case view: DataTableJsonView[_] =>
-      contentType = "application/json"
-      view.renderJson
+  get("/export") {
+    new ExportView()
   }
 
-  override protected def renderPipeline = renderView orElse super.renderPipeline
+  get("/export.csv") {
+    val Header = "ASN,IP Prefix,Max Length\n"
+    val RowFormat = "%s,%s,%s\n"
+
+    contentType = "text/csv"
+    response.addHeader("Content-Disposition", "attachment; filename=roas.csv")
+    response.addHeader("Pragma", "public")
+    response.addHeader("Cache-Control", "no-cache")
+
+    val writer = response.getWriter()
+    writer.print(Header)
+
+    for { prefix <- getRtrPrefixes } {
+      val effectiveMaxPrefix = {
+        prefix.maxPrefixLength match {
+          case None => prefix.prefix.getPrefixLength()
+          case Some(length) => length
+        }
+      }
+      writer.write(RowFormat.format(prefix.asn, prefix.prefix, effectiveMaxPrefix))
+    }
+
+  }
+
 }

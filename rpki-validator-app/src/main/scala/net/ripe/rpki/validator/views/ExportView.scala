@@ -27,37 +27,24 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package config
+package net.ripe.rpki.validator.views
+import scala.xml.Text
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
-import net.ripe.rpki.validator.views.DataTableJsonView
-
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with ValidatedObjectsController
-  with TrustAnchorsController
-  with RtrLogController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController
-  with ExportController
-  with RtrSessionsController {
-
-  private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
-
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view))
-    case view: DataTableJsonView[_] =>
-      contentType = "application/json"
-      view.renderJson
+class ExportView extends View with ViewHelpers {
+  
+  def tab = Tabs.ExportTab
+  def title = Text("Export")
+  def body = {
+    <p>
+	  Here you are able to export the complete data set for use in an existing BGP decision making workflow. The output will be in CSV format and consist of all validated ROAs, minus your Ignore Filter entries, plus your Whitelist additions.
+	</p>
+    <div class="alert-actions">
+      <a href="export.csv" class="btn">Download CSV</a>
+	  <span class="help-inline">
+	  This is a stable link. In other words you copy the url and use a tool such as wget from cron to periodically get updates. 
+	  </span>
+    </div>
+    <br/>
   }
 
-  override protected def renderPipeline = renderView orElse super.renderPipeline
 }

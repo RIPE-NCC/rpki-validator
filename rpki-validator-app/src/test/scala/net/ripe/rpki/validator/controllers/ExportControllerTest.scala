@@ -28,36 +28,40 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package config
+package controllers
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
-import net.ripe.rpki.validator.views.DataTableJsonView
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with ValidatedObjectsController
-  with TrustAnchorsController
-  with RtrLogController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController
-  with ExportController
-  with RtrSessionsController {
+import support.ControllerTestCase
+import models.RtrPrefix
+import net.ripe.ipresource.{ IpRange, Asn }
 
-  private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
+@RunWith(classOf[JUnitRunner])
+class ExportControllerTest extends ControllerTestCase {
 
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view))
-    case view: DataTableJsonView[_] =>
-      contentType = "application/json"
-      view.renderJson
+  val PREFIX1 = RtrPrefix(asn = Asn.parse("AS6500"), prefix = IpRange.parse("10/8"), maxPrefixLength = None)
+  val PREFIX2 = RtrPrefix(asn = Asn.parse("AS6500"), prefix = IpRange.parse("192.168/16"), maxPrefixLength = Some(24))
+  val TEST_PREFIXES = Set[RtrPrefix](PREFIX1, PREFIX2)
+  
+  override def controller = new ControllerFilter with ExportController {
+    override def getRtrPrefixes: Set[RtrPrefix] = {
+      TEST_PREFIXES
+    }
+  }
+  
+  test("Should make CSV with max lengths filled out") {
+    get("/export.csv") {
+      response.status should equal(200)
+      
+      val expectedResponse = """ASN,IP Prefix,Max Length
+AS6500,10.0.0.0/8,8
+AS6500,192.168.0.0/16,24
+"""
+      response.body should equal(expectedResponse)
+      response.getHeader("Cache-Control") should equal("no-cache")
+      
+    }
   }
 
-  override protected def renderPipeline = renderView orElse super.renderPipeline
 }
