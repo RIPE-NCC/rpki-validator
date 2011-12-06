@@ -36,6 +36,7 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.net.URI;
 
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 
 import org.junit.Before;
@@ -47,6 +48,7 @@ public class UriToFileMapperTest {
     public static final URI INVALID_URI = URI.create("rsync:///path/file.txt");
 
     private static final File TARGET_DIRECTORY = new File("/test");
+    private static final ValidationLocation TEST_LOCATION = new ValidationLocation("test");
 
     private ValidationResult validationResult;
     private UriToFileMapper subject;
@@ -54,7 +56,7 @@ public class UriToFileMapperTest {
     @Before
     public void setUp() {
         validationResult = new ValidationResult();
-        validationResult.setLocation("test");
+		validationResult.setLocation(TEST_LOCATION);
         subject = new UriToFileMapper(TARGET_DIRECTORY);
     }
 
@@ -62,10 +64,10 @@ public class UriToFileMapperTest {
     public void shouldIncludeHostAndPathInFile() {
         assertEquals(new File("/test/localhost/path/file.txt"), subject.map(URI.create("rsync://localhost/path/file.txt"), validationResult));
         assertFalse(validationResult.hasFailureForCurrentLocation());
-        assertTrue(validationResult.getResult("test", VALIDATOR_URI_RSYNC_SCHEME).isOk());
-        assertTrue(validationResult.getResult("test", VALIDATOR_URI_HOST).isOk());
-        assertTrue(validationResult.getResult("test", VALIDATOR_URI_PATH).isOk());
-        assertTrue(validationResult.getResult("test", VALIDATOR_URI_SAFETY).isOk());
+        assertTrue(validationResult.getResult(TEST_LOCATION, VALIDATOR_URI_RSYNC_SCHEME).isOk());
+        assertTrue(validationResult.getResult(TEST_LOCATION, VALIDATOR_URI_HOST).isOk());
+        assertTrue(validationResult.getResult(TEST_LOCATION, VALIDATOR_URI_PATH).isOk());
+        assertTrue(validationResult.getResult(TEST_LOCATION, VALIDATOR_URI_SAFETY).isOk());
     }
 
     @Test
@@ -78,42 +80,42 @@ public class UriToFileMapperTest {
     public void shouldRejectNonRsyncUri() {
         assertNull(subject.map(URI.create("http://localhost/path/file.txt"), validationResult));
         assertTrue(validationResult.hasFailureForCurrentLocation());
-        assertFalse(validationResult.getResult("test", VALIDATOR_URI_RSYNC_SCHEME).isOk());
+        assertFalse(validationResult.getResult(TEST_LOCATION, VALIDATOR_URI_RSYNC_SCHEME).isOk());
     }
 
     @Test
     public void shouldRejectUriWithoutHost() {
         assertNull(subject.map(URI.create("rsync:///path/file.txt"), validationResult));
         assertTrue(validationResult.hasFailureForCurrentLocation());
-        assertFalse(validationResult.getResult("test", VALIDATOR_URI_HOST).isOk());
+        assertFalse(validationResult.getResult(TEST_LOCATION, VALIDATOR_URI_HOST).isOk());
     }
 
     @Test
     public void shouldRejectUriWithHostStartingWithDot() {
         assertNull(subject.map(URI.create("rsync://.host/path/file.txt"), validationResult));
         assertTrue(validationResult.hasFailureForCurrentLocation());
-        assertFalse(validationResult.getResult("test", VALIDATOR_URI_HOST).isOk());
+        assertFalse(validationResult.getResult(TEST_LOCATION, VALIDATOR_URI_HOST).isOk());
     }
 
     @Test
     public void shouldRejectUriWithoutPath() {
         assertNull(subject.map(URI.create("rsync:foo"), validationResult));
         assertTrue(validationResult.hasFailureForCurrentLocation());
-        assertFalse(validationResult.getResult("test", VALIDATOR_URI_PATH).isOk());
+        assertFalse(validationResult.getResult(TEST_LOCATION, VALIDATOR_URI_PATH).isOk());
     }
 
     @Test
     public void shouldRejectUriContainingParentDirectoryPath() {
         assertNull(subject.map(URI.create("rsync://host/path/../foo.txt"), validationResult));
         assertTrue(validationResult.hasFailureForCurrentLocation());
-        assertFalse(validationResult.getResult("test", VALIDATOR_URI_SAFETY).isOk());
+        assertFalse(validationResult.getResult(TEST_LOCATION, VALIDATOR_URI_SAFETY).isOk());
     }
 
     @Test
     public void shouldRejectUriEndingInParentDirectoryPath() {
         assertNull(subject.map(URI.create("rsync://host/.."), validationResult));
         assertTrue(validationResult.hasFailureForCurrentLocation());
-        assertFalse(validationResult.getResult("test", VALIDATOR_URI_SAFETY).isOk());
+        assertFalse(validationResult.getResult(TEST_LOCATION, VALIDATOR_URI_SAFETY).isOk());
     }
 
 }

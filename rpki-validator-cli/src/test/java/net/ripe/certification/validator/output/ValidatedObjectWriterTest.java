@@ -37,6 +37,7 @@ import java.net.URI;
 
 import net.ripe.certification.validator.util.UriToFileMapper;
 import net.ripe.certification.validator.util.UriToFileMapperTest;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificateTest;
@@ -62,7 +63,7 @@ public class ValidatedObjectWriterTest {
     @Before
     public void setUp() {
         result = new ValidationResult();
-        result.setLocation(TEST_OBJECT_URI);
+        result.setLocation(new ValidationLocation(TEST_OBJECT_URI));
 
         certificate = X509ResourceCertificateTest.createSelfSignedCaResourceCertificate();
         subject = new ValidatedObjectWriter(new UriToFileMapper(TEST_TARGET_DIRECTORY));

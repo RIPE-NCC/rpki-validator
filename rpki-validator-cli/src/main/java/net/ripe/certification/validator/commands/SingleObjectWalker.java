@@ -39,6 +39,7 @@ import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetc
 import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.util.Specifications;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
@@ -113,7 +114,7 @@ public class SingleObjectWalker {
         URI parentURI = startingPoint.getParentCertificateUri();
 
         while(parentURI != null) {
-            result.setLocation(parentURI.toString());
+            result.setLocation(new ValidationLocation(parentURI));
             CertificateRepositoryObject parent = chainBuildFetcher.getObject(parentURI, null, Specifications.<byte[]>alwaysTrue(), result);
 
             if (parent instanceof X509ResourceCertificate) {
@@ -148,7 +149,7 @@ public class SingleObjectWalker {
      */
     void validateTrustAnchor(List<CertificateRepositoryObjectValidationContext> trustAnchors) {
         URI rootURI = parentCertificateChain.get(0);
-        result.setLocation(rootURI);
+        result.setLocation(new ValidationLocation(rootURI));
         X509ResourceCertificate rootCertificate = (X509ResourceCertificate) chainBuildFetcher.getObject(rootURI, null, Specifications.<byte[]>alwaysTrue(), result);
 
         boolean rootCertIsTa = false;

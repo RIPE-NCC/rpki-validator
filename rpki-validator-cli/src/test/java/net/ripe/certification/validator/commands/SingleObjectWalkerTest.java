@@ -44,6 +44,7 @@ import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryO
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.util.Specifications;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
@@ -131,7 +132,7 @@ public class SingleObjectWalkerTest {
 
         assertEquals(0, certificateChain.size());
         assertTrue(result.hasFailures());
-        assertEquals(ValidationString.CERT_AIA_NOT_POINTING_TO_CERT, result.getFailures(FIRST_CHILD_CERTIFICATE_LOCATION.toString()).get(0).getKey());
+        assertEquals(ValidationString.CERT_AIA_NOT_POINTING_TO_CERT, result.getFailures(new ValidationLocation(FIRST_CHILD_CERTIFICATE_LOCATION)).get(0).getKey());
     }
 
     @Test
@@ -147,8 +148,8 @@ public class SingleObjectWalkerTest {
     	verifyMocks();
 
     	assertTrue(result.hasFailures());
-    	assertEquals(1, result.getFailures(ROOT_CERTIFICATE_LOCATION.toString()).size());
-    	assertEquals(ValidationString.CERT_CHAIN_CIRCULAR_REFERENCE, result.getFailures(ROOT_CERTIFICATE_LOCATION.toString()).get(0).getKey());
+    	assertEquals(1, result.getFailures(new ValidationLocation(ROOT_CERTIFICATE_LOCATION)).size());
+    	assertEquals(ValidationString.CERT_CHAIN_CIRCULAR_REFERENCE, result.getFailures(new ValidationLocation(ROOT_CERTIFICATE_LOCATION)).get(0).getKey());
     }
 
     @Test
@@ -176,8 +177,8 @@ public class SingleObjectWalkerTest {
         verifyMocks();
 
         assertTrue(result.hasFailures());
-        assertEquals(1, result.getResults(ROOT_CERTIFICATE_LOCATION.toString()).size());
-        assertEquals(ValidationString.ROOT_IS_TA, result.getFailures(ROOT_CERTIFICATE_LOCATION.toString()).get(0).getKey());
+        assertEquals(1, result.getAllValidationChecksForLocation(new ValidationLocation(ROOT_CERTIFICATE_LOCATION)).size());
+        assertEquals(ValidationString.ROOT_IS_TA, result.getFailures(new ValidationLocation(ROOT_CERTIFICATE_LOCATION)).get(0).getKey());
     }
 
 

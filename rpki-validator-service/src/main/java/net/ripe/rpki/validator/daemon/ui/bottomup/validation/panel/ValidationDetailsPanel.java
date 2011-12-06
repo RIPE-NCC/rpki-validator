@@ -56,7 +56,7 @@ public class ValidationDetailsPanel extends Panel {
         wrapper.setVisible(false);
         add(wrapper);
 
-        ListView<ValidationCheck> resultView = new ListView<ValidationCheck>("list", new ArrayList<ValidationCheck>(result.getResultsForCurrentLocation())) {
+        ListView<ValidationCheck> resultView = new ListView<ValidationCheck>("list", new ArrayList<ValidationCheck>(result.getAllValidationChecksForLocation(result.getCurrentLocation()))) {
 
             private static final long serialVersionUID = 1L;
 

@@ -36,6 +36,7 @@ import java.util.Queue;
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
@@ -73,7 +74,7 @@ public class TopDownWalker {
 
     void prefetch(CertificateRepositoryObjectValidationContext context) {
         URI repositoryURI = context.getRepositoryURI();
-        validationResult.setLocation(repositoryURI);
+        validationResult.setLocation(new ValidationLocation(repositoryURI));
         certificateRepositoryObjectFetcher.prefetch(repositoryURI, validationResult);
     }
 
@@ -86,7 +87,7 @@ public class TopDownWalker {
     }
 
     ManifestCms fetchManifest(URI manifestURI, CertificateRepositoryObjectValidationContext context) {
-        validationResult.setLocation(manifestURI);
+        validationResult.setLocation(new ValidationLocation(manifestURI));
         return certificateRepositoryObjectFetcher.getManifest(manifestURI, context, validationResult);
     }
 
@@ -99,7 +100,7 @@ public class TopDownWalker {
 
     void processManifestEntry(ManifestCms manifestCms, CertificateRepositoryObjectValidationContext context, URI repositoryURI, String fileName) {
         URI uri = repositoryURI.resolve(fileName);
-        validationResult.setLocation(uri);
+        validationResult.setLocation(new ValidationLocation(uri));
         CertificateRepositoryObject object = certificateRepositoryObjectFetcher.getObject(uri, context, manifestCms.getFileContentSpecification(fileName), validationResult);
         addToWorkQueueIfObjectIssuer(context, uri, object);
     }

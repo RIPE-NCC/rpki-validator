@@ -41,6 +41,7 @@ import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.util.Specifications;
 import net.ripe.commons.certification.validation.CertificateRepositoryObjectValidationContextTest;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
@@ -64,7 +65,7 @@ public class CachingCertificateRepositoryObjectFetcherTest {
         context = CertificateRepositoryObjectValidationContextTest.create();
         fileContentSpecification = Specifications.alwaysTrue();
         result = new ValidationResult();
-        result.setLocation(uri);
+        result.setLocation(new ValidationLocation(uri));
         fetcher = createMock(CertificateRepositoryObjectFetcher.class);
         subject = new CachingCertificateRepositoryObjectFetcher(fetcher);
     }

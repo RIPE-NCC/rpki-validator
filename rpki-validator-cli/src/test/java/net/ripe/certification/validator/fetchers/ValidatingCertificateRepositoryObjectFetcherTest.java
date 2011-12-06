@@ -40,6 +40,7 @@ import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.util.Specification;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
@@ -97,18 +98,18 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andAnswer(new IAnswer<ManifestCms>() {
             @Override
             public ManifestCms answer() throws Throwable {
-                assertEquals("manifest location not pushed before trying to retrieve manifest", rootContext.getManifestURI().toString(), result.getCurrentLocation());
+                assertEquals("manifest location not pushed before trying to retrieve manifest", new ValidationLocation(rootContext.getManifestURI()), result.getCurrentLocation());
                 return manifestFromRsync;
             }
         });
         replayMocks();
 
-        result.setLocation(ROOT_MANIFEST_CRL_LOCATION);
+        result.setLocation(new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION));
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
         verifyMocks();
         assertEquals(crlFromRepository, crlActual);
-        assertEquals("crl location not restored", ROOT_MANIFEST_CRL_LOCATION.toString(), result.getCurrentLocation());
+        assertEquals("crl location not restored", new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION), result.getCurrentLocation());
     }
 
 
@@ -121,12 +122,12 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
         replayMocks();
 
-        result.setLocation(ROOT_MANIFEST_CRL_LOCATION);
+        result.setLocation(new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION));
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
         verifyMocks();
         assertNull(crlActual);
-        String expectedRootCrlErrorLocation = ROOT_MANIFEST_CRL_LOCATION.toString();
+        ValidationLocation expectedRootCrlErrorLocation = new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION);
         assertTrue(result.hasFailureForLocation(expectedRootCrlErrorLocation));
         assertEquals(ValidationString.VALIDATOR_FILE_CONTENT,result.getFailures(expectedRootCrlErrorLocation).get(0).getKey());
     }
@@ -140,12 +141,12 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
         replayMocks();
 
-        result.setLocation(ROOT_MANIFEST_CRL_LOCATION);
+        result.setLocation(new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION));
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
         verifyMocks();
         assertNull(crlActual);
-        String expectedRootCrlErrorLocation = ROOT_MANIFEST_CRL_LOCATION.toString();
+        ValidationLocation expectedRootCrlErrorLocation = new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION);
         assertTrue(result.hasFailureForLocation(expectedRootCrlErrorLocation));
         assertEquals(ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, result.getFailures(expectedRootCrlErrorLocation).get(0).getKey());
     }
@@ -159,18 +160,18 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
         replayMocks();
 
-        result.setLocation(ROOT_MANIFEST_CRL_LOCATION);
+        result.setLocation(new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION));
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
         verifyMocks();
         assertNull(crlActual);
-        assertEquals(ROOT_MANIFEST_CRL_LOCATION.toString(), result.getCurrentLocation());
+        assertEquals(new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION), result.getCurrentLocation());
         assertTrue(result.hasFailureForCurrentLocation());
     }
 
     @Test
     public void shouldRejectInvalidCrl() {
-        result.setLocation(ROOT_CERTIFICATE_LOCATION);
+        result.setLocation(new ValidationLocation(ROOT_CERTIFICATE_LOCATION));
 
         X509Crl crlFromRepository = getRootCrlWithInvalidSignature();
         expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
@@ -184,13 +185,14 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         verifyMocks();
 
         assertNull(crlValidated);
-        assertTrue(result.hasFailureForLocation(ROOT_MANIFEST_CRL_LOCATION.toString()));
-        assertTrue(ValidationString.CRL_SIGNATURE_VALID.equals(result.getFailures(ROOT_MANIFEST_CRL_LOCATION.toString()).get(0).getKey()));
+        ValidationLocation rootManifestCrlValidationLocation = new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION);
+		assertTrue(result.hasFailureForLocation(rootManifestCrlValidationLocation));
+        assertTrue(ValidationString.CRL_SIGNATURE_VALID.equals(result.getFailures(rootManifestCrlValidationLocation).get(0).getKey()));
     }
 
     @Test
     public void shouldReturnNullForCrlWhenCrlNotReturnedFromRsync() {
-        result.setLocation(ROOT_CERTIFICATE_LOCATION);
+        result.setLocation(new ValidationLocation(ROOT_CERTIFICATE_LOCATION));
 
         X509Crl crlFromRepository = null;
         expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
@@ -303,8 +305,9 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         verifyMocks();
 
         assertNull(certificateFromValidatingFetcher);
-        assertTrue(result.hasFailureForLocation(ROOT_CERTIFICATE_LOCATION.toString()));
-        assertTrue(ValidationString.NOT_VALID_AFTER.equals(result.getFailures(ROOT_CERTIFICATE_LOCATION.toString()).get(0).getKey()));
+        ValidationLocation rootCertValidationLocation = new ValidationLocation(ROOT_CERTIFICATE_LOCATION);
+		assertTrue(result.hasFailureForLocation(rootCertValidationLocation));
+        assertTrue(ValidationString.NOT_VALID_AFTER.equals(result.getFailures(rootCertValidationLocation).get(0).getKey()));
     }
 
     @Test

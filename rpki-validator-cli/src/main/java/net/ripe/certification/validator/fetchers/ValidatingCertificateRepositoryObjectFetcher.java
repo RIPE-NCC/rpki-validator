@@ -37,6 +37,7 @@ import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.crl.CrlLocator;
 import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.util.Specification;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
@@ -165,7 +166,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
 
         // FIXME: is this really the right way to go with error locations?
         //        this way the manifest check error does end up with the CRL which I believe is right..
-        result.setLocation(uri.toString());
+        result.setLocation(new ValidationLocation(uri));
         result.isTrue(manifest.containsFile(crlFileName), ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, crlFileName);
         if (result.hasFailureForCurrentLocation()) {
             return;
@@ -175,8 +176,8 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
 
 
     private ManifestCms getManifestValidatedForCrl(URI crlUri, CertificateRepositoryObjectValidationContext context, ValidationResult result, X509Crl crl) {
-        String savedCurrentLocation = result.getCurrentLocation();
-        result.setLocation(context.getManifestURI());
+        ValidationLocation savedCurrentLocation = result.getCurrentLocation();
+        result.setLocation(new ValidationLocation(context.getManifestURI()));
         try {
             ManifestCms manifest = fetcher.getManifest(context.getManifestURI(), context, result);
             if (manifest == null) {

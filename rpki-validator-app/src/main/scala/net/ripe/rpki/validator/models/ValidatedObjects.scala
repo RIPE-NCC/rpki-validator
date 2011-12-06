@@ -44,6 +44,7 @@ import net.ripe.commons.certification.cms.roa.RoaCms
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.commons.certification.validation.ValidationCheck
+import net.ripe.commons.certification.validation.ValidationLocation
 
 sealed trait ValidatedObject {
   val uri: URI
@@ -104,7 +105,7 @@ object ValidatedObjects {
     trustAnchor.getPrefetchUris().asScala.foreach { prefetchUri =>
       logger.info("Prefetching '" + prefetchUri + "'")
       val validationResult = new ValidationResult();
-      validationResult.setLocation(prefetchUri);
+      validationResult.setLocation(new ValidationLocation(prefetchUri));
       cachingFetcher.prefetch(prefetchUri, validationResult);
     }
 
@@ -127,7 +128,7 @@ object ValidatedObjects {
     }
 
     override def afterFetchFailure(uri: URI, result: ValidationResult) {
-      objects += new InvalidObject(uri, result.getResults(uri.toString()).asScala)
+      objects += new InvalidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
       logger.warn("Failed to validate '" + uri + "': " + result.getFailuresForCurrentLocation().asScala.map(_.toString()).mkString(", "))
     }
 
@@ -135,9 +136,9 @@ object ValidatedObjects {
       obj match {
         case roa: RoaCms =>
           logger.info("Validated ROA '" + uri + "'")
-          objects += new ValidRoa(uri, result.getResults(uri.toString()).asScala, roa)
+          objects += new ValidRoa(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, roa)
         case _ =>
-          objects += new ValidObject(uri, result.getResults(uri.toString()).asScala, obj)
+          objects += new ValidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, obj)
           logger.info("Validated OBJECT '" + uri + "'")
       }
     }

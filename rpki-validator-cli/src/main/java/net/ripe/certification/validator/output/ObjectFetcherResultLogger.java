@@ -37,6 +37,7 @@ import java.net.URI;
 import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.validation.ValidationCheck;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationMessage;
 import net.ripe.commons.certification.validation.ValidationResult;
 
@@ -81,14 +82,15 @@ public class ObjectFetcherResultLogger implements NotifyingCertificateRepository
     }
 
     protected void logResults(URI uri, ValidationResult result) {
-        for (ValidationCheck check: result.getResultsForCurrentLocation()) {
+    	
+        for (ValidationCheck check: result.getAllValidationChecksForLocation(new ValidationLocation(uri))) {
             String message = uri + ": " + ValidationMessage.getMessage(check);
             if (check.isOk()) {
-            	if (logValidObjects ) {
-            		LOG.debug("<OK> " + message);
+            	if (logValidObjects) {
+            		LOG.debug(check.getStatus() + "->" + message);
             	}
             } else {
-                LOG.error("<FAIL> " + message);
+                LOG.error(check.getStatus() + "->" + message);
             }
         }
     }

@@ -32,6 +32,7 @@ package net.ripe.rpki.validator.daemon.service;
 import static org.junit.Assert.*;
 
 import net.ripe.commons.certification.cms.roa.RoaCmsObjectMother;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 
 import org.junit.Test;
@@ -54,7 +55,7 @@ public class BottomUpRoaValidationResultTest {
     @Test
     public void shouldBeInvalidWithFailingValidation() {
         ValidationResult validationResult = new ValidationResult();
-        validationResult.setLocation("a");
+        validationResult.setLocation(new ValidationLocation("a"));
         validationResult.isFalse(true, "a");
         BottomUpRoaValidationResult result = new BottomUpRoaValidationResult(RoaCmsObjectMother.getRoaCms(), validationResult);
 

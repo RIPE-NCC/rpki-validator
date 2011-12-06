@@ -42,6 +42,7 @@ import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.util.Specifications;
 import net.ripe.commons.certification.validation.CertificateRepositoryObjectValidationContextTest;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 
@@ -66,7 +67,7 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
     @Before
     public void setUp() {
         result = new ValidationResult();
-        result.setLocation(TEST_URI);
+        result.setLocation(new ValidationLocation(TEST_URI));
 
         context = CertificateRepositoryObjectValidationContextTest.create();
         fetcher = createMock(CertificateRepositoryObjectFetcher.class);

@@ -31,6 +31,7 @@ package net.ripe.rpki.validator.daemon.ui.bottomup.validation.panel;
 
 import static org.junit.Assert.*;
 
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.rpki.validator.daemon.ui.AbstractWicketTest;
 
@@ -45,7 +46,7 @@ public class ValidationDetailsPanelTest extends AbstractWicketTest {
     @Before
     public void setUpValidationResult() {
         validationResult = new ValidationResult();
-        validationResult.setLocation("objects.crl.valid");
+        validationResult.setLocation(new ValidationLocation("objects.crl.valid"));
         validationResult.isTrue(true, "objects.crl.valid");
     }
 

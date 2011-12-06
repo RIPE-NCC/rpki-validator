@@ -48,6 +48,7 @@ import net.ripe.certification.validator.summary.ValidationSummaryCollector;
 import net.ripe.certification.validator.summary.ValidationSummaryPrinter;
 import net.ripe.certification.validator.util.UriToFileMapper;
 import net.ripe.commons.certification.rsync.Rsync;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 
@@ -182,7 +183,7 @@ public class TopDownCertificateRepositoryValidator {
         for (URI prefetchUri : prefetchUris) {
             LOG.info("prefetching " + prefetchUri);
             ValidationResult validationResult = new ValidationResult();
-            validationResult.setLocation(prefetchUri);
+            validationResult.setLocation(new ValidationLocation(prefetchUri));
             fetcher.prefetch(prefetchUri, validationResult);
         }
     }

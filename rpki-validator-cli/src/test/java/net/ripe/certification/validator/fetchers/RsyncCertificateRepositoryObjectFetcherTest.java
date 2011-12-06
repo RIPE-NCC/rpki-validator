@@ -29,9 +29,13 @@
  */
 package net.ripe.certification.validator.fetchers;
 
-import static net.ripe.commons.certification.validation.ValidationString.*;
-
-import static org.junit.Assert.*;
+import static net.ripe.commons.certification.validation.ValidationString.KNOWN_OBJECT_TYPE;
+import static net.ripe.commons.certification.validation.ValidationString.VALIDATOR_FILE_CONTENT;
+import static net.ripe.commons.certification.validation.ValidationString.VALIDATOR_READ_FILE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,7 +49,9 @@ import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.rsync.Rsync;
 import net.ripe.commons.certification.util.Specifications;
 import net.ripe.commons.certification.validation.ValidationCheck;
+import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
+import net.ripe.commons.certification.validation.ValidationStatus;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
@@ -68,10 +74,7 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
     private static final File TEST_OBJECT_CERT_FILE = new File(TEST_TARGET_DIRECTORY, "localhost:9999/repo/ca%20repo/object.cer");
 
     private static final URI TEST_OBJECT_MFT_URI = TEST_REPOSITORY_URI.resolve("object.mft");
-    private static final File TEST_OBJECT_MFT_FILE = new File(TEST_TARGET_DIRECTORY, "localhost:9999/repo/ca%20repo/object.mft");
 
-    private static final URI TEST_OBJECT_CRL_URI = TEST_REPOSITORY_URI.resolve("object.crl");
-    private static final File TEST_OBJECT_CRL_FILE = new File(TEST_TARGET_DIRECTORY, "localhost:9999/repo/ca%20repo/object.crl");
 
     private boolean rsyncExecuted = false;
     private int rsyncExitCode = 0;
@@ -101,7 +104,7 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
         manifest = TopDownWalkerTest.getRootManifestCms();
         crl = RepositoryObjectsSetUpHelper.getRootCrl();
         validationResult = new ValidationResult();
-        validationResult.setLocation(VALIDATION_URI);
+        validationResult.setLocation(new ValidationLocation(VALIDATION_URI));
         subject = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(TEST_TARGET_DIRECTORY));
     }
 
@@ -114,21 +117,21 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
     public void shouldFetchObject() {
         rsyncFileContents = manifest.getEncoded();
         assertEquals(manifest, subject.getObject(TEST_OBJECT_MFT_URI, null, Specifications.<byte[]>alwaysTrue(), validationResult));
-        assertEquals(new ValidationCheck(true, KNOWN_OBJECT_TYPE, VALIDATION_URI), validationResult.getResult(VALIDATION_URI, KNOWN_OBJECT_TYPE));
+        assertEquals(new ValidationCheck(ValidationStatus.PASSED, KNOWN_OBJECT_TYPE, VALIDATION_URI), validationResult.getResult(new ValidationLocation(VALIDATION_URI), KNOWN_OBJECT_TYPE));
     }
 
     @Test
     public void shouldNotFetchObjectIfContentsCannotBeVerified() {
         rsyncFileContents = manifest.getEncoded();
         assertNull("content verification must fail", subject.getObject(TEST_OBJECT_CERT_URI, null, Specifications.<byte[]>alwaysFalse(), validationResult));
-        assertEquals(new ValidationCheck(false, VALIDATOR_FILE_CONTENT, TEST_OBJECT_CERT_URI), validationResult.getResult(TEST_OBJECT_CERT_URI, VALIDATOR_FILE_CONTENT));
+        assertEquals(new ValidationCheck(ValidationStatus.ERROR, VALIDATOR_FILE_CONTENT, TEST_OBJECT_CERT_URI), validationResult.getResult(new ValidationLocation(TEST_OBJECT_CERT_URI), VALIDATOR_FILE_CONTENT));
     }
 
     @Test
     public void shouldNotFetchObjectIfContentsCannotBeParsed() {
         rsyncFileContents = new byte[] { 0x10, 0x12, 0x3 };
         assertNull("content should not be parsed", subject.getObject(TEST_OBJECT_CERT_URI, null, Specifications.<byte[]>alwaysTrue(), validationResult));
-        assertEquals(new ValidationCheck(false, KNOWN_OBJECT_TYPE, TEST_OBJECT_CERT_URI), validationResult.getResult(TEST_OBJECT_CERT_URI, KNOWN_OBJECT_TYPE));
+        assertEquals(new ValidationCheck(ValidationStatus.ERROR, KNOWN_OBJECT_TYPE, TEST_OBJECT_CERT_URI), validationResult.getResult(new ValidationLocation(TEST_OBJECT_CERT_URI), KNOWN_OBJECT_TYPE));
     }
 
     @Test
@@ -156,7 +159,7 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
         rsyncExitCode = 0;
         rsyncFileContents = null;
         assertNull(subject.getObject(TEST_OBJECT_CERT_URI, null, Specifications.<byte[]>alwaysFalse(), validationResult));
-        assertFalse(validationResult.getResult(TEST_OBJECT_CERT_URI, VALIDATOR_READ_FILE).isOk());
+        assertFalse(validationResult.getResult(new ValidationLocation(TEST_OBJECT_CERT_URI), VALIDATOR_READ_FILE).isOk());
     }
 
     @Test
