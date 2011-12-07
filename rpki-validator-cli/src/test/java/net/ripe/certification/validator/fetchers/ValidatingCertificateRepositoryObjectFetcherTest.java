@@ -156,7 +156,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         X509Crl crlFromRepository = getRootCrl();
         expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
 
-        ManifestCms manifestFromRsync = getInvalidRootManifestCms();
+        ManifestCms manifestFromRsync = getFutureDatedManifestCms();
         expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
         replayMocks();
 
@@ -222,7 +222,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
 
     @Test
     public void shouldRejectInvalidManifest() {
-        ManifestCms cmsReturnedByRsyncFetcher = getInvalidRootManifestCms();
+        ManifestCms cmsReturnedByRsyncFetcher = getFutureDatedManifestCms();
         X509Crl crlFromRepository = getRootCrl();
 
         expect(rsyncFetcher.getManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, rootContext, result)).andReturn(cmsReturnedByRsyncFetcher);

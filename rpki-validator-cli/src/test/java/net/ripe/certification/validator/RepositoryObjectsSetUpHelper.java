@@ -100,10 +100,10 @@ public class RepositoryObjectsSetUpHelper {
         return rootManifestBuilder.build(MANIFEST_KEY_PAIR.getPrivate());
     }
 
-    public static ManifestCms getInvalidRootManifestCms() {
+    public static ManifestCms getFutureDatedManifestCms() {
     	ManifestCmsBuilder rootManifestBuilder = getRootManifestBuilder();
-    	X509ResourceCertificate expiredCert = getManifestEEResourceCertificateBuilder().withValidityPeriod(new ValidityPeriod(new DateTime().minusMonths(1), new DateTime().minusMinutes(1))).build();
-    	rootManifestBuilder.withCertificate(expiredCert);
+    	X509ResourceCertificate futureDatedCert = getManifestEEResourceCertificateBuilder().withValidityPeriod(new ValidityPeriod(new DateTime().plusMonths(1), new DateTime().plusMonths(2))).build();
+    	rootManifestBuilder.withCertificate(futureDatedCert);
     	return rootManifestBuilder.build(MANIFEST_KEY_PAIR.getPrivate());
     }
 
