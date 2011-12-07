@@ -119,7 +119,7 @@ public class SingleObjectWalker {
 
             if (parent instanceof X509ResourceCertificate) {
                 parentCertificateChain.add(0, parentURI);
-                if (!result.isTrue(parentCertificateChain.size() <= MAX_CHAIN_LENGTH, CERT_CHAIN_LENGTH, MAX_CHAIN_LENGTH)) {
+                if (!result.rejectIfFalse(parentCertificateChain.size() <= MAX_CHAIN_LENGTH, CERT_CHAIN_LENGTH, MAX_CHAIN_LENGTH)) {
                 	chainBuildLogger.afterFetchFailure(parentURI, result);
                 	return; // break the chain building
                 }
@@ -127,7 +127,7 @@ public class SingleObjectWalker {
                 URI newParentURI = parent.getParentCertificateUri();
 
                 if (parentCertificateChain.contains(newParentURI)) {
-                	result.isTrue(false, CERT_CHAIN_CIRCULAR_REFERENCE);
+                	result.rejectIfFalse(false, CERT_CHAIN_CIRCULAR_REFERENCE);
                 	chainBuildLogger.afterFetchFailure(parentURI, result);
                 	return; // break the chain building
                 }
@@ -136,7 +136,7 @@ public class SingleObjectWalker {
             } else if (parent == null) {
                 parentURI = null; // found TA
             } else {
-                result.isTrue(false, CERT_AIA_NOT_POINTING_TO_CERT);
+                result.rejectIfFalse(false, CERT_AIA_NOT_POINTING_TO_CERT);
                 chainBuildLogger.afterFetchFailure(parentURI, result);
                 return; // break the chain building
             }
@@ -159,7 +159,7 @@ public class SingleObjectWalker {
 				break;
 			}
 		}
-        if (!result.isTrue(rootCertIsTa, ValidationString.ROOT_IS_TA)) {
+        if (!result.rejectIfFalse(rootCertIsTa, ValidationString.ROOT_IS_TA)) {
         	chainBuildLogger.afterFetchFailure(rootURI, result);
         }
     }

@@ -82,7 +82,7 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
 
     @Test
     public void shouldNotifyOnPrefetchSuccess() {
-        result.isTrue(true, "dummy.check");
+        result.rejectIfFalse(true, "dummy.check");
         fetcher.prefetch(TEST_URI, result);
         firstCallback.afterPrefetchSuccess(TEST_URI, result);
         secondCallback.afterPrefetchSuccess(TEST_URI, result);
@@ -94,7 +94,7 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
 
     @Test
     public void shouldNotifyOnPrefetchFailure() {
-        result.isTrue(false, "dummy.check");
+        result.rejectIfFalse(false, "dummy.check");
         fetcher.prefetch(TEST_URI, result);
         firstCallback.afterPrefetchFailure(TEST_URI, result);
         secondCallback.afterPrefetchFailure(TEST_URI, result);
@@ -107,7 +107,7 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldNotifyOnGetObjectSuccess() {
         CertificateRepositoryObject object = RepositoryObjectsSetUpHelper.getRootResourceCertificate();
-        result.isTrue(true, "dummy.check");
+        result.rejectIfFalse(true, "dummy.check");
 
         expect(fetcher.getObject(TEST_URI, context, FILE_CONTENT_SPECIFICATION, result)).andReturn(object);
         firstCallback.afterFetchSuccess(TEST_URI, object, result);
@@ -121,7 +121,7 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
 
     @Test
     public void shouldNotifyOnGetObjectFailure() {
-        result.isTrue(false, "dummy.check");
+        result.rejectIfFalse(false, "dummy.check");
 
         expect(fetcher.getObject(TEST_URI, context, FILE_CONTENT_SPECIFICATION, result)).andReturn(null);
         firstCallback.afterFetchFailure(TEST_URI, result);
@@ -136,7 +136,7 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldNotifyOnGetCrl() {
         X509Crl object = RepositoryObjectsSetUpHelper.getRootCrl();
-        result.isTrue(true, "dummy.check");
+        result.rejectIfFalse(true, "dummy.check");
 
         expect(fetcher.getCrl(TEST_URI, context, result)).andReturn(object);
         firstCallback.afterFetchSuccess(TEST_URI, object, result);
@@ -151,7 +151,7 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldNotifyOnGetManifest() {
         ManifestCms object = RepositoryObjectsSetUpHelper.getRootManifestCms();
-        result.isTrue(true, "dummy.check");
+        result.rejectIfFalse(true, "dummy.check");
 
         expect(fetcher.getManifest(TEST_URI, context, result)).andReturn(object);
         firstCallback.afterFetchSuccess(TEST_URI, object, result);

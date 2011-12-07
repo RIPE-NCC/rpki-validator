@@ -77,7 +77,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
             return null;
         }
 
-        result.isTrue(object instanceof X509Crl, VALIDATOR_FETCHED_OBJECT_IS_CRL, object);
+        result.rejectIfFalse(object instanceof X509Crl, VALIDATOR_FETCHED_OBJECT_IS_CRL, object);
         if (result.hasFailureForCurrentLocation()) {
             return null;
         }
@@ -91,7 +91,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
             return null;
         }
 
-        result.isTrue(object instanceof ManifestCms, VALIDATOR_FETCHED_OBJECT_IS_MANIFEST, object);
+        result.rejectIfFalse(object instanceof ManifestCms, VALIDATOR_FETCHED_OBJECT_IS_MANIFEST, object);
         if (result.hasFailureForCurrentLocation()) {
             return null;
         }
@@ -115,7 +115,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
             return null;
         }
 
-        result.isTrue(fileContentSpecification.isSatisfiedBy(contents), VALIDATOR_FILE_CONTENT, uri);
+        result.rejectIfFalse(fileContentSpecification.isSatisfiedBy(contents), VALIDATOR_FILE_CONTENT, uri);
         if (result.hasFailureForCurrentLocation()) {
             return null;
         }
@@ -126,7 +126,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
         } catch (CertificateRepositoryObjectParserException ex) {
             cro = null;
         }
-        result.notNull(cro, KNOWN_OBJECT_TYPE, uri);
+        result.rejectIfNull(cro, KNOWN_OBJECT_TYPE, uri);
         return cro;
     }
 
@@ -150,7 +150,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
 
         destinationDirectory.mkdirs();
         int rc = rsync.execute();
-        result.isTrue(rc == 0, VALIDATOR_RSYNC_COMMAND, uri);
+        result.rejectIfFalse(rc == 0, VALIDATOR_RSYNC_COMMAND, uri);
         if (rc == 0) {
             uriCache.add(uri);
         }
@@ -170,7 +170,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
 
         destinationFile.getParentFile().mkdirs();
         int rc = rsync.execute();
-        result.isTrue(rc == 0, VALIDATOR_RSYNC_COMMAND, uri);
+        result.rejectIfFalse(rc == 0, VALIDATOR_RSYNC_COMMAND, uri);
         if (rc == 0) {
             uriCache.add(uri);
         }
@@ -183,7 +183,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
         } catch (IOException e) {
             result = null;
         }
-        validationResult.notNull(result, VALIDATOR_READ_FILE, destinationFile.getAbsolutePath());
+        validationResult.rejectIfNull(result, VALIDATOR_READ_FILE, destinationFile.getAbsolutePath());
         return result;
     }
 }

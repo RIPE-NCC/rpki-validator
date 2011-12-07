@@ -96,7 +96,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
 
         // 2: Get the manifest and validate it based on this CRL
         ManifestCms manifest = getManifestValidatedForCrl(uri, context, result, crl);
-        result.isTrue(manifest != null, ValidationString.CRL_MANIFEST_VALID);
+        result.rejectIfFalse(manifest != null, ValidationString.CRL_MANIFEST_VALID);
         if (manifest == null) {
             return null;
         }
@@ -121,7 +121,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
             return (ManifestCms) processCertificateRepositoryObject(uri, context, result, manifestCms);
         } catch (Exception e) {
             log.error("There was an exception trying to get manifest: " + uri.toString(), e);
-            result.isTrue(false, VALIDATOR_INTERNAL_ERROR);
+            result.rejectIfFalse(false, VALIDATOR_INTERNAL_ERROR);
             return null;
         }
 
@@ -138,7 +138,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
         return processCertificateRepositoryObject(uri, context, result, certificateRepositoryObject);
         } catch (Exception e) {
             log.error("There was an exception trying to get object for uri: " + uri.toString(), e);
-            result.isTrue(false, VALIDATOR_INTERNAL_ERROR);
+            result.rejectIfFalse(false, VALIDATOR_INTERNAL_ERROR);
             return null;
         }
     }
@@ -167,11 +167,11 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
         // FIXME: is this really the right way to go with error locations?
         //        this way the manifest check error does end up with the CRL which I believe is right..
         result.setLocation(new ValidationLocation(uri));
-        result.isTrue(manifest.containsFile(crlFileName), ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, crlFileName);
+        result.rejectIfFalse(manifest.containsFile(crlFileName), ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, crlFileName);
         if (result.hasFailureForCurrentLocation()) {
             return;
         }
-        result.isTrue(manifest.verifyFileContents(crlFileName, crl.getEncoded()), ValidationString.VALIDATOR_FILE_CONTENT);
+        result.rejectIfFalse(manifest.verifyFileContents(crlFileName, crl.getEncoded()), ValidationString.VALIDATOR_FILE_CONTENT);
     }
 
 

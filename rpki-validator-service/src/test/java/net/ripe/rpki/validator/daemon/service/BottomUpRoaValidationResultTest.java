@@ -56,7 +56,7 @@ public class BottomUpRoaValidationResultTest {
     public void shouldBeInvalidWithFailingValidation() {
         ValidationResult validationResult = new ValidationResult();
         validationResult.setLocation(new ValidationLocation("a"));
-        validationResult.isFalse(true, "a");
+        validationResult.rejectIfTrue(true, "a");
         BottomUpRoaValidationResult result = new BottomUpRoaValidationResult(RoaCmsObjectMother.getRoaCms(), validationResult);
 
         assertFalse(result.isValid());

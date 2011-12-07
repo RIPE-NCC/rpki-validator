@@ -47,7 +47,7 @@ public class ValidationDetailsPanelTest extends AbstractWicketTest {
     public void setUpValidationResult() {
         validationResult = new ValidationResult();
         validationResult.setLocation(new ValidationLocation("objects.crl.valid"));
-        validationResult.isTrue(true, "objects.crl.valid");
+        validationResult.rejectIfFalse(true, "objects.crl.valid");
     }
 
     @Test
