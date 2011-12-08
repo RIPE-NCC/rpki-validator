@@ -34,23 +34,112 @@ import org.scalatest.FunSuite
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.ShouldMatchers
-
 import models.RtrPrefix
-
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
+  
+  val AS1 = Asn.parse("AS65001") 
+  val AS2 = Asn.parse("AS65002")
+  val AS3 = Asn.parse("AS65003")
+  
+  val PREFIX1 = IpRange.parse("10.0.1.0/24")
+  val PREFIX2 = IpRange.parse("10.0.2.0/24")
+  val PREFIX3 = IpRange.parse("10.0.3.0/24")
+  val PREFIX4 = IpRange.parse("10.0.4.0/24")
+  
+  val ANNOUNCED_ROUTE1 = AnnouncedRoute(AS1, PREFIX1)
+  val ANNOUNCED_ROUTE2 = AnnouncedRoute(AS2, PREFIX2)
+  val ANNOUNCED_ROUTE3 = AnnouncedRoute(AS3, PREFIX4)
+  
+  val RTR_PREFIX1 = RtrPrefix(asn = AS1, prefix = PREFIX1, maxPrefixLength = None)
+  val RTR_PREFIX2 = RtrPrefix(asn = AS1, prefix = PREFIX2, maxPrefixLength = None)
+  
+  val VALIDATED_ANNOUNCEMENT1 = ValidatedAnnouncement(route = ANNOUNCED_ROUTE1, validates = Seq[RtrPrefix](RTR_PREFIX1), invalidates = Seq.empty[RtrPrefix]) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
+  val VALIDATED_ANNOUNCEMENT2 = ValidatedAnnouncement(route = ANNOUNCED_ROUTE2, validates = Seq.empty[RtrPrefix], invalidates = Seq[RtrPrefix](RTR_PREFIX2)) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
+  val VALIDATED_ANNOUNCEMENT3 = ValidatedAnnouncement(route = ANNOUNCED_ROUTE3, validates = Seq.empty[RtrPrefix], invalidates = Seq.empty[RtrPrefix]) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
 
-  test("should validate") {
+  val TEST_BGP_RIS_ENTRIES = {
+    Set.empty[BgpRisEntry] + 
+        new BgpRisEntry(origin = AS1, prefix = PREFIX1, visibility = 10) +
+        new BgpRisEntry(origin = AS2, prefix = PREFIX2, visibility = 5) +
+        new BgpRisEntry(origin = AS2, prefix = PREFIX3, visibility = 4) +
+    	new BgpRisEntry(origin = AS3, prefix = PREFIX4, visibility = 5)
+  }
+  
+  val TEST_ANNOUNCEMENTS_FROM_RIS: IndexedSeq[AnnouncedRoute] = {
+    (Set.empty[AnnouncedRoute] +
+        ANNOUNCED_ROUTE1 +
+        ANNOUNCED_ROUTE2 +
+        ANNOUNCED_ROUTE3
+    ).toIndexedSeq
+  }
+  
+  val TEST_RTR_PREFIXES = {
+    Set.empty[RtrPrefix] + 
+      RTR_PREFIX1 +
+      RTR_PREFIX2
+  }
+  
+  val TEST_VALIDATED_ANNOUNCEMENTS = {
+    Set.empty[ValidatedAnnouncement] +
+    VALIDATED_ANNOUNCEMENT1 +
+    VALIDATED_ANNOUNCEMENT2 +
+    VALIDATED_ANNOUNCEMENT3
+  }
+  
+  
+  test("should update announced routes with visibility threshold 5") {
+    val announcementValidator = new BgpAnnouncementValidator {
+      override
+      protected def readBgpEntries =  { TEST_BGP_RIS_ENTRIES.toIterator }
+    }
     
-    val prefixes: Set[RtrPrefix] = Set.empty[RtrPrefix] + new RtrPrefix(asn = Asn.parse("AS65000"),
-      prefix = IpRange.parse("192.168.0.0/16"), maxPrefixLength = None)
-    System.err.println(BgpAnnouncementValidator.announcedRoutes.get.size) // wait to get the real announcements, refactor
-    BgpAnnouncementValidator.updateRtrPrefixes(prefixes)
+    announcementValidator.updateAnnouncedRoutes()
+    val announcementsFound = announcementValidator.announcedRoutes.get
     
-//    BgpAnnouncementValidator.validatedAnnouncements.get foreach { ann => System.err.println(ann.toString)};
+    announcementsFound.size should equal(TEST_ANNOUNCEMENTS_FROM_RIS.size)
+    
+    announcementsFound.foreach {
+      announcement => TEST_ANNOUNCEMENTS_FROM_RIS should contain (announcement)
+    }
+  }
+  
+  test("should validate prefixes") {
+	  val announcementValidator = new BgpAnnouncementValidator {
+		  override
+		  protected def readBgpEntries =  { TEST_BGP_RIS_ENTRIES.toIterator }
+	  }
+	  
+	  announcementValidator.updateAnnouncedRoutes()
+	  val announcementsFound = announcementValidator.announcedRoutes.get
+	      
+	  announcementValidator.updateRtrPrefixes(TEST_RTR_PREFIXES)
+	  
+	  val foundValidatedAnnouncements = announcementValidator.validatedAnnouncements.get
+	  
+	  foundValidatedAnnouncements.size should equal (TEST_VALIDATED_ANNOUNCEMENTS.size)
+	  TEST_VALIDATED_ANNOUNCEMENTS.foreach {
+	    expectedAnnouncement => foundValidatedAnnouncements should contain (expectedAnnouncement)
+	  }
+  }
+  
+  test("should use old bgp entries if reading fails") {
+    val announcementValidator = new BgpAnnouncementValidator {
+	  override
+	  protected def readBgpEntries =  { throw new java.io.IOException() }
+	}
+    
+    announcementValidator.updateAnnouncedRoutes()
+    
+    val announcementsFound = announcementValidator.announcedRoutes.get
+    
+    announcementsFound.size should equal (0)
   }
   
 }
+
+
+

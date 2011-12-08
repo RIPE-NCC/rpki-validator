@@ -81,6 +81,7 @@ object Main {
     registerMemoryImageListener(memoryImage => rtrServer.notify(memoryImage.version))
 
     scheduleValidator(memoryImage)
+    scheduleRisDumpRetrieval(memoryImage)
   }
 
   private def error(message: String) = {
@@ -108,6 +109,16 @@ object Main {
       Thread.sleep(10000L)
     }
   }
+  
+  private def scheduleRisDumpRetrieval(memoryImage: Atomic[MemoryImage]) {
+    spawnForever("ris-dump-update-scheduler") {
+      BgpAnnouncementValidator.updateAnnouncedRoutes()
+      BgpAnnouncementValidator.updateRtrPrefixes(memoryImage.get.getDistinctRtrPrefixes())
+      val updateIntervalMillis = 12 * 60 * 60 * 1000    // 12 hours
+      Thread.sleep(updateIntervalMillis)                // First we wait to avoid loading twice at startup
+    }
+  }
+  
 
   def runValidator(memoryImage: Atomic[MemoryImage], trustAnchors: Seq[TrustAnchor]) {
     implicit val runner = TaskRunners.threadPoolRunner
@@ -172,7 +183,7 @@ object Main {
       override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
 
-      override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements.get
+      override protected def validatedAnnouncements = BgpAnnouncementValidator.getValidatedAnnouncements
       
       override protected def getRtrPrefixes = memoryImage.get.getDistinctRtrPrefixes()
 

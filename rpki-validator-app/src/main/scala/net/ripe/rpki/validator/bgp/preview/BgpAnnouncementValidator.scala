@@ -59,25 +59,45 @@ case class ValidatedAnnouncement(route: AnnouncedRoute, validates: Seq[RtrPrefix
   }
 }
 
-object BgpAnnouncementValidator extends Logging {
+class BgpAnnouncementValidator extends Logging {
 
   val VISIBILITY_THRESHOLD = 5
 
-  val announcedRoutes: Promise[Traversable[AnnouncedRoute]] = Promise {
-    val bgpEntries =
-      RisWhoisParser.parseFromUrl(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")) ++
-        RisWhoisParser.parseFromUrl(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz"))
-
-    bgpEntries
-      .filter(_.visibility >= VISIBILITY_THRESHOLD)
-      .map(entry => AnnouncedRoute(entry.origin, entry.prefix))
-      .toArray.distinct
-  }
+  @volatile
+  var announcedRoutes = Promise(IndexedSeq.empty[AnnouncedRoute]) 
 
   @volatile
   var validatedAnnouncements = Promise(IndexedSeq.empty[ValidatedAnnouncement])
 
   private val latestRtrPrefixes = new SyncVar[Set[RtrPrefix]]
+  
+  def updateAnnouncedRoutes(): Unit = {
+    info("Started retrieving new RIS dump files")
+    
+      val oldRoutes = announcedRoutes.get
+    
+      announcedRoutes = Promise {
+    	try {
+        val result = readBgpEntries
+          .filter(_.visibility >= VISIBILITY_THRESHOLD)
+          .map(entry => AnnouncedRoute(entry.origin, entry.prefix))
+          .toArray.distinct
+          info("Finished retrieving new RIS dump files, found " + result.size + " announcements")
+          result
+    	} catch {
+    		case e: Exception => {
+    		  error("An error occured while trying to read new RIS bgp entries, using old values")
+    		  oldRoutes
+    		}
+    	}
+      }
+    
+  }
+  
+  protected def readBgpEntries() = {
+    RisWhoisParser.parseFromUrl(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")) ++
+    RisWhoisParser.parseFromUrl(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz"))
+  }
 
   def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]): Unit = {
     validatedAnnouncements = Promise({
@@ -101,4 +121,14 @@ object BgpAnnouncementValidator extends Logging {
     prefix.asn == announced.asn &&
       prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()) >= announced.prefix.getPrefixLength()
   }
+}
+
+object BgpAnnouncementValidator {
+  
+  private val singletonValidator = new BgpAnnouncementValidator
+  
+  def updateAnnouncedRoutes() = singletonValidator.updateAnnouncedRoutes()
+  def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]) = singletonValidator.updateRtrPrefixes(newRtrPrefixes)
+  def getValidatedAnnouncements = singletonValidator.validatedAnnouncements.get
+  
 }
