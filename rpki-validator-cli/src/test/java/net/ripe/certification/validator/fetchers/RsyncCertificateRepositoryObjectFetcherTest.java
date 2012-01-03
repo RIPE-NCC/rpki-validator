@@ -117,21 +117,21 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
     public void shouldFetchObject() {
         rsyncFileContents = manifest.getEncoded();
         assertEquals(manifest, subject.getObject(TEST_OBJECT_MFT_URI, null, Specifications.<byte[]>alwaysTrue(), validationResult));
-        assertEquals(new ValidationCheck(ValidationStatus.PASSED, KNOWN_OBJECT_TYPE, VALIDATION_URI), validationResult.getResult(new ValidationLocation(VALIDATION_URI), KNOWN_OBJECT_TYPE));
+        assertEquals(new ValidationCheck(ValidationStatus.PASSED, KNOWN_OBJECT_TYPE, VALIDATION_URI.toString()), validationResult.getResult(new ValidationLocation(VALIDATION_URI), KNOWN_OBJECT_TYPE));
     }
 
     @Test
     public void shouldNotFetchObjectIfContentsCannotBeVerified() {
         rsyncFileContents = manifest.getEncoded();
         assertNull("content verification must fail", subject.getObject(TEST_OBJECT_CERT_URI, null, Specifications.<byte[]>alwaysFalse(), validationResult));
-        assertEquals(new ValidationCheck(ValidationStatus.ERROR, VALIDATOR_FILE_CONTENT, TEST_OBJECT_CERT_URI), validationResult.getResult(new ValidationLocation(TEST_OBJECT_CERT_URI), VALIDATOR_FILE_CONTENT));
+        assertEquals(new ValidationCheck(ValidationStatus.ERROR, VALIDATOR_FILE_CONTENT, TEST_OBJECT_CERT_URI.toString()), validationResult.getResult(new ValidationLocation(TEST_OBJECT_CERT_URI), VALIDATOR_FILE_CONTENT));
     }
 
     @Test
     public void shouldNotFetchObjectIfContentsCannotBeParsed() {
         rsyncFileContents = new byte[] { 0x10, 0x12, 0x3 };
         assertNull("content should not be parsed", subject.getObject(TEST_OBJECT_CERT_URI, null, Specifications.<byte[]>alwaysTrue(), validationResult));
-        assertEquals(new ValidationCheck(ValidationStatus.ERROR, KNOWN_OBJECT_TYPE, TEST_OBJECT_CERT_URI), validationResult.getResult(new ValidationLocation(TEST_OBJECT_CERT_URI), KNOWN_OBJECT_TYPE));
+        assertEquals(new ValidationCheck(ValidationStatus.ERROR, KNOWN_OBJECT_TYPE, TEST_OBJECT_CERT_URI.toString()), validationResult.getResult(new ValidationLocation(TEST_OBJECT_CERT_URI), KNOWN_OBJECT_TYPE));
     }
 
     @Test

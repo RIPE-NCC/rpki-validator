@@ -52,11 +52,11 @@ public class UriToFileMapper {
     public File map(URI uri, ValidationResult result) {
         Validate.notNull(result);
         Validate.notNull(uri);
-        result.rejectIfFalse(RSYNC_SCHEME.equalsIgnoreCase(uri.getScheme()), VALIDATOR_URI_RSYNC_SCHEME, uri);
-        result.rejectIfNull(uri.getHost(), VALIDATOR_URI_HOST, uri);
-        result.rejectIfNull(uri.getRawPath(), VALIDATOR_URI_PATH, uri);
+        result.rejectIfFalse(RSYNC_SCHEME.equalsIgnoreCase(uri.getScheme()), VALIDATOR_URI_RSYNC_SCHEME, uri.toString());
+        result.rejectIfNull(uri.getHost(), VALIDATOR_URI_HOST, uri.toString());
+        result.rejectIfNull(uri.getRawPath(), VALIDATOR_URI_PATH, uri.toString());
         String s = uri.toString();
-        result.rejectIfTrue(s.contains("/../") || s.endsWith("/.."), VALIDATOR_URI_SAFETY, uri);
+        result.rejectIfTrue(s.contains("/../") || s.endsWith("/.."), VALIDATOR_URI_SAFETY, uri.toString());
         if (result.hasFailureForCurrentLocation()) {
             return null;
         }

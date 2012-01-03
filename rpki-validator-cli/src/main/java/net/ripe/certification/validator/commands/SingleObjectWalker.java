@@ -119,7 +119,7 @@ public class SingleObjectWalker {
 
             if (parent instanceof X509ResourceCertificate) {
                 parentCertificateChain.add(0, parentURI);
-                if (!result.rejectIfFalse(parentCertificateChain.size() <= MAX_CHAIN_LENGTH, CERT_CHAIN_LENGTH, MAX_CHAIN_LENGTH)) {
+                if (!result.rejectIfFalse(parentCertificateChain.size() <= MAX_CHAIN_LENGTH, CERT_CHAIN_LENGTH, Integer.valueOf(MAX_CHAIN_LENGTH).toString())) {
                 	chainBuildLogger.afterFetchFailure(parentURI, result);
                 	return; // break the chain building
                 }
