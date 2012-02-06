@@ -41,10 +41,11 @@ import java.io.FileInputStream
 import java.io.InputStreamReader
 import java.net.URL
 import scala.collection._
+import grizzled.slf4j.Logging
 
 case class BgpRisEntry(origin: Asn, prefix: IpRange, visibility: Int)
 
-object RisWhoisParser {
+object RisWhoisParser extends Logging {
 
   val regex = """^\s*([0-9]+)\s+([0-9a-fA-F.:/]+)\s+([0-9]+)\s*$""".r
 
@@ -67,7 +68,11 @@ object RisWhoisParser {
         try {
           Some(new BgpRisEntry(origin = Asn.parse(asn), prefix = IpRange.parse(ipprefix), visibility = Integer.parseInt(visibility)))
         } catch {
-          case _ => None
+          case e: Throwable => {
+            error("Unable to parse line " + content)
+            debug("Detailed error: ", e)
+            None
+          }
         }
       case _ => None
     }
