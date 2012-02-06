@@ -62,6 +62,11 @@ class RisWhoisTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter w
     entry should equal(Some(new BgpRisEntry(origin = new Asn(24490), prefix = IpRange.parse("::1.2.3.4/128"), visibility = 62)))
   }
 
+  test("should skip malformed line") {
+    val entry = RisWhoisParser.parseLine("24490\t::::/128\t62\n")
+    entry should equal(None)
+  }
+
   test("should read remote file") {
     val url = Thread.currentThread().getContextClassLoader().getResource("ris/riswhoisdump-head-1000.IPv4.gz")
     

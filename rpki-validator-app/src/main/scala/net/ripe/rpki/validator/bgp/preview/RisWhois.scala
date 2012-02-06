@@ -64,7 +64,11 @@ object RisWhoisParser {
   def parseLine(content: String): Option[BgpRisEntry] = {
     content match {
       case regex(asn, ipprefix, visibility) =>
-        Some(new BgpRisEntry(origin = Asn.parse(asn), prefix = IpRange.parse(ipprefix), visibility = Integer.parseInt(visibility)))
+        try {
+          Some(new BgpRisEntry(origin = Asn.parse(asn), prefix = IpRange.parse(ipprefix), visibility = Integer.parseInt(visibility)))
+        } catch {
+          case _ => None
+        }
       case _ => None
     }
   }
