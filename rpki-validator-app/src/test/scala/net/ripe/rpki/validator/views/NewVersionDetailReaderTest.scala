@@ -27,18 +27,45 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.config
-
+package net.ripe.rpki.validator.views
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
+import java.net.URI
+import java.io.InputStream
 
-class ReleaseInfoTest extends FunSuite with ShouldMatchers {
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+class NewVersionDetailReaderTest extends FunSuite with ShouldMatchers {
 
-  test("should return version number") {
-    ReleaseInfo.version should include regex ("""\d\.\d""")
+  // Note: this should reflect whatever we have in the latest-version.properties file in src/test/resources
+  val currentVersion = "2.0.2"
+  val expectedNewVersion = "2.0.10"
+  val expectedUrl = URI.create("http://www.ripe.net/lir-services/resource-management/certification/tools-and-resources")
+
+  test("should read new version details when upgrade available") {
+    val reader = new TestableNewVersionDetailReader("/latest-version.properties")
+    val newVersionDetails = reader.readNewVersionDetails(currentVersion = currentVersion)
+    newVersionDetails should equal(Some(NewVersionDetails(version = expectedNewVersion, url = expectedUrl)))
+  }
+  
+  test("should return none when up to date") {
+	  val reader = new TestableNewVersionDetailReader("/latest-version.properties")
+	  val newVersionDetails = reader.readNewVersionDetails(currentVersion = expectedNewVersion)
+	  newVersionDetails should equal(None)
   }
 
-  test("should return empty string for unknown keys") {
-    ReleaseInfo("nosuchkey") should equal ("")
+  test("should return none if version properties can't be read") {
+    val reader = new TestableNewVersionDetailReader("doesnotexist")
+    val newVersionDetails = reader.readNewVersionDetails(currentVersion = currentVersion)
+    newVersionDetails should equal(None)
   }
+
 }
+
+class TestableNewVersionDetailReader(fileLocation: String) extends NewVersionDetailReader {
+
+  override def readNewVersionPropertiesFile(): InputStream = {
+    getClass().getResourceAsStream(fileLocation);
+  }
+
+}
+

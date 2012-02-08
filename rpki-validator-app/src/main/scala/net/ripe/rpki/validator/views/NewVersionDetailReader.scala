@@ -27,25 +27,77 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.lib
+package net.ripe.rpki.validator.views
 
-import scala.concurrent.ops._
-import grizzled.slf4j.Logger
+import java.net.URI
+import org.joda.time.DateTime
+import java.io.InputStream
+import java.util.Properties
+import java.net.URL
 import grizzled.slf4j.Logging
 
-object Process extends Logging {
+class NewVersionDetailReader extends Logging {
 
-  def spawnForever(name: String)(body: => Unit): Unit = spawn {
+  val PUBLIC_LATEST_VERSION_URL = new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties")
+
+  /**
+   * Read new version details.
+   * Will return None in case of problems or when no new version exists
+   */
+  def readNewVersionDetails(currentVersion: String): Option[NewVersionDetails] = {
+    var in: InputStream = null
+    
     try {
-      Thread.currentThread().setName(name)
-      logger.info("Process '" + name + "' started.")
-      while (!Thread.currentThread().isInterrupted()) {
-        body
+      in = readNewVersionPropertiesFile()
+      
+      val properties = new Properties()
+      properties.load(in)
+      
+      val newVersion = properties.getProperty("version.latest")
+
+      if (newVersion > currentVersion) {
+        Some(NewVersionDetails(version = newVersion, url = URI.create(properties.getProperty("version.url"))))
+      } else {
+        None
       }
-      logger.info("Process '" + name + "' was interrupted, terminating.")
     } catch {
-      case e: Exception =>
-        logger.error("Process '" + name + "' caught exception '" + e + "', terminating.", e)
+      case t: Throwable => {
+        error("Could not read latest version details from url: " + PUBLIC_LATEST_VERSION_URL)
+        None
+      }
+    } finally {
+      if (in != null) {
+        in.close()
+      }
     }
   }
+
+  /*
+   * Override this for unit testing
+   */
+  protected def readNewVersionPropertiesFile(): InputStream = {
+    PUBLIC_LATEST_VERSION_URL.openStream()
+  }
 }
+
+case class NewVersionDetails(version: String, url: URI)
+
+object NewVersionAlerter {
+  
+  val reader = new NewVersionDetailReader
+  var enabled = true
+  
+  def getNewVersionDetails(currentVersion: String) = {
+    if (enabled) {
+      reader.readNewVersionDetails(currentVersion)
+    } else {
+      None
+    }
+  }
+  
+  
+}
+
+
+
+
