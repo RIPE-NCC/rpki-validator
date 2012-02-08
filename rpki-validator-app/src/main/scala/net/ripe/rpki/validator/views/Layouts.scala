@@ -32,6 +32,7 @@ package views
 
 import scala.xml._
 import org.joda.time._
+import config.ReleaseInfo
 
 object Layouts {
   def none(view: View): NodeSeq = {
@@ -87,7 +88,8 @@ object Layouts {
           <footer>
           	<div class="copyright">
           		<img src="/images/ncc-logo.png" align="middle" /> &nbsp;
-          		Copyright &copy; { List(2009, (new DateTime).getYear).mkString("-") } the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted.
+
+              Copyright &copy; { List(2009, (new DateTime).getYear).mkString("-") } the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version v.{ ReleaseInfo.version }
           	</div>
           </footer>
         </div>
