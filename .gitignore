@@ -1,3 +1,14 @@
-rpki-validator-service/rpki-vs.log
+.classpath
+.project
+.settings
+target
+velocity.log
+*.log
+/log
 rpki-validator-service/validated-tas/
-/*/target/
+
+# Intellj
+*.iml
+*.ipr
+*.iws
+.idea/
