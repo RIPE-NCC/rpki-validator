@@ -27,7 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.views
+package net.ripe.rpki.validator.lib
 
 import java.net.URI
 import org.joda.time.DateTime
@@ -35,27 +35,59 @@ import java.io.InputStream
 import java.util.Properties
 import java.net.URL
 import grizzled.slf4j.Logging
+import org.joda.time.Duration
+import scalaz.concurrent.Promise
 
-class NewVersionDetailReader extends Logging {
+trait SoftwareUpdateChecker extends Logging {
 
-  val PUBLIC_LATEST_VERSION_URL = new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties")
+  private val PUBLIC_LATEST_VERSION_URL = new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties")
+
+  private var lastCheck: DateTime = _
+  private var newVersionDetails = readNewVersionDetails
+
+  def getSoftwareUpdateOptions: Option[SoftwareUpdateOptions]
+  def getCurrentVersion: String
 
   /**
-   * Read new version details.
-   * Will return None in case of problems or when no new version exists
+   * Get new version details. Will cache for one day. Returns
+   * None in case of problems or when no new version exists.
    */
-  def readNewVersionDetails(currentVersion: String): Option[NewVersionDetails] = {
+  def getNewVersionDetails(): Option[NewVersionDetails] = {
+
+    getSoftwareUpdateOptions match {
+      case None => None
+      case Some(SoftwareUpdateOptions(false)) => None
+      case Some(SoftwareUpdateOptions(true)) => {
+        val difference = new Duration(lastCheck, new DateTime())
+        if (difference.isLongerThan(Duration.standardDays(1))) {
+          newVersionDetails = readNewVersionDetails
+        }
+        newVersionDetails
+      }
+    }
+
+  }
+
+  /*
+   * Override this for unit testing
+   */
+  protected def readNewVersionPropertiesFile(): InputStream = {
+    PUBLIC_LATEST_VERSION_URL.openStream()
+  }
+
+  private def readNewVersionDetails = {
+
     var in: InputStream = null
-    
+
     try {
       in = readNewVersionPropertiesFile()
-      
+
       val properties = new Properties()
       properties.load(in)
-      
+
       val newVersion = properties.getProperty("version.latest")
 
-      if (newVersion > currentVersion) {
+      if (newVersion != getCurrentVersion) {
         Some(NewVersionDetails(version = newVersion, url = URI.create(properties.getProperty("version.url"))))
       } else {
         None
@@ -69,34 +101,15 @@ class NewVersionDetailReader extends Logging {
       if (in != null) {
         in.close()
       }
+      lastCheck = new DateTime()
     }
   }
 
-  /*
-   * Override this for unit testing
-   */
-  protected def readNewVersionPropertiesFile(): InputStream = {
-    PUBLIC_LATEST_VERSION_URL.openStream()
-  }
 }
 
 case class NewVersionDetails(version: String, url: URI)
 
-object NewVersionAlerter {
-  
-  val reader = new NewVersionDetailReader
-  var enabled = true
-  
-  def getNewVersionDetails(currentVersion: String) = {
-    if (enabled) {
-      reader.readNewVersionDetails(currentVersion)
-    } else {
-      None
-    }
-  }
-  
-  
-}
+case class SoftwareUpdateOptions(enableChoice: Boolean)
 
 
 
