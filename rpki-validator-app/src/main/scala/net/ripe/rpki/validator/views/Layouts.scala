@@ -89,7 +89,7 @@ object Layouts {
           	<div class="copyright">
           		<img src="/images/ncc-logo.png" align="middle" /> &nbsp;
 
-              Copyright &copy; { List(2009, (new DateTime).getYear).mkString("-") } the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version v.{ ReleaseInfo.version }
+              Copyright &copy; { List(2009, (new DateTime).getYear).mkString("-") } the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version { ReleaseInfo.version }
           	</div>
           </footer>
         </div>
