@@ -36,6 +36,9 @@ import org.scalatest.matchers.ShouldMatchers
 import java.net.URI
 import java.io.InputStream
 
+import org.joda.time.DateTime
+import org.joda.time.DateTimeUtils
+
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class SoftwareUpdateCheckerTest extends FunSuite with ShouldMatchers {
 
@@ -44,80 +47,134 @@ class SoftwareUpdateCheckerTest extends FunSuite with ShouldMatchers {
   val expectedNewVersion = "2.0.10"
   val expectedUrl = URI.create("http://www.ripe.net/lir-services/resource-management/certification/tools-and-resources")
 
-  test("should read new version details when upgrade available") {
-    val checker = new TestableSoftwareUpdateChecker
+  test("should NOT read properties when no choice was made") {
+    
+    
+    val checker = new SoftwareUpdateChecker {
+      override def getNewVersionDetailFetcher = null
+      override def getSoftwareUpdateOptions = None
+      override def getCurrentVersion = currentVersion
+    }
     val newVersionDetails = checker.getNewVersionDetails
-    newVersionDetails should equal(Some(NewVersionDetails(version = expectedNewVersion, url = expectedUrl)))
-  }
-  
-  ignore("should cache new version details") {
-    var checker = new TestableSoftwareUpdateChecker
-    val newVersionDetails = checker.getNewVersionDetails
-    val newVersionDetails2 = checker.getNewVersionDetails
-    newVersionDetails should equal(Some(NewVersionDetails(version = expectedNewVersion, url = expectedUrl)))
-    newVersionDetails should equal(newVersionDetails2)
-    checker.numberOfReads should equal(1)
+    newVersionDetails should equal(None)
   }
 
   test("should NOT read properties when disabled") {
-    val checker = new NonReadingSoftwareUpdateChecker(softwareUpdateOptions = Some(SoftwareUpdateOptions(enableChoice = false)))
+    val checker = new SoftwareUpdateChecker {
+      override def getNewVersionDetailFetcher = null
+      override def getSoftwareUpdateOptions = Some(SoftwareUpdateOptions(enableChoice = false))
+      override def getCurrentVersion = currentVersion
+    }
     val newVersionDetails = checker.getNewVersionDetails
     newVersionDetails should equal(None)
-    checker.fileWasRead should equal(false)
   }
 
-  test("should NOT read properties when no choice was made") {
-    val checker = new NonReadingSoftwareUpdateChecker(softwareUpdateOptions = None)
+  test("should cache new version details") {
+    val countingFetcher = new MockNewVersionDetailFetcher(None)
+    val checker = new SoftwareUpdateChecker {
+      override def getNewVersionDetailFetcher = countingFetcher
+      override def getSoftwareUpdateOptions = Some(SoftwareUpdateOptions(enableChoice = true))
+      override def getCurrentVersion = currentVersion
+    }
+    countingFetcher.counter should equal(0)
     val newVersionDetails = checker.getNewVersionDetails
     newVersionDetails should equal(None)
-    checker.fileWasRead should equal(false)
+    countingFetcher.counter should equal(1)
+
+    val newVersionDetails2 = checker.getNewVersionDetails
+    newVersionDetails2 should equal(newVersionDetails)
+    countingFetcher.counter should equal(1)
   }
 
-  test("should return none when up to date") {
-    val checker = new TestableSoftwareUpdateChecker(currentVersion = expectedNewVersion)
+  test("should read again after 24 hours") {
+    val now = new DateTime()
+    DateTimeUtils.setCurrentMillisFixed(now.getMillis())
+
+    val countingFetcher = new MockNewVersionDetailFetcher(None)
+    val checker = new SoftwareUpdateChecker {
+      override def getNewVersionDetailFetcher = countingFetcher
+      override def getSoftwareUpdateOptions = Some(SoftwareUpdateOptions(enableChoice = true))
+      override def getCurrentVersion = currentVersion
+    }
+    countingFetcher.counter should equal(0)
     val newVersionDetails = checker.getNewVersionDetails
     newVersionDetails should equal(None)
+    countingFetcher.counter should equal(1)
+
+    val newVersionDetails2 = checker.getNewVersionDetails
+    newVersionDetails2 should equal(newVersionDetails)
+    countingFetcher.counter should equal(1)
+
+    DateTimeUtils.setCurrentMillisFixed(now.plusDays(1).plusMillis(1).getMillis())
+
+    val newVersionDetails3 = checker.getNewVersionDetails
+    newVersionDetails3 should equal(None)
+    countingFetcher.counter should equal(2)
+
+    DateTimeUtils.setCurrentMillisSystem()
   }
-  
+
+  test("should read new version details when upgrade available") {
+    val checker = new SoftwareUpdateChecker {
+      override def getNewVersionDetailFetcher = getTestNewVersionDetailFetcher("version.latest=" + expectedNewVersion + "\n" + "version.url=" + expectedUrl)
+      override def getSoftwareUpdateOptions = Some(SoftwareUpdateOptions(enableChoice = true))
+      override def getCurrentVersion = currentVersion
+    }
+    val newVersionDetails = checker.getNewVersionDetails
+    newVersionDetails should equal(Some(NewVersionDetails(version = expectedNewVersion, url = expectedUrl)))
+  }
+
+  test("should return none if we're up to date") {
+    val checker = new SoftwareUpdateChecker {
+      override def getNewVersionDetailFetcher = getTestNewVersionDetailFetcher("version.latest=" + currentVersion + "\n" + "version.url=" + expectedUrl)
+      override def getSoftwareUpdateOptions = Some(SoftwareUpdateOptions(enableChoice = true))
+      override def getCurrentVersion = currentVersion
+    }
+    val newVersionDetails = checker.getNewVersionDetails
+    newVersionDetails should equal(None)
+
+  }
+
   test("should return none if version properties can't be read") {
-	  val checker = new TestableSoftwareUpdateChecker(fileLocation = "doesnotexist")
-	  val newVersionDetails = checker.getNewVersionDetails
-	  newVersionDetails should equal(None)
+    val checker = new SoftwareUpdateChecker {
+      override def getNewVersionDetailFetcher = getTestNewVersionDetailFetcher("this makes no sense")
+      override def getSoftwareUpdateOptions = Some(SoftwareUpdateOptions(enableChoice = true))
+      override def getCurrentVersion = currentVersion
+    }
+    val newVersionDetails = checker.getNewVersionDetails
+    newVersionDetails should equal(None)
+  }
+
+  test("should return none if fetching string throws exception") {
+    val checker = new SoftwareUpdateChecker {
+      override def getNewVersionDetailFetcher = new OnlineNewVersionDetailFetcher(currentVersion, () => { throw new RuntimeException() })
+      override def getSoftwareUpdateOptions = Some(SoftwareUpdateOptions(enableChoice = true))
+      override def getCurrentVersion = currentVersion
+    }
+    val newVersionDetails = checker.getNewVersionDetails
+    newVersionDetails should equal(None)
+  }
+
+  // Don't depend on network... but this is how we read the remote file:
+  //  test("should read file") {
+  //     val url = new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties")
+  //     val content = scala.io.Source.fromURL(url, "UTF-8").mkString
+  //  }
+
+  private def getTestNewVersionDetailFetcher(propertiesString: String) = {
+    new OnlineNewVersionDetailFetcher(currentVersion, () => propertiesString)
   }
 
 }
 
-class TestableSoftwareUpdateChecker(
-  fileLocation: String = "/latest-version.properties",
-  currentVersion: String = "2.0.2",
-  softwareUpdateOptions: Option[SoftwareUpdateOptions] = Some(SoftwareUpdateOptions(enableChoice = true))) extends SoftwareUpdateChecker with Logging {
-  
-  var numberOfReads: Int = 0
+class MockNewVersionDetailFetcher(details: Option[NewVersionDetails]) extends NewVersionDetailFetcher {
 
-  override def getSoftwareUpdateOptions = softwareUpdateOptions
-  override def getCurrentVersion = currentVersion
+  var counter = 0
 
-  override def readNewVersionPropertiesFile(): InputStream = {
-    numberOfReads = numberOfReads + 1
-    getClass().getResourceAsStream(fileLocation);
-  }
-  
-}
-
-class NonReadingSoftwareUpdateChecker(
-  currentVersion: String = "2.0.2",
-  softwareUpdateOptions: Option[SoftwareUpdateOptions] = Some(SoftwareUpdateOptions(enableChoice = true))) extends SoftwareUpdateChecker with Logging {
-
-  var fileWasRead = false
-
-  override def getSoftwareUpdateOptions = softwareUpdateOptions
-  override def getCurrentVersion = currentVersion
-
-  override def readNewVersionPropertiesFile(): InputStream = {
-    fileWasRead = true
-    throw new RuntimeException("Not implemented")
+  override def readNewVersionDetails: Option[NewVersionDetails] = {
+    counter = counter + 1
+    details
   }
 
 }
-
 

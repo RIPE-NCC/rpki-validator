@@ -37,14 +37,17 @@ import java.net.URL
 import grizzled.slf4j.Logging
 import org.joda.time.Duration
 import scalaz.concurrent.Promise
+import java.io.ByteArrayInputStream
+
+case class NewVersionDetails(version: String, url: URI)
+case class SoftwareUpdateOptions(enableChoice: Boolean)
 
 trait SoftwareUpdateChecker extends Logging {
 
-  private val PUBLIC_LATEST_VERSION_URL = new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties")
+  private var lastCheck: DateTime = null
+  private var cachedNewVersionDetails: Option[NewVersionDetails] = None
 
-  private var lastCheck: DateTime = _
-  private var newVersionDetails = readNewVersionDetails
-
+  def getNewVersionDetailFetcher: NewVersionDetailFetcher
   def getSoftwareUpdateOptions: Option[SoftwareUpdateOptions]
   def getCurrentVersion: String
 
@@ -58,59 +61,72 @@ trait SoftwareUpdateChecker extends Logging {
       case None => None
       case Some(SoftwareUpdateOptions(false)) => None
       case Some(SoftwareUpdateOptions(true)) => {
-        val difference = new Duration(lastCheck, new DateTime())
-        if (difference.isLongerThan(Duration.standardDays(1))) {
-          newVersionDetails = readNewVersionDetails
-        }
-        newVersionDetails
+        returnNewVersionDetails
       }
     }
 
   }
 
-  /*
-   * Override this for unit testing
-   */
-  protected def readNewVersionPropertiesFile(): InputStream = {
-    PUBLIC_LATEST_VERSION_URL.openStream()
+  def returnNewVersionDetails = {
+
+    if (lastCheck == null || new Duration(lastCheck, new DateTime()).isLongerThan(Duration.standardDays(1))) {
+      var fetcher = getNewVersionDetailFetcher
+      cachedNewVersionDetails = fetcher.readNewVersionDetails
+      lastCheck = new DateTime()
+    }
+
+    cachedNewVersionDetails
   }
 
-  private def readNewVersionDetails = {
+}
 
-    var in: InputStream = null
+
+trait NewVersionDetailFetcher {
+  def readNewVersionDetails: Option[NewVersionDetails]
+}
+
+
+class OnlineNewVersionDetailFetcher(currentVersion: String, getPropertiesString: () => String) extends NewVersionDetailFetcher with Logging {
+
+  override def readNewVersionDetails = {
 
     try {
-      in = readNewVersionPropertiesFile()
-
-      val properties = new Properties()
-      properties.load(in)
-
+      val properties = parseProperties
       val newVersion = properties.getProperty("version.latest")
 
-      if (newVersion != getCurrentVersion) {
+      if (newVersion != currentVersion) {
         Some(NewVersionDetails(version = newVersion, url = URI.create(properties.getProperty("version.url"))))
       } else {
         None
       }
     } catch {
-      case t: Throwable => {
-        error("Could not read latest version details from url: " + PUBLIC_LATEST_VERSION_URL)
+      case e: Exception => {
+        error(e)
         None
       }
+    }
+  }
+  
+  private def parseProperties = {
+
+    var in: InputStream = null
+    try {
+      val bytes = getPropertiesString.apply().getBytes("UTF-8")
+      in = new ByteArrayInputStream(bytes)
+      
+      val properties = new Properties()
+      properties.load(in)
+      properties
+      
     } finally {
       if (in != null) {
         in.close()
       }
-      lastCheck = new DateTime()
     }
+
   }
 
 }
-
-case class NewVersionDetails(version: String, url: URI)
-
-case class SoftwareUpdateOptions(enableChoice: Boolean)
-
 
 
 
