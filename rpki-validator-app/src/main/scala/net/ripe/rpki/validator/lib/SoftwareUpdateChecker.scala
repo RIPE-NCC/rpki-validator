@@ -38,7 +38,7 @@ import org.joda.time.Duration
 import java.io.ByteArrayInputStream
 
 case class NewVersionDetails(version: String, url: URI)
-case class SoftwareUpdatePreferences(enableChoice: Boolean)
+case class UserPreferences(updateAlertActive: Boolean = false)
 
 trait SoftwareUpdateChecker extends Logging {
 
@@ -46,32 +46,27 @@ trait SoftwareUpdateChecker extends Logging {
   private var cachedNewVersionDetails: Option[NewVersionDetails] = None
 
   def getNewVersionDetailFetcher: NewVersionDetailFetcher
-  def getSoftwareUpdatePreferences: SoftwareUpdatePreferences
+  def getUserPreferences: UserPreferences
 
   /**
    * Get new version details. Will cache for one day. Returns
    * None in case of problems or when no new version exists.
    */
   def getNewVersionDetails(): Option[NewVersionDetails] = {
-
-    getSoftwareUpdatePreferences.enableChoice match {
-      case true => returnNewVersionDetails
-      case false => None
+    getUserPreferences.updateAlertActive match {
+      case true   => returnNewVersionDetails
+      case false  => None
     }
-
   }
 
   def returnNewVersionDetails = {
 
     if (lastCheck == null || new Duration(lastCheck, new DateTime()).isLongerThan(Duration.standardDays(1))) {
-      var fetcher = getNewVersionDetailFetcher
-      cachedNewVersionDetails = fetcher.readNewVersionDetails
+      cachedNewVersionDetails = getNewVersionDetailFetcher.readNewVersionDetails
       lastCheck = new DateTime()
     }
-
     cachedNewVersionDetails
   }
-
 }
 
 
@@ -83,7 +78,6 @@ trait NewVersionDetailFetcher {
 class OnlineNewVersionDetailFetcher(currentVersion: String, getPropertiesString: () => String) extends NewVersionDetailFetcher with Logging {
 
   override def readNewVersionDetails = {
-
     try {
       val properties = parseProperties
       val newVersion = properties.getProperty("version.latest")
@@ -119,8 +113,4 @@ class OnlineNewVersionDetailFetcher(currentVersion: String, getPropertiesString:
     }
 
   }
-
 }
-
-
-

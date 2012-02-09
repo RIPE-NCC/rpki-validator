@@ -48,14 +48,14 @@ abstract class WebFilter extends ScalatraFilter
   with BgpPreviewController
   with ExportController
   with RtrSessionsController
-  with PreferencesController {
+  with UserPreferencesController {
 
   private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
 
   private def renderView: PartialFunction[Any, Any] = {
     case view: View =>
       contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view, getNewVersionDetails, getSoftwareUpdatePreferences))
+      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view, getNewVersionDetails, getUserPreferences))
     case view: DataTableJsonView[_] =>
       contentType = "application/json"
       view.renderJson

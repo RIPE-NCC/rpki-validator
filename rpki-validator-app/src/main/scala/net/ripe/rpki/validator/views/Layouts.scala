@@ -33,7 +33,7 @@ package views
 import scala.xml._
 import org.joda.time._
 import config.ReleaseInfo
-import lib.{SoftwareUpdatePreferences, NewVersionDetails}
+import lib.{UserPreferences, NewVersionDetails}
 
 object Layouts {
   def none(view: View): NodeSeq = {
@@ -45,7 +45,7 @@ object Layouts {
     </html>
   }
 
-  def standard(view: View, newVersionDetails: Option[NewVersionDetails], softwareUpdatePreferences: SoftwareUpdatePreferences): NodeSeq = {
+  def standard(view: View, newVersionDetails: Option[NewVersionDetails], userPreferences: UserPreferences): NodeSeq = {
     <html lang="en">
       <head>
         <meta charset="utf-8"/>
@@ -85,9 +85,9 @@ object Layouts {
         <div class="container">
           <div class="alert-message block-message info">
             {
-              softwareUpdatePreferences.enableChoice match {
-                case true  => <p>Automatic version check enabled. <a href="/set-update-check/false">Disable</a></p>
-                case false => <p>Automatic version check disabled. <a href="/set-update-check/true">Enable</a></p>
+              userPreferences.updateAlertActive match {
+                case true  => <p>Automatic version check enabled. <a href="/set-update-alert/false">Disable</a></p>
+                case false => <p>Automatic version check disabled. <a href="/set-update-alert/true">Enable</a></p>
               }
             }
             {

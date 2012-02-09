@@ -37,9 +37,9 @@ import net.ripe.ipresource.IpRange
 import grizzled.slf4j.Logging
 import models._
 import java.io.{FileNotFoundException, File, IOException}
-import lib.SoftwareUpdatePreferences
+import lib.UserPreferences
 
-case class PersistentData(schemaVersion: Int = 0, filters: Filters = Filters(), whitelist: Whitelist = Whitelist(), softwareUpdatePreferences: SoftwareUpdatePreferences = SoftwareUpdatePreferences(false))
+case class PersistentData(schemaVersion: Int = 0, filters: Filters = Filters(), whitelist: Whitelist = Whitelist(), userPreferences: UserPreferences = UserPreferences())
 
 class PersistentDataSerialiser {
 

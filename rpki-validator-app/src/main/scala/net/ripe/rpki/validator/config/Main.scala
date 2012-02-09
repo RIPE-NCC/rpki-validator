@@ -71,7 +71,7 @@ object Main {
     val dataFile = new File(options.dataFileName).getCanonicalFile()
     val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
     val memoryImage = new Atomic[MemoryImage](
-      MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.softwareUpdatePreferences),
+      MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.userPreferences),
       memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
 
     val rtrServer = runRtrServer(options, memoryImage)
@@ -191,8 +191,8 @@ object Main {
 
       // Software Update checker
       override def getNewVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version, () => scala.io.Source.fromURL(new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties"), "UTF-8").mkString)
-      override def getSoftwareUpdatePreferences = memoryImage.get.softwareUpdatePreferences
-      override def updateUserPreferences(userPreferences: SoftwareUpdatePreferences) = updateAndPersist { _.updateSoftwareUpdatePreferences(userPreferences)}
+      override def getUserPreferences = memoryImage.get.userPreferences
+      override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { _.updateUserPreferences(userPreferences)}
     }), "/*", FilterMapping.ALL)
 
     val requestLogHandler = {

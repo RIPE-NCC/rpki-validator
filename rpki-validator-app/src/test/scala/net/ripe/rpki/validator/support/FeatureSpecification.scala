@@ -41,7 +41,7 @@ import net.ripe.rpki.validator.config.WebFilter
 import org.scalatra.test.scalatest.ScalatraFeatureSpec
 import org.joda.time.DateTime
 import models._
-import lib.SoftwareUpdatePreferences
+import lib.UserPreferences
 
 @RunWith(classOf[JUnitRunner])
 abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatchers with MockitoSugar {
@@ -61,8 +61,8 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
     override lazy val version = sys.error("TBD")
     override val lastUpdateTime = new DateTime
 
-    override def getSoftwareUpdatePreferences = sys.error("TODO")
+    override def getUserPreferences = sys.error("TODO")
     override def getNewVersionDetailFetcher = sys.error("TODO")
-    override def updateUserPreferences(userPreferences: SoftwareUpdatePreferences) = sys.error("TODO")
+    override def updateUserPreferences(userPreferences: UserPreferences) = sys.error("TODO")
   }, "/*")
 }
