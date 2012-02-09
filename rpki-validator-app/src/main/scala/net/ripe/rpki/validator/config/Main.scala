@@ -71,7 +71,7 @@ object Main {
     val dataFile = new File(options.dataFileName).getCanonicalFile()
     val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
     val memoryImage = new Atomic[MemoryImage](
-      MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.userPreferences),
+      MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.userPreferences.getOrElse(UserPreferences())),
       memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
 
     val rtrServer = runRtrServer(options, memoryImage)

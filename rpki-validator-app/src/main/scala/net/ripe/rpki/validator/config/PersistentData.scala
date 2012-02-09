@@ -39,7 +39,7 @@ import models._
 import java.io.{FileNotFoundException, File, IOException}
 import lib.UserPreferences
 
-case class PersistentData(schemaVersion: Int = 0, filters: Filters = Filters(), whitelist: Whitelist = Whitelist(), userPreferences: UserPreferences = UserPreferences())
+case class PersistentData(schemaVersion: Int = 0, filters: Filters = Filters(), whitelist: Whitelist = Whitelist(), userPreferences: Option[UserPreferences] = Some(UserPreferences()))
 
 class PersistentDataSerialiser {
 

@@ -71,12 +71,12 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
   test("should be backwards compatible with json string without software update preferences") {
     val json: String = """{"schemaVersion":0}"""
     val data = serialiser.deserialise(json)
-    data.userPreferences should equal (UserPreferences(updateAlertActive = false))
+    data.userPreferences should equal (None)
   }
 
   test("serialise Whitelist, maxPrefixLength and preferences") {
     val data: PersistentData = PersistentData(0, Filters(), Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"),
-      IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)), UserPreferences(updateAlertActive = true))
+      IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)), Some(UserPreferences(updateAlertActive = true)))
     val json: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]},"userPreferences":{"updateAlertActive":true}}"""
     serialiser.serialise(data) should equal(json)
     serialiser.deserialise(json) should equal(data)
