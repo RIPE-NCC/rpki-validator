@@ -160,7 +160,7 @@ object Main {
       private def updateAndPersist(f: MemoryImage => MemoryImage) {
         memoryImage.update { memoryImage =>
           val updated = f(memoryImage)
-          PersistentDataSerialiser.write(PersistentData(filters = updated.filters, whitelist = updated.whitelist), dataFile)
+          PersistentDataSerialiser.write(PersistentData(filters = updated.filters, whitelist = updated.whitelist, userPreferences = Some(updated.userPreferences)), dataFile)
           updated
         }
       }
