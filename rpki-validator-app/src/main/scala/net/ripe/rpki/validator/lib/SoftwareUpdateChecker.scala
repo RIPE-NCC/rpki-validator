@@ -60,7 +60,6 @@ trait SoftwareUpdateChecker extends Logging {
   }
 
   def returnNewVersionDetails = {
-
     if (lastCheck == null || new Duration(lastCheck, new DateTime()).isLongerThan(Duration.standardDays(1))) {
       cachedNewVersionDetails = getNewVersionDetailFetcher.readNewVersionDetails
       lastCheck = new DateTime()

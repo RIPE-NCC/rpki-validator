@@ -96,6 +96,5 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
     PersistentDataSerialiser.write(data_some, file)
     FileUtils.readFileToString(file, "UTF-8") should equal(json_some)
     PersistentDataSerialiser.read(file) should equal(Some(data_some))
-
   }
 }
