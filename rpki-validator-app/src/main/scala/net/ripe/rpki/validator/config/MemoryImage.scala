@@ -36,8 +36,9 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 import org.joda.time.DateTime
 import models._
 import scalaz.Validation
+import lib.SoftwareUpdatePreferences
 
-case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, version: Int = 0) {
+case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, softwareUpdatePreferences: SoftwareUpdatePreferences, version: Int = 0) {
   val lastUpdateTime: DateTime = new DateTime
 
   def startProcessingTrustAnchor(tal: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(tal, description))
@@ -58,4 +59,6 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
   def addFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.addFilter(filter))
 
   def removeFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.removeFilter(filter))
+  
+  def updateSoftwareUpdatePreferences(newSoftwareUpdatePreferences: SoftwareUpdatePreferences) = copy(softwareUpdatePreferences = newSoftwareUpdatePreferences)
 }

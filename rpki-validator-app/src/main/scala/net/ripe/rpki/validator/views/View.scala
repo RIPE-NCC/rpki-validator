@@ -35,4 +35,6 @@ trait View {
   def tab: Tab
   def title: NodeSeq
   def body: NodeSeq
+
+
 }

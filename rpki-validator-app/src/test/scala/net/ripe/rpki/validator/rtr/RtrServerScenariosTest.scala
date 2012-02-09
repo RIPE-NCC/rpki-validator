@@ -68,7 +68,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   override def beforeAll() = {
     val trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
     val validatedObjects: ValidatedObjects = new ValidatedObjects(new HashMap[String, Seq[ValidatedObject]])
-    cache = new Atomic(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects))
+    cache = new Atomic(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects, SoftwareUpdatePreferences(false)))
     server = new RTRServer(
       port = port,
       noCloseOnError = false,
@@ -91,7 +91,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     cache.update {
       val trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
       val validatedObjects: ValidatedObjects = new ValidatedObjects(new HashMap[String, Seq[ValidatedObject]])
-      db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects)
+      db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects, SoftwareUpdatePreferences(false))
     }
     client.close()
   }

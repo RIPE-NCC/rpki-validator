@@ -36,6 +36,7 @@ import controllers._
 import views.View
 import views.Layouts
 import net.ripe.rpki.validator.views.DataTableJsonView
+import lib.SoftwareUpdateChecker
 
 abstract class WebFilter extends ScalatraFilter
   with ApplicationController
@@ -46,14 +47,15 @@ abstract class WebFilter extends ScalatraFilter
   with WhitelistController
   with BgpPreviewController
   with ExportController
-  with RtrSessionsController {
+  with RtrSessionsController
+  with PreferencesController {
 
   private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
 
   private def renderView: PartialFunction[Any, Any] = {
     case view: View =>
       contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view))
+      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view, getNewVersionDetails, getSoftwareUpdatePreferences))
     case view: DataTableJsonView[_] =>
       contentType = "application/json"
       view.renderJson

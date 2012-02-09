@@ -33,14 +33,12 @@ import java.net.URI
 import org.joda.time.DateTime
 import java.io.InputStream
 import java.util.Properties
-import java.net.URL
 import grizzled.slf4j.Logging
 import org.joda.time.Duration
-import scalaz.concurrent.Promise
 import java.io.ByteArrayInputStream
 
 case class NewVersionDetails(version: String, url: URI)
-case class SoftwareUpdateOptions(enableChoice: Boolean)
+case class SoftwareUpdatePreferences(enableChoice: Boolean)
 
 trait SoftwareUpdateChecker extends Logging {
 
@@ -48,8 +46,7 @@ trait SoftwareUpdateChecker extends Logging {
   private var cachedNewVersionDetails: Option[NewVersionDetails] = None
 
   def getNewVersionDetailFetcher: NewVersionDetailFetcher
-  def getSoftwareUpdateOptions: Option[SoftwareUpdateOptions]
-  def getCurrentVersion: String
+  def getSoftwareUpdatePreferences: SoftwareUpdatePreferences
 
   /**
    * Get new version details. Will cache for one day. Returns
@@ -57,12 +54,9 @@ trait SoftwareUpdateChecker extends Logging {
    */
   def getNewVersionDetails(): Option[NewVersionDetails] = {
 
-    getSoftwareUpdateOptions match {
-      case None => None
-      case Some(SoftwareUpdateOptions(false)) => None
-      case Some(SoftwareUpdateOptions(true)) => {
-        returnNewVersionDetails
-      }
+    getSoftwareUpdatePreferences.enableChoice match {
+      case true => returnNewVersionDetails
+      case false => None
     }
 
   }

@@ -36,6 +36,7 @@ import net.ripe.ipresource.{IpRange, Asn}
 import java.io.File
 import org.apache.commons.io.FileUtils
 import models._
+import lib.SoftwareUpdatePreferences
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class PersistentDataTest extends FunSuite with ShouldMatchers {
@@ -63,6 +64,20 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
     val data: PersistentData = PersistentData(0, Filters(), Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"),
       IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)))
     val json: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]}}"""
+    serialiser.serialise(data) should equal(json)
+    serialiser.deserialise(json) should equal(data)
+  }
+
+  test("should be backwards compatible with json string without software update preferences") {
+    val json: String = """{"schemaVersion":0}"""
+    val data = serialiser.deserialise(json)
+    data.softwareUpdatePreferences should equal (None)
+  }
+
+  test("serialise Whitelist, maxPrefixLength and preferences") {
+    val data: PersistentData = PersistentData(0, Filters(), Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"),
+      IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)), SoftwareUpdatePreferences(true))
+    val json: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]},"softwareUpdatePreferences":{"enableChoice":true}}"""
     serialiser.serialise(data) should equal(json)
     serialiser.deserialise(json) should equal(data)
   }
