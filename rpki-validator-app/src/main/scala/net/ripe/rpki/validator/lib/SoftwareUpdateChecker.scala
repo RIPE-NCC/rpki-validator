@@ -38,7 +38,7 @@ import org.joda.time.Duration
 import java.io.ByteArrayInputStream
 
 case class NewVersionDetails(version: String, url: URI)
-case class UserPreferences(updateAlertActive: Boolean = false)
+case class UserPreferences(updateAlertActive: Boolean = true)
 
 trait SoftwareUpdateChecker extends Logging {
 

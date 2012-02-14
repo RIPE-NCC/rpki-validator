@@ -33,7 +33,7 @@ package views
 import scala.xml._
 import org.joda.time._
 import config.ReleaseInfo
-import lib.{UserPreferences, NewVersionDetails}
+import lib.{ UserPreferences, NewVersionDetails }
 
 object Layouts {
   def none(view: View): NodeSeq = {
@@ -57,6 +57,7 @@ object Layouts {
         <script src="/javascript/bootstrap/1.3.0/bootstrap-alerts.js"/>
         <script src="/javascript/bootstrap/1.3.0/bootstrap-twipsy.js"/>
         <script src="/javascript/bootstrap/1.3.0/bootstrap-popover.js"/>
+        <script src="/javascript/bootstrap/1.4.0/bootstrap-dropdown.js"/>
         <script type="text/javascript" charset="utf-8"><!--
             $(document).ready(function(){
                 $("#feedbackButton").hover(function(){
@@ -64,56 +65,64 @@ object Layouts {
                 }, function(){
                         $(this).css("left","-5px");
                 });
+        		$(".dropdown").dropdown();
              });
         // --></script>
-
       </head>
       <body>
         <div class="topbar">
           <div class="fill">
             <div class="container">
               <a class="brand" href="/">RPKI Validator</a>
-              <ul class="nav">{
-                for (tab <- Tabs.all) yield {
-                  <li class={ if (tab == view.tab) "active" else "" }><a href={ tab.url }>{ tab.text }</a></li>
+              <ul class="nav">
+                {
+                  for (tab <- Tabs.all) yield {
+                    <li class={ if (tab == view.tab) "active" else "" }><a href={ tab.url }>{ tab.text }</a></li>
+                  }
                 }
-              }</ul>
+                <li class="dropdown">
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown"><img src="/images/cogs.png" width="15" height="17" alt="Settings"/></a>
+                  <ul class="dropdown-menu">
+                    {
+                      userPreferences.updateAlertActive match {
+                        case true => <li><a href="/set-update-alert/false" style="white-space:nowrap">Disable automatic update checks</a></li>
+                        case false => <li><a href="/set-update-alert/true" style="white-space:nowrap">Enable automatic update checks</a></li>
+                      }
+                    }
+                  </ul>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
-
         <div class="container">
-          <div class="alert-message block-message info">
-            {
-              userPreferences.updateAlertActive match {
-                case true  => <p>Automatic version check enabled. <a href="/set-update-alert/false">Disable</a></p>
-                case false => <p>Automatic version check disabled. <a href="/set-update-alert/true">Enable</a></p>
+          {
+            newVersionDetails match {
+              case Some(versionDetails) => {
+                <div class="alert-message block-message info">
+                  <p>New version { versionDetails.version } available <a href={ versionDetails.url.toString }>here</a></p>
+                </div>
               }
+              case None => NodeSeq.Empty
             }
-            {
-              newVersionDetails match {
-                case Some(versionDetails) => <p>New version { versionDetails.version } available <a href={ versionDetails.url.toString }>here</a></p>
-                case None => NodeSeq.Empty
-              }
-            }
-          </div>
-
+          }
           <div class="page-header">
             <h1>{ view.title }</h1>
           </div>
           { view.body }
           <footer>
-          	<div class="copyright">
-          		<img src="/images/ncc-logo.png" align="middle" /> &nbsp;
+            <div class="copyright">
+              <img src="/images/ncc-logo.png" align="middle"/>
+              &nbsp;
 
-              Copyright &copy; { List(2009, (new DateTime).getYear).mkString("-") } the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version { ReleaseInfo.version }
-          	</div>
+              Copyright &copy;{ List(2009, (new DateTime).getYear).mkString("-") }
+              the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version{ ReleaseInfo.version }
+            </div>
           </footer>
         </div>
         <div id="feedbackButton">
-           <a href="mailto:certification@ripe.net?subject=RPKI Validator Feedback"><img src="/images/feedback.png" width="41" height="111" alt="Feedback" /></a>
+          <a href="mailto:certification@ripe.net?subject=RPKI Validator Feedback"><img src="/images/feedback.png" width="41" height="111" alt="Feedback"/></a>
         </div>
-
       </body>
     </html>
   }
