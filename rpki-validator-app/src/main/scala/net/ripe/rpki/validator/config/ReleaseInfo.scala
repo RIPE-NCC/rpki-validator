@@ -31,16 +31,19 @@ package net.ripe.rpki.validator.config
 
 import grizzled.slf4j.Logging
 import java.util.Properties
-import java.io.{FileInputStream, File}
+import java.io.{ FileInputStream, File }
 import scala.collection.JavaConverters._
 
 object ReleaseInfo extends Logging {
   private val releasePropertiesFilePath = "/version.properties"
-  private val data =  {
-      val props = new Properties
-      props.load(new FileInputStream(new File(getClass().getResource(releasePropertiesFilePath).toURI)))
-      props.asScala.toMap
+  private val data = {
+    val props = new Properties
+    val resourceStream = getClass().getResourceAsStream(releasePropertiesFilePath)
+    if (resourceStream != null) {
+    	props.load(resourceStream)
+    }
+    props.asScala.toMap
   }
 
-  val version: String = data("version")
+  val version: String = data.getOrElse("version", "unknown")
 }

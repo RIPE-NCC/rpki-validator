@@ -116,7 +116,7 @@ object Layouts {
               &nbsp;
 
               Copyright &copy;{ List(2009, (new DateTime).getYear).mkString("-") }
-              the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version{ ReleaseInfo.version }
+              the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version { ReleaseInfo.version }
             </div>
           </footer>
         </div>
