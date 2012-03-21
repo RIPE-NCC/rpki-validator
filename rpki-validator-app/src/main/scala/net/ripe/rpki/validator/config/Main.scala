@@ -182,6 +182,7 @@ object Main {
       override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
 
+      override protected def bgpRisDumps = BgpAnnouncementValidator.bgpRisDumps
       override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements
 
       override protected def getRtrPrefixes = memoryImage.get.getDistinctRtrPrefixes()

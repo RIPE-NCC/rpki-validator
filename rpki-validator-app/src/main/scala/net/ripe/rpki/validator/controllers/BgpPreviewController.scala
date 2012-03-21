@@ -32,18 +32,19 @@ package controllers
 
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 
-import bgp.preview.ValidatedAnnouncement
+import bgp.preview._
 import views.BgpPreviewView
 import views.BgpPreviewTableData
 
 trait BgpPreviewController extends ApplicationController {
 
+  protected def bgpRisDumps: Seq[BgpRisDump]
   protected def validatedAnnouncements: IndexedSeq[ValidatedAnnouncement]
 
   private def baseUrl = views.Tabs.BgpPreviewTab.url
 
   get(baseUrl) {
-    new BgpPreviewView()
+    new BgpPreviewView(bgpRisDumps)
   }
 
   get("/bgp-preview-data") {
@@ -53,7 +54,5 @@ trait BgpPreviewController extends ApplicationController {
       }
     }
   }
-
-
 
 }

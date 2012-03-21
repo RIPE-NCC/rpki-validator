@@ -31,7 +31,6 @@ package net.ripe.rpki.validator
 package views
 
 import org.joda.time._
-import org.joda.time.format.PeriodFormat
 import scala.xml.Text
 import scala.xml.NodeSeq
 import scala.collection.SortedMap

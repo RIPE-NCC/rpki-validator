@@ -30,35 +30,45 @@
 package net.ripe.rpki.validator
 package views
 
+import org.joda.time._
 import scala.xml.Text
 import scala.util.Random
 import bgp.preview._
+import lib.DateAndTime._
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import net.ripe.ipresource.Asn
 
-class BgpPreviewView() extends View with ViewHelpers {
+class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump]) extends View with ViewHelpers {
 
-  val MAX_RESULTS = 2000;
+  val now = new Instant()
 
   def tab = Tabs.BgpPreviewTab
   def title = Text("BGP Preview")
   def body = {
     <div class="alert-message block-message info">
       <p>
-      This page provides a <strong>preview</strong> of the likely rpki validity states your routers will
-	  associate with BGP announcements. This preview is based on:
+        This page provides a <strong>preview</strong>
+        of the likely rpki validity states your routers will
+        associate with BGP announcements. This preview is based on:
       </p>
       <ul>
-        <li>BGP announcements that are widely (>5 peers) <a href="http://www.ris.ripe.net/dumps/">seen</a> by the RIPE NCC RIS Route Collectors.</li>
+        <li>BGP announcements that are widely ({ BgpAnnouncementValidator.VISIBILITY_THRESHOLD } or more peers) <a href="http://www.ris.ripe.net/dumps/">seen</a> by the RIPE NCC RIS Route Collectors.</li>
         <li>Validation rules defined in the <a href="http://tools.ietf.org/html/draft-ietf-sidr-roa-validation-10#section-2">IETF standard</a>.</li>
         <li>The validated ROAs found by this validator after applying your filters and additional whitelist entries</li>
       </ul>
-      <br />
+      <br/>
       <p>
-      Please note that the actual validation of announcements is done in your routers and that the announcements that your
-      routers see may differ from the announcements used here.
+        Please note that the actual validation of announcements is done in your routers and that the announcements that your routers see may differ from the announcements used here.
       </p>
     </div>
+    <table id="bgp-ris-dumps" class="zebra-striped">
+      <thead><tr><th>BGP RIS dump URL</th><th>Last Update</th></tr></thead>
+      <tbody>{
+        for (dump <- bgpRisDumps) yield {
+          <tr><td>{ dump.url }</td><td>{ dump.lastModified.map(modified => periodInWords(new Period(modified, now), 2) + " ago").getOrElse("unknown") }</td></tr>
+        }
+      }</tbody>
+    </table>
     <table id="bgp-preview-table" class="zebra-striped" style="display: none;">
       <thead>
         <tr>
@@ -86,9 +96,19 @@ $(document).ready(function() {
   }).live('click', function (e) {
     e.preventDefault();
   });
+  var refreshBgpRisDumps = function() {
+    $.ajax({
+      url: "/bgp-preview",
+      dataType: "html",
+      success: function (data) {
+        var updatedTable = $(data).filter("#bgp-ris-dumps");
+        $("#bgp-ris-dumps").replaceWith(updatedTable);
+      }
+    });
+  };
+  setInterval(refreshBgpRisDumps, 10000);
 });
 // --></script>
   }
 
 }
-

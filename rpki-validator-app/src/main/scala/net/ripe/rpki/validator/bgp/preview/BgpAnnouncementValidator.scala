@@ -71,6 +71,8 @@ class BgpAnnouncementValidator extends Logging {
   @volatile
   private var _validatedAnnouncements = Promise(IndexedSeq.empty[ValidatedAnnouncement])
 
+  def bgpRisDumps = _bgpRisDumps.get
+
   def validatedAnnouncements = _validatedAnnouncements.get
 
   def updateBgpRisDumps(): Unit = {
