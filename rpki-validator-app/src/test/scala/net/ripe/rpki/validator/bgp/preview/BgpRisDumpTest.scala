@@ -37,41 +37,42 @@ import net.ripe.ipresource._
 import java.net.URL
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class RisWhoisTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
+class BgpRisDumpTest extends FunSuite with ShouldMatchers {
 
   test("should parse empty line") {
-    RisWhoisParser.parseLine("") should equal(None)
+    BgpRisDump.parseLine("") should equal(None)
+    BgpRisDump.parseLine("\n") should equal(None)
   }
 
   test("should parse comment line") {
-    RisWhoisParser.parseLine("% this is some comment") should equal(None)
+    BgpRisDump.parseLine("% this is some comment") should equal(None)
   }
 
   test("should parse IPv4 announcement") {
-    val entry = RisWhoisParser.parseLine("3333\t127.0.0.0/8\t201\n")
+    val entry = BgpRisDump.parseLine("3333\t127.0.0.0/8\t201\n")
     entry should equal(Some(new BgpRisEntry(origin = new Asn(3333), prefix = IpRange.parse("127.0.0.0/8"), visibility = 201)))
   }
 
   test("should parse IPv6 announcement") {
-    val entry = RisWhoisParser.parseLine("24490\t2001:254:8000::/33\t62\n")
+    val entry = BgpRisDump.parseLine("24490\t2001:254:8000::/33\t62\n")
     entry should equal(Some(new BgpRisEntry(origin = new Asn(24490), prefix = IpRange.parse("2001:254:8000::/33"), visibility = 62)))
   }
 
   test("should parse IPv4-Embedded Ipv6 announcement") {
-    val entry = RisWhoisParser.parseLine("24490\t::1.2.3.4/128\t62\n")
+    val entry = BgpRisDump.parseLine("24490\t::1.2.3.4/128\t62\n")
     entry should equal(Some(new BgpRisEntry(origin = new Asn(24490), prefix = IpRange.parse("::1.2.3.4/128"), visibility = 62)))
   }
 
   test("should skip malformed line") {
-    val entry = RisWhoisParser.parseLine("24490\t::::/128\t62\n")
+    val entry = BgpRisDump.parseLine("24490\t::::/128\t62\n")
     entry should equal(None)
   }
 
-  test("should read remote file") {
-    val url = Thread.currentThread().getContextClassLoader().getResource("ris/riswhoisdump-head-1000.IPv4.gz")
-    
-    val entries = RisWhoisParser.parseFromUrl(url).toList
-    entries.size should equal (42 * 2) /// and don't ask why! 
+  test("should parse file") {
+    val url = Thread.currentThread().getContextClassLoader().getResourceAsStream("ris/riswhoisdump-example.IPv4.gz")
+
+    val entries = BgpRisDump.parseRisDump(url).right.get
+    entries.size should equal (42 * 2) /// and don't ask why!
     entries should contain (new BgpRisEntry(origin = new Asn(45528), prefix = IpRange.parse("1.22.120.0/24"), visibility = 105))
   }
 

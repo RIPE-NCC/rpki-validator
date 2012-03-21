@@ -67,7 +67,7 @@ case class ValidRoa(uri: URI, checks: Set[ValidationCheck], roa: RoaCms) extends
 class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
 
   def getValidatedRtrPrefixes = {
-      
+
     for {
       (trustAnchorName, validatedObjects) <- all
       ValidRoa(_, _, roa) <- validatedObjects
@@ -76,7 +76,7 @@ class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
       RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(trustAnchorName))
     }
   }
-  
+
   def update(tal: TrustAnchorLocator, validatedObjects: Seq[ValidatedObject]) = {
     new ValidatedObjects(all.updated(tal.getCaName(), validatedObjects))
   }
@@ -99,8 +99,8 @@ object ValidatedObjects {
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
     validatingFetcher.setOuterMostDecorator(cachingFetcher);
 
-    val objects = collection.mutable.Buffer.empty[ValidatedObject]
-    notifyingFetcher.addCallback(new RoaCollector(trustAnchor, objects))
+    val builder = IndexedSeq.newBuilder[ValidatedObject]
+    notifyingFetcher.addCallback(new RoaCollector(trustAnchor, builder))
 
     trustAnchor.getPrefetchUris().asScala.foreach { prefetchUri =>
       logger.info("Prefetching '" + prefetchUri + "'")
@@ -113,12 +113,14 @@ object ValidatedObjects {
     walker.addTrustAnchor(certificate)
     logger.info("Started validating " + trustAnchor.getCaName())
     walker.execute()
+
+    val objects = builder.result()
     logger.info("Finished validating " + trustAnchor.getCaName() + ", fetched " + objects.size + " valid Objects")
 
-    objects.toIndexedSeq
+    objects
   }
 
-  private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Buffer[ValidatedObject]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
+  private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[ValidatedObject, _]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
     override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
       logger.warn("Failed to prefetch '" + uri + "'")
     }
@@ -135,11 +137,11 @@ object ValidatedObjects {
     override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
       obj match {
         case roa: RoaCms =>
-          logger.info("Validated ROA '" + uri + "'")
+          logger.debug("Validated ROA '" + uri + "'")
           objects += new ValidRoa(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, roa)
         case _ =>
           objects += new ValidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, obj)
-          logger.info("Validated OBJECT '" + uri + "'")
+          logger.debug("Validated OBJECT '" + uri + "'")
       }
     }
   }

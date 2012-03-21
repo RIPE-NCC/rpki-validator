@@ -31,9 +31,7 @@ package net.ripe.rpki.validator
 package bgp.preview
 
 import scala.collection.JavaConverters._
-import scala.concurrent.SyncVar
-import scala.concurrent.ops._
-import scalaz.Reducer
+import scalaz._, Scalaz._
 import scalaz.concurrent.Promise
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import lib.Process._
@@ -64,71 +62,55 @@ class BgpAnnouncementValidator extends Logging {
   val VISIBILITY_THRESHOLD = 5
 
   @volatile
-  var announcedRoutes = Promise(IndexedSeq.empty[AnnouncedRoute])
-
-  @volatile
-  var validatedAnnouncements = Promise(IndexedSeq.empty[ValidatedAnnouncement])
-
-  private val latestRtrPrefixes = new SyncVar[Set[RtrPrefix]]
-
-  def updateAnnouncedRoutes(): Unit = {
-    info("Started retrieving new RIS dump files")
-
-    val oldRoutes = announcedRoutes.get
-
-    announcedRoutes = Promise {
-      try {
-        val result = readBgpEntries
-          .filter(_.visibility >= VISIBILITY_THRESHOLD)
-          .map(entry => AnnouncedRoute(entry.origin, entry.prefix))
-          .toArray.distinct
-        info("Finished retrieving new RIS dump files, found " + result.size + " announcements")
-        result
-      } catch {
-        case e: Exception => {
-          error("An error occured while trying to read new RIS bgp entries, using old values")
-          oldRoutes
-        }
-      }
-    }
-
+  private var _bgpRisDumps = Promise {
+    Seq(
+      BgpRisDump(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")),
+      BgpRisDump(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz")))
   }
 
-  protected def readBgpEntries() = {
-    RisWhoisParser.parseFromUrl(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")) ++
-      RisWhoisParser.parseFromUrl(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz"))
+  @volatile
+  private var _validatedAnnouncements = Promise(IndexedSeq.empty[ValidatedAnnouncement])
+
+  def validatedAnnouncements = _validatedAnnouncements.get
+
+  def updateBgpRisDumps(): Unit = {
+    _bgpRisDumps = retrieveBgpRisDumps(_bgpRisDumps)
   }
 
   def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]): Unit = {
-    validatedAnnouncements = Promise({
-      val routes = announcedRoutes.get
-
+    _validatedAnnouncements = announcedRoutes map { routes =>
       info("Started validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
       val prefixTree = NumberResourceIntervalTree(newRtrPrefixes.toSeq: _*)
 
-      routes.par.map(
-        route => {
+      val result = routes.par.map({ route =>
           val matchingPrefixes = prefixTree.filterContaining(route.interval)
           val (validates, invalidates) = matchingPrefixes.partition(validatesAnnouncedRoute(_, route))
           ValidatedAnnouncement(route, validates, invalidates)
         }).seq.toIndexedSeq
-    })
 
-    info("Completed validating " + validatedAnnouncements.get.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
+      info("Completed validating " + result.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
+      result
+    }
   }
+
+  protected def retrieveBgpRisDumps(dumps: Promise[Seq[BgpRisDump]]) = dumps flatMap { _.map(BgpRisDump.refresh).sequence }
 
   private def validatesAnnouncedRoute(prefix: RtrPrefix, announced: AnnouncedRoute): Boolean = {
     prefix.asn == announced.asn &&
       prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()) >= announced.prefix.getPrefixLength()
   }
+
+  private[preview] def announcedRoutes = _bgpRisDumps map { dumps =>
+    val routes = for {
+      dump <- dumps
+      entry <- dump.entries
+      if entry.visibility >= VISIBILITY_THRESHOLD
+    } yield {
+      AnnouncedRoute(entry.origin, entry.prefix)
+    }
+    routes.distinct
+  }
+
 }
 
-object BgpAnnouncementValidator {
-
-  private val singletonValidator = new BgpAnnouncementValidator
-
-  def updateAnnouncedRoutes() = singletonValidator.updateAnnouncedRoutes()
-  def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]) = singletonValidator.updateRtrPrefixes(newRtrPrefixes)
-  def getValidatedAnnouncements = singletonValidator.validatedAnnouncements.get
-
-}
+object BgpAnnouncementValidator extends BgpAnnouncementValidator

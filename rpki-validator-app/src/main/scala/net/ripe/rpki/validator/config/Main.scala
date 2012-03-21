@@ -112,7 +112,7 @@ object Main {
 
   private def scheduleRisDumpRetrieval(memoryImage: Atomic[MemoryImage]) {
     spawnForever("ris-dump-update-scheduler") {
-      BgpAnnouncementValidator.updateAnnouncedRoutes()
+      BgpAnnouncementValidator.updateBgpRisDumps()
       BgpAnnouncementValidator.updateRtrPrefixes(memoryImage.get.getDistinctRtrPrefixes())
       val updateIntervalMillis = 12 * 60 * 60 * 1000 // 12 hours
       Thread.sleep(updateIntervalMillis) // First we wait to avoid loading twice at startup
@@ -182,7 +182,7 @@ object Main {
       override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
 
-      override protected def validatedAnnouncements = BgpAnnouncementValidator.getValidatedAnnouncements
+      override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements
 
       override protected def getRtrPrefixes = memoryImage.get.getDistinctRtrPrefixes()
 

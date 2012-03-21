@@ -84,17 +84,23 @@
         </dependency>
 
         <dependency>
+            <groupId>com.ning</groupId>
+            <artifactId>async-http-client</artifactId>
+            <version>1.7.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>net.liftweb</groupId>
             <artifactId>lift-json_${scala.version}</artifactId>
             <version>2.4-M4</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.clapper</groupId>
             <artifactId>argot_${scala.version}</artifactId>
             <version>0.3.5</version>
         </dependency>
-        
+
         <dependency>
             <!-- http://software.clapper.org/grizzled-slf4j/ -->
             <groupId>org.clapper</groupId>
