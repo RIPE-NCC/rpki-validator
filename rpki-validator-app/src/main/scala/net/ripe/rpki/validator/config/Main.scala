@@ -41,7 +41,7 @@ import org.eclipse.jetty.server.handler.HandlerCollection
 import org.eclipse.jetty.server.NCSARequestLog
 import org.joda.time.DateTime
 import grizzled.slf4j.Logger
-import scalaz.{Success, Failure}
+import scalaz.{ Success, Failure }
 
 import net.ripe.certification.validator.util.TrustAnchorExtractor
 import rtr.Pdu
@@ -109,16 +109,15 @@ object Main {
       Thread.sleep(10000L)
     }
   }
-  
+
   private def scheduleRisDumpRetrieval(memoryImage: Atomic[MemoryImage]) {
     spawnForever("ris-dump-update-scheduler") {
       BgpAnnouncementValidator.updateAnnouncedRoutes()
       BgpAnnouncementValidator.updateRtrPrefixes(memoryImage.get.getDistinctRtrPrefixes())
-      val updateIntervalMillis = 12 * 60 * 60 * 1000    // 12 hours
-      Thread.sleep(updateIntervalMillis)                // First we wait to avoid loading twice at startup
+      val updateIntervalMillis = 12 * 60 * 60 * 1000 // 12 hours
+      Thread.sleep(updateIntervalMillis) // First we wait to avoid loading twice at startup
     }
   }
-  
 
   def runValidator(memoryImage: Atomic[MemoryImage], trustAnchors: Seq[TrustAnchor]) {
     implicit val runner = TaskRunners.threadPoolRunner
@@ -184,7 +183,7 @@ object Main {
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
 
       override protected def validatedAnnouncements = BgpAnnouncementValidator.getValidatedAnnouncements
-      
+
       override protected def getRtrPrefixes = memoryImage.get.getDistinctRtrPrefixes()
 
       protected def sessionData = rtrServer.rtrSessions.allClientData
@@ -192,7 +191,7 @@ object Main {
       // Software Update checker
       override def getNewVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version, () => scala.io.Source.fromURL(new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties"), "UTF-8").mkString)
       override def getUserPreferences = memoryImage.get.userPreferences
-      override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { _.updateUserPreferences(userPreferences)}
+      override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { _.updateUserPreferences(userPreferences) }
     }), "/*", FilterMapping.ALL)
 
     val requestLogHandler = {

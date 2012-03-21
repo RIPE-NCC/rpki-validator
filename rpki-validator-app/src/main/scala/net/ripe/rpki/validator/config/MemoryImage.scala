@@ -59,6 +59,6 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
   def addFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.addFilter(filter))
 
   def removeFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.removeFilter(filter))
-  
+
   def updateUserPreferences(newUserPreferences: UserPreferences) = copy(userPreferences = newUserPreferences)
 }
