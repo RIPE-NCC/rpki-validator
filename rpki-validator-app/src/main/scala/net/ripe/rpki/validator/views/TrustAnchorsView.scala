@@ -69,7 +69,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
                 case Some(certificate) =>
                   val notValidAfter = certificate.getCertificate().getValidityPeriod().getNotValidAfter()
                   <td>{ certificate.getCertificate().getSubject() }</td>
-                  <td><span title={ notValidAfter.toString() }>{ expiresIn(notValidAfter) }</span></td>
+                  <td><span rel="twipsy" data-original-title={ formatDateTime(notValidAfter) }>{ expiresIn(notValidAfter) }</span></td>
                 case None =>
                   <td></td>
                   <td></td>
@@ -77,7 +77,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
             }{
               ta.lastUpdated match {
                 case Some(lastUpdated) =>
-                  <td><span title={ lastUpdated.toString() }>{ periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago" }</span></td>
+                  <td><span rel="twipsy" data-original-title={ formatDateTime(lastUpdated) }>{ periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago" }</span></td>
                 case None =>
                   <td></td>
               }
@@ -87,7 +87,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
                   <td>{ description }</td>
                   <td style="text-align: center;"><img src="/images/spinner.gif"/></td>
                 case Idle(nextUpdate, errorMessage) =>
-                  <td><span title={ nextUpdate.toString() }>{
+                  <td><span rel="twipsy" data-original-title={ formatDateTime(nextUpdate) }>{
                       if (now <= nextUpdate) periodInWords(new Period(now, nextUpdate), number = 1) else "any moment"
                     }</span>{
                       errorMessage.map(text => <span rel="twipsy" data-original-title={text}>&nbsp;<img align="center" src="/images/warningS.png" /></span>).getOrElse(NodeSeq.Empty)

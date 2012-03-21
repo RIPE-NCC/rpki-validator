@@ -37,10 +37,16 @@ import bgp.preview._
 import lib.DateAndTime._
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import net.ripe.ipresource.Asn
+import org.joda.time.format.DateTimeFormat
 
 class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump]) extends View with ViewHelpers {
 
   val now = new Instant()
+
+  private def lastUpdated = bgpRisDumps.flatMap(_.lastModified).toList match {
+    case Nil => <span>is being loaded</span>
+    case times => <span>was last updated <span rel="twipsy" data-original-title={formatDateTime(times.max)}>{periodInWords(new Period(times.max, now), 2)} ago</span></span>
+  }
 
   def tab = Tabs.BgpPreviewTab
   def title = Text("BGP Preview")
@@ -60,15 +66,10 @@ class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump]) extends View with ViewHelpers
       <p>
         Please note that the actual validation of announcements is done in your routers and that the announcements that your routers see may differ from the announcements used here.
       </p>
+      <p>
+        The RIPE NCC Route Collector information <span id="bgp-dump-last-updated">{lastUpdated}</span>.
+      </p>
     </div>
-    <table id="bgp-ris-dumps" class="zebra-striped">
-      <thead><tr><th>BGP RIS dump URL</th><th>Last Update</th></tr></thead>
-      <tbody>{
-        for (dump <- bgpRisDumps) yield {
-          <tr><td>{ dump.url }</td><td>{ dump.lastModified.map(modified => periodInWords(new Period(modified, now), 2) + " ago").getOrElse("unknown") }</td></tr>
-        }
-      }</tbody>
-    </table>
     <table id="bgp-preview-table" class="zebra-striped" style="display: none;">
       <thead>
         <tr>
@@ -96,13 +97,16 @@ $(document).ready(function() {
   }).live('click', function (e) {
     e.preventDefault();
   });
+  $('[rel=twipsy]').twipsy({
+    "live": true
+  });
   var refreshBgpRisDumps = function() {
     $.ajax({
       url: "/bgp-preview",
       dataType: "html",
       success: function (data) {
-        var updatedTable = $(data).filter("#bgp-ris-dumps");
-        $("#bgp-ris-dumps").replaceWith(updatedTable);
+        var updated = $(data).find("#bgp-dump-last-updated");
+        $("#bgp-dump-last-updated").replaceWith(updated);
       }
     });
   };

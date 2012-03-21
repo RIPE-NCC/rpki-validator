@@ -32,11 +32,18 @@ package lib
 
 import org.joda.time._
 import org.joda.time.format.PeriodFormat
+import org.joda.time.format.DateTimeFormat
+import java.util.Locale
 
 object DateAndTime {
-  def periodInWords(period: Period, number: Int = 2): String = {
-    PeriodFormat.getDefault().print(keepMostSignificantPeriodFields(period, number))
-  }
+  def locale = new Locale("en", "UK")
+
+  def dateTimeFormatter = DateTimeFormat.fullDateTime().withLocale(locale)
+  def periodFormatter = PeriodFormat.getDefault().withLocale(locale)
+
+  def formatDateTime(datetime: DateTime) = datetime.toString(dateTimeFormatter)
+
+  def periodInWords(period: Period, number: Int = 2): String = periodFormatter.print(keepMostSignificantPeriodFields(period, number))
 
   def keepMostSignificantPeriodFields(period: Period, number: Int): Period = {
     val values = period.getValues()
