@@ -72,7 +72,7 @@ class NumberResourcesTest extends Spec with ShouldMatchers {
       subject should be('empty)
     }
     it("should not find any match") {
-      subject.filterContaining(Range_10_8) should be('empty)
+      subject.findExactAndAllLessSpecific(Range_10_8) should be('empty)
     }
   }
 
@@ -83,15 +83,15 @@ class NumberResourcesTest extends Spec with ShouldMatchers {
     }
 
     it("should find exact match") {
-      subject.filterContaining(Range_10_8) should contain(RtrPrefix_10_8)
+      subject.findExactAndAllLessSpecific(Range_10_8) should contain(RtrPrefix_10_8)
     }
 
     it("should find containing match") {
-      subject.filterContaining(Range_10_9) should contain(RtrPrefix_10_8)
+      subject.findExactAndAllLessSpecific(Range_10_9) should contain(RtrPrefix_10_8)
     }
 
     it("should not find range outside") {
-      subject.filterContaining(Range_127_8) should be('empty)
+      subject.findExactAndAllLessSpecific(Range_127_8) should be('empty)
     }
   }
 
@@ -102,15 +102,15 @@ class NumberResourcesTest extends Spec with ShouldMatchers {
     }
 
     it("should find exact match") {
-      subject.filterContaining(Range_10_8) should contain(RtrPrefix_10_8)
+      subject.findExactAndAllLessSpecific(Range_10_8) should contain(RtrPrefix_10_8)
     }
 
     it("should find containing matches") {
-      subject.filterContaining(Range_10_9) should (contain(RtrPrefix_10_8) and contain(RtrPrefix_10_9))
+      subject.findExactAndAllLessSpecific(Range_10_9) should (contain(RtrPrefix_10_8) and contain(RtrPrefix_10_9))
     }
 
     it("should not find range outside") {
-      subject.filterContaining(Range_127_8) should be('empty)
+      subject.findExactAndAllLessSpecific(Range_127_8) should be('empty)
     }
   }
 
@@ -121,14 +121,14 @@ class NumberResourcesTest extends Spec with ShouldMatchers {
     val subject = NumberResourceIntervalTree(prefixes: _*)
     it("should find exact matches") {
       for (prefix <- prefixes) {
-        subject.filterContaining(prefix.prefix) should (have size (1) and contain(prefix))
+        subject.findExactAndAllLessSpecific(prefix.prefix) should (have size (1) and contain(prefix))
       }
     }
     it("should find containing match") {
-      subject.filterContaining("1/9") should (have size (1) and contain(RtrPrefix(1, "1/8", None)))
-      subject.filterContaining("33/9") should (have size (1) and contain(RtrPrefix(33, "33/8", None)))
-      subject.filterContaining("99/9") should (have size (1) and contain(RtrPrefix(99, "99/8", None)))
-      subject.filterContaining("100/9") should (have size (1) and contain(RtrPrefix(100, "100/8", None)))
+      subject.findExactAndAllLessSpecific("1/9") should (have size (1) and contain(RtrPrefix(1, "1/8", None)))
+      subject.findExactAndAllLessSpecific("33/9") should (have size (1) and contain(RtrPrefix(33, "33/8", None)))
+      subject.findExactAndAllLessSpecific("99/9") should (have size (1) and contain(RtrPrefix(99, "99/8", None)))
+      subject.findExactAndAllLessSpecific("100/9") should (have size (1) and contain(RtrPrefix(100, "100/8", None)))
     }
   }
 
@@ -139,11 +139,11 @@ class NumberResourcesTest extends Spec with ShouldMatchers {
     val subject = NumberResourceIntervalTree(prefixes: _*)
     it("should find exact matches") {
       for (prefix <- prefixes) {
-        subject.filterContaining(prefix.prefix) should (have size (prefix.maxPrefixLength.get + 1) and contain(prefix))
+        subject.findExactAndAllLessSpecific(prefix.prefix) should (have size (prefix.maxPrefixLength.get + 1) and contain(prefix))
       }
     }
     it("should find containing match") {
-      subject.filterContaining("0/31") should equal(prefixes)
+      subject.findExactAndAllLessSpecific("0/31") should equal(prefixes)
     }
   }
 }

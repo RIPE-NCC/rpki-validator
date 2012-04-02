@@ -76,7 +76,7 @@ class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) ext
     val prefixTree = NumberResourceIntervalTree(prefixes: _*)
 
     val result = announcements.par.map({ route =>
-      val matchingPrefixes = prefixTree.filterContaining(route.interval)
+      val matchingPrefixes = prefixTree.findExactAndAllLessSpecific(route.interval)
       val (validates, invalidates) = matchingPrefixes.partition(validatesAnnouncedRoute(_, route))
       BgpValidatedAnnouncement(route, validates, invalidates)
     }).seq.toIndexedSeq

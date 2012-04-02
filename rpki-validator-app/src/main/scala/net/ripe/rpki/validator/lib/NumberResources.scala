@@ -76,25 +76,24 @@ object NumberResources {
   class NumberResourceIntervalTree[A] private (tree: FingerTree[NumberResourceInterval, A])(implicit measurer: Reducer[A, NumberResourceInterval]) {
     def isEmpty = tree.isEmpty
 
-    def filterContaining(range: NumberResourceInterval): IndexedSeq[A] = {
-      def loop[A](tree: FingerTree[NumberResourceInterval, A])(collect: A => Unit)(implicit measurer: Reducer[A, NumberResourceInterval]) {
-        def collectIfMatches(value: A) = if (measurer.unit(value) contains range) collect(value)
-
-        def collectFinger(finger: Finger[NumberResourceInterval, A]) = if (finger.measure contains range) finger.foreach(collectIfMatches)
-
-        tree.fold(
-          empty = _ => (),
-          single = (_, value) => collectIfMatches(value),
-          deep = (measure, prefix, interior, suffix) => if (measure contains range) {
-            collectFinger(prefix)
-            loop(interior)(_.foreach(collectIfMatches))(FingerTree.NodeMeasure)
-            collectFinger(suffix)
-          })
-      }
-
+    def findExactAndAllLessSpecific(range: NumberResourceInterval): IndexedSeq[A] = {
       val builder = IndexedSeq.newBuilder[A]
-      loop(tree)(builder += _)
+      traverseTree(tree, _ contains range, (a: A) => if (measurer.unit(a) contains range) builder += a)
       builder.result()
+    }
+
+    private[this] final def traverseTree[A](tree: FingerTree[NumberResourceInterval, A], pred: NumberResourceInterval => Boolean, collect: A => Unit) {
+      def traverseFinger(finger: Finger[NumberResourceInterval, A]) = if (pred(finger.measure)) finger.foreach(collect)
+      def traverseNode(node: Node[NumberResourceInterval, A]) = if (pred(node.measure)) node.foreach(collect)
+
+      tree.fold(
+        empty = _ => (),
+        single = (measure, value) => if (pred(measure)) collect(value),
+        deep = (measure, prefix, middle, suffix) => if (pred(measure)) {
+          traverseFinger(prefix)
+          traverseTree(middle, pred, traverseNode)
+          traverseFinger(suffix)
+        })
     }
   }
 
