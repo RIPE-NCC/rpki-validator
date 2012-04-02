@@ -63,8 +63,7 @@ class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with 
   val VALIDATED_ANNOUNCEMENT3 = BgpValidatedAnnouncement(route = ANNOUNCED_ROUTE3, validates = Seq.empty[RtrPrefix], invalidates = Seq.empty[RtrPrefix]) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
 
   val TEST_BGP_DUMPS = {
-    Seq(BgpRisDump(
-      new java.net.URL("http://localhost/"), None, Seq(
+    Seq(BgpRisDump("http://localhost/", None, Seq(
         new BgpRisEntry(origin = AS1, prefix = PREFIX1, visibility = 10),
         new BgpRisEntry(origin = AS2, prefix = PREFIX2, visibility = 5),
         new BgpRisEntry(origin = AS2, prefix = PREFIX3, visibility = 4),

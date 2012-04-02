@@ -54,7 +54,7 @@ object RTRServer {
 }
 
 class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurrentCacheSerial: () => Int,
-                getCurrentRtrPrefixes: () => Set[RtrPrefix], getCurrentNonce: () => Pdu.Nonce)
+                getCurrentRtrPrefixes: () => Set[RtrPrefix], getCurrentNonce: () => Pdu.Nonce)(implicit actorSystem: akka.actor.ActorSystem)
   extends Logging {
 
   import TimeUnit._
@@ -66,13 +66,16 @@ class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurren
 
   val serverHandler = new RTRServerHandler(noCloseOnError, rtrSessions)
 
-  def notify(serial: Long) = {
+  // Use an agent to make notification sending transactional.
+  private val notifier = akka.agent.Agent(())
+
+  def notify(serial: Long) = notifier.send { _ =>
     if (!noNotify) {
       info("Sending Notify with serial %s to all clients".format(serial))
       serverHandler.notifyChildren(rtrSessions.serialNotify(serial))
     }
   }
-    
+
   def startServer() {
 
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
@@ -139,7 +142,7 @@ class RTRServerHandler(noCloseOnError: Boolean = false, clients: RtrSessions[Soc
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
     val clientAddress = context.getChannel().getRemoteAddress()
-    
+
     // decode and process
     val requestPdu = event.getMessage().asInstanceOf[Either[BadData, Pdu]]
     val responsePdus: Seq[Pdu] = clients.responseForRequest(clientAddress, requestPdu)

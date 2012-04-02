@@ -69,9 +69,9 @@ class BgpRisDumpTest extends FunSuite with ShouldMatchers {
   }
 
   test("should parse file") {
-    val url = Thread.currentThread().getContextClassLoader().getResourceAsStream("ris/riswhoisdump-example.IPv4.gz")
+    val inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("ris/riswhoisdump-example.IPv4")
 
-    val entries = BgpRisDump.parseRisDump(url).right.get
+    val entries = BgpRisDump.parse(inputStream).right.get
     entries.size should equal (42 * 2) /// and don't ask why!
     entries should contain (new BgpRisEntry(origin = new Asn(45528), prefix = IpRange.parse("1.22.120.0/24"), visibility = 105))
   }

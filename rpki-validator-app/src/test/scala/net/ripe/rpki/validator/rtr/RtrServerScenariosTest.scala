@@ -61,20 +61,21 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   var server: RTRServer = null
   var client: RTRClient = null
 
-  var cache: Atomic[MemoryImage] = null
+  var cache: scala.concurrent.stm.Ref[MemoryImage] = null
 
   var nonce: Short = new Random().nextInt(65536).toShort
 
   override def beforeAll() = {
+    implicit val actorSystem = akka.actor.ActorSystem()
     val trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
     val validatedObjects: ValidatedObjects = new ValidatedObjects(new HashMap[String, Seq[ValidatedObject]])
-    cache = new Atomic(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects, UserPreferences(false)))
+    cache = scala.concurrent.stm.Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects, UserPreferences(false)))
     server = new RTRServer(
       port = port,
       noCloseOnError = false,
       noNotify = false,
-      getCurrentCacheSerial = { () => cache.get.version },
-      getCurrentRtrPrefixes = { () => cache.get.getDistinctRtrPrefixes() },
+      getCurrentCacheSerial = { () => cache.single.get.version },
+      getCurrentRtrPrefixes = { () => cache.single.get.getDistinctRtrPrefixes() },
       getCurrentNonce = { () => nonce })
     server.startServer()
   }
@@ -88,7 +89,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   }
 
   after {
-    cache.update {
+    cache.single.transform {
       val trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
       val validatedObjects: ValidatedObjects = new ValidatedObjects(new HashMap[String, Seq[ValidatedObject]])
       db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects, UserPreferences(false))
@@ -124,7 +125,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
 
     val roas = collection.mutable.Seq.apply[ValidRoa](validatedRoa)
 
-    cache.update { db => db.updateValidatedObjects(tal, roas) }
+    cache.single.transform { db => db.updateValidatedObjects(tal, roas) }
 
     client.sendPdu(ResetQueryPdu())
     var responsePdus = client.getResponse(expectedNumber = 5)
@@ -167,7 +168,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     iter.next() match {
       case EndOfDataPdu(responseNonce, serial) =>
         responseNonce should equal(nonce)
-        serial should equal(cache.get.version)
+        serial should equal(cache.single.get.version)
         lastSerial = serial
       case _ => fail("Expected end of data")
     }
@@ -196,8 +197,8 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     client should be ('connected)
 
     // Update ROAs, client should get notify
-    cache.update { db => db.updateValidatedObjects(tal, roas) }
-    server.notify(cache.get.version)
+    cache.single.transform { db => db.updateValidatedObjects(tal, roas) }
+    server.notify(cache.single.get.version)
 
     var responsePdusAfterCacheUpdate = client.getResponse(expectedNumber = 1)
     responsePdusAfterCacheUpdate.size should equal(1)
@@ -295,7 +296,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
 //    // 16777217 is one over frame length: in hex 01 00 00 01
 //    println(Runtime.getRuntime().freeMemory());
 //    System.gc();
-//    
+//
 //    client.sendData(Array[Byte](0x0, 0x2, 0x0, 0x0, 0x1, 0x0, 0x0, 0x1) ++ Array.fill[Byte](RTRServer.MAXIMUM_FRAME_LENGTH + 1 - 8)(0))
 ////    client.sendData(Array[Byte](0x0, 0x2, 0x0, 0x0, 0x1, 0x0, 0x0, 0x1))
 ////    for (_ <- 1 to RTRServer.MAXIMUM_FRAME_LENGTH + 1 - 8) {
