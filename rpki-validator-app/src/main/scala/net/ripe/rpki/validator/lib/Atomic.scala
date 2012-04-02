@@ -30,9 +30,7 @@
 package net.ripe.rpki.validator
 package lib
 
-import java.util.concurrent.atomic.AtomicReference
-
-class Atomic[T](initialValue: T, listener: T => Unit = (_: T) => ()) {
+class Atomic[T](initialValue: T) {
   /**
    * Reads the current value.
    */
@@ -46,7 +44,6 @@ class Atomic[T](initialValue: T, listener: T => Unit = (_: T) => ()) {
       val current = get
       val updated = f(current)
       currentValue = updated
-      listener(updated)
     }
   }
 

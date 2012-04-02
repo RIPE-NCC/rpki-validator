@@ -58,8 +58,6 @@ object Main {
 
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
 
-  private var memoryImageListener = Set.empty[MemoryImage => Unit]
-
   def main(args: Array[String]): Unit = Options.parse(args) match {
     case Right(options) => run(options)
     case Left(message) => error(message)
@@ -70,17 +68,13 @@ object Main {
     val roas = ValidatedObjects(trustAnchors)
     val dataFile = new File(options.dataFileName).getCanonicalFile()
     val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
-    val memoryImage = new Atomic[MemoryImage](
-      MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.userPreferences.getOrElse(UserPreferences())),
-      memoryImage => for (listener <- memoryImageListener) listener(memoryImage))
+    val memoryImage = new Atomic(
+      MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.userPreferences.getOrElse(UserPreferences())))
 
     val rtrServer = runRtrServer(options, memoryImage)
     runWebServer(options, dataFile, memoryImage, rtrServer)
 
-    registerMemoryImageListener(memoryImage => BgpAnnouncementValidator.updateRtrPrefixes(memoryImage.getDistinctRtrPrefixes()))
-    registerMemoryImageListener(memoryImage => rtrServer.notify(memoryImage.version))
-
-    scheduleValidator(memoryImage)
+    scheduleValidator(memoryImage, rtrServer)
     scheduleRisDumpRetrieval(memoryImage)
   }
 
@@ -95,7 +89,7 @@ object Main {
     TrustAnchors.load(tals.asScala, "tmp/tals")
   }
 
-  private def scheduleValidator(memoryImage: Atomic[MemoryImage]) {
+  private def scheduleValidator(memoryImage: Atomic[MemoryImage], rtrServer: RTRServer) {
     spawnForever("validator-scheduler") {
       val trustAnchors = memoryImage.get.trustAnchors
       val now = new DateTime
@@ -104,7 +98,7 @@ object Main {
         Idle(nextUpdate, _) = ta.status if nextUpdate <= now
       } yield ta
 
-      runValidator(memoryImage, needUpdating)
+      runValidator(memoryImage, needUpdating, rtrServer)
 
       Thread.sleep(10000L)
     }
@@ -119,7 +113,7 @@ object Main {
     }
   }
 
-  def runValidator(memoryImage: Atomic[MemoryImage], trustAnchors: Seq[TrustAnchor]) {
+  def runValidator(memoryImage: Atomic[MemoryImage], trustAnchors: Seq[TrustAnchor], rtrServer: RTRServer) {
     implicit val runner = TaskRunners.threadPoolRunner
     for (ta <- trustAnchors; if ta.status.isIdle) {
       memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
@@ -130,8 +124,11 @@ object Main {
           memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating ROAs") }
 
           val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate)
-          memoryImage.update {
-            _.updateValidatedObjects(ta.locator, validatedObjects).finishedProcessingTrustAnchor(ta.locator, Success(certificate))
+          memoryImage.update { memoryImage =>
+            val result = memoryImage.updateValidatedObjects(ta.locator, validatedObjects).finishedProcessingTrustAnchor(ta.locator, Success(certificate))
+            BgpAnnouncementValidator.updateRtrPrefixes(result.getDistinctRtrPrefixes())
+            rtrServer.notify(result.version)
+            result
           }
         } catch {
           case e: Exception =>
@@ -164,7 +161,7 @@ object Main {
         }
       }
 
-      override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = Main.runValidator(memoryImage, trustAnchors)
+      override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = Main.runValidator(memoryImage, trustAnchors, rtrServer)
 
       override def trustAnchors = memoryImage.get.trustAnchors
 
@@ -238,10 +235,6 @@ object Main {
       })
     rtrServer.startServer()
     rtrServer
-  }
-
-  private def registerMemoryImageListener(function: MemoryImage => Unit) = {
-    memoryImageListener = memoryImageListener + (function)
   }
 
 }
