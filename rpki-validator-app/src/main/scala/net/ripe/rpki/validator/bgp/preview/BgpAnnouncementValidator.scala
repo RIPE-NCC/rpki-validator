@@ -57,25 +57,21 @@ case class BgpValidatedAnnouncement(route: BgpAnnouncement, validates: Seq[RtrPr
   }
 }
 
-class BgpAnnouncementValidator extends Logging {
-  import scala.concurrent.SyncVar
-
+object BgpAnnouncementValidator {
   val VISIBILITY_THRESHOLD = 5
+}
+class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) extends Logging {
+  import akka.util.duration._
 
-  private val _update: SyncVar[(Seq[BgpAnnouncement], Seq[RtrPrefix])] = new SyncVar
+  private val _validatedAnnouncements = akka.agent.Agent(IndexedSeq.empty[BgpValidatedAnnouncement])
 
-  @volatile
-  private var _validatedAnnouncements = IndexedSeq.empty[BgpValidatedAnnouncement]
+  def validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement] = _validatedAnnouncements.await(30 seconds)
 
-  def validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement] = _validatedAnnouncements
-
-  def update(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]): Unit = {
-    _update.set((announcements, prefixes))
+  def startUpdate(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]): Unit = _validatedAnnouncements.sendOff {
+    _ => validate(announcements, prefixes)
   }
 
-  def spawn(): Unit = spawnForever("bgp-announcement-validator") {
-    val (announcements, prefixes) = _update.take()
-
+  private def validate(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]): IndexedSeq[BgpValidatedAnnouncement] = {
     info("Started validating " + announcements.size + " BGP announcements with " + prefixes.size + " RTR prefixes.")
     val prefixTree = NumberResourceIntervalTree(prefixes: _*)
 
@@ -84,9 +80,10 @@ class BgpAnnouncementValidator extends Logging {
       val (validates, invalidates) = matchingPrefixes.partition(validatesAnnouncedRoute(_, route))
       BgpValidatedAnnouncement(route, validates, invalidates)
     }).seq.toIndexedSeq
-    _validatedAnnouncements = result
 
     info("Completed validating " + result.size + " BGP announcements with " + prefixes.size + " RTR prefixes.")
+
+    result
   }
 
   private def validatesAnnouncedRoute(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
@@ -95,5 +92,3 @@ class BgpAnnouncementValidator extends Logging {
   }
 
 }
-
-object BgpAnnouncementValidator extends BgpAnnouncementValidator

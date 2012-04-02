@@ -32,59 +32,52 @@ package config
 
 import java.io.File
 import scala.collection.JavaConverters._
-import scala.concurrent.TaskRunners
-import scala.concurrent.ops._
 import org.apache.commons.io.FileUtils
 import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.server.handler.RequestLogHandler
-import org.eclipse.jetty.server.handler.HandlerCollection
-import org.eclipse.jetty.server.NCSARequestLog
 import org.joda.time.DateTime
 import grizzled.slf4j.Logger
-import scalaz.{ Success, Failure }
-
 import net.ripe.certification.validator.util.TrustAnchorExtractor
 import rtr.Pdu
 import rtr.RTRServer
 import lib._
-import lib.DateAndTime._
-import lib.Process._
 import models._
 import bgp.preview._
+import scalaz.{ Success, Failure }
+import akka.dispatch.Future
 
 object Main {
-
-  val logger = Logger[this.type]
-
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
 
   def main(args: Array[String]): Unit = Options.parse(args) match {
-    case Right(options) => run(options)
-    case Left(message) => error(message)
+    case Right(options) =>
+      new Main(options)
+    case Left(message) =>
+      println(message)
+      sys.exit(1)
   }
+}
+class Main(options: Options) { main =>
+  import akka.util.duration._
 
-  private def run(options: Options): Unit = {
-    val trustAnchors = loadTrustAnchors()
-    val roas = ValidatedObjects(trustAnchors)
-    val dataFile = new File(options.dataFileName).getCanonicalFile()
-    val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
-    val memoryImage = new Atomic(
-      MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.userPreferences.getOrElse(UserPreferences())))
+  val logger = Logger[this.type]
 
-    val rtrServer = runRtrServer(options, memoryImage)
-    runWebServer(options, dataFile, memoryImage, rtrServer)
+  implicit val actorSystem = akka.actor.ActorSystem()
 
-    scheduleValidator(memoryImage, rtrServer)
-    scheduleRisDumpRetrieval(memoryImage)
-    BgpAnnouncementValidator.spawn()
-  }
+  val bgpAnnouncementValidator = new BgpAnnouncementValidator
+  val trustAnchors = loadTrustAnchors()
+  val roas = ValidatedObjects(trustAnchors)
+  val dataFile = new File(options.dataFileName).getCanonicalFile()
+  val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
+  val memoryImage = new Atomic(
+    MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.userPreferences.getOrElse(UserPreferences())))
 
-  private def error(message: String) = {
-    println(message)
-    sys.exit(1)
-  }
+  val rtrServer = runRtrServer()
+  runWebServer()
 
-  def loadTrustAnchors(): TrustAnchors = {
+  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { runValidator() }
+  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 2 hours) { refreshRisDumps() }
+
+  private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
     val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[ju.Collection[File]])
     TrustAnchors.load(tals.asScala, "tmp/tals")
@@ -95,7 +88,7 @@ object Main {
     BgpRisDump(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")),
     BgpRisDump(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz")))
 
-  private def announcedRoutes = (for {
+  private def announcedRoutes(dumps: Seq[BgpRisDump]) = (for {
     dump <- bgpRisDumps
     entry <- dump.entries
     if entry.visibility >= BgpAnnouncementValidator.VISIBILITY_THRESHOLD
@@ -103,35 +96,31 @@ object Main {
     BgpAnnouncement(entry.origin, entry.prefix)
   }).distinct
 
-  private def scheduleRisDumpRetrieval(memoryImage: Atomic[MemoryImage]): Unit = spawnForever("ris-dump-update-scheduler") {
-    bgpRisDumps = bgpRisDumps.map(BgpRisDump.refresh).map(_.get)
-
-    BgpAnnouncementValidator.update(announcedRoutes, memoryImage.get.getDistinctRtrPrefixes().toSeq)
-
-    val updateIntervalMillis = 12 * 60 * 60 * 1000 // 12 hours
-    Thread.sleep(updateIntervalMillis) // First we wait to avoid loading twice at startup
-  }
-
-  private def scheduleValidator(memoryImage: Atomic[MemoryImage], rtrServer: RTRServer) {
-    spawnForever("validator-scheduler") {
-      val trustAnchors = memoryImage.get.trustAnchors
-      val now = new DateTime
-      val needUpdating = for {
-        ta <- trustAnchors.all if ta.status.isIdle
-        Idle(nextUpdate, _) = ta.status if nextUpdate <= now
-      } yield ta
-
-      runValidator(memoryImage, needUpdating, rtrServer)
-
-      Thread.sleep(10000L)
+  private def refreshRisDumps() {
+    Future.sequence(bgpRisDumps.map(BgpRisDump.refresh)) onSuccess {
+      case dumps =>
+        bgpAnnouncementValidator.startUpdate(announcedRoutes(dumps), memoryImage.get.getDistinctRtrPrefixes().toSeq)
+        bgpRisDumps = dumps
     }
   }
 
-  private def runValidator(memoryImage: Atomic[MemoryImage], trustAnchors: Seq[TrustAnchor], rtrServer: RTRServer) {
-    implicit val runner = TaskRunners.threadPoolRunner
+  private def runValidator() {
+    import lib.DateAndTime._
+
+    val now = new DateTime
+    val needUpdating = for {
+      ta <- memoryImage.get.trustAnchors.all if ta.status.isIdle
+      Idle(nextUpdate, _) = ta.status
+      if nextUpdate <= now
+    } yield ta
+
+    runValidator(needUpdating)
+  }
+
+  private def runValidator(trustAnchors: Seq[TrustAnchor]) {
     for (ta <- trustAnchors; if ta.status.isIdle) {
       memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
-      spawn {
+      Future {
         try {
           val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
           logger.info("Loaded trust anchor from location " + certificate.getLocation())
@@ -140,7 +129,7 @@ object Main {
           val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate)
           memoryImage.update { memoryImage =>
             val result = memoryImage.updateValidatedObjects(ta.locator, validatedObjects).finishedProcessingTrustAnchor(ta.locator, Success(certificate))
-            BgpAnnouncementValidator.update(announcedRoutes, result.getDistinctRtrPrefixes().toSeq)
+            bgpAnnouncementValidator.startUpdate(announcedRoutes(bgpRisDumps), result.getDistinctRtrPrefixes().toSeq)
             rtrServer.notify(result.version)
             result
           }
@@ -156,8 +145,38 @@ object Main {
     }
   }
 
-  def setup(server: Server, dataFile: File, memoryImage: Atomic[MemoryImage], rtrServer: RTRServer): Server = {
+  private def runWebServer() {
+    val server = setup(new Server(options.httpPort))
+
+    sys.addShutdownHook({
+      server.stop()
+      logger.info("Terminating...")
+    })
+    server.start()
+    logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + options.httpPort + ". Hit CTRL+C to terminate.")
+  }
+
+  private def runRtrServer(): RTRServer = {
+    val rtrServer = new RTRServer(port = options.rtrPort, noCloseOnError = options.noCloseOnError,
+      noNotify = options.noNotify,
+      getCurrentCacheSerial = {
+        () => memoryImage.get.version
+      },
+      getCurrentRtrPrefixes = {
+        () => memoryImage.get.getDistinctRtrPrefixes()
+      },
+      getCurrentNonce = {
+        () => Main.nonce
+      })
+    rtrServer.startServer()
+    rtrServer
+  }
+
+  private def setup(server: Server): Server = {
     import org.eclipse.jetty.servlet._
+    import org.eclipse.jetty.server.handler.RequestLogHandler
+    import org.eclipse.jetty.server.handler.HandlerCollection
+    import org.eclipse.jetty.server.NCSARequestLog
     import org.scalatra._
 
     val root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS)
@@ -171,21 +190,18 @@ object Main {
         memoryImage.update { memoryImage =>
           val updated = f(memoryImage)
           PersistentDataSerialiser.write(PersistentData(filters = updated.filters, whitelist = updated.whitelist, userPreferences = Some(updated.userPreferences)), dataFile)
-          BgpAnnouncementValidator.update(announcedRoutes, updated.getDistinctRtrPrefixes().toSeq)
+          bgpAnnouncementValidator.startUpdate(announcedRoutes(bgpRisDumps), updated.getDistinctRtrPrefixes().toSeq)
           rtrServer.notify(updated.version)
           updated
         }
       }
 
-      override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = Main.runValidator(memoryImage, trustAnchors, rtrServer)
+      override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = main.runValidator()
 
-      override def trustAnchors = memoryImage.get.trustAnchors
-
-      override def validatedObjects = memoryImage.get.validatedObjects
-
-      override def version = memoryImage.get.version
-
-      override def lastUpdateTime = memoryImage.get.lastUpdateTime
+      override protected def trustAnchors = memoryImage.get.trustAnchors
+      override protected def validatedObjects = memoryImage.get.validatedObjects
+      override protected def version = memoryImage.get.version
+      override protected def lastUpdateTime = memoryImage.get.lastUpdateTime
 
       override protected def filters = memoryImage.get.filters
       override protected def addFilter(filter: IgnoreFilter) = updateAndPersist { _.addFilter(filter) }
@@ -195,8 +211,8 @@ object Main {
       override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
 
-      override protected def bgpRisDumps = Main.bgpRisDumps
-      override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements
+      override protected def bgpRisDumps = main.bgpRisDumps
+      override protected def validatedAnnouncements = bgpAnnouncementValidator.validatedAnnouncements
 
       override protected def getRtrPrefixes = memoryImage.get.getDistinctRtrPrefixes()
 
@@ -224,33 +240,6 @@ object Main {
     handlers.addHandler(requestLogHandler)
     server.setHandler(handlers)
     server
-  }
-
-  private def runWebServer(options: Options, dataFile: File, memoryImage: Atomic[MemoryImage], rtrServer: RTRServer) {
-    val server = setup(new Server(options.httpPort), dataFile, memoryImage: Atomic[MemoryImage], rtrServer)
-
-    sys.addShutdownHook({
-      server.stop()
-      logger.info("Terminating...")
-    })
-    server.start()
-    logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + options.httpPort + ". Hit CTRL+C to terminate.")
-  }
-
-  private def runRtrServer(options: Options, memoryImage: Atomic[MemoryImage]): RTRServer = {
-    val rtrServer = new RTRServer(port = options.rtrPort, noCloseOnError = options.noCloseOnError,
-      noNotify = options.noNotify,
-      getCurrentCacheSerial = {
-        () => memoryImage.get.version
-      },
-      getCurrentRtrPrefixes = {
-        () => memoryImage.get.getDistinctRtrPrefixes()
-      },
-      getCurrentNonce = {
-        () => Main.nonce
-      })
-    rtrServer.startServer()
-    rtrServer
   }
 
 }

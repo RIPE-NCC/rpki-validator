@@ -40,7 +40,7 @@ import net.ripe.ipresource.IpRange
 import scalaz.concurrent.Promise
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
+class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers {
 
   val AS1 = Asn.parse("AS65001")
   val AS2 = Asn.parse("AS65002")
@@ -73,49 +73,40 @@ class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with 
 
   val TEST_ANNOUNCEMENTS_FROM_RIS: IndexedSeq[BgpAnnouncement] = Vector(ANNOUNCED_ROUTE1, ANNOUNCED_ROUTE2, ANNOUNCED_ROUTE3)
 
-  val TEST_RTR_PREFIXES = {
-    Set.empty[RtrPrefix] +
-      RTR_PREFIX1 +
-      RTR_PREFIX2
-  }
+  val TEST_RTR_PREFIXES = Vector(RTR_PREFIX1, RTR_PREFIX2)
 
   val TEST_VALIDATED_ANNOUNCEMENTS = {
-    Set.empty[ValidatedAnnouncement] +
+    Set.empty[BgpValidatedAnnouncement] +
       VALIDATED_ANNOUNCEMENT1 +
       VALIDATED_ANNOUNCEMENT2 +
       VALIDATED_ANNOUNCEMENT3
   }
 
-  test("should update announced routes with visibility threshold 5") {
-    val announcementValidator = new BgpAnnouncementValidator {
-      override protected def retrieveBgpRisDumps(dumps: Promise[Seq[BgpRisDump]]) = Promise { TEST_BGP_DUMPS }
-    }
+  implicit val actorSystem = akka.actor.ActorSystem()
+  private val subject = new BgpAnnouncementValidator
 
-    announcementValidator.updateBgpRisDumps()
-    val announcementsFound = announcementValidator.announcedRoutes.get
-
-    announcementsFound.size should equal(TEST_ANNOUNCEMENTS_FROM_RIS.size)
-
-    announcementsFound.foreach {
-      announcement => TEST_ANNOUNCEMENTS_FROM_RIS should contain(announcement)
-    }
-  }
-
+//  test("should update announced routes with visibility threshold 5") {
+//    val announcementValidator = new BgpAnnouncementValidator {
+//      override protected def retrieveBgpRisDumps(dumps: Promise[Seq[BgpRisDump]]) = Promise { TEST_BGP_DUMPS }
+//    }
+//
+//    announcementValidator.updateBgpRisDumps()
+//    val announcementsFound = announcementValidator.announcedRoutes.get
+//
+//    announcementsFound.size should equal(TEST_ANNOUNCEMENTS_FROM_RIS.size)
+//
+//    announcementsFound.foreach {
+//      announcement => TEST_ANNOUNCEMENTS_FROM_RIS should contain(announcement)
+//    }
+//  }
+//
   test("should validate prefixes") {
-    val announcementValidator = new BgpAnnouncementValidator {
-      override protected def retrieveBgpRisDumps(dumps: Promise[Seq[BgpRisDump]]) = Promise { TEST_BGP_DUMPS }
-    }
+    subject.startUpdate(TEST_ANNOUNCEMENTS_FROM_RIS, TEST_RTR_PREFIXES)
 
-    announcementValidator.updateBgpRisDumps()
-    val announcementsFound = announcementValidator.announcedRoutes.get
-
-    announcementValidator.updateRtrPrefixes(TEST_RTR_PREFIXES)
-
-    val foundValidatedAnnouncements = announcementValidator.validatedAnnouncements
-
-    foundValidatedAnnouncements.size should equal(TEST_VALIDATED_ANNOUNCEMENTS.size)
+    val result = subject.validatedAnnouncements
+    result.size should equal(TEST_VALIDATED_ANNOUNCEMENTS.size)
     TEST_VALIDATED_ANNOUNCEMENTS.foreach {
-      expectedAnnouncement => foundValidatedAnnouncements should contain(expectedAnnouncement)
+      expectedAnnouncement => result should contain(expectedAnnouncement)
     }
   }
 

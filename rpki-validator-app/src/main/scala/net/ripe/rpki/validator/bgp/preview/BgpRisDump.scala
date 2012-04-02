@@ -37,10 +37,11 @@ import java.io.InputStreamReader
 import java.io.Reader
 import java.net.URL
 import java.util.zip.GZIPInputStream
+import javax.servlet.http.HttpServletResponse._
 import grizzled.slf4j.Logging
 import org.joda.time.DateTime
-import scalaz.concurrent.Promise
-import scalaz.concurrent.Strategy
+import akka.dispatch.ExecutionContext
+import akka.dispatch.{ Future, Promise }
 import com.ning.http.client.AsyncHttpClient
 import com.ning.http.client.AsyncCompletionHandler
 import com.ning.http.client.Response
@@ -54,43 +55,43 @@ object BgpRisDump extends Logging {
   private lazy val http = new AsyncHttpClient()
 
   /**
-   * Refreshes the given BgpRisDump. If the source information was not modified or could not be retrieved the original dump is returned.
+   * Refreshes the given BgpRisDump. If the source information was not modified or could not be retrieved the input dump is returned.
    */
-  def refresh(dump: BgpRisDump): Promise[BgpRisDump] = {
-    import javax.servlet.http.HttpServletResponse._
-
+  def refresh(dump: BgpRisDump)(implicit ec: ExecutionContext): Future[BgpRisDump] = {
     val url = dump.url
-    val result = new Promise[BgpRisDump]()
-    info("Retrieving BGP entries from " + dump.url)
+    info("Retrieving BGP entries from " + url)
+
     val request = http.prepareGet(url.toString()).setFollowRedirects(true)
     dump.lastModified foreach { lastModified =>
       request.setHeader("If-Modified-Since", DateUtil.formatDate(lastModified.toDate()))
     }
 
+    val result = Promise[BgpRisDump]()
     request.execute(new AsyncCompletionHandler[Unit] {
       override def onCompleted(response: Response) = response.getStatusCode() match {
         case SC_OK =>
           parseRisDump(response.getResponseBodyAsStream()) match {
             case Left(exception) =>
               error("Error parsing BGP entries from " + url + ". " + exception.toString(), exception)
-              result.fulfill(dump)
+              result.success(dump)
             case Right(entries) =>
               val modified = lastModified(response)
               info("Retrieved " + entries.size + " entries from " + url + ", last modified at " + modified.getOrElse("unknown"))
-              result.fulfill(BgpRisDump(url, modified, entries))
+              result.success(dump.copy(lastModified = modified, entries = entries))
           }
         case SC_NOT_MODIFIED if dump.lastModified.isDefined =>
           info("BGP entries from " + url + " were not modified since " + dump.lastModified.get)
-          result.fulfill(dump)
+          result.success(dump)
         case _ =>
           warn("error retrieving BGP entries from " + url + ". Code: " + response.getStatusCode() + " " + response.getStatusText())
-          result.fulfill(dump)
+          result.success(dump)
       }
       override def onThrowable(t: Throwable) = {
         error("error retrieving BGP entries from " + url, t)
-        result.fulfill(dump)
+        result.success(dump)
       }
     })
+
     result
   }
 
