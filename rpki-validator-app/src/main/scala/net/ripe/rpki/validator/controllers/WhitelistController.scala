@@ -39,15 +39,15 @@ import Scalaz._
 import lib.Validation._
 import models._
 import views.WhitelistView
-import net.ripe.rpki.validator.bgp.preview.ValidatedAnnouncement
+import net.ripe.rpki.validator.bgp.preview.BgpValidatedAnnouncement
 
 trait WhitelistController extends ApplicationController {
   protected def whitelist: Whitelist
   protected def addWhitelistEntry(entry: RtrPrefix): Unit
   protected def removeWhitelistEntry(entry: RtrPrefix): Unit
   protected def entryExists(entry: RtrPrefix): Boolean = whitelist.entries.contains(entry)
-  
-  protected def validatedAnnouncements: IndexedSeq[ValidatedAnnouncement]
+
+  protected def validatedAnnouncements: Seq[BgpValidatedAnnouncement]
 
   private def baseUrl = views.Tabs.WhitelistTab.url
 

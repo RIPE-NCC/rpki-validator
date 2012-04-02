@@ -31,14 +31,14 @@ package net.ripe.rpki.validator
 package views
 
 import lib.NumberResources._
-import bgp.preview.ValidatedAnnouncement
+import bgp.preview.BgpValidatedAnnouncement
 import net.ripe.ipresource.IpRange
 import net.ripe.ipresource.Asn
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import scala.xml.NodeSeq
 import scala.xml.Xhtml
 
-abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[ValidatedAnnouncement]) extends DataTableJsonView[ValidatedAnnouncement] {
+abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement]) extends DataTableJsonView[BgpValidatedAnnouncement] {
 
   private object RouteValidityStateOrdering extends Ordering[RouteValidityState] {
     override def compare(x: RouteValidityState, y: RouteValidityState) = x.toString compareTo y.toString
@@ -49,7 +49,7 @@ abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[ValidatedA
     case RouteValidityState.VALID => "label notice"
   }
 
-  override def getValuesForRecord(announcement: ValidatedAnnouncement) = {
+  override def getValuesForRecord(announcement: BgpValidatedAnnouncement) = {
     def reason =
       <table>
         <thead>
@@ -76,7 +76,7 @@ abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[ValidatedA
       Xhtml.toXhtml(validity))
   }
 
-  override def filter(searchCriterium: Any): ValidatedAnnouncement => Boolean = searchCriterium match {
+  override def filter(searchCriterium: Any): BgpValidatedAnnouncement => Boolean = searchCriterium match {
     case range: IpRange => (record => record.prefix.overlaps(range))
     case asn: Asn => (record => record.asn == asn)
     case searchString: String =>

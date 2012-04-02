@@ -35,10 +35,10 @@ import Scalaz._
 import scala.xml._
 import models._
 import lib.Validation._
-import bgp.preview.ValidatedAnnouncement
+import bgp.preview.BgpValidatedAnnouncement
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 
-class WhitelistView(whitelist: Whitelist, validatedAnnouncements: IndexedSeq[ValidatedAnnouncement], params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
+class WhitelistView(whitelist: Whitelist, validatedAnnouncements: Seq[BgpValidatedAnnouncement], params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   private val fieldNameToText = Map("asn" -> "Origin", "prefix" -> "Prefix", "maxPrefixLength" -> "Maximum prefix length")
 
   def tab = Tabs.WhitelistTab
@@ -103,11 +103,11 @@ class WhitelistView(whitelist: Whitelist, validatedAnnouncements: IndexedSeq[Val
 
                 // Will work because we only match on affected announcements and will have no unknowns
                 var (validated, invalidated) = affectedAnnouncements.partition(_.validity == RouteValidityState.VALID)
-                
+
                 // Validates only matches on asn
                 validated = validated.filter { _.asn == entry.asn }
 
-                def makeDetailsTable(announcements: Seq[ValidatedAnnouncement]) = {
+                def makeDetailsTable(announcements: Seq[BgpValidatedAnnouncement]) = {
                   <table>
                     <thead>
                       <tr><th>ASN</th><th>Prefix</th></tr>

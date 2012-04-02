@@ -76,6 +76,7 @@ object Main {
 
     scheduleValidator(memoryImage, rtrServer)
     scheduleRisDumpRetrieval(memoryImage)
+    BgpAnnouncementValidator.spawn()
   }
 
   private def error(message: String) = {
@@ -87,6 +88,28 @@ object Main {
     import java.{ util => ju }
     val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[ju.Collection[File]])
     TrustAnchors.load(tals.asScala, "tmp/tals")
+  }
+
+  @volatile
+  private var bgpRisDumps = Seq(
+    BgpRisDump(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")),
+    BgpRisDump(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz")))
+
+  private def announcedRoutes = (for {
+    dump <- bgpRisDumps
+    entry <- dump.entries
+    if entry.visibility >= BgpAnnouncementValidator.VISIBILITY_THRESHOLD
+  } yield {
+    BgpAnnouncement(entry.origin, entry.prefix)
+  }).distinct
+
+  private def scheduleRisDumpRetrieval(memoryImage: Atomic[MemoryImage]): Unit = spawnForever("ris-dump-update-scheduler") {
+    bgpRisDumps = bgpRisDumps.map(BgpRisDump.refresh).map(_.get)
+
+    BgpAnnouncementValidator.update(announcedRoutes, memoryImage.get.getDistinctRtrPrefixes().toSeq)
+
+    val updateIntervalMillis = 12 * 60 * 60 * 1000 // 12 hours
+    Thread.sleep(updateIntervalMillis) // First we wait to avoid loading twice at startup
   }
 
   private def scheduleValidator(memoryImage: Atomic[MemoryImage], rtrServer: RTRServer) {
@@ -104,16 +127,7 @@ object Main {
     }
   }
 
-  private def scheduleRisDumpRetrieval(memoryImage: Atomic[MemoryImage]) {
-    spawnForever("ris-dump-update-scheduler") {
-      BgpAnnouncementValidator.updateBgpRisDumps()
-      BgpAnnouncementValidator.updateRtrPrefixes(memoryImage.get.getDistinctRtrPrefixes())
-      val updateIntervalMillis = 12 * 60 * 60 * 1000 // 12 hours
-      Thread.sleep(updateIntervalMillis) // First we wait to avoid loading twice at startup
-    }
-  }
-
-  def runValidator(memoryImage: Atomic[MemoryImage], trustAnchors: Seq[TrustAnchor], rtrServer: RTRServer) {
+  private def runValidator(memoryImage: Atomic[MemoryImage], trustAnchors: Seq[TrustAnchor], rtrServer: RTRServer) {
     implicit val runner = TaskRunners.threadPoolRunner
     for (ta <- trustAnchors; if ta.status.isIdle) {
       memoryImage.update { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
@@ -126,7 +140,7 @@ object Main {
           val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate)
           memoryImage.update { memoryImage =>
             val result = memoryImage.updateValidatedObjects(ta.locator, validatedObjects).finishedProcessingTrustAnchor(ta.locator, Success(certificate))
-            BgpAnnouncementValidator.updateRtrPrefixes(result.getDistinctRtrPrefixes())
+            BgpAnnouncementValidator.update(announcedRoutes, result.getDistinctRtrPrefixes().toSeq)
             rtrServer.notify(result.version)
             result
           }
@@ -157,6 +171,8 @@ object Main {
         memoryImage.update { memoryImage =>
           val updated = f(memoryImage)
           PersistentDataSerialiser.write(PersistentData(filters = updated.filters, whitelist = updated.whitelist, userPreferences = Some(updated.userPreferences)), dataFile)
+          BgpAnnouncementValidator.update(announcedRoutes, updated.getDistinctRtrPrefixes().toSeq)
+          rtrServer.notify(updated.version)
           updated
         }
       }
@@ -179,7 +195,7 @@ object Main {
       override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
 
-      override protected def bgpRisDumps = BgpAnnouncementValidator.bgpRisDumps
+      override protected def bgpRisDumps = Main.bgpRisDumps
       override protected def validatedAnnouncements = BgpAnnouncementValidator.validatedAnnouncements
 
       override protected def getRtrPrefixes = memoryImage.get.getDistinctRtrPrefixes()

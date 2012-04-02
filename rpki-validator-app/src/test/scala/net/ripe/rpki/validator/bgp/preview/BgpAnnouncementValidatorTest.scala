@@ -51,16 +51,16 @@ class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with 
   val PREFIX3 = IpRange.parse("10.0.3.0/24")
   val PREFIX4 = IpRange.parse("10.0.4.0/24")
 
-  val ANNOUNCED_ROUTE1 = AnnouncedRoute(AS1, PREFIX1)
-  val ANNOUNCED_ROUTE2 = AnnouncedRoute(AS2, PREFIX2)
-  val ANNOUNCED_ROUTE3 = AnnouncedRoute(AS3, PREFIX4)
+  val ANNOUNCED_ROUTE1 = BgpAnnouncement(AS1, PREFIX1)
+  val ANNOUNCED_ROUTE2 = BgpAnnouncement(AS2, PREFIX2)
+  val ANNOUNCED_ROUTE3 = BgpAnnouncement(AS3, PREFIX4)
 
   val RTR_PREFIX1 = RtrPrefix(asn = AS1, prefix = PREFIX1, maxPrefixLength = None)
   val RTR_PREFIX2 = RtrPrefix(asn = AS1, prefix = PREFIX2, maxPrefixLength = None)
 
-  val VALIDATED_ANNOUNCEMENT1 = ValidatedAnnouncement(route = ANNOUNCED_ROUTE1, validates = Seq[RtrPrefix](RTR_PREFIX1), invalidates = Seq.empty[RtrPrefix]) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
-  val VALIDATED_ANNOUNCEMENT2 = ValidatedAnnouncement(route = ANNOUNCED_ROUTE2, validates = Seq.empty[RtrPrefix], invalidates = Seq[RtrPrefix](RTR_PREFIX2)) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
-  val VALIDATED_ANNOUNCEMENT3 = ValidatedAnnouncement(route = ANNOUNCED_ROUTE3, validates = Seq.empty[RtrPrefix], invalidates = Seq.empty[RtrPrefix]) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
+  val VALIDATED_ANNOUNCEMENT1 = BgpValidatedAnnouncement(route = ANNOUNCED_ROUTE1, validates = Seq[RtrPrefix](RTR_PREFIX1), invalidates = Seq.empty[RtrPrefix]) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
+  val VALIDATED_ANNOUNCEMENT2 = BgpValidatedAnnouncement(route = ANNOUNCED_ROUTE2, validates = Seq.empty[RtrPrefix], invalidates = Seq[RtrPrefix](RTR_PREFIX2)) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
+  val VALIDATED_ANNOUNCEMENT3 = BgpValidatedAnnouncement(route = ANNOUNCED_ROUTE3, validates = Seq.empty[RtrPrefix], invalidates = Seq.empty[RtrPrefix]) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
 
   val TEST_BGP_DUMPS = {
     Seq(BgpRisDump(
@@ -71,7 +71,7 @@ class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with 
         new BgpRisEntry(origin = AS3, prefix = PREFIX4, visibility = 5))))
   }
 
-  val TEST_ANNOUNCEMENTS_FROM_RIS: IndexedSeq[AnnouncedRoute] = Vector(ANNOUNCED_ROUTE1, ANNOUNCED_ROUTE2, ANNOUNCED_ROUTE3)
+  val TEST_ANNOUNCEMENTS_FROM_RIS: IndexedSeq[BgpAnnouncement] = Vector(ANNOUNCED_ROUTE1, ANNOUNCED_ROUTE2, ANNOUNCED_ROUTE3)
 
   val TEST_RTR_PREFIXES = {
     Set.empty[RtrPrefix] +

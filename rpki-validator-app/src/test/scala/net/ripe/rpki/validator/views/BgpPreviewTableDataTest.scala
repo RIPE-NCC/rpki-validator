@@ -30,25 +30,25 @@
 package net.ripe.rpki.validator
 package views
 
-import net.ripe.rpki.validator.bgp.preview.ValidatedAnnouncement
+import net.ripe.rpki.validator.bgp.preview.BgpAnnouncement
+import net.ripe.rpki.validator.bgp.preview.BgpValidatedAnnouncement
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import net.ripe.commons.certification.validation.roa.RouteValidityState
 import scala.collection.mutable.HashMap
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
-import net.ripe.rpki.validator.bgp.preview.AnnouncedRoute
 import net.ripe.rpki.validator.models.RtrPrefix
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class BgpPreviewControllerTest extends FunSuite with ShouldMatchers {
   import lib.NumberResourcesTest._
 
-  val announce1 = ValidatedAnnouncement(AnnouncedRoute(65001, "10.0.0.0/24"), validates = Seq(RtrPrefix(65001, "10.0.0.0/24", None)), invalidates = Seq.empty)
-  val announce2 = ValidatedAnnouncement(AnnouncedRoute(65002, "10.0.1.0/24"), validates = Seq.empty, invalidates = Seq(RtrPrefix(0, "10.0.1.0/24", None)))
-  val announce3 = ValidatedAnnouncement(AnnouncedRoute(65003, "10.0.2.0/24"), validates = Seq.empty, invalidates = Seq.empty)
+  val announce1 = BgpValidatedAnnouncement(BgpAnnouncement(65001, "10.0.0.0/24"), validates = Seq(RtrPrefix(65001, "10.0.0.0/24", None)), invalidates = Seq.empty)
+  val announce2 = BgpValidatedAnnouncement(BgpAnnouncement(65002, "10.0.1.0/24"), validates = Seq.empty, invalidates = Seq(RtrPrefix(0, "10.0.1.0/24", None)))
+  val announce3 = BgpValidatedAnnouncement(BgpAnnouncement(65003, "10.0.2.0/24"), validates = Seq.empty, invalidates = Seq.empty)
 
-  val testAnnouncements: IndexedSeq[ValidatedAnnouncement] = IndexedSeq[ValidatedAnnouncement](announce1, announce2, announce3)
+  val testAnnouncements: IndexedSeq[BgpValidatedAnnouncement] = IndexedSeq[BgpValidatedAnnouncement](announce1, announce2, announce3)
 
   val subject = new BgpPreviewTableData(testAnnouncements) {
     override def getParam(name: String) = "1"

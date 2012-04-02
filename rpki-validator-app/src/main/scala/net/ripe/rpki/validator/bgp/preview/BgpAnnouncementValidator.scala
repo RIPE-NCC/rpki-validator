@@ -41,13 +41,13 @@ import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import grizzled.slf4j.Logging
 
-case class AnnouncedRoute private (asn: Asn, interval: NumberResourceInterval) {
+case class BgpAnnouncement private (asn: Asn, interval: NumberResourceInterval) {
   def prefix = interval.start.upTo(interval.end).asInstanceOf[IpRange]
 }
-object AnnouncedRoute {
-  def apply(asn: Asn, prefix: IpRange) = new AnnouncedRoute(asn, NumberResourceInterval(prefix.getStart, prefix.getEnd))
+object BgpAnnouncement {
+  def apply(asn: Asn, prefix: IpRange) = new BgpAnnouncement(asn, NumberResourceInterval(prefix.getStart, prefix.getEnd))
 }
-case class ValidatedAnnouncement(route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix]) {
+case class BgpValidatedAnnouncement(route: BgpAnnouncement, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix]) {
   def asn = route.asn
   def prefix = route.prefix
   def validity = {
@@ -58,59 +58,40 @@ case class ValidatedAnnouncement(route: AnnouncedRoute, validates: Seq[RtrPrefix
 }
 
 class BgpAnnouncementValidator extends Logging {
+  import scala.concurrent.SyncVar
 
   val VISIBILITY_THRESHOLD = 5
 
-  @volatile
-  private var _bgpRisDumps = Promise {
-    Seq(
-      BgpRisDump(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz")),
-      BgpRisDump(new java.net.URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz")))
-  }
+  private val _update: SyncVar[(Seq[BgpAnnouncement], Seq[RtrPrefix])] = new SyncVar
 
   @volatile
-  private var _validatedAnnouncements = Promise(IndexedSeq.empty[ValidatedAnnouncement])
+  private var _validatedAnnouncements = IndexedSeq.empty[BgpValidatedAnnouncement]
 
-  def bgpRisDumps = _bgpRisDumps.get
+  def validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement] = _validatedAnnouncements
 
-  def validatedAnnouncements = _validatedAnnouncements.get
-
-  def updateBgpRisDumps(): Unit = {
-    _bgpRisDumps = retrieveBgpRisDumps(_bgpRisDumps)
+  def update(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]): Unit = {
+    _update.set((announcements, prefixes))
   }
 
-  def updateRtrPrefixes(newRtrPrefixes: Set[RtrPrefix]): Unit = {
-    _validatedAnnouncements = announcedRoutes map { routes =>
-      info("Started validating " + routes.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
-      val prefixTree = NumberResourceIntervalTree(newRtrPrefixes.toSeq: _*)
+  def spawn(): Unit = spawnForever("bgp-announcement-validator") {
+    val (announcements, prefixes) = _update.take()
 
-      val result = routes.par.map({ route =>
-          val matchingPrefixes = prefixTree.filterContaining(route.interval)
-          val (validates, invalidates) = matchingPrefixes.partition(validatesAnnouncedRoute(_, route))
-          ValidatedAnnouncement(route, validates, invalidates)
-        }).seq.toIndexedSeq
+    info("Started validating " + announcements.size + " BGP announcements with " + prefixes.size + " RTR prefixes.")
+    val prefixTree = NumberResourceIntervalTree(prefixes: _*)
 
-      info("Completed validating " + result.size + " BGP announcements with " + newRtrPrefixes.size + " RTR prefixes.")
-      result
-    }
+    val result = announcements.par.map({ route =>
+      val matchingPrefixes = prefixTree.filterContaining(route.interval)
+      val (validates, invalidates) = matchingPrefixes.partition(validatesAnnouncedRoute(_, route))
+      BgpValidatedAnnouncement(route, validates, invalidates)
+    }).seq.toIndexedSeq
+    _validatedAnnouncements = result
+
+    info("Completed validating " + result.size + " BGP announcements with " + prefixes.size + " RTR prefixes.")
   }
 
-  protected def retrieveBgpRisDumps(dumps: Promise[Seq[BgpRisDump]]) = dumps flatMap { _.map(BgpRisDump.refresh).sequence }
-
-  private def validatesAnnouncedRoute(prefix: RtrPrefix, announced: AnnouncedRoute): Boolean = {
+  private def validatesAnnouncedRoute(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
     prefix.asn == announced.asn &&
       prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()) >= announced.prefix.getPrefixLength()
-  }
-
-  private[preview] def announcedRoutes = _bgpRisDumps map { dumps =>
-    val routes = for {
-      dump <- dumps
-      entry <- dump.entries
-      if entry.visibility >= VISIBILITY_THRESHOLD
-    } yield {
-      AnnouncedRoute(entry.origin, entry.prefix)
-    }
-    routes.distinct
   }
 
 }
