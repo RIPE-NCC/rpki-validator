@@ -39,7 +39,7 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 public abstract class ValidationCommand {
 
     private TrustAnchorExtractor trustAnchorExtractor;
-    
+
     private CommandLineOptions options;
 
     public ValidationCommand(CommandLineOptions options) {

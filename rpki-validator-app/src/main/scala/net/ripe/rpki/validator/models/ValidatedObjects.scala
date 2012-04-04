@@ -93,7 +93,9 @@ object ValidatedObjects {
   def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext) = {
     import net.ripe.commons.certification.rsync.Rsync
 
-    val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(new File("tmp/cache/" + trustAnchor.getFile().getName())));
+    val rsync = new Rsync()
+    rsync.setTimeoutInSeconds(300)
+    val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchor.getFile().getName())))
     val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);

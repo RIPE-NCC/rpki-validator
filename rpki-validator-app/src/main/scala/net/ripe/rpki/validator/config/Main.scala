@@ -118,8 +118,8 @@ class Main(options: Options) { main =>
       Future {
         try {
           val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
-          logger.info("Loaded trust anchor from location " + certificate.getLocation())
           memoryImage.single.transform { _.startProcessingTrustAnchor(ta.locator, "Updating ROAs") }
+          logger.info("Loaded trust anchor from location " + certificate.getLocation())
 
           val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate)
           atomic { implicit transaction =>
@@ -131,11 +131,11 @@ class Main(options: Options) { main =>
           }
         } catch {
           case e: Exception =>
-            logger.error("Error while validating trust anchor " + ta.locator.getCertificateLocation() + ": " + e, e)
             val message = if (e.getMessage != null) e.getMessage else e.toString
             memoryImage.single.transform {
               _.finishedProcessingTrustAnchor(ta.locator, Failure(message))
             }
+            logger.error("Error while validating trust anchor " + ta.locator.getCertificateLocation() + ": " + e, e)
         }
       }
     }

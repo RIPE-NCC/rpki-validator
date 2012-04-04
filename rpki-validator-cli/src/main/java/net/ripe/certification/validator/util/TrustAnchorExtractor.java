@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.ripe.certification.validator.cli.CommandLineOptions;
+import net.ripe.certification.validator.runtimeproblems.ValidatorIOException;
 import net.ripe.commons.certification.rsync.Rsync;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.commons.certification.x509cert.X509CertificateUtil;
@@ -41,6 +42,16 @@ import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
 
 
 public class TrustAnchorExtractor {
+
+    private final Rsync rsync;
+
+    public TrustAnchorExtractor() {
+        this(new Rsync());
+    }
+
+    public TrustAnchorExtractor(Rsync rsync) {
+        this.rsync = rsync;
+    }
 
     public List<CertificateRepositoryObjectValidationContext> extractTAS(CommandLineOptions options) {
         return extractTAS(options.getTrustAnchorFiles(), options.getOutputDir().getAbsolutePath());
@@ -75,7 +86,7 @@ public class TrustAnchorExtractor {
     }
 
     private X509ResourceCertificate getRemoteCertificate(TrustAnchorLocator tal, String rootCertificateOutputDir) {
-        Rsync rsync = new Rsync();
+        rsync.reset();
         rsync.setSource(tal.getCertificateLocation().toString());
 
         String targetDirectoryPath = rootCertificateOutputDir;
@@ -86,8 +97,12 @@ public class TrustAnchorExtractor {
 
         String dest = targetDirectoryPath + "/" + tal.getFile().getName() + ".cer";
         rsync.setDestination(dest);
-        rsync.execute();
-
-        return CertificateRepositoryObjectLocalFileHelper.readCertificate(new File(dest));
+        int exitStatus = rsync.execute();
+        switch (exitStatus) {
+        case 0:
+            return CertificateRepositoryObjectLocalFileHelper.readCertificate(new File(dest));
+        default:
+            throw new ValidatorIOException("rsync failed while retrieving remote certificate from '" + tal.getCertificateLocation() + "': exit status: " + exitStatus);
+        }
     }
 }

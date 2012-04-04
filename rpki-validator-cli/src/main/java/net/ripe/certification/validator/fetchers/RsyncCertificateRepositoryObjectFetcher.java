@@ -63,7 +63,6 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
     private final Rsync rsync;
     private final UriToFileMapper uriToFileMapper;
 
-
     public RsyncCertificateRepositoryObjectFetcher(Rsync rsync, UriToFileMapper uriToFileMapper) {
         this.rsync = rsync;
         this.uriToFileMapper = uriToFileMapper;
