@@ -197,7 +197,7 @@ class Main(options: Options) { main =>
         }
       }
 
-      override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = main.runValidator()
+      override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = main.runValidator(trustAnchors)
 
       override protected def trustAnchors = memoryImage.single.get.trustAnchors
       override protected def validatedObjects = memoryImage.single.get.validatedObjects
