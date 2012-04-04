@@ -77,7 +77,10 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
             }{
               ta.lastUpdated match {
                 case Some(lastUpdated) =>
-                  <td><span rel="twipsy" data-original-title={ formatDateTime(lastUpdated) }>{ periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago" }</span></td>
+                  val manifestStale = ta.manifestNextUpdateTime.flatMap { dt => if (dt.isBefore(now)) Some("Manifest has been stale for " + periodInWords(new Period(dt, now))) else None }
+                  val crlStale = ta.crlNextUpdateTime.flatMap { dt => if (dt.isBefore(now)) Some("CRL has been stale for " + periodInWords(new Period(dt, now))) else None }
+                  val warnings = Seq(manifestStale, crlStale).flatten
+                  <td><span rel="twipsy" data-original-title={ formatDateTime(lastUpdated) }>{ periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago" }</span>{ if (warnings.isEmpty) NodeSeq.Empty else <span rel="twipsy" data-original-title={ warnings.mkString(", ") }>&nbsp;<img align="center" src="/images/warningS.png" /></span> } </td>
                 case None =>
                   <td></td>
               }

@@ -62,11 +62,11 @@ case class TrustAnchor(
   def name: String = locator.getCaName()
   def prefetchUris: Seq[URI] = locator.getPrefetchUris().asScala
 
-
-  def oldestNextUpdateTime = List(manifest.map(_.getNextUpdateTime), crl.map(_.getNextUpdateTime), manifest.map(_.getCertificate.getValidityPeriod.getNotValidAfter)).flatten match {
-    case Nil => None
-    case nonEmpty => Some(nonEmpty.min)
+  def manifestNextUpdateTime: Option[DateTime] = manifest.map { manifest =>
+    manifest.getNextUpdateTime min manifest.getCertificate.getValidityPeriod.getNotValidAfter
   }
+
+  def crlNextUpdateTime: Option[DateTime] = crl.map(_.getNextUpdateTime)
 }
 
 class TrustAnchors(val all: Seq[TrustAnchor]) {
