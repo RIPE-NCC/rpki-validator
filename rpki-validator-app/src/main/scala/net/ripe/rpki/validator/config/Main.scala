@@ -45,6 +45,8 @@ import bgp.preview._
 import scalaz.{ Success, Failure }
 import scala.concurrent.stm._
 import akka.dispatch.Future
+import net.ripe.commons.certification.cms.manifest.ManifestCms
+import net.ripe.commons.certification.crl.X509Crl
 
 object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
@@ -122,9 +124,21 @@ class Main(options: Options) { main =>
           logger.info("Loaded trust anchor from location " + certificate.getLocation())
 
           val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate)
+
+          val manifest = validatedObjects.get(certificate.getManifestURI).collect {
+            case ValidObject(_, _, manifest: ManifestCms) => manifest
+          }
+          val crl = for {
+            mft <- manifest
+            crlUri <- Option(mft.getCrlUri)
+            crl <- validatedObjects.get(crlUri).collect {
+              case ValidObject(_, _, crl: X509Crl) => crl
+            }
+          } yield crl
+
           atomic { implicit transaction =>
             memoryImage.transform {
-              _.updateValidatedObjects(ta.locator, validatedObjects).finishedProcessingTrustAnchor(ta.locator, Success(certificate))
+              _.updateValidatedObjects(ta.locator, validatedObjects.values.toSeq).finishedProcessingTrustAnchor(ta.locator, Success(certificate), manifest, crl)
             }
             bgpAnnouncementValidator.startUpdate(bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
             rtrServer.notify(memoryImage().version)
@@ -133,7 +147,7 @@ class Main(options: Options) { main =>
           case e: Exception =>
             val message = if (e.getMessage != null) e.getMessage else e.toString
             memoryImage.single.transform {
-              _.finishedProcessingTrustAnchor(ta.locator, Failure(message))
+              _.finishedProcessingTrustAnchor(ta.locator, Failure(message), None, None)
             }
             logger.error("Error while validating trust anchor " + ta.locator.getCertificateLocation() + ": " + e, e)
         }

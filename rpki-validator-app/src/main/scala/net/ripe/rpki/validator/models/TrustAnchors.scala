@@ -34,12 +34,12 @@ import java.io.File
 import java.net.URI
 import grizzled.slf4j.Logging
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate
-import net.ripe.certification.validator.util.TrustAnchorExtractor
 import net.ripe.certification.validator.util.TrustAnchorLocator
-import scalaz.concurrent.Promise
 import org.joda.time.DateTime
 import scalaz.{Validation, Failure, Success}
+import net.ripe.commons.certification.cms.manifest.ManifestCms
+import net.ripe.commons.certification.crl.X509Crl
+import net.ripe.rpki.validator.lib.DateAndTime._
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -56,9 +56,17 @@ case class TrustAnchor(
   locator: TrustAnchorLocator,
   status: ProcessingStatus,
   certificate: Option[CertificateRepositoryObjectValidationContext],
+  manifest: Option[ManifestCms],
+  crl: Option[X509Crl],
   lastUpdated: Option[DateTime] = None) {
   def name: String = locator.getCaName()
   def prefetchUris: Seq[URI] = locator.getPrefetchUris().asScala
+
+
+  def oldestNextUpdateTime = List(manifest.map(_.getNextUpdateTime), crl.map(_.getNextUpdateTime), manifest.map(_.getCertificate.getValidityPeriod.getNotValidAfter)).flatten match {
+    case Nil => None
+    case nonEmpty => Some(nonEmpty.min)
+  }
 }
 
 class TrustAnchors(val all: Seq[TrustAnchor]) {
@@ -68,14 +76,14 @@ class TrustAnchors(val all: Seq[TrustAnchor]) {
       else ta
     })
   }
-  def finishedProcessing(locator: TrustAnchorLocator, result: Validation[String, CertificateRepositoryObjectValidationContext]): TrustAnchors = {
+  def finishedProcessing(locator: TrustAnchorLocator, result: Validation[String, CertificateRepositoryObjectValidationContext], manifest: Option[ManifestCms], crl: Option[X509Crl]): TrustAnchors = {
     val now = new DateTime
     new TrustAnchors(all.map { ta =>
       if (ta.locator == locator) {
         result match {
           case Success(certificate) =>
             val nextUpdate = now.plusHours(4)
-            ta.copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = Some(certificate))
+            ta.copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = Some(certificate), manifest = manifest, crl = crl)
           case Failure(errorMessage) =>
             val nextUpdate = now.plusHours(1)
             ta.copy(lastUpdated = Some(now), status = Idle(nextUpdate, Some(errorMessage)))
@@ -94,7 +102,9 @@ object TrustAnchors extends Logging {
       new TrustAnchor(
         locator = tal,
         status = Idle(now),
-        certificate = None)
+        certificate = None,
+        manifest = None,
+        crl = None)
     }
     new TrustAnchors(trustAnchors)
   }

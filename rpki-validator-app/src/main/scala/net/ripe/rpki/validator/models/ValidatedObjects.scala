@@ -101,7 +101,7 @@ object ValidatedObjects {
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
     validatingFetcher.setOuterMostDecorator(cachingFetcher);
 
-    val builder = IndexedSeq.newBuilder[ValidatedObject]
+    val builder = Map.newBuilder[URI, ValidatedObject]
     notifyingFetcher.addCallback(new RoaCollector(trustAnchor, builder))
 
     trustAnchor.getPrefetchUris().asScala.foreach { prefetchUri =>
@@ -122,7 +122,7 @@ object ValidatedObjects {
     objects
   }
 
-  private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[ValidatedObject, _]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
+  private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[(URI, ValidatedObject), _]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
     override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
       logger.warn("Failed to prefetch '" + uri + "'")
     }
@@ -132,7 +132,7 @@ object ValidatedObjects {
     }
 
     override def afterFetchFailure(uri: URI, result: ValidationResult) {
-      objects += new InvalidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
+      objects += uri -> new InvalidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
       logger.warn("Failed to validate '" + uri + "': " + result.getFailuresForCurrentLocation().asScala.map(_.toString()).mkString(", "))
     }
 
@@ -140,9 +140,9 @@ object ValidatedObjects {
       obj match {
         case roa: RoaCms =>
           logger.debug("Validated ROA '" + uri + "'")
-          objects += new ValidRoa(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, roa)
+          objects += uri -> new ValidRoa(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, roa)
         case _ =>
-          objects += new ValidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, obj)
+          objects += uri -> new ValidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, obj)
           logger.debug("Validated OBJECT '" + uri + "'")
       }
     }
