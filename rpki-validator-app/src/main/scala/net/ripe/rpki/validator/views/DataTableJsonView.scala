@@ -101,11 +101,11 @@ trait DataTableJsonView[R <: Any] {
       JString(string)
     }
   }
-  
+
   private[views] def filterRecords(allRecords: IndexedSeq[R], searchCriterium: Any): IndexedSeq[R] = {
-    allRecords.filter(filter(searchCriterium))
+    allRecords.par.filter(filter(searchCriterium)).toIndexedSeq
   }
-  
+
   private[views] def sortRecords(filteredRecords: IndexedSeq[R], sortColumn: Int): IndexedSeq[R] = {
     filteredRecords.sorted(ordering(sortColumn))
   }
