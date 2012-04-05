@@ -52,6 +52,10 @@ td.warning {
 }
 
 span.object-counter {
+    padding: 1px 9px 2px;
+    -webkit-border-radius: 9px;
+    -moz-border-radius: 9px;
+    border-radius: 9px;
     display: inline-block;
     text-align: center;
     min-width: 3em;

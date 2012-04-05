@@ -129,12 +129,17 @@ $(function () {
   }
 
   private def renderCounters(ta: TrustAnchor, counters: Map[ValidationStatus, Int]) = {
+    def badge(level: String, count: Int) = {
+      val clazz = "object-counter label " + level
+      val style = if (count > 0) "" else "opacity: 0.25;"
+      <span class={ clazz } style={ style }>{ count }</span>
+    }
     def link(s: NodeSeq): NodeSeq = (<a href={ Tabs.ValidationResultsTab.url + "?q=" + ta.name}>{ s }</a>)
 
     <span>
-      <span class="object-counter label success">{ counters.getOrElse(ValidationStatus.PASSED, 0) }</span>
-      { link(<span class="object-counter label warning">{ counters.getOrElse(ValidationStatus.WARNING, 0) }</span>) }
-      { link(<span class="object-counter label important">{ counters.getOrElse(ValidationStatus.ERROR, 0) }</span>) }
+      { badge("success", counters.getOrElse(ValidationStatus.PASSED, 0)) }
+      { link(badge("warning", counters.getOrElse(ValidationStatus.WARNING, 0))) }
+      { link(badge("important", counters.getOrElse(ValidationStatus.ERROR, 0))) }
     </span>
   }
 
