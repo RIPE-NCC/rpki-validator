@@ -30,8 +30,6 @@
 package net.ripe.rpki.validator
 package views
 
-import models.ValidatedObjects
-import models.ValidatedObject
 import java.net.URI
 import scala.collection.JavaConverters._
 import grizzled.slf4j.Logging
@@ -49,7 +47,7 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
             record.uri.toString().toUpperCase().contains(searchString) ||
             record.isValid.toString().toUpperCase().contains(searchString) ||
             record.check.getStatus().toString().toUpperCase().contains(searchString) ||
-            ValidationMessage.getMessage(record.check).contains(searchString) ||
+            ValidationMessage.getMessage(record.check).toUpperCase().contains(searchString) ||
             record.check.getKey().toUpperCase().contains(searchString)})
       case _ => _ => true
     }
