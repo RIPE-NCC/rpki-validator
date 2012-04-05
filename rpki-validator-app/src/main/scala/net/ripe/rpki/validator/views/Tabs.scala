@@ -41,6 +41,7 @@ object Tabs {
   val ExportTab = Tab("Export", "/export")
   val RtrSessionsTab = Tab("Router Sessions", "/rtr-sessions")
   val RtrLogTab = Tab("rpki-rtr log", "/rtr-log")
+  val ValidationDetailsTab = Tab("Validation Details", "/validation-details")
 
-  def all = Seq(HomeTab, TrustAnchorsTab, RoasTab, FiltersTab, WhitelistTab, BgpPreviewTab, ExportTab, RtrSessionsTab, RtrLogTab)
+  def visibleTabs = Seq(HomeTab, TrustAnchorsTab, RoasTab, FiltersTab, WhitelistTab, BgpPreviewTab, ExportTab, RtrSessionsTab, RtrLogTab)
 }

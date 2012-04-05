@@ -35,7 +35,7 @@ import scala.xml.Text
 
 class ValidationDetailsView() extends View {
 
-  def tab = Tabs.RoasTab
+  def tab = Tabs.ValidationDetailsTab
   def title = Text("Validation Details")
   def body = {
     <table id="validation-details-table" class="zebra-striped" style="display: none;">

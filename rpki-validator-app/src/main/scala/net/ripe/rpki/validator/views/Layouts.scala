@@ -76,7 +76,7 @@ object Layouts {
               <a class="brand" href="/">RPKI Validator</a>
               <ul class="nav">
                 {
-                  for (tab <- Tabs.all) yield {
+                  for (tab <- Tabs.visibleTabs) yield {
                     <li class={ if (tab == view.tab) "active" else "" }><a href={ tab.url }>{ tab.text }</a></li>
                   }
                 }
