@@ -1,3 +1,5 @@
+package net.ripe.rpki.validator.views
+
 /**
  * The BSD License
  *
@@ -27,28 +29,25 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package views
 
 import java.net.URI
 import scala.collection.JavaConverters._
 import grizzled.slf4j.Logging
-import net.ripe.commons.certification.validation.{ValidationMessage, ValidationCheck}
+import net.ripe.commons.certification.validation.{ValidationStatus, ValidationMessage, ValidationCheck}
 
-abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] with Logging {
-  
+abstract class ValidationResultsTableData (records: IndexedSeq[ValidatedObjectResult]) extends DataTableJsonView[ValidatedObjectResult] with Logging {
+
   override def getAllRecords() = records
 
-  override def filter(searchCriterium: Any): ValidatedObjectDetail => Boolean = {
+  override def filter(searchCriterium: Any): ValidatedObjectResult => Boolean = {
     searchCriterium match {
       case searchString: String =>
         (record => {
             searchString.isEmpty() ||
             record.uri.toString().toUpperCase().contains(searchString) ||
-            record.isValid.toString().toUpperCase().contains(searchString) ||
-            record.check.getStatus().toString().toUpperCase().contains(searchString) ||
-            record.message.toUpperCase().contains(searchString) ||
-            record.check.getKey().toUpperCase().contains(searchString)})
+            record.validationStatus.toString().toUpperCase().contains(searchString) ||
+            record.messages.contains(searchString)
+        })
       case _ => _ => true
     }
   }
@@ -56,20 +55,18 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
   override def ordering(sortColumn: Int) = {
     sortColumn match {
       case 0 => implicitly[Ordering[URI]].on(_.uri)
-      case 1 => implicitly[Ordering[Boolean]].on(_.isValid)
-      case 2 => implicitly[Ordering[String]].on(_.check.getKey())
-      case 3 => implicitly[Ordering[String]].on(_.message)
-      case 4 => implicitly[Ordering[Boolean]].on(_.check.isOk)
+      case 1 => implicitly[Ordering[ValidationStatus]].on(_.validationStatus)
+      case 2 => implicitly[Ordering[String]].on(_.messages)
       case _ => sys.error("unknown sort column: " + sortColumn)
     }
   }
 
-  override def getValuesForRecord(record: ValidatedObjectDetail) = {
-    List(record.uri.toString(), record.isValid.toString, record.check.getKey(), record.message, record.check.getStatus().toString())
+  override def getValuesForRecord(record: ValidatedObjectResult) = {
+    List(record.uri.toString(), record.validationStatus.toString, record.messages)
   }
-  
+
 }
 
-case class ValidatedObjectDetail(val uri: URI, val isValid: Boolean, val check: ValidationCheck) {
-  lazy val message = ValidationMessage.getMessage(check)
+case class ValidatedObjectResult(val uri: URI, val validationStatus: ValidationStatus, val checks: Set[ValidationCheck]) {
+  lazy val messages = checks.map(ValidationMessage.getMessage(_)).mkString("\n")
 }

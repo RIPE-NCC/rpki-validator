@@ -1,3 +1,6 @@
+package net.ripe.rpki.validator
+package views
+
 /**
  * The BSD License
  *
@@ -27,22 +30,39 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.views
 
-case class Tab(text: String, url: String)
+import scala.xml.Text
 
-object Tabs {
-  val HomeTab = Tab("Home", "/")
-  val TrustAnchorsTab = Tab("Trust Anchors", "/trust-anchors")
-  val RoasTab = Tab("ROAs", "/roas")
-  val FiltersTab = Tab("Ignore Filters", "/filters")
-  val WhitelistTab = Tab("Whitelist", "/whitelist")
-  val BgpPreviewTab = Tab("BGP Preview", "/bgp-preview")
-  val ExportTab = Tab("Export", "/export")
-  val RtrSessionsTab = Tab("Router Sessions", "/rtr-sessions")
-  val RtrLogTab = Tab("rpki-rtr log", "/rtr-log")
-  val ValidationResultsTab = Tab("Validation Results", "/validation-results")
-  val ValidationDetailsTab = Tab("Validation Details", "/validation-details")
+class ValidationResultsView() extends View {
 
-  def visibleTabs = Seq(HomeTab, TrustAnchorsTab, RoasTab, FiltersTab, WhitelistTab, BgpPreviewTab, ExportTab, RtrSessionsTab, RtrLogTab)
+  def tab = Tabs.ValidationResultsTab
+
+  def title = Text("Validation Results")
+
+  def body = {
+    <table id="validation-details-table" class="zebra-striped" style="display: none;">
+      <thead>
+        <tr>
+          <th>URI</th>
+          <th>Object Valid</th>
+          <th>Check Msg</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+      <script>
+        <!--
+$(document).ready(function() {
+  $('#validation-details-table').dataTable({
+        "sPaginationType": "full_numbers",
+        "bProcessing": true,
+        "bServerSide": true,
+        "sAjaxSource": "validation-results-data"
+    }).show();
+});
+// -->
+      </script>
+  }
+
 }

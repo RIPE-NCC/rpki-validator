@@ -36,12 +36,9 @@ import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
 import net.ripe.rpki.validator.config.Main
 import models._
-import views.RoasView
-import views.RoaTableData
-import views.ValidationDetailsView
-import views.ValidationDetailsTableData
-import views.ValidatedObjectDetail
 import grizzled.slf4j.Logging
+import views._
+import net.ripe.commons.certification.validation.ValidationStatus
 
 trait ValidatedObjectsController extends ApplicationController with Logging {
   protected def validatedObjects: ValidatedObjects
@@ -52,6 +49,16 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
 
   get("/roas-data") {
     new RoaTableData(validatedObjects) {
+      override def getParam(name: String) = params(name)
+    }
+  }
+
+  get("/validation-results") {
+    new ValidationResultsView()
+  }
+
+  get("/validation-results-data") {
+    new ValidationResultsTableData(getValidationResults) {
       override def getParam(name: String) = params(name)
     }
   }
@@ -92,6 +99,16 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
     }
   }
 
+  def getValidationResults = {
+    val records = for {
+      validatedObjects <- validatedObjects.all.values.par
+      validatedObject <- validatedObjects.filterNot(_.validationStatus == ValidationStatus.PASSED)
+    } yield {
+      ValidatedObjectResult(validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
+    }
+    records.seq.toIndexedSeq
+  }
+
   def getValidationDetails = {
     val records = for {
       validatedObjects <- validatedObjects.all.values.par
@@ -102,5 +119,4 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
     }
     records.seq.toIndexedSeq
   }
-
 }
