@@ -30,21 +30,20 @@
 package net.ripe.rpki.validator
 package testing
 
-import net.ripe.ipresource.Asn
-import net.ripe.commons.certification.cms.roa.RoaPrefix
-import net.ripe.ipresource.IpRange
-import net.ripe.commons.certification.ValidityPeriod
-import org.joda.time.DateTime
-import net.ripe.commons.certification.cms.roa.RoaCms
-import net.ripe.commons.certification.cms.roa.RoaCmsObjectMother
-import java.net.URI
 import scala.collection.JavaConverters._
 import java.io.File
+import java.net.URI
 import net.ripe.certification.validator.util.TrustAnchorLocator
-import scala.collection.mutable.HashMap
-import net.ripe.commons.certification.validation.ValidationResult
-import models._
+import net.ripe.commons.certification.ValidityPeriod
+import net.ripe.commons.certification.cms.roa.RoaCms
+import net.ripe.commons.certification.cms.roa.RoaCmsObjectMother
+import net.ripe.commons.certification.cms.roa.RoaPrefix
 import net.ripe.commons.certification.validation.ValidationCheck
+import net.ripe.commons.certification.validation.ValidationResult
+import net.ripe.ipresource.Asn
+import net.ripe.ipresource.IpRange
+import org.joda.time.DateTime
+import models._
 
 object TestingObjectMother {
 
@@ -73,9 +72,8 @@ object TestingObjectMother {
 
     new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
   }
-  
-  def ROAS = {
 
+  def ROAS = {
     val prefixes1 = List[RoaPrefix](
       ROA_PREFIX_V4_1,
       ROA_PREFIX_V6_1,
@@ -101,21 +99,13 @@ object TestingObjectMother {
     val roa3: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes3.asJava, validityPeriod, ASN1)
     val roa3Uri: URI = URI.create("rsync://example.com/roa3.roa")
     val validatedRoa3: ValidRoa = new ValidRoa(roa3Uri, Set.empty[ValidationCheck], roa3)
-    
-    val roas = collection.mutable.Seq.apply[ValidRoa](validatedRoa1, validatedRoa2, validatedRoa3)
-    val map = new HashMap[String, Seq[ValidatedObject]]
-    map.put(TAL.getCaName, roas)
-    new ValidatedObjects(map)
-  }
-  
-  
-  def FILTERS = {
-    new Filters(Set(new IgnoreFilter(ROA_PREFIX_V6_1.getPrefix)))
+
+    val roas = Seq(validatedRoa1, validatedRoa2, validatedRoa3)
+    new ValidatedObjects(Map(TAL.getCaName -> roas))
   }
 
-  def WHITELIST = {
-    Whitelist(Set(ASN3_TO_WHITELIST1))
-  }
-  
 
+  def FILTERS = new Filters(Set(new IgnoreFilter(ROA_PREFIX_V6_1.getPrefix)))
+
+  def WHITELIST = Whitelist(Set(ASN3_TO_WHITELIST1))
 }

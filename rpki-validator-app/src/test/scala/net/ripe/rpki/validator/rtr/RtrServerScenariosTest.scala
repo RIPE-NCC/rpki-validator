@@ -42,7 +42,6 @@ import java.io.File
 import java.net.URI
 import net.ripe.commons.certification.cms.roa._
 import net.ripe.rpki.validator.models._
-import scala.collection.mutable._
 import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.Ipv6Address
@@ -67,8 +66,8 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
 
   override def beforeAll() = {
     implicit val actorSystem = akka.actor.ActorSystem()
-    val trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
-    val validatedObjects: ValidatedObjects = new ValidatedObjects(new HashMap[String, Seq[ValidatedObject]])
+    val trustAnchors: TrustAnchors = new TrustAnchors(Seq.empty)
+    val validatedObjects: ValidatedObjects = new ValidatedObjects(Map.empty)
     cache = scala.concurrent.stm.Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects, UserPreferences(false)))
     server = new RTRServer(
       port = port,
@@ -90,8 +89,8 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
 
   after {
     cache.single.transform {
-      val trustAnchors: TrustAnchors = new TrustAnchors(collection.mutable.Seq.empty[TrustAnchor])
-      val validatedObjects: ValidatedObjects = new ValidatedObjects(new HashMap[String, Seq[ValidatedObject]])
+      val trustAnchors: TrustAnchors = new TrustAnchors(Seq.empty)
+      val validatedObjects: ValidatedObjects = new ValidatedObjects(Map.empty)
       db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects, UserPreferences(false))
     }
     client.close()
@@ -123,7 +122,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
 
     val validatedRoa: ValidRoa = new ValidRoa(roaUri, Set.empty[ValidationCheck], roa)
 
-    val roas = collection.mutable.Seq.apply[ValidRoa](validatedRoa)
+    val roas = Seq(validatedRoa)
 
     cache.single.transform { db => db.updateValidatedObjects(tal, roas) }
 

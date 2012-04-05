@@ -31,7 +31,6 @@ package net.ripe.rpki.validator
 package models
 
 import lib.Java
-import scala.collection._
 import scala.collection.JavaConverters._
 import java.io.File
 import java.net.URI
@@ -45,11 +44,19 @@ import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.commons.certification.validation.ValidationCheck
 import net.ripe.commons.certification.validation.ValidationLocation
+import net.ripe.commons.certification.validation.ValidationStatus
 
 sealed trait ValidatedObject {
   val uri: URI
   val checks: Set[ValidationCheck]
   val isValid: Boolean
+
+  def validationStatus: ValidationStatus = {
+    val statuses = checks.map(_.getStatus)
+    if (statuses.contains(ValidationStatus.ERROR)) ValidationStatus.ERROR
+    else if (statuses.contains(ValidationStatus.WARNING)) ValidationStatus.WARNING
+    else ValidationStatus.PASSED
+  }
 }
 
 case class InvalidObject(uri: URI, checks: Set[ValidationCheck]) extends ValidatedObject {
@@ -65,9 +72,7 @@ case class ValidRoa(uri: URI, checks: Set[ValidationCheck], roa: RoaCms) extends
 }
 
 class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
-
   def getValidatedRtrPrefixes = {
-
     for {
       (trustAnchorName, validatedObjects) <- all
       ValidRoa(_, _, roa) <- validatedObjects
@@ -87,7 +92,7 @@ object ValidatedObjects {
   private val logger = Logger[this.type]
 
   def apply(trustAnchors: TrustAnchors): ValidatedObjects = {
-    new ValidatedObjects(trustAnchors.all.map(ta => ta.locator.getCaName() -> Seq.empty[ValidatedObject])(breakOut))
+    new ValidatedObjects(trustAnchors.all.map(ta => ta.locator.getCaName() -> Seq.empty[ValidatedObject])(collection.breakOut))
   }
 
   def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext) = {
