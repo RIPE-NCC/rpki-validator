@@ -41,6 +41,7 @@ import models._
 class TrustAnchorControllersTest extends ControllerTestCase {
   override def controller = new ControllerFilter with TrustAnchorsController {
     override def trustAnchors = new TrustAnchors(Seq.empty)
+    override def validatedObjects = new ValidatedObjects(Map.empty)
     override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = sys.error("TODO")
   }
 

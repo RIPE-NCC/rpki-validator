@@ -37,16 +37,17 @@ import scala.collection.SortedMap
 import lib.DateAndTime._
 import lib.Validation._
 import models._
+import net.ripe.commons.certification.validation.ValidationStatus
 
-class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
+class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[String, Map[ValidationStatus, Int]], now: DateTime = new DateTime, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   def tab = Tabs.TrustAnchorsTab
   def title = Text("Configured Trust Anchors")
   def body = {
     <div>{ renderMessages(messages, identity) }</div>
     <table id="trust-anchors" class="zebra-striped">
       <thead>
-        <th>CA Name</th>
-        <th>Subject</th>
+        <th>Trust anchor</th>
+        <th>Objects</th>
         <th>Expires in</th>
         <th>Last updated</th>
         <th>Next update in</th>
@@ -64,14 +65,13 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, now: DateTime = new DateTime,
       <tbody>{
         for (ta <- sortedTrustAnchors) yield {
           <tr>
-            <td>{ ta.name }</td>{
+            <td><span rel="twipsy" data-original-title={ ta.certificate.map(_.getCertificate.getSubject.toString).getOrElse("") }>{ ta.name }</span></td>
+            <td nowrap="nowrap">{ renderCounters(ta, validationStatusCounts.getOrElse(ta.name, Map.empty)) }</td>{
               ta.certificate match {
                 case Some(certificate) =>
                   val notValidAfter = certificate.getCertificate().getValidityPeriod().getNotValidAfter()
-                  <td>{ certificate.getCertificate().getSubject() }</td>
                   <td><span rel="twipsy" data-original-title={ formatDateTime(notValidAfter) }>{ expiresIn(notValidAfter) }</span></td>
                 case None =>
-                  <td></td>
                   <td></td>
               }
             }{
@@ -119,12 +119,23 @@ $(function () {
       success: function (data) {
         var updatedTable = $(data).filter("#trust-anchors");
         $("#trust-anchors").replaceWith(updatedTable);
+        $("div.twipsy").fadeOut();
       }
     });
   };
   setInterval(refresh, 10000);
 });
 //--></script>
+  }
+
+  private def renderCounters(ta: TrustAnchor, counters: Map[ValidationStatus, Int]) = {
+    def link(s: NodeSeq): NodeSeq = (<a href="#">{ s }</a>) // TODO render link to validation results for TA
+
+    <span>
+      <span class="object-counter label success">{ counters.getOrElse(ValidationStatus.PASSED, 0) }</span>
+      { link(<span class="object-counter label warning">{ counters.getOrElse(ValidationStatus.WARNING, 0) }</span>) }
+      { link(<span class="object-counter label important">{ counters.getOrElse(ValidationStatus.ERROR, 0) }</span>) }
+    </span>
   }
 
   private def expiresIn(notValidAfter: DateTime): NodeSeq = {

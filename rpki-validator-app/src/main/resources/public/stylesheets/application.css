@@ -51,6 +51,13 @@ td.warning {
 	background-color: #FDF5D9 !important;
 }
 
+span.object-counter {
+    display: inline-block;
+    text-align: center;
+    min-width: 3em;
+    margin-left: 0.5em;
+}
+
 .popover .inner {
 	width: 500px;
 }

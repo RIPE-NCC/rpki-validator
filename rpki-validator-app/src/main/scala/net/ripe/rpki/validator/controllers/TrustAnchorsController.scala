@@ -37,10 +37,11 @@ import lib.Validation._
 
 trait TrustAnchorsController extends ApplicationController {
   protected def trustAnchors: TrustAnchors
+  protected def validatedObjects: ValidatedObjects
   protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor])
 
   get("/trust-anchors") {
-    new views.TrustAnchorsView(trustAnchors, messages = feedbackMessages)
+    new views.TrustAnchorsView(trustAnchors, validatedObjects.validationStatusCounts, messages = feedbackMessages)
   }
 
   post("/trust-anchors/update") {

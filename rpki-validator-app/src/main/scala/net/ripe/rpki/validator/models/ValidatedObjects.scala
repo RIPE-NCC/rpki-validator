@@ -72,6 +72,16 @@ case class ValidRoa(uri: URI, checks: Set[ValidationCheck], roa: RoaCms) extends
 }
 
 class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
+  def validationStatusCounts: Map[String, Map[ValidationStatus, Int]] = for ((trustAnchorName, validatedObjects) <- all) yield {
+    trustAnchorName -> {
+      var counters = collection.mutable.Map.empty[ValidationStatus, Int].withDefaultValue(0)
+      for (validatedObject <- validatedObjects) {
+        counters(validatedObject.validationStatus) += 1
+      }
+      counters.toMap
+    }
+  }
+
   def getValidatedRtrPrefixes = {
     for {
       (trustAnchorName, validatedObjects) <- all
