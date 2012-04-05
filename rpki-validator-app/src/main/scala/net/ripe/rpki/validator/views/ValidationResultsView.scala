@@ -43,9 +43,9 @@ class ValidationResultsView() extends View {
     <table id="validation-details-table" class="zebra-striped" style="display: none;">
       <thead>
         <tr>
-          <th>URI</th>
-          <th>Object Valid</th>
-          <th>Check Msg</th>
+          <th>Object</th>
+          <th>Validity</th>
+          <th>Validation Message</th>
         </tr>
       </thead>
       <tbody>
