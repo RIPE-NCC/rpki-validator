@@ -129,7 +129,7 @@ $(function () {
   }
 
   private def renderCounters(ta: TrustAnchor, counters: Map[ValidationStatus, Int]) = {
-    def link(s: NodeSeq): NodeSeq = (<a href="#">{ s }</a>) // TODO render link to validation results for TA
+    def link(s: NodeSeq): NodeSeq = (<a href={ Tabs.ValidationResultsTab.url + "?q=" + ta.name}>{ s }</a>)
 
     <span>
       <span class="object-counter label success">{ counters.getOrElse(ValidationStatus.PASSED, 0) }</span>

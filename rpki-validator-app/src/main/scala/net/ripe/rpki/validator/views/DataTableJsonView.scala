@@ -67,21 +67,13 @@ trait DataTableJsonView[R <: Any] {
     val allRecords = getAllRecords
     val filteredRecords = filterRecords(allRecords, searchCriterium)
     val sortedRecords = sortRecords(filteredRecords, sortCol)
-    val orderedRecords = order(sortedRecords)
-    val displayRecords = paginate(orderedRecords)
+    val displayRecords = paginate(sortedRecords)
 
     compact(render(JObject(List(
       JField("sEcho", JInt(getParam("sEcho").toInt)),
       JField("iTotalRecords", JInt(allRecords.size)),
       JField("iTotalDisplayRecords", JInt(filteredRecords.size)),
       JField("aaData", makeJArray(displayRecords))))))
-  }
-
-  private def order(records: IndexedSeq[R]) = {
-    sortOrder match {
-      case "desc" => records.reverse
-      case _ => records
-    }
   }
 
   private def paginate(records: IndexedSeq[R]) = {
@@ -107,6 +99,11 @@ trait DataTableJsonView[R <: Any] {
   }
 
   private[views] def sortRecords(filteredRecords: IndexedSeq[R], sortColumn: Int): IndexedSeq[R] = {
-    filteredRecords.sorted(ordering(sortColumn))
+    filteredRecords.sorted(order(ordering(sortColumn)))
+  }
+
+  private def order(ordering: Ordering[R]) = sortOrder match {
+    case "desc" => ordering.reverse
+    case _      => ordering
   }
 }

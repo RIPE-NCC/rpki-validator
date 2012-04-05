@@ -54,7 +54,7 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
   }
 
   get("/validation-results") {
-    new ValidationResultsView()
+    new ValidationResultsView(params.getOrElse("q", ""))
   }
 
   get("/validation-results-data") {
@@ -66,13 +66,13 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
   get("/validation-details") {
     new ValidationDetailsView()
   }
-  
+
   get("/validation-details-data") {
     new ValidationDetailsTableData(getValidationDetails) {
       override def getParam(name: String) = params(name)
     }
   }
-  
+
   get("/validation-details.csv") {
 
     contentType = "text/csv"
@@ -101,10 +101,10 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
 
   def getValidationResults = {
     val records = for {
-      validatedObjects <- validatedObjects.all.values.par
+      (trustAnchorName, validatedObjects) <- validatedObjects.all.par
       validatedObject <- validatedObjects.filterNot(_.validationStatus == ValidationStatus.PASSED)
     } yield {
-      ValidatedObjectResult(validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
+      ValidatedObjectResult(trustAnchorName, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
     }
     records.seq.toIndexedSeq
   }

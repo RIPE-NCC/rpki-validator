@@ -33,40 +33,38 @@ package net.ripe.rpki.validator.views
 import java.net.URI
 import scala.collection.JavaConverters._
 import grizzled.slf4j.Logging
-import net.ripe.commons.certification.validation.{ValidationStatus, ValidationMessage, ValidationCheck}
+import net.ripe.commons.certification.validation.{ ValidationStatus, ValidationMessage, ValidationCheck }
 
-abstract class ValidationResultsTableData (records: IndexedSeq[ValidatedObjectResult]) extends DataTableJsonView[ValidatedObjectResult] with Logging {
+abstract class ValidationResultsTableData(records: IndexedSeq[ValidatedObjectResult]) extends DataTableJsonView[ValidatedObjectResult] with Logging {
 
   override def getAllRecords() = records
 
   override def filter(searchCriterium: Any): ValidatedObjectResult => Boolean = {
-    searchCriterium match {
-      case searchString: String =>
-        (record => {
-            searchString.isEmpty() ||
-            record.uri.toString().toUpperCase().contains(searchString) ||
-            record.validationStatus.toString().toUpperCase().contains(searchString) ||
-            record.messages.contains(searchString)
-        })
-      case _ => _ => true
-    }
+    val searchString = searchCriterium.toString
+
+    record => searchString.isEmpty() ||
+      record.trustAnchorName.toUpperCase().contains(searchString) ||
+      record.uri.toString().toUpperCase().contains(searchString) ||
+      record.validationStatus.toString().toUpperCase().contains(searchString) ||
+      record.messages.contains(searchString)
   }
 
   override def ordering(sortColumn: Int) = {
     sortColumn match {
-      case 0 => implicitly[Ordering[URI]].on(_.uri)
-      case 1 => implicitly[Ordering[ValidationStatus]].on(_.validationStatus)
-      case 2 => implicitly[Ordering[String]].on(_.messages)
+      case 0 => implicitly[Ordering[String]].on(_.trustAnchorName)
+      case 1 => implicitly[Ordering[URI]].on(_.uri)
+      case 2 => implicitly[Ordering[ValidationStatus]].on(_.validationStatus)
+      case 3 => implicitly[Ordering[String]].on(_.messages)
       case _ => sys.error("unknown sort column: " + sortColumn)
     }
   }
 
   override def getValuesForRecord(record: ValidatedObjectResult) = {
-    List(record.uri.toString(), record.validationStatus.toString, record.messages)
+    List(record.trustAnchorName, <span rel="twipsy" data-original-title={ record.uri.toString() }>{ record.uri.toString.split("/").last }</span>.toString, record.validationStatus.toString, record.messages)
   }
 
 }
 
-case class ValidatedObjectResult(val uri: URI, val validationStatus: ValidationStatus, val checks: Set[ValidationCheck]) {
+case class ValidatedObjectResult(trustAnchorName: String, uri: URI, validationStatus: ValidationStatus, checks: Set[ValidationCheck]) {
   lazy val messages = checks.map(ValidationMessage.getMessage(_)).mkString("\n")
 }

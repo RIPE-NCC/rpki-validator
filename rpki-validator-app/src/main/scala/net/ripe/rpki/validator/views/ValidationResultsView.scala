@@ -33,16 +33,17 @@ package views
 
 import scala.xml.Text
 
-class ValidationResultsView() extends View {
+class ValidationResultsView(search: String) extends View {
 
   def tab = Tabs.ValidationResultsTab
 
   def title = Text("Validation Results")
 
   def body = {
-    <table id="validation-details-table" class="zebra-striped" style="display: none;">
+    <table id="validation-details-table" class="zebra-striped" style="display: none;" data-search={ search }>
       <thead>
         <tr>
+          <th>Trust Anchor</th>
           <th>Object</th>
           <th>Validity</th>
           <th>Validation Message</th>
@@ -54,7 +55,11 @@ class ValidationResultsView() extends View {
       <script>
         <!--
 $(document).ready(function() {
+  $('[rel=twipsy]').twipsy({
+    "live": true
+  });
   $('#validation-details-table').dataTable({
+        "oSearch": {"sSearch": $('#validation-details-table').attr('data-search')},
         "sPaginationType": "full_numbers",
         "bProcessing": true,
         "bServerSide": true,
