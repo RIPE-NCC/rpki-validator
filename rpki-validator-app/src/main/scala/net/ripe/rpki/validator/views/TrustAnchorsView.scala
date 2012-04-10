@@ -47,7 +47,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
     <table id="trust-anchors" class="zebra-striped">
       <thead>
         <th>Trust anchor</th>
-        <th>Objects</th>
+        <th>Processed Items</th>
         <th>Expires in</th>
         <th>Last updated</th>
         <th>Next update in</th>
@@ -80,7 +80,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
                   val manifestStale = ta.manifestNextUpdateTime.flatMap { dt => if (dt.isBefore(now)) Some("Manifest has been stale for " + periodInWords(new Period(dt, now))) else None }
                   val crlStale = ta.crlNextUpdateTime.flatMap { dt => if (dt.isBefore(now)) Some("CRL has been stale for " + periodInWords(new Period(dt, now))) else None }
                   val warnings = Seq(manifestStale, crlStale).flatten
-                  <td><span rel="twipsy" data-original-title={ formatDateTime(lastUpdated) }>{ periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago" }</span>{ if (warnings.isEmpty) NodeSeq.Empty else <span rel="twipsy" data-original-title={ warnings.mkString(", ") }>&nbsp;<img align="center" src="/images/warningS.png" /></span> } </td>
+                  <td><span rel="twipsy" data-original-title={ formatDateTime(lastUpdated) }>{ periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago" }</span>{ if (warnings.isEmpty) NodeSeq.Empty else <span rel="twipsy" data-original-title={ warnings.mkString(", ") }>&nbsp;<img align="center" src="/images/warningS.png"/></span> } </td>
                 case None =>
                   <td></td>
               }
@@ -91,10 +91,10 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
                   <td style="text-align: center;"><img src="/images/spinner.gif"/></td>
                 case Idle(nextUpdate, errorMessage) =>
                   <td><span rel="twipsy" data-original-title={ formatDateTime(nextUpdate) }>{
-                      if (now <= nextUpdate) periodInWords(new Period(now, nextUpdate), number = 1) else "any moment"
-                    }</span>{
-                      errorMessage.map(text => <span rel="twipsy" data-original-title={text}>&nbsp;<img align="center" src="/images/warningS.png" /></span>).getOrElse(NodeSeq.Empty)
-                    }</td>
+                    if (now <= nextUpdate) periodInWords(new Period(now, nextUpdate), number = 1) else "any moment"
+                  }</span>{
+                    errorMessage.map(text => <span rel="twipsy" data-original-title={ text }>&nbsp;<img align="center" src="/images/warningS.png"/></span>).getOrElse(NodeSeq.Empty)
+                  }</td>
                   <td>
                     <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
                       <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
@@ -134,12 +134,25 @@ $(function () {
       val style = if (count > 0) "" else "opacity: 0.25;"
       <span class={ clazz } style={ style }>{ count }</span>
     }
-    def link(s: NodeSeq): NodeSeq = (<a href={ Tabs.ValidationResultsTab.url + "?q=" + ta.name}>{ s }</a>)
+    def link(s: NodeSeq, helpText: String): NodeSeq = (
+      <span rel="twipsy" data-original-title={ helpText }>
+        <a href={ Tabs.ValidationResultsTab.url + "?q=" + ta.name }>{ s }</a>
+      </span>)
 
     <span>
       { badge("success", counters.getOrElse(ValidationStatus.PASSED, 0)) }
-      { link(badge("warning", counters.getOrElse(ValidationStatus.WARNING, 0))) }
-      { link(badge("important", counters.getOrElse(ValidationStatus.ERROR, 0))) }
+      {
+        counters.getOrElse(ValidationStatus.WARNING, 0) match {
+          case 0 => badge("warning", 0)
+          case nr => link(badge("warning", nr), nr + " warnings exist, click to view")
+        }
+      }
+      {
+        counters.getOrElse(ValidationStatus.ERROR, 0) match {
+          case 0 => badge("important", 0)
+          case nr => link(badge("important", nr), nr + " errors exist, click to view")
+        }
+      }
     </span>
   }
 

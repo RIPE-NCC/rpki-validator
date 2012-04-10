@@ -44,5 +44,5 @@ object Tabs {
   val ValidationResultsTab = Tab("Validation Results", "/validation-results")
   val ValidationDetailsTab = Tab("Validation Details", "/validation-details")
 
-  def visibleTabs = Seq(HomeTab, TrustAnchorsTab, RoasTab, FiltersTab, WhitelistTab, BgpPreviewTab, ExportTab, RtrSessionsTab, RtrLogTab)
+  def visibleTabs = Seq(HomeTab, TrustAnchorsTab, RoasTab, FiltersTab, WhitelistTab, BgpPreviewTab, ExportTab, RtrSessionsTab)
 }

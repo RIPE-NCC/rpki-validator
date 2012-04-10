@@ -41,7 +41,7 @@ class ExportView extends View with ViewHelpers {
     <div class="alert-actions">
       <a href="export.csv" class="btn">Download CSV</a>
 	  <span class="help-inline">
-	  This is a stable link. In other words you copy the url and use a tool such as wget from cron to periodically get updates. 
+	  This is a stable link. In other words you can copy the url and use a tool such as wget from cron to periodically get this export. 
 	  </span>
     </div>
     <br/>
