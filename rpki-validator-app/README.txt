@@ -22,14 +22,23 @@ Requirements
 - At least 1GB of free memory
 
   For performance this tool keeps a lot of data in memory. This also helps multi-threading,
-  allowing the tool to work faster by doing tasks in paralel.
+  allowing the tool to work faster by doing tasks in parallel.
+  
+  If you want to change the memory settings, you can manually edit the line containing:
+  
+  EXTRA_JVM_ARGUMENTS="-Xms128m -Xmx256m"
+  
+  In the bin/rpki-validator or bin/rpki-validator.bat files.
+  
+  Be aware though that if you give this tool too little memory it will become slow first, and
+  then stop working properly.
   
 
 Usage
 -----
 
 = Unzip (we think you've done that or you wouldn't be reading this...)
-= Run the validator from the root folder
+= Run the RPKI Validator from the root folder
 
     ./bin/rpki-validator [OPTIONS]
 
@@ -102,17 +111,9 @@ Known Issues
   Then you have tried to run the validator from another location than its root folder. Make sure you do:
   ./bin/rpki-validator
   
-  This will be fixed at some point... should be trivial, we're just loaded with more important stuff
-  right now...
-
-= The validator does not re-validate ROAs automatically at this time, you need to manually
-  click the 'update now' button on the ROAs page. We expect to automate this over the next
-  two weeks
-  
 = The validator does not check for revocations or expiration times in between validation runs
 
-= The validator treats expired CRLs and Manifest as invalid, not stale, and will reject any
-  dependent objects at this time. 
+= The validator treats expired CRLs and Manifest as a warning
 
 = The validator does not support incremental updates as defined here, yet:
   http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.2
