@@ -50,7 +50,6 @@
 	<modules>
 		<module>rpki-validator-app</module>
 		<module>rpki-validator-cli</module>
-		<module>rpki-validator-service</module>
 	</modules>
 
 	<dependencies>
