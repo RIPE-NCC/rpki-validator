@@ -47,6 +47,7 @@ import scala.concurrent.stm._
 import akka.dispatch.Future
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
+import net.ripe.commons.certification.validation.ValidationOptions
 
 object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
@@ -123,7 +124,10 @@ class Main(options: Options) { main =>
           memoryImage.single.transform { _.startProcessingTrustAnchor(ta.locator, "Updating ROAs") }
           logger.info("Loaded trust anchor from location " + certificate.getLocation())
 
-          val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate)
+          val options = new ValidationOptions();
+          options.setMaxStaleDays(memoryImage.single.get.userPreferences.maxStaleDays)
+
+          val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate, options)
 
           val manifest = validatedObjects.get(certificate.getManifestURI).collect {
             case ValidObject(_, _, manifest: ManifestCms) => manifest

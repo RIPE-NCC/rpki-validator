@@ -40,11 +40,8 @@ import net.ripe.certification.validator.util._
 import net.ripe.certification.validator.commands.TopDownWalker
 import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.roa.RoaCms
-import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.commons.certification.validation.ValidationCheck
-import net.ripe.commons.certification.validation.ValidationLocation
-import net.ripe.commons.certification.validation.ValidationStatus
+import net.ripe.commons.certification.validation._
 
 sealed trait ValidatedObject {
   val uri: URI
@@ -105,13 +102,13 @@ object ValidatedObjects {
     new ValidatedObjects(trustAnchors.all.map(ta => ta.locator.getCaName() -> Seq.empty[ValidatedObject])(collection.breakOut))
   }
 
-  def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext) = {
+  def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext, options: ValidationOptions) = {
     import net.ripe.commons.certification.rsync.Rsync
 
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
     val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchor.getFile().getName())))
-    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
+    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher, options);
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
     validatingFetcher.setOuterMostDecorator(cachingFetcher);
