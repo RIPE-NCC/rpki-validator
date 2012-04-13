@@ -27,7 +27,10 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.lib
+package net.ripe.rpki.validator
+package lib
+
+import Validation._
 
 import java.net.URI
 import org.joda.time.DateTime
@@ -37,8 +40,18 @@ import grizzled.slf4j.Logging
 import org.joda.time.Duration
 import java.io.ByteArrayInputStream
 
+import scalaz._
+import Scalaz._
+
 case class NewVersionDetails(version: String, url: URI)
-case class UserPreferences(updateAlertActive: Boolean = true)
+case class UserPreferences(updateAlertActive: Boolean = true, maxStaleDays: Int = 3)
+
+object UserPreferences {
+  def validate(updateAlertActive: Boolean, maxStaleDays: Int): ValidationNEL[FeedbackMessage, UserPreferences] = {
+    liftFailErrorMessage(UserPreferences(updateAlertActive, maxStaleDays).success, Some("user preferences"))
+  }
+}
+
 
 trait SoftwareUpdateChecker extends Logging {
 

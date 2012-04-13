@@ -115,6 +115,13 @@ object Validation {
     case _: NumberFormatException => (quote(s) + " is not a number").fail
   }
 
+  def parseCheckBoxValue(s: Option[String]): Validation[String, Boolean] = {
+    s match {
+      case Some("on") => true.success
+      case _ => false.success
+    }
+  }
+  
   def containedIn(range: Range): Int => Validation[String, Int] = value => {
     if (range.contains(value)) value.success else "must be between %d and %d, was %d".format(range.start, range.end, value).fail
   }

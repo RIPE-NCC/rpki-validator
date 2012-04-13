@@ -27,25 +27,49 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.views
+package net.ripe.rpki.validator
+package views
 
 import scala.xml._
+import lib.UserPreferences
+import lib.Validation._
+import controllers.UserPreferencesController
 
-case class Tab(text: NodeSeq, url: String)
+class UserPreferencesView(userPreferences: UserPreferences, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
 
-object Tabs {
-  val HomeTab = Tab(Text("Home"), "/")
-  val TrustAnchorsTab = Tab(Text("Trust Anchors"), "/trust-anchors")
-  val RoasTab = Tab(Text("ROAs"), "/roas")
-  val FiltersTab = Tab(Text("Ignore Filters"), "/filters")
-  val WhitelistTab = Tab(Text("Whitelist"), "/whitelist")
-  val BgpPreviewTab = Tab(Text("BGP Preview"), "/bgp-preview")
-  val ExportTab = Tab(Text("Export"), "/export")
-  val RtrSessionsTab = Tab(Text("Router Sessions"), "/rtr-sessions")
-  val RtrLogTab = Tab(Text("rpki-rtr log"), "/rtr-log")
-  val ValidationResultsTab = Tab(Text("Validation Results"), "/validation-results")
-  val ValidationDetailsTab = Tab(Text("Validation Details"), "/validation-details")
-  val UserPreferencesTab = Tab(<img src="/images/cogs.png" width="15" height="17" alt="Settings"/>, "/user-preferences")
+  private val fieldNameToText = Map("enable-update-checks" -> "Check for updates", "max-stale-days" -> "Maximum days out of date")
 
-  def visibleTabs = Seq(HomeTab, TrustAnchorsTab, RoasTab, FiltersTab, WhitelistTab, BgpPreviewTab, ExportTab, RtrSessionsTab, UserPreferencesTab)
+  def tab = Tabs.UserPreferencesTab
+
+  def title = Text("User Preferences")
+
+  def body = {
+
+    <div>{ renderMessages(messages, fieldNameToText) }</div>
+    <div class="well">
+      <form method="POST" class="form-stacked">
+        <fieldset>
+          <div>
+            <div class="span8">Automatically check for new versions of this validator</div>
+            <div class="span4">
+              {
+                userPreferences.updateAlertActive match {
+                  case true => <input name="enable-update-checks" type="checkbox" checked="checked"/>
+                  case false => <input name="enable-update-checks" type="checkbox"/>
+                }
+              }
+            </div>
+          </div>
+          <div>
+            <div class="span8">Maximum time to accept out of date repositories (days)</div>
+            <div class="span4">
+              <input type="text" name="max-stale-days" value= { Text(userPreferences.maxStaleDays.toString) } />
+            </div>
+          </div>
+          <div class="span12"><input type="submit" class="btn primary" value="Make it so"/></div>
+        </fieldset>
+      </form>
+    </div>
+  }
+
 }

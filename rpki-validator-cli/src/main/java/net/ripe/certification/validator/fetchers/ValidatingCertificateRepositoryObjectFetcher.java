@@ -38,6 +38,7 @@ import net.ripe.commons.certification.crl.CrlLocator;
 import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.validation.ValidationLocation;
+import net.ripe.commons.certification.validation.ValidationOptions;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
@@ -53,8 +54,9 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
     private static final Logger log = Logger.getLogger(ValidatingCertificateRepositoryObjectFetcher.class);
 
     private final CertificateRepositoryObjectFetcher fetcher;
-
     private CertificateRepositoryObjectFetcher outerMostDecorator;
+
+	private ValidationOptions options;
 
     /**
      * A validating CROFetcher. All objects retrieved are being validated. Invalid objects result in
@@ -64,7 +66,20 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
      */
     public ValidatingCertificateRepositoryObjectFetcher(CertificateRepositoryObjectFetcher fetcher) {
         this.fetcher = fetcher;
+        this.options = new ValidationOptions();
         this.outerMostDecorator = this;
+    }
+    
+    /**
+     * A validating CROFetcher. All objects retrieved are being validated. Invalid objects result in
+     * null values being returned instead. Note that validation requires a CrlLocator. Because other
+     * decorating CROFetchers are likely to be used (notifying, caching) a setter is provided to
+     * allow for the outermost decorator to be used for the CRL retrieval.
+     */
+    public ValidatingCertificateRepositoryObjectFetcher(CertificateRepositoryObjectFetcher fetcher, ValidationOptions options) {
+    	this.fetcher = fetcher;
+    	this.options = options;
+    	this.outerMostDecorator = this;
     }
 
     /**
@@ -153,7 +168,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
         if (certificateRepositoryObject == null) {
             return null;
         }
-        certificateRepositoryObject.validate(uri.toString(), context, outerMostDecorator, result);
+        certificateRepositoryObject.validate(uri.toString(), context, outerMostDecorator, options, result);
         if (result.hasFailureForCurrentLocation()) {
             return null;
         }
@@ -195,7 +210,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
                     return crlForCrlLocator;
                 }
 
-            }, result);
+            }, options, result);
             if (result.hasFailureForCurrentLocation()) {
                 return null;
             }

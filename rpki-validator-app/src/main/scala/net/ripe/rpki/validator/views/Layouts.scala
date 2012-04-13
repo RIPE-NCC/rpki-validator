@@ -80,17 +80,6 @@ object Layouts {
                     <li class={ if (tab == view.tab) "active" else "" }><a href={ tab.url }>{ tab.text }</a></li>
                   }
                 }
-                <li class="dropdown">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown"><img src="/images/cogs.png" width="15" height="17" alt="Settings"/></a>
-                  <ul class="dropdown-menu">
-                    {
-                      userPreferences.updateAlertActive match {
-                        case true => <li><a href="/set-update-alert/false" style="white-space:nowrap">Disable automatic update checks</a></li>
-                        case false => <li><a href="/set-update-alert/true" style="white-space:nowrap">Enable automatic update checks</a></li>
-                      }
-                    }
-                  </ul>
-                </li>
               </ul>
             </div>
           </div>

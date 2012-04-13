@@ -27,21 +27,41 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.controllers
+package net.ripe.rpki.validator
+package controllers
 
 import org.scalatra.ScalatraKernel
-import net.ripe.rpki.validator.lib.{UserPreferences, SoftwareUpdateChecker}
+import lib.{ UserPreferences, SoftwareUpdateChecker }
+import lib.Validation._
+import scalaz._
+import Scalaz._
 
+trait UserPreferencesController extends ApplicationController with SoftwareUpdateChecker {
 
-trait UserPreferencesController extends ScalatraKernel with SoftwareUpdateChecker {
+  val baseUrl = "/user-preferences"
 
   def updateUserPreferences(userPreferences: UserPreferences)
-  
-  get("/set-update-alert/:state") {
-    params("state") match {
-      case "true"   => updateUserPreferences(UserPreferences(updateAlertActive = true))
-      case "false"  => updateUserPreferences(UserPreferences(updateAlertActive = false))
-    }
-    redirect("/")
+  def getUserPreferences: UserPreferences
+
+  get(baseUrl) {
+    new views.UserPreferencesView(getUserPreferences, messages = feedbackMessages)
   }
+
+  post(baseUrl) {
+    submittedFilter match {
+      case Success(userPreferences) => {
+        updateUserPreferences(userPreferences)
+        new views.UserPreferencesView(getUserPreferences, messages = Seq(SuccessMessage("Your preferences were updated")))
+      }
+      case Failure(errors) => new views.UserPreferencesView(getUserPreferences, messages = errors)
+    }
+  }
+
+  private def submittedFilter: ValidationNEL[FeedbackMessage, UserPreferences] = {
+    val enabled = liftFailErrorMessage(parseCheckBoxValue(params.get("enable-update-checks")), Some("enable-update-checks"))
+    val maxStale = validateParameter("max-stale-days", required(parseInt))
+    
+    (enabled |@| maxStale).apply(UserPreferences.validate).flatMap(identity)
+  }
+
 }

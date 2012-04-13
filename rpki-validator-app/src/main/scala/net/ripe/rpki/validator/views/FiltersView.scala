@@ -44,7 +44,7 @@ class FiltersView(filters: Filters, getCurrentRtrPrefixes: () => Iterable[RtrPre
   val currentRtrPrefixes = getCurrentRtrPrefixes()
   
   def tab = Tabs.FiltersTab
-  def title = Text(tab.text)
+  def title = tab.text
   def body = {
     <div>{ renderMessages(messages, fieldNameToText) }</div>
     <div class="alert-message block-message info">

@@ -235,6 +235,8 @@ class Main(options: Options) { main =>
 
       // Software Update checker
       override def getNewVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version, () => scala.io.Source.fromURL(new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties"), "UTF-8").mkString)
+      
+      // UserPreferences
       override def getUserPreferences = memoryImage.single.get.userPreferences
       override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { _.updateUserPreferences(userPreferences) }
     }), "/*", FilterMapping.ALL)
