@@ -109,6 +109,14 @@ object Validation {
     case _ => (quote(s) + " is not a valid IPv4 or IPv6 prefix").fail
   }
 
+  def parseNonNegativeInt(s: String): Validation[String, Int] = {
+    parseInt(s) match {
+      case Success(x) if x >= 0 => x.success
+      case Success(x) => (quote(s) + " must be zero or positive").fail
+      case Failure(m) => m.fail
+    }
+  }
+
   def parseInt(s: String): Validation[String, Int] = try {
     s.toInt.success
   } catch {

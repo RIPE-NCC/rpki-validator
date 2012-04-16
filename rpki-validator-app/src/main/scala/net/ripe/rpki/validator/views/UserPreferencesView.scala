@@ -63,7 +63,7 @@ class UserPreferencesView(userPreferences: UserPreferences, messages: Seq[Feedba
           <div>
             <div class="span8">Maximum time to accept out of date repositories (days)</div>
             <div class="span4">
-              <input type="text" name="max-stale-days" value= { Text(userPreferences.maxStaleDays.toString) } />
+              <input type="number" min="0" name="max-stale-days" value= { Text(userPreferences.maxStaleDays.toString) } />
             </div>
           </div>
           <div class="span12"><input type="submit" class="btn primary" value="Make it so"/></div>

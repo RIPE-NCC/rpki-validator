@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package controllers
 
-import org.scalatra.ScalatraKernel
 import lib.{ UserPreferences, SoftwareUpdateChecker }
 import lib.Validation._
 import scalaz._
@@ -51,7 +50,7 @@ trait UserPreferencesController extends ApplicationController with SoftwareUpdat
     submittedFilter match {
       case Success(userPreferences) => {
         updateUserPreferences(userPreferences)
-        new views.UserPreferencesView(getUserPreferences, messages = Seq(SuccessMessage("Your preferences were updated")))
+        new views.UserPreferencesView(getUserPreferences, messages = Seq(SuccessMessage("Your preferences have been updated. Changes will take effect on next update.")))
       }
       case Failure(errors) => new views.UserPreferencesView(getUserPreferences, messages = errors)
     }
@@ -59,7 +58,7 @@ trait UserPreferencesController extends ApplicationController with SoftwareUpdat
 
   private def submittedFilter: ValidationNEL[FeedbackMessage, UserPreferences] = {
     val enabled = liftFailErrorMessage(parseCheckBoxValue(params.get("enable-update-checks")), Some("enable-update-checks"))
-    val maxStale = validateParameter("max-stale-days", required(parseInt))
+    val maxStale = validateParameter("max-stale-days", required(parseNonNegativeInt))
     
     (enabled |@| maxStale).apply(UserPreferences.validate).flatMap(identity)
   }
