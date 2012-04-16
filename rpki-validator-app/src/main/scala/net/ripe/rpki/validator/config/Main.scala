@@ -79,7 +79,7 @@ class Main(options: Options) { main =>
   val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
 
   val memoryImage = Ref(
-    MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.userPreferences.getOrElse(UserPreferences())))
+    MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.userPreferences))
 
   val rtrServer = runRtrServer()
   runWebServer()
@@ -210,7 +210,7 @@ class Main(options: Options) { main =>
           }
           val image = memoryImage.single.get
           PersistentDataSerialiser.write(
-            PersistentData(filters = image.filters, whitelist = image.whitelist, userPreferences = Some(image.userPreferences)),
+            PersistentData(filters = image.filters, whitelist = image.whitelist, userPreferences = image.userPreferences),
             dataFile)
         }
       }

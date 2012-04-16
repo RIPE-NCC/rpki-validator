@@ -43,7 +43,7 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
 
   val serialiser = new PersistentDataSerialiser
 
-  val data_empty: PersistentData = PersistentData(0, Filters(), Whitelist())
+  val data_empty: PersistentData = PersistentData()
   val json_empty: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[]},"userPreferences":{"updateAlertActive":true,"maxStaleDays":3}}"""
   val data_some: PersistentData = PersistentData(0,
       Filters(Set(IgnoreFilter(IpRange.parse("192.168.0.0/16")))),
@@ -71,12 +71,18 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
   test("should be backwards compatible with json string without software update preferences") {
     val json: String = """{"schemaVersion":0}"""
     val data = serialiser.deserialise(json)
-    data.userPreferences should equal (None)
+    data.userPreferences should equal (UserPreferences())
+  }
+
+  test("should be backwards compatible with json string without software maxStaleDays in update preferences") {
+    val json: String = """{"schemaVersion":0,"userPreferences":{"updateAlertActive":false}}"""
+    val data = serialiser.deserialise(json)
+    data.userPreferences should equal (UserPreferences(updateAlertActive = false))
   }
 
   test("serialise Whitelist, maxPrefixLength and preferences") {
     val data: PersistentData = PersistentData(0, Filters(), Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"),
-      IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)), Some(UserPreferences(updateAlertActive = true)))
+      IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)), UserPreferences(updateAlertActive = true))
     val json: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]},"userPreferences":{"updateAlertActive":true,"maxStaleDays":3}}"""
     serialiser.serialise(data) should equal(json)
     serialiser.deserialise(json) should equal(data)

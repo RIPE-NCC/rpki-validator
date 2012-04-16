@@ -39,7 +39,7 @@ import models._
 import java.io.{FileNotFoundException, File, IOException}
 import lib.UserPreferences
 
-case class PersistentData(schemaVersion: Int = 0, filters: Filters = Filters(), whitelist: Whitelist = Whitelist(), userPreferences: Option[UserPreferences] = Some(UserPreferences()))
+case class PersistentData(schemaVersion: Int = 0, filters: Filters = Filters(), whitelist: Whitelist = Whitelist(), userPreferences: UserPreferences = UserPreferences())
 
 class PersistentDataSerialiser {
 
@@ -67,7 +67,11 @@ class PersistentDataSerialiser {
 
   def serialise(data: PersistentData) = Serialization.write(data)
 
-  def deserialise(json: String): PersistentData = Serialization.read[PersistentData](json)
+  def deserialise(json: String): PersistentData = {
+    val jsonAst = net.liftweb.json.parse(json)
+    val defaultJsonAst =  Extraction.decompose(PersistentData())
+    (defaultJsonAst merge jsonAst).extract[PersistentData]
+  }
 }
 
 object PersistentDataSerialiser extends PersistentDataSerialiser with Logging {
