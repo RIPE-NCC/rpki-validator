@@ -49,25 +49,25 @@ class SoftwareUpdateCheckerTest extends FunSuite with ShouldMatchers {
 
   test("should NOT read properties when disabled") {
     val checker = new SoftwareUpdateChecker {
-      override def getNewVersionDetailFetcher = null
-      override def getUserPreferences = UserPreferences(updateAlertActive = false)
+      override def newVersionDetailFetcher = null
+      override def userPreferences = UserPreferences(updateAlertActive = false)
     }
-    val newVersionDetails = checker.getNewVersionDetails
+    val newVersionDetails = checker.newVersionDetails
     newVersionDetails should equal(None)
   }
 
   test("should cache new version details") {
     val countingFetcher = new MockNewVersionDetailFetcher(None)
     val checker = new SoftwareUpdateChecker {
-      override def getNewVersionDetailFetcher = countingFetcher
-      override def getUserPreferences = UserPreferences(updateAlertActive = true)
+      override def newVersionDetailFetcher = countingFetcher
+      override def userPreferences = UserPreferences(updateAlertActive = true)
     }
     countingFetcher.counter should equal(0)
-    val newVersionDetails = checker.getNewVersionDetails
+    val newVersionDetails = checker.newVersionDetails
     newVersionDetails should equal(None)
     countingFetcher.counter should equal(1)
 
-    val newVersionDetails2 = checker.getNewVersionDetails
+    val newVersionDetails2 = checker.newVersionDetails
     newVersionDetails2 should equal(newVersionDetails)
     countingFetcher.counter should equal(1)
   }
@@ -78,21 +78,21 @@ class SoftwareUpdateCheckerTest extends FunSuite with ShouldMatchers {
 
     val countingFetcher = new MockNewVersionDetailFetcher(None)
     val checker = new SoftwareUpdateChecker {
-      override def getNewVersionDetailFetcher = countingFetcher
-      override def getUserPreferences = UserPreferences(updateAlertActive = true)
+      override def newVersionDetailFetcher = countingFetcher
+      override def userPreferences = UserPreferences(updateAlertActive = true)
     }
     countingFetcher.counter should equal(0)
-    val newVersionDetails = checker.getNewVersionDetails
+    val newVersionDetails = checker.newVersionDetails
     newVersionDetails should equal(None)
     countingFetcher.counter should equal(1)
 
-    val newVersionDetails2 = checker.getNewVersionDetails
+    val newVersionDetails2 = checker.newVersionDetails
     newVersionDetails2 should equal(newVersionDetails)
     countingFetcher.counter should equal(1)
 
     DateTimeUtils.setCurrentMillisFixed(now.plusDays(1).plusMillis(1).getMillis())
 
-    val newVersionDetails3 = checker.getNewVersionDetails
+    val newVersionDetails3 = checker.newVersionDetails
     newVersionDetails3 should equal(None)
     countingFetcher.counter should equal(2)
 
@@ -101,38 +101,38 @@ class SoftwareUpdateCheckerTest extends FunSuite with ShouldMatchers {
 
   test("should read new version details when upgrade available") {
     val checker = new SoftwareUpdateChecker {
-      override def getNewVersionDetailFetcher = getTestNewVersionDetailFetcher("version.latest=" + expectedNewVersion + "\n" + "version.url=" + expectedUrl)
-      override def getUserPreferences = UserPreferences(updateAlertActive = true)
+      override def newVersionDetailFetcher = getTestNewVersionDetailFetcher("version.latest=" + expectedNewVersion + "\n" + "version.url=" + expectedUrl)
+      override def userPreferences = UserPreferences(updateAlertActive = true)
     }
-    val newVersionDetails = checker.getNewVersionDetails
+    val newVersionDetails = checker.newVersionDetails
     newVersionDetails should equal(Some(NewVersionDetails(version = expectedNewVersion, url = expectedUrl)))
   }
 
   test("should return none if we're up to date") {
     val checker = new SoftwareUpdateChecker {
-      override def getNewVersionDetailFetcher = getTestNewVersionDetailFetcher("version.latest=" + currentVersion + "\n" + "version.url=" + expectedUrl)
-      override def getUserPreferences = UserPreferences(updateAlertActive = true)
+      override def newVersionDetailFetcher = getTestNewVersionDetailFetcher("version.latest=" + currentVersion + "\n" + "version.url=" + expectedUrl)
+      override def userPreferences = UserPreferences(updateAlertActive = true)
     }
-    val newVersionDetails = checker.getNewVersionDetails
+    val newVersionDetails = checker.newVersionDetails
     newVersionDetails should equal(None)
 
   }
 
   test("should return none if version properties can't be read") {
     val checker = new SoftwareUpdateChecker {
-      override def getNewVersionDetailFetcher = getTestNewVersionDetailFetcher("this makes no sense")
-      override def getUserPreferences = UserPreferences(updateAlertActive = true)
+      override def newVersionDetailFetcher = getTestNewVersionDetailFetcher("this makes no sense")
+      override def userPreferences = UserPreferences(updateAlertActive = true)
     }
-    val newVersionDetails = checker.getNewVersionDetails
+    val newVersionDetails = checker.newVersionDetails
     newVersionDetails should equal(None)
   }
 
   test("should return none if fetching string throws exception") {
     val checker = new SoftwareUpdateChecker {
-      override def getNewVersionDetailFetcher = new OnlineNewVersionDetailFetcher(currentVersion, () => { throw new RuntimeException() })
-      override def getUserPreferences = UserPreferences(updateAlertActive = true)
+      override def newVersionDetailFetcher = new OnlineNewVersionDetailFetcher(currentVersion, () => { throw new RuntimeException() })
+      override def userPreferences = UserPreferences(updateAlertActive = true)
     }
-    val newVersionDetails = checker.getNewVersionDetails
+    val newVersionDetails = checker.newVersionDetails
     newVersionDetails should equal(None)
   }
 

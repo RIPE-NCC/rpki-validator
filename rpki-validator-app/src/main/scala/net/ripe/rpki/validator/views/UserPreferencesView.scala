@@ -33,7 +33,6 @@ package views
 import scala.xml._
 import lib.UserPreferences
 import lib.Validation._
-import controllers.UserPreferencesController
 
 class UserPreferencesView(userPreferences: UserPreferences, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
 
@@ -50,26 +49,25 @@ class UserPreferencesView(userPreferences: UserPreferences, messages: Seq[Feedba
       <form method="POST" class="form-stacked">
         <fieldset>
           <div>
-            <div class="span8">Automatically check for new versions of this validator</div>
-            <div class="span4">
+            <label class="checkbox">
               {
                 userPreferences.updateAlertActive match {
                   case true => <input name="enable-update-checks" type="checkbox" checked="checked"/>
                   case false => <input name="enable-update-checks" type="checkbox"/>
                 }
-              }
-            </div>
-          </div>
-          <div>
-            <div class="span8">Maximum time to accept out of date repositories (days)</div>
-            <div class="span4">
-              <input type="number" min="0" name="max-stale-days" value= { Text(userPreferences.maxStaleDays.toString) } />
-            </div>
-          </div>
-          <div class="span12"><input type="submit" class="btn primary" value="Make it so"/></div>
+              } Automatically check for new versions of this validator
+            </label>
+
+            <label>Maximum time to accept out of date repositories (days)</label>
+            <input type="number" class="span3" min="0" name="max-stale-days" value= { Text(userPreferences.maxStaleDays.toString) } />
+        </div>
+
+        <div>
+          <br/>
+          <button type="submit" class="btn primary">Save</button>
+        </div>
         </fieldset>
       </form>
     </div>
   }
-
 }

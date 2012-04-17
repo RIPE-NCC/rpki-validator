@@ -62,8 +62,8 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
     override lazy val version = sys.error("TBD")
     override val lastUpdateTime = new DateTime
 
-    override def getUserPreferences = UserPreferences(updateAlertActive = false)
-    override def getNewVersionDetailFetcher = sys.error("TODO")
+    override def userPreferences = UserPreferences(updateAlertActive = false)
+    override def newVersionDetailFetcher = sys.error("TODO")
     override def updateUserPreferences(userPreferences: UserPreferences) = sys.error("TODO")
   }, "/*")
 }

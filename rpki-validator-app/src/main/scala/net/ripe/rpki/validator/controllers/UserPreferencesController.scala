@@ -40,27 +40,27 @@ trait UserPreferencesController extends ApplicationController with SoftwareUpdat
   val baseUrl = "/user-preferences"
 
   def updateUserPreferences(userPreferences: UserPreferences)
-  def getUserPreferences: UserPreferences
+  def userPreferences: UserPreferences
 
   get(baseUrl) {
-    new views.UserPreferencesView(getUserPreferences, messages = feedbackMessages)
+    new views.UserPreferencesView(userPreferences, messages = feedbackMessages)
   }
 
   post(baseUrl) {
-    submittedFilter match {
-      case Success(userPreferences) => {
+    submittedUserPreferences match {
+      case Success(userPreferences) =>
         updateUserPreferences(userPreferences)
-        new views.UserPreferencesView(getUserPreferences, messages = Seq(SuccessMessage("Your preferences have been updated. Changes will take effect on next update.")))
-      }
-      case Failure(errors) => new views.UserPreferencesView(getUserPreferences, messages = errors)
+        new views.UserPreferencesView(userPreferences, messages = Seq(SuccessMessage("Your preferences have been updated. Changes will take effect on next update.")))
+      case Failure(errors) =>
+        new views.UserPreferencesView(userPreferences, messages = errors)
     }
   }
 
-  private def submittedFilter: ValidationNEL[FeedbackMessage, UserPreferences] = {
-    val enabled = liftFailErrorMessage(parseCheckBoxValue(params.get("enable-update-checks")), Some("enable-update-checks"))
+  private def submittedUserPreferences: ValidationNEL[FeedbackMessage, UserPreferences] = {
+    val enabled = validateParameter("enable-update-checks", parseCheckBoxValue)
     val maxStale = validateParameter("max-stale-days", required(parseNonNegativeInt))
     
-    (enabled |@| maxStale).apply(UserPreferences.validate).flatMap(identity)
+    (enabled |@| maxStale).apply(UserPreferences)
   }
 
 }

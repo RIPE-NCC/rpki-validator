@@ -44,29 +44,24 @@ import scalaz._
 import Scalaz._
 
 case class NewVersionDetails(version: String, url: URI)
-case class UserPreferences(updateAlertActive: Boolean = true, maxStaleDays: Int = 3)
-
-object UserPreferences {
-  def validate(updateAlertActive: Boolean, maxStaleDays: Int): ValidationNEL[FeedbackMessage, UserPreferences] = {
-    liftFailErrorMessage(UserPreferences(updateAlertActive, maxStaleDays).success, Some("user preferences"))
-  }
+case class UserPreferences(updateAlertActive: Boolean = true, maxStaleDays: Int = 3) {
+  require(maxStaleDays >= 0)
 }
-
 
 trait SoftwareUpdateChecker extends Logging {
 
   private var lastCheck: DateTime = null
   private var cachedNewVersionDetails: Option[NewVersionDetails] = None
 
-  def getNewVersionDetailFetcher: NewVersionDetailFetcher
-  def getUserPreferences: UserPreferences
+  def newVersionDetailFetcher: NewVersionDetailFetcher
+  def userPreferences: UserPreferences
 
   /**
    * Get new version details. Will cache for one day. Returns
    * None in case of problems or when no new version exists.
    */
-  def getNewVersionDetails(): Option[NewVersionDetails] = {
-    getUserPreferences.updateAlertActive match {
+  def newVersionDetails(): Option[NewVersionDetails] = {
+    userPreferences.updateAlertActive match {
       case true   => returnNewVersionDetails
       case false  => None
     }
@@ -74,7 +69,7 @@ trait SoftwareUpdateChecker extends Logging {
 
   def returnNewVersionDetails = {
     if (lastCheck == null || new Duration(lastCheck, new DateTime()).isLongerThan(Duration.standardDays(1))) {
-      cachedNewVersionDetails = getNewVersionDetailFetcher.readNewVersionDetails
+      cachedNewVersionDetails = newVersionDetailFetcher.readNewVersionDetails
       lastCheck = new DateTime()
     }
     cachedNewVersionDetails
