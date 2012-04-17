@@ -34,7 +34,7 @@ import scala.xml._
 import lib.UserPreferences
 import lib.Validation._
 
-class UserPreferencesView(userPreferences: UserPreferences, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
+class UserPreferencesView(val userPreferences: UserPreferences, val messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
 
   private val fieldNameToText = Map("enable-update-checks" -> "Check for updates", "max-stale-days" -> "Maximum days out of date")
 
