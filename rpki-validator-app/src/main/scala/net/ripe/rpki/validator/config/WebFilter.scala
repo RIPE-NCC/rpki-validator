@@ -36,7 +36,6 @@ import controllers._
 import views.View
 import views.Layouts
 import net.ripe.rpki.validator.views.DataTableJsonView
-import lib.SoftwareUpdateChecker
 
 abstract class WebFilter extends ScalatraFilter
   with ApplicationController

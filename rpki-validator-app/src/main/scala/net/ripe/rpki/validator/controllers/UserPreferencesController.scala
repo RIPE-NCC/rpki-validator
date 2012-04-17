@@ -62,5 +62,4 @@ trait UserPreferencesController extends ApplicationController with SoftwareUpdat
     
     (enabled |@| maxStale).apply(UserPreferences)
   }
-
 }
