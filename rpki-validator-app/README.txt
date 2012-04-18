@@ -1,5 +1,5 @@
-Certification Validator Tool
-============================
+RPKI Validator Tool
+===================
 
 Requirements
 -------------
