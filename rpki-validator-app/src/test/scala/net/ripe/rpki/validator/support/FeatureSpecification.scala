@@ -65,5 +65,6 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
     override def userPreferences = UserPreferences(updateAlertActive = false)
     override def newVersionDetailFetcher = sys.error("TODO")
     override def updateUserPreferences(userPreferences: UserPreferences) = sys.error("TODO")
+    override protected def setTrustAnchorEnabled(trustAnchorName: String, enabled: Boolean) {}
   }, "/*")
 }

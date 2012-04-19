@@ -52,6 +52,8 @@ case class Running(description: String) extends ProcessingStatus {
   def isIdle = false
 }
 
+case class TrustAnchorData(enabled: Boolean = true)
+
 case class TrustAnchor(
   locator: TrustAnchorLocator,
   status: ProcessingStatus,
@@ -90,6 +92,13 @@ class TrustAnchors(val all: Seq[TrustAnchor]) {
             ta.copy(lastUpdated = Some(now), status = Idle(nextUpdate, Some(errorMessage)))
         }
       } else ta
+    })
+  }
+
+  def setTrustAnchorEnabled(name: String, enabled: Boolean)= {
+    new TrustAnchors(all.map { ta =>
+      if (ta.name == name) ta.copy(enabled = enabled)
+      else ta
     })
   }
 }

@@ -36,7 +36,6 @@ import org.apache.commons.io.FileUtils
 import org.eclipse.jetty.server.Server
 import org.joda.time.DateTime
 import grizzled.slf4j.Logger
-import net.ripe.certification.validator.util.TrustAnchorExtractor
 import rtr.Pdu
 import rtr.RTRServer
 import lib._
@@ -48,6 +47,7 @@ import akka.dispatch.Future
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
 import net.ripe.commons.certification.validation.ValidationOptions
+import net.ripe.certification.validator.util.{TrustAnchorExtractor}
 
 object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
@@ -78,8 +78,10 @@ class Main(options: Options) { main =>
   val dataFile = new File(options.dataFileName).getCanonicalFile()
   val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
 
+  val trustAnchors2 = trustAnchors.all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
+
   val memoryImage = Ref(
-    MemoryImage(data.filters, data.whitelist, trustAnchors, roas, data.userPreferences))
+    MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors2), roas, data.userPreferences))
 
   val rtrServer = runRtrServer()
   runWebServer()
@@ -210,7 +212,8 @@ class Main(options: Options) { main =>
           }
           val image = memoryImage.single.get
           PersistentDataSerialiser.write(
-            PersistentData(filters = image.filters, whitelist = image.whitelist, userPreferences = image.userPreferences),
+            PersistentData(filters = image.filters, whitelist = image.whitelist, userPreferences = image.userPreferences,
+              trustAnchorData = image.trustAnchors.all.map(ta => ta.name -> TrustAnchorData(ta.enabled))(collection.breakOut)),
             dataFile)
         }
       }
@@ -243,6 +246,10 @@ class Main(options: Options) { main =>
       // UserPreferences
       override def userPreferences = memoryImage.single.get.userPreferences
       override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { _.updateUserPreferences(userPreferences) }
+
+      protected def setTrustAnchorEnabled(trustAnchorName: String, enabled: Boolean) = updateAndPersist { image =>
+        image.copy(trustAnchors = image.trustAnchors.setTrustAnchorEnabled(trustAnchorName, enabled))
+      }
     }), "/*", FilterMapping.ALL)
 
     val requestLogHandler = {

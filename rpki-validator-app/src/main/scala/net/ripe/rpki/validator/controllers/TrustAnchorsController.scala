@@ -30,13 +30,13 @@
 package net.ripe.rpki.validator
 package controllers
 
-import org.scalatra.ScalatraKernel
 import scalaz._, Scalaz._
 import models._
 import lib.Validation._
 
 trait TrustAnchorsController extends ApplicationController {
   protected def trustAnchors: TrustAnchors
+  protected def setTrustAnchorEnabled(trustAnchorName: String, enabled: Boolean)
   protected def validatedObjects: ValidatedObjects
   protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor])
 
