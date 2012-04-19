@@ -89,8 +89,8 @@ class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
     }
   }
 
-  def update(tal: TrustAnchorLocator, validatedObjects: Seq[ValidatedObject]) = {
-    new ValidatedObjects(all.updated(tal.getCaName(), validatedObjects))
+  def update(trustAnchorName: String, validatedObjects: Seq[ValidatedObject]) = {
+    new ValidatedObjects(all.updated(trustAnchorName, validatedObjects))
   }
 
 }

@@ -49,7 +49,7 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
     copy(trustAnchors = trustAnchors.finishedProcessing(tal, result, manifest, crl))
 
   def updateValidatedObjects(tal: TrustAnchorLocator, newValidatedObjects: Seq[ValidatedObject]) =
-    copy(version = version + 1, validatedObjects = validatedObjects.update(tal, newValidatedObjects))
+    copy(version = version + 1, validatedObjects = validatedObjects.update(tal.getCaName, newValidatedObjects))
 
   def addWhitelistEntry(entry: RtrPrefix) = copy(version = version + 1, whitelist = whitelist.addEntry(entry))
 
@@ -63,4 +63,7 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
   def removeFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.removeFilter(filter))
 
   def updateUserPreferences(newUserPreferences: UserPreferences) = copy(userPreferences = newUserPreferences)
+
+  def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean) =
+    copy(version = version + 1, trustAnchors = trustAnchors.updateTrustAnchorState(trustAnchorName, enabled), validatedObjects = validatedObjects.update(trustAnchorName, Seq.empty[ValidatedObject]))
 }

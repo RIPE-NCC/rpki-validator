@@ -36,9 +36,9 @@ import lib.Validation._
 
 trait TrustAnchorsController extends ApplicationController {
   protected def trustAnchors: TrustAnchors
-  protected def setTrustAnchorState(trustAnchorName: String, enabled: Boolean)
+  protected def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean)
   protected def validatedObjects: ValidatedObjects
-  protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor])
+  protected def startTrustAnchorValidation(trustAnchors: Seq[String])
 
   get("/trust-anchors") {
     new views.TrustAnchorsView(trustAnchors, validatedObjects.validationStatusCounts, messages = feedbackMessages)
@@ -47,10 +47,10 @@ trait TrustAnchorsController extends ApplicationController {
   post("/trust-anchors/update") {
     validateParameter("name", required(trustAnchorByName)) match {
       case Success(trustAnchor) =>
-        startTrustAnchorValidation(Seq(trustAnchor))
+        startTrustAnchorValidation(Seq(trustAnchor.name))
         redirectWithFeedbackMessages("/trust-anchors", Seq(InfoMessage("Started validation of trust anchor " + trustAnchor.name)))
       case Failure(_) =>
-        startTrustAnchorValidation(trustAnchors.all)
+        startTrustAnchorValidation(trustAnchors.all.map(_.name))
         redirectWithFeedbackMessages("/trust-anchors", Seq(InfoMessage("Started validation of all trust anchors.")))
     }
   }
@@ -59,9 +59,9 @@ trait TrustAnchorsController extends ApplicationController {
     validateParameter("name", required(trustAnchorByName)) match {
       case Success(trustAnchor) =>
         val enabled = !trustAnchor.enabled
-        setTrustAnchorState(trustAnchor.name, enabled)
+        updateTrustAnchorState(trustAnchor.name, enabled)
         if (enabled) {
-          startTrustAnchorValidation(Seq(trustAnchor))
+          startTrustAnchorValidation(Seq(trustAnchor.name))
           redirectWithFeedbackMessages("/trust-anchors", Seq(InfoMessage("Trust anchor '" + trustAnchor.name + "' has been enabled.")))
         } else {
           redirectWithFeedbackMessages("/trust-anchors", Seq(InfoMessage("Trust anchor '" + trustAnchor.name + "' has been disabled.")))

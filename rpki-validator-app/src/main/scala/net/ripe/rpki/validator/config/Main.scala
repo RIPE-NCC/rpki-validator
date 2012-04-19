@@ -112,14 +112,19 @@ class Main(options: Options) { main =>
       ta <- memoryImage.single.get.trustAnchors.all if ta.status.isIdle
       Idle(nextUpdate, _) = ta.status
       if nextUpdate <= now
-    } yield ta
+    } yield ta.name
 
     runValidator(needUpdating)
   }
 
-  private def runValidator(trustAnchors: Seq[TrustAnchor]) {
-    for (ta <- trustAnchors; if ta.status.isIdle && ta.enabled) {
-      memoryImage.single.transform { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
+  private def runValidator(trustAnchors: Seq[String]) {
+    val tasToValidate = atomic { implicit transaction =>
+      for (ta <- memoryImage().trustAnchors.all; if ta.status.isIdle && ta.enabled && trustAnchors.contains(ta.name)) yield {
+        memoryImage.transform { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
+        ta
+      }
+    }
+    for (ta <- tasToValidate) {
       Future {
         try {
           val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
@@ -143,11 +148,16 @@ class Main(options: Options) { main =>
           } yield crl
 
           atomic { implicit transaction =>
-            memoryImage.transform {
-              _.updateValidatedObjects(ta.locator, validatedObjects.values.toSeq).finishedProcessingTrustAnchor(ta.locator, Success(certificate), manifest, crl)
+            memoryImage.transform { _.finishedProcessingTrustAnchor(ta.locator, Success(certificate), manifest, crl) }
+            memoryImage.get.trustAnchors.all.find(_.name == ta.name) match {
+              case Some(trustAnchor) if trustAnchor.enabled =>
+                memoryImage.transform {
+                  _.updateValidatedObjects(ta.locator, validatedObjects.values.toSeq)
+                }
+                bgpAnnouncementValidator.startUpdate(bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
+                rtrServer.notify(memoryImage().version)
+              case _ =>
             }
-            bgpAnnouncementValidator.startUpdate(bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
-            rtrServer.notify(memoryImage().version)
           }
         } catch {
           case e: Exception =>
@@ -218,7 +228,7 @@ class Main(options: Options) { main =>
         }
       }
 
-      override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = main.runValidator(trustAnchors)
+      override protected def startTrustAnchorValidation(trustAnchors: Seq[String]) = main.runValidator(trustAnchors)
 
       override protected def trustAnchors = memoryImage.single.get.trustAnchors
       override protected def validatedObjects = memoryImage.single.get.validatedObjects
@@ -247,8 +257,7 @@ class Main(options: Options) { main =>
       override def userPreferences = memoryImage.single.get.userPreferences
       override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { _.updateUserPreferences(userPreferences) }
 
-      protected def setTrustAnchorState(trustAnchorName: String, enabled: Boolean) = updateAndPersist { image =>
-        image.copy(trustAnchors = image.trustAnchors.setTrustAnchorState(trustAnchorName, enabled))
+      override protected def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean) = updateAndPersist { image => image.updateTrustAnchorState(trustAnchorName, enabled)
       }
     }), "/*", FilterMapping.ALL)
 
