@@ -61,6 +61,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
             }
           </form>
         </th>
+        <th>Status</th>
       </thead>
       <tbody>{
         for (ta <- sortedTrustAnchors) yield {
@@ -75,40 +76,57 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
                   <td></td>
               }
             }{
-              ta.lastUpdated match {
-                case Some(lastUpdated) =>
-                  val manifestStale = ta.manifestNextUpdateTime.flatMap { dt => if (dt.isBefore(now)) Some("Manifest has been stale for " + periodInWords(new Period(dt, now))) else None }
-                  val crlStale = ta.crlNextUpdateTime.flatMap { dt => if (dt.isBefore(now)) Some("CRL has been stale for " + periodInWords(new Period(dt, now))) else None }
-                  val warnings = Seq(manifestStale, crlStale).flatten
-                  <td><span rel="twipsy" data-original-title={ formatDateTime(lastUpdated) }>{ periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago" }</span>{ if (warnings.isEmpty) NodeSeq.Empty else <span rel="twipsy" data-original-title={ warnings.mkString(", ") }>&nbsp;<img align="center" src="/images/warningS.png"/></span> } </td>
-                case None =>
-                  <td></td>
+              if (ta.enabled) {
+                ta.lastUpdated match {
+                  case Some(lastUpdated) =>
+                    val manifestStale = ta.manifestNextUpdateTime.flatMap { dt => if (dt.isBefore(now)) Some("Manifest has been stale for " + periodInWords(new Period(dt, now))) else None }
+                    val crlStale = ta.crlNextUpdateTime.flatMap { dt => if (dt.isBefore(now)) Some("CRL has been stale for " + periodInWords(new Period(dt, now))) else None }
+                    val warnings = Seq(manifestStale, crlStale).flatten
+                    <td><span rel="twipsy" data-original-title={ formatDateTime(lastUpdated) }>{ periodInWords(new Period(lastUpdated, now).withMillis(0), number = 1) + " ago" }</span>{ if (warnings.isEmpty) NodeSeq.Empty else <span rel="twipsy" data-original-title={ warnings.mkString(", ") }>&nbsp;<img align="center" src="/images/warningS.png"/></span> } </td>
+                  case None =>
+                    <td></td>
+                }
+              } else {
+                <td></td>
               }
             }{
-              ta.status match {
-                case Running(description) =>
-                  <td>{ description }</td>
-                  <td style="text-align: center;"><img src="/images/spinner.gif"/></td>
-                case Idle(nextUpdate, errorMessage) =>
-                  <td><span rel="twipsy" data-original-title={ if (ta.enabled) formatDateTime(nextUpdate) else "Trust Anchor is disabled" }>{
-                    if (now <= nextUpdate) periodInWords(new Period(now, nextUpdate), number = 1) else
-                      if (ta.enabled) "any moment" else "N/A"
-                  }</span>{
-                    errorMessage.map(text => <span rel="twipsy" data-original-title={ text }>&nbsp;<img align="center" src="/images/warningS.png"/></span>).getOrElse(NodeSeq.Empty)
-                  }</td>
-                  <td>
-                    <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
-                      <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
-                      {
+              if (ta.enabled) {
+                ta.status match {
+                  case Running(description) =>
+                    <td>{ description }</td>
+                      <td style="text-align: center;"><img src="/images/spinner.gif"/></td>
+                  case Idle(nextUpdate, errorMessage) =>
+                    <td><span rel="twipsy" data-original-title={ formatDateTime(nextUpdate) }>{
                       if (ta.enabled)
-                          <input type="submit" class="btn span2" value="update"/>
+                        if (now <= nextUpdate) periodInWords(new Period(now, nextUpdate), number = 1) else "any moment"
                       else
-                          <input type="submit" class="btn span2" value="update" disabled="disabled"/>
-                      }
-                      </form>
+                        ""
+                      }</span>{
+                      errorMessage.map(text => <span rel="twipsy" data-original-title={ text }>&nbsp;<img align="center" src="/images/warningS.png"/></span>).getOrElse(NodeSeq.Empty)
+                      }</td>
+                      <td>
+                        <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
+                            <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
+                            <input type="submit" class="btn span2" value="update"/>
+                        </form>
                       </td>
                 }
+              } else {
+                <td></td>
+                <td></td>
               }
+            }
+            <td>
+              <form method="POST" action={ tab.url + "/toggle" } style="padding:0;margin:0;">
+                  <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
+                {
+                if (ta.enabled)
+                    <input type="submit" class="btn span2" value="Disable"/>
+                else
+                    <input type="submit" class="btn span2" value="Enable"/>
+                }
+              </form>
+            </td>
           </tr>
         }
       }</tbody>
