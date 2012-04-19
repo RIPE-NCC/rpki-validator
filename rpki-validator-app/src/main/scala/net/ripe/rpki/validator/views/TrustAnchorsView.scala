@@ -54,7 +54,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
         <th>
           <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
             {
-              if (trustAnchors.all.forall(_.status.isRunning))
+              if ((trustAnchors.all.forall(_.status.isRunning)) || (trustAnchors.all.forall(!_.enabled)))
                 <input type="submit" class="btn primary span2" value="update all" disabled="disabled"/>
               else
                 <input type="submit" class="btn primary span2" value="update all"/>
@@ -90,19 +90,25 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
                   <td>{ description }</td>
                   <td style="text-align: center;"><img src="/images/spinner.gif"/></td>
                 case Idle(nextUpdate, errorMessage) =>
-                  <td><span rel="twipsy" data-original-title={ formatDateTime(nextUpdate) }>{
-                    if (now <= nextUpdate) periodInWords(new Period(now, nextUpdate), number = 1) else "any moment"
+                  <td><span rel="twipsy" data-original-title={ if (ta.enabled) formatDateTime(nextUpdate) else "Trust Anchor is disabled" }>{
+                    if (now <= nextUpdate) periodInWords(new Period(now, nextUpdate), number = 1) else
+                      if (ta.enabled) "any moment" else "N/A"
                   }</span>{
                     errorMessage.map(text => <span rel="twipsy" data-original-title={ text }>&nbsp;<img align="center" src="/images/warningS.png"/></span>).getOrElse(NodeSeq.Empty)
                   }</td>
                   <td>
                     <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
                       <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
-                      <input type="submit" class="btn span2" value="update"/>
-                    </form>
-                  </td>
+                      {
+                      if (ta.enabled)
+                          <input type="submit" class="btn span2" value="update"/>
+                      else
+                          <input type="submit" class="btn span2" value="update" disabled="disabled"/>
+                      }
+                      </form>
+                      </td>
+                }
               }
-            }
           </tr>
         }
       }</tbody>

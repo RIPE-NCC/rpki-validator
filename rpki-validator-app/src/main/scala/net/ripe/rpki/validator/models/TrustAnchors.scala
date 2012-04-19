@@ -55,6 +55,7 @@ case class Running(description: String) extends ProcessingStatus {
 case class TrustAnchor(
   locator: TrustAnchorLocator,
   status: ProcessingStatus,
+  enabled: Boolean,
   certificate: Option[CertificateRepositoryObjectValidationContext],
   manifest: Option[ManifestCms],
   crl: Option[X509Crl],
@@ -102,6 +103,7 @@ object TrustAnchors extends Logging {
       new TrustAnchor(
         locator = tal,
         status = Idle(now),
+        enabled = true,
         certificate = None,
         manifest = None,
         crl = None)

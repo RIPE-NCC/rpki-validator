@@ -116,7 +116,7 @@ class Main(options: Options) { main =>
   }
 
   private def runValidator(trustAnchors: Seq[TrustAnchor]) {
-    for (ta <- trustAnchors; if ta.status.isIdle) {
+    for (ta <- trustAnchors; if ta.status.isIdle && ta.enabled) {
       memoryImage.single.transform { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
       Future {
         try {
