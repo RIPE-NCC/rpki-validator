@@ -55,7 +55,7 @@ trait TrustAnchorsController extends ApplicationController {
     }
   }
 
-  post("/trust-anchors/toggle") {
+  post("/trust-anchors/toggle", false) {
     validateParameter("name", required(trustAnchorByName)) match {
       case Success(trustAnchor) =>
         val enabled = !trustAnchor.enabled

@@ -61,7 +61,6 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
             }
           </form>
         </th>
-        <th>Status</th>
       </thead>
       <tbody>{
         for (ta <- sortedTrustAnchors) yield {
@@ -116,17 +115,6 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
                 <td></td>
               }
             }
-            <td>
-              <form method="POST" action={ tab.url + "/toggle" } style="padding:0;margin:0;">
-                  <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
-                {
-                if (ta.enabled)
-                    <input type="submit" class="btn span2" value="Disable"/>
-                else
-                    <input type="submit" class="btn span2" value="Enable"/>
-                }
-              </form>
-            </td>
           </tr>
         }
       }</tbody>
