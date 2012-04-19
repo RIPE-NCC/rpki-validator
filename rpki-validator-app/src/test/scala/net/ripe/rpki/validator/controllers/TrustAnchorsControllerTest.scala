@@ -43,7 +43,7 @@ class TrustAnchorControllersTest extends ControllerTestCase {
     override def trustAnchors = new TrustAnchors(Seq.empty)
     override def validatedObjects = new ValidatedObjects(Map.empty)
     override protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor]) = sys.error("TODO")
-    override protected def setTrustAnchorEnabled(trustAnchorName: String, enabled: Boolean) {}
+    override protected def setTrustAnchorState(trustAnchorName: String, enabled: Boolean) {}
   }
 
   test("list trust anchors") {

@@ -36,7 +36,7 @@ import lib.Validation._
 
 trait TrustAnchorsController extends ApplicationController {
   protected def trustAnchors: TrustAnchors
-  protected def setTrustAnchorEnabled(trustAnchorName: String, enabled: Boolean)
+  protected def setTrustAnchorState(trustAnchorName: String, enabled: Boolean)
   protected def validatedObjects: ValidatedObjects
   protected def startTrustAnchorValidation(trustAnchors: Seq[TrustAnchor])
 
@@ -52,6 +52,22 @@ trait TrustAnchorsController extends ApplicationController {
       case Failure(_) =>
         startTrustAnchorValidation(trustAnchors.all)
         redirectWithFeedbackMessages("/trust-anchors", Seq(InfoMessage("Started validation of all trust anchors.")))
+    }
+  }
+
+  post("/trust-anchors/toggle") {
+    validateParameter("name", required(trustAnchorByName)) match {
+      case Success(trustAnchor) =>
+        val enabled = !trustAnchor.enabled
+        setTrustAnchorState(trustAnchor.name, enabled)
+        if (enabled) {
+          startTrustAnchorValidation(Seq(trustAnchor))
+          redirectWithFeedbackMessages("/trust-anchors", Seq(InfoMessage("Trust anchor '" + trustAnchor.name + "' has been enabled.")))
+        } else {
+          redirectWithFeedbackMessages("/trust-anchors", Seq(InfoMessage("Trust anchor '" + trustAnchor.name + "' has been disabled.")))
+        }
+      case Failure(feedbackMessage) =>
+        redirectWithFeedbackMessages("/trust-anchors", feedbackMessage)
     }
   }
 

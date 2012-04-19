@@ -247,8 +247,8 @@ class Main(options: Options) { main =>
       override def userPreferences = memoryImage.single.get.userPreferences
       override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { _.updateUserPreferences(userPreferences) }
 
-      protected def setTrustAnchorEnabled(trustAnchorName: String, enabled: Boolean) = updateAndPersist { image =>
-        image.copy(trustAnchors = image.trustAnchors.setTrustAnchorEnabled(trustAnchorName, enabled))
+      protected def setTrustAnchorState(trustAnchorName: String, enabled: Boolean) = updateAndPersist { image =>
+        image.copy(trustAnchors = image.trustAnchors.setTrustAnchorState(trustAnchorName, enabled))
       }
     }), "/*", FilterMapping.ALL)
 

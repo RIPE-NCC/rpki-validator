@@ -95,7 +95,7 @@ class TrustAnchors(val all: Seq[TrustAnchor]) {
     })
   }
 
-  def setTrustAnchorEnabled(name: String, enabled: Boolean)= {
+  def setTrustAnchorState(name: String, enabled: Boolean)= {
     new TrustAnchors(all.map { ta =>
       if (ta.name == name) ta.copy(enabled = enabled)
       else ta
