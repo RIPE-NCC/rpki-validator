@@ -88,8 +88,8 @@ object Layouts {
           {
             newVersionDetails match {
               case Some(versionDetails) => {
-                <div class="alert-message block-message info">
-                  <p>New version { versionDetails.version } available <a href={ versionDetails.url.toString }>here</a></p>
+                <div class="alert-message block-message">
+                  <p>New version { versionDetails.version } available <a href={ versionDetails.url.toString }>here</a>.</p>
                 </div>
               }
               case None => NodeSeq.Empty
