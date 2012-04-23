@@ -46,18 +46,19 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
     <div>{ renderMessages(messages, identity) }</div>
     <table id="trust-anchors" class="zebra-striped">
       <thead>
+        <th>Enabled</th>
         <th>Trust anchor</th>
         <th>Processed Items</th>
         <th>Expires in</th>
         <th>Last updated</th>
         <th>Next update in</th>
-        <th>
+        <th class="center">
           <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
             {
-              if ((trustAnchors.all.forall(_.status.isRunning)) || (trustAnchors.all.forall(!_.enabled)))
-                <input type="submit" class="btn primary span2" value="update all" disabled="disabled"/>
-              else
-                <input type="submit" class="btn primary span2" value="update all"/>
+            if ((trustAnchors.all.forall(_.status.isRunning)) || (trustAnchors.all.forall(!_.enabled)))
+                <input type="submit" class="btn primary span2" value="Update all" disabled="disabled"/>
+            else
+                <input type="submit" class="btn primary span2" value="Update all"/>
             }
           </form>
         </th>
@@ -65,6 +66,17 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
       <tbody>{
         for (ta <- sortedTrustAnchors) yield {
           <tr>
+            <td class="center">
+              <form method="POST" action={ tab.url + "/toggle" } style="padding:0;margin:0;">
+                  <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
+                {
+                if (ta.enabled)
+                    <input name="enable-ta" type="checkbox" checked="checked" onclick="this.form.submit();"/>
+                else
+                    <input name="enable-ta" type="checkbox" onclick="this.form.submit();"/>
+                }
+              </form>
+            </td>
             <td><span rel="twipsy" data-original-title={ ta.certificate.map(_.getCertificate.getSubject.toString).getOrElse("") }>{ ta.name }</span></td>
             <td nowrap="nowrap">{ renderCounters(ta, validationStatusCounts.getOrElse(ta.name, Map.empty)) }</td>{
               ta.certificate match {
@@ -103,10 +115,10 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
                       }</span>{
                       errorMessage.map(text => <span rel="twipsy" data-original-title={ text }>&nbsp;<img align="center" src="/images/warningS.png"/></span>).getOrElse(NodeSeq.Empty)
                       }</td>
-                      <td>
+                      <td class="center">
                         <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
                             <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
-                            <input type="submit" class="btn span2" value="update"/>
+                            <input type="submit" class="btn span2" value="Update"/>
                         </form>
                       </td>
                 }
