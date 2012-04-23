@@ -58,13 +58,22 @@ class UserPreferencesView(val userPreferences: UserPreferences, val messages: Se
               } Automatically check for new versions of this validator
             </label>
 
-            <label>Maximum time to accept out of date repositories (days)</label>
-            <input type="number" class="span3" min="0" name="max-stale-days" value= { Text(userPreferences.maxStaleDays.toString) } />
+            <label class="checkbox" style="display:inline">
+              {
+                if (userPreferences.maxStaleDays != 0)
+                    <input name="enable-staleness-check" type="checkbox" checked="checked"/>
+                else
+                    <input name="enable-staleness-check" type="checkbox"/>
+              } Discard repositories that are out of date for more than
+            </label>
+            <input type="number" class="span1" min="0" name="max-stale-days" value= { Text(userPreferences.maxStaleDays.toString) } />
+            <strong>days.</strong>
+
         </div>
 
         <div>
           <br/>
-          <button type="submit" class="btn primary">Save</button>
+          <button type="submit" class="btn primary">Update Preferences</button>
         </div>
         </fieldset>
       </form>

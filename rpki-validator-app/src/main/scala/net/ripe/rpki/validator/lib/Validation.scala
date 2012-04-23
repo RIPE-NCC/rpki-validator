@@ -110,8 +110,10 @@ object Validation {
   }
 
   def parseNonNegativeInt(s: String): Validation[String, Int] = parseInt(s).flatMap { x =>
-    if (x >= 0) x.success
-    else (quote(s) + " must be zero or positive").fail
+    if (x >= 0)
+      x.success
+    else
+      (quote(s) + " must be zero or positive").fail
   }
 
   def parseInt(s: String): Validation[String, Int] = try {
