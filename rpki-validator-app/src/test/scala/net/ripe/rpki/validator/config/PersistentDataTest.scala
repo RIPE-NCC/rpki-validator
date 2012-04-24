@@ -44,11 +44,11 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
   val serialiser = new PersistentDataSerialiser
 
   val data_empty: PersistentData = PersistentData()
-  val json_empty: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[]},"userPreferences":{"updateAlertActive":true,"maxStaleDays":3},"trustAnchorData":{}}"""
+  val json_empty: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[]},"userPreferences":{"updateAlertActive":true,"maxStaleDays":0},"trustAnchorData":{}}"""
   val data_some: PersistentData = PersistentData(0,
       Filters(Set(IgnoreFilter(IpRange.parse("192.168.0.0/16")))),
       Whitelist(Set(RtrPrefix(Asn.parse("AS65530"), IpRange.parse("10.0.0.0/8"), None))))
-  val json_some: String = """{"schemaVersion":0,"filters":{"entries":[{"prefix":"192.168.0.0/16"}]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8"}]},"userPreferences":{"updateAlertActive":true,"maxStaleDays":3},"trustAnchorData":{}}"""
+  val json_some: String = """{"schemaVersion":0,"filters":{"entries":[{"prefix":"192.168.0.0/16"}]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8"}]},"userPreferences":{"updateAlertActive":true,"maxStaleDays":0},"trustAnchorData":{}}"""
 
   test("serialise empty Whitelist") {
     serialiser.serialise(data_empty) should equal(json_empty)
@@ -63,7 +63,7 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
   test("serialise Whitelist with maxPrefixLength") {
     val data: PersistentData = PersistentData(0, Filters(), Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"),
       IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)))
-    val json: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]},"userPreferences":{"updateAlertActive":true,"maxStaleDays":3},"trustAnchorData":{}}"""
+    val json: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]},"userPreferences":{"updateAlertActive":true,"maxStaleDays":0},"trustAnchorData":{}}"""
     serialiser.serialise(data) should equal(json)
     serialiser.deserialise(json) should equal(data)
   }

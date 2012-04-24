@@ -55,28 +55,30 @@ class UserPreferencesView(val userPreferences: UserPreferences, val messages: Se
                   case true => <input name="enable-update-checks" type="checkbox" checked="checked"/>
                   case false => <input name="enable-update-checks" type="checkbox"/>
                 }
-              } Automatically check for new versions of this validator
+              }
+              Automatically check for new versions of this validator
             </label>
-
-            <label class="checkbox" style="display:inline">
-              {
-                if (userPreferences.maxStaleDays != 0)
-                    <input name="enable-staleness-check" type="checkbox" checked="checked"/>
-                else
-                    <input name="enable-staleness-check" type="checkbox"/>
-              } Discard repositories that are out of date for more than
+            <label class="checkbox">
+              Accept repositories that are no longer updated for up to
+              <span rel="twipsy" data-original-title="Increasing this number means that you are less strict about out-of-date repositories, but this means you are more vulnerable to replay attacks. If in doubt, you can leave this on the default setting of 0.">
+                <input type="number" class="span2" min="0" name="max-stale-days" value={ Text(userPreferences.maxStaleDays.toString) }/>
+              </span>
+              days.
             </label>
-            <input type="number" class="span1" min="0" name="max-stale-days" value= { Text(userPreferences.maxStaleDays.toString) } />
-            <strong>days.</strong>
-
-        </div>
-
-        <div>
-          <br/>
-          <button type="submit" class="btn primary">Update Preferences</button>
-        </div>
+          </div>
+          <div>
+            <br/>
+            <button type="submit" class="btn primary">Update Preferences</button>
+          </div>
         </fieldset>
       </form>
     </div>
+    <script><!--
+$(function () {
+  $('[rel=twipsy]').twipsy({
+    "live": true
+  });
+});
+//--></script>
   }
 }

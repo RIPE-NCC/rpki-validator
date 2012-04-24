@@ -92,6 +92,10 @@ class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
   def update(trustAnchorName: String, validatedObjects: Seq[ValidatedObject]) = {
     new ValidatedObjects(all.updated(trustAnchorName, validatedObjects))
   }
+  
+  def removeTrustAnchor(trustAnchorName: String) = {
+    new ValidatedObjects(all.filterKeys(key => !key.equals(trustAnchorName)))
+  }
 
 }
 

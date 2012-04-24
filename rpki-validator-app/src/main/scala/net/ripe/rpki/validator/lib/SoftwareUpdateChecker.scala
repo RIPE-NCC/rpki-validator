@@ -44,7 +44,7 @@ import scalaz._
 import Scalaz._
 
 case class NewVersionDetails(version: String, url: URI)
-case class UserPreferences(updateAlertActive: Boolean = true, maxStaleDays: Int = 3) {
+case class UserPreferences(updateAlertActive: Boolean = true, maxStaleDays: Int = 0) {
   require(maxStaleDays >= 0)
 }
 

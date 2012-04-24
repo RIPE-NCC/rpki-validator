@@ -60,6 +60,7 @@ object Main {
       sys.exit(1)
   }
 }
+
 class Main(options: Options) { main =>
   import akka.util.duration._
 
@@ -67,8 +68,7 @@ class Main(options: Options) { main =>
 
   implicit val actorSystem = akka.actor.ActorSystem()
 
-  val trustAnchors = loadTrustAnchors()
-  val roas = ValidatedObjects(trustAnchors)
+
   val bgpRisDumps = Ref(Seq(
     BgpRisDump("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz"),
     BgpRisDump("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz")))
@@ -78,10 +78,11 @@ class Main(options: Options) { main =>
   val dataFile = new File(options.dataFileName).getCanonicalFile()
   val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
 
-  val trustAnchors2 = trustAnchors.all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
+  val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
+  val roas = ValidatedObjects(new TrustAnchors(trustAnchors.filter(ta => ta.enabled)))
 
   val memoryImage = Ref(
-    MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors2), roas, data.userPreferences))
+    MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors), roas, data.userPreferences))
 
   val rtrServer = runRtrServer()
   runWebServer()

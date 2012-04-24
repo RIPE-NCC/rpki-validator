@@ -64,6 +64,11 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
 
   def updateUserPreferences(newUserPreferences: UserPreferences) = copy(userPreferences = newUserPreferences)
 
-  def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean) =
-    copy(version = version + 1, trustAnchors = trustAnchors.updateTrustAnchorState(trustAnchorName, enabled), validatedObjects = validatedObjects.update(trustAnchorName, Seq.empty[ValidatedObject]))
+  def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean) = {
+    val newValidatedObjects = enabled match {
+      case true => validatedObjects.update(trustAnchorName, Seq.empty[ValidatedObject])
+      case false => validatedObjects.removeTrustAnchor(trustAnchorName)
+    }
+    copy(version = version + 1, trustAnchors = trustAnchors.updateTrustAnchorState(trustAnchorName, enabled), validatedObjects = newValidatedObjects)
+  }
 }

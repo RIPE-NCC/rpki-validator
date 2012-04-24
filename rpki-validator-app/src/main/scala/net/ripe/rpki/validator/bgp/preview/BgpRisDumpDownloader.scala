@@ -30,73 +30,87 @@
 package net.ripe.rpki.validator.bgp.preview
 
 import scala.concurrent.stm.Ref
-import java.io.InputStream
-import java.util.zip.GZIPInputStream
-import javax.servlet.http.HttpServletResponse._
 import grizzled.slf4j.Logging
 import org.joda.time.DateTime
 import akka.dispatch.ExecutionContext
 import akka.dispatch.Future
 import akka.dispatch.Promise
-import com.ning.http.client.AsyncHttpClient
-import com.ning.http.client.AsyncCompletionHandler
-import com.ning.http.client.Response
-import com.ning.http.util.DateUtil
+
+import java.io.InputStream
+import java.util.zip.GZIPInputStream
+
+import javax.servlet.http.HttpServletResponse._
+import org.apache.http.client.HttpClient
+import org.apache.http.impl.client.DefaultHttpClient
+import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.ResponseHandler
+import org.apache.http.HttpResponse
+import org.apache.http.impl.cookie.DateUtils
 
 object BgpRisDumpDownloader extends Logging {
   val DEFAULT_URLS = Seq(
     "http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz",
     "http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz")
 
-  private lazy val http = new AsyncHttpClient()
-
   /**
    * Refreshes the given BgpRisDump. If the source information was not modified or could not be retrieved the input dump is returned.
    */
-  def download(dump: BgpRisDump)(implicit ec: ExecutionContext): Future[BgpRisDump] = {
-    val url = dump.url
-    info("Retrieving BGP entries from " + url)
+  def download(dump: BgpRisDump)(implicit ec: ExecutionContext): Future[BgpRisDump] = Future {
+    val client = new DefaultHttpClient()
+    try {
+      val get = new HttpGet(dump.url)
+      dump.lastModified foreach { lastModified =>
+        get.addHeader("If-Modified-Since", DateUtils.formatDate(lastModified.toDate()))
+      }
+      val responseHandler = makeResponseHandler(dump)
 
-    val request = http.prepareGet(url).setFollowRedirects(true)
-    dump.lastModified foreach { lastModified =>
-      request.setHeader("If-Modified-Since", DateUtil.formatDate(lastModified.toDate()))
+      client.execute(get, responseHandler)
+    } catch {
+      case e: Exception =>
+        error("error retrieving BGP entries from " + dump.url, e)
+        dump
+    } finally {
+      client.getConnectionManager().shutdown()
     }
 
-    val result = Promise[BgpRisDump]()
-    request.execute(new AsyncCompletionHandler[Unit] {
-      override def onCompleted(response: Response) = response.getStatusCode() match {
-        case SC_OK =>
-          BgpRisDump.parse(new GZIPInputStream(response.getResponseBodyAsStream())) match {
-            case Left(exception) =>
-              error("Error parsing BGP entries from " + url + ". " + exception.toString(), exception)
-              result.success(dump)
-            case Right(entries) =>
-              val modified = lastModified(response)
-              info("Retrieved " + entries.size + " entries from " + url + ", last modified at " + modified.getOrElse("unknown"))
-              result.success(dump.copy(lastModified = modified, entries = entries))
-          }
-        case SC_NOT_MODIFIED if dump.lastModified.isDefined =>
-          info("BGP entries from " + url + " were not modified since " + dump.lastModified.get)
-          result.success(dump)
-        case _ =>
-          warn("error retrieving BGP entries from " + url + ". Code: " + response.getStatusCode() + " " + response.getStatusText())
-          result.success(dump)
-      }
-      override def onThrowable(t: Throwable) = {
-        error("error retrieving BGP entries from " + url, t)
-        result.success(dump)
-      }
-    })
-
-    result
   }
 
-  private def lastModified(response: Response) = Option(response.getHeader("Last-Modified")) flatMap { v =>
-    try {
-      Some(new DateTime(DateUtil.parseDate(v)))
-    } catch {
-      case _ => None
+  private def lastModified(response: HttpResponse) = {
+    Option(response.getFirstHeader("Last-Modified")) map { h =>
+      new DateTime(org.apache.http.impl.cookie.DateUtils.parseDate(h.getValue()))
     }
+  }
+
+  protected[preview] def makeResponseHandler(dump: net.ripe.rpki.validator.bgp.preview.BgpRisDump): java.lang.Object with org.apache.http.client.ResponseHandler[net.ripe.rpki.validator.bgp.preview.BgpRisDump] = {
+    val responseHandler = new ResponseHandler[BgpRisDump]() {
+      override def handleResponse(response: HttpResponse): BgpRisDump = {
+        response.getStatusLine().getStatusCode() match {
+          case SC_OK =>
+            try {
+              BgpRisDump.parse(new GZIPInputStream(response.getEntity().getContent())) match {
+                case Left(exception) =>
+                  error("Error parsing BGP entries from " + dump.url + ". " + exception.toString(), exception)
+                  dump
+                case Right(entries) =>
+                  val modified = lastModified(response)
+                  info("Retrieved " + entries.size + " entries from " + dump.url + ", last modified at " + modified.getOrElse("unknown"))
+                  dump.copy(lastModified = modified, entries = entries)
+              }
+            } catch {
+              case exception: Exception =>
+                error("Error parsing BGP entries from " + dump.url + ". " + exception.toString(), exception)
+                dump
+            }
+          case SC_NOT_MODIFIED if dump.lastModified.isDefined =>
+            info("BGP entries from " + dump.url + " were not modified since " + dump.lastModified.get)
+            dump
+          case _ =>
+            warn("error retrieving BGP entries from " + dump.url + ". Code: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase())
+            dump
+        }
+      }
+    }
+    responseHandler
   }
 
 }
