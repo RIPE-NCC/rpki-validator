@@ -47,7 +47,8 @@ class FiltersView(filters: Filters, getCurrentRtrPrefixes: () => Iterable[RtrPre
   def title = tab.text
   def body = {
     <div>{ renderMessages(messages, fieldNameToText) }</div>
-    <div class="alert-message block-message info">
+    <div class="alert-message block-message info" data-alert="alert">
+    <a class="close" href="#">×</a>
     <p>By adding a filter the validator will ignore any RPKI prefixes that overlap with the filter's prefix.</p>
     </div>
     <h2>Add filter</h2>

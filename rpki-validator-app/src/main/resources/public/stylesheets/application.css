@@ -213,3 +213,10 @@ span.object-counter {
 .center {
   text-align:center;
 }
+
+.inline-feedback-option-form {
+  display: inline;
+  margin-left: 4px;
+  margin-right: 4px;
+  margin-bottom: 0;
+}

@@ -51,7 +51,8 @@ class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump]) extends View with ViewHelpers
   def tab = Tabs.BgpPreviewTab
   def title = Text("BGP Preview")
   def body = {
-    <div class="alert-message block-message info">
+    <div class="alert-message block-message info" data-alert="alert">
+      <a class="close" href="#">×</a>
       <p>
         This page provides a <strong>preview</strong>
         of the likely rpki validity states your routers will

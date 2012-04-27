@@ -38,7 +38,8 @@ class RoasView(validatedObjects: ValidatedObjects) extends View {
   def title = Text("Validated ROAs")
   def body = {
     val (loading, ready) = validatedObjects.all.partition(_._2.isEmpty)
-    <div class="alert-message block-message info">
+    <div class="alert-message block-message info" data-alert="alert">
+    <a class="close" href="#">×</a>
       {
         optional(ready.nonEmpty, <p>Validated ROAs from { listTrustAnchorNames(ready.keys.toSeq) }.</p>) ++
         optional(loading.nonEmpty, <p>Still retrieving and validating ROAs from { listTrustAnchorNames(loading.keys.toSeq) }.</p>)

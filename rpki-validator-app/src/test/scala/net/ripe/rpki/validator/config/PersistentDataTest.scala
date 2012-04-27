@@ -82,8 +82,8 @@ class PersistentDataTest extends FunSuite with ShouldMatchers {
 
   test("serialise Whitelist, maxPrefixLength, preferences and disabled trust anchors list") {
     val data: PersistentData = PersistentData(0, Filters(), Whitelist(Set(RtrPrefix.validate(Asn.parse("AS65530"),
-      IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)), UserPreferences(updateAlertActive = false, maxStaleDays = 5), trustAnchorData = Map("AfriNIC RPKI Root" -> TrustAnchorData(enabled = true)))
-    val json: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]},"userPreferences":{"updateAlertActive":false,"maxStaleDays":5},"trustAnchorData":{"AfriNIC RPKI Root":{"enabled":true}}}"""
+      IpRange.parse("10.0.0.0/8"), Some(16)).toOption.get)), UserPreferences(updateAlertActive = false, maxStaleDays = 5, enableFeedback = Some(true)), trustAnchorData = Map("AfriNIC RPKI Root" -> TrustAnchorData(enabled = true)))
+    val json: String = """{"schemaVersion":0,"filters":{"entries":[]},"whitelist":{"entries":[{"asn":65530,"prefix":"10.0.0.0/8","maxPrefixLength":16}]},"userPreferences":{"updateAlertActive":false,"maxStaleDays":5,"enableFeedback":true},"trustAnchorData":{"AfriNIC RPKI Root":{"enabled":true}}}"""
     serialiser.serialise(data) should equal(json)
     serialiser.deserialise(json) should equal(data)
   }

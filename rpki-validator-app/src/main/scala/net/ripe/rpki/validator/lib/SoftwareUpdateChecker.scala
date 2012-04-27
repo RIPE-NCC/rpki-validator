@@ -44,7 +44,9 @@ import scalaz._
 import Scalaz._
 
 case class NewVersionDetails(version: String, url: URI)
-case class UserPreferences(updateAlertActive: Boolean = true, maxStaleDays: Int = 0) {
+
+// Note enableFeedback is an option so that we can see detect if users never made this choice, and prompt them.
+case class UserPreferences(updateAlertActive: Boolean = true, maxStaleDays: Int = 0, enableFeedback: Option[Boolean] = None) {
   require(maxStaleDays >= 0)
 }
 

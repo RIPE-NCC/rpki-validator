@@ -45,7 +45,8 @@ class WhitelistView(whitelist: Whitelist, validatedAnnouncements: Seq[BgpValidat
   def title = Text("Whitelist")
   def body = {
     <div>{ renderMessages(messages, fieldNameToText) }</div>
-    <div class="alert-message block-message info">
+    <div class="alert-message block-message info" data-alert="alert">
+    <a class="close" href="#">×</a>
       <p>
         By adding a whitelist entry you can manually authorize an ASN to announce a prefix in addition to validated ROAs
         from the repository.

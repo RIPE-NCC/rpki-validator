@@ -86,14 +86,25 @@ object Layouts {
         </div>
         <div class="container">
           {
-            newVersionDetails match {
+            val newVersionNotify = newVersionDetails match {
               case Some(versionDetails) => {
-                <div class="alert-message block-message">
                   <p>New version { versionDetails.version } available <a href={ versionDetails.url.toString }>here</a>.</p>
-                </div>
               }
               case None => NodeSeq.Empty
             }
+            
+            
+            val enableFeedbackQuestion = EnableFeedbackPrompt.optionalFeedBackEnablePrompt(userPreferences)
+            
+            (newVersionNotify ++ enableFeedbackQuestion) match {
+              case NodeSeq.Empty => NodeSeq.Empty
+              case messages => 
+              <div class="alert-message block-message"  data-alert="alert">
+                  <a class="close" href="#">×</a>
+                  { messages }
+              </div>
+            }
+            
           }
           <div class="page-header">
             <h1>{ view.title }</h1>
@@ -105,7 +116,7 @@ object Layouts {
               &nbsp;
 
               Copyright &copy;{ List(2009, (new DateTime).getYear).mkString("-") }
-              the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version { ReleaseInfo.version }
+              the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version{ ReleaseInfo.version }
             </div>
           </footer>
         </div>

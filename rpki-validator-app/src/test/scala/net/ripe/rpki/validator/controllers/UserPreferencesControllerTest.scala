@@ -67,7 +67,7 @@ class UserPreferencesControllerTest extends ControllerTestCase {
       view.userPreferences.updateAlertActive should be(true)
       view.userPreferences.maxStaleDays should equal(123)
 
-      view.messages should contain (FeedbackMessage(SuccessMessage, "Your preferences have been updated. Changes will take effect on next update.", None))
+      view.messages should contain (FeedbackMessage(SuccessMessage, "Your preferences have been updated.", None))
     }
   }
 

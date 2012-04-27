@@ -31,7 +31,10 @@ package net.ripe.rpki.validator
 package features
 
 import support.FeatureSpecification
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class WelcomePageSpec extends FeatureSpecification {
   feature("Welcome page") {
     scenario("home") {

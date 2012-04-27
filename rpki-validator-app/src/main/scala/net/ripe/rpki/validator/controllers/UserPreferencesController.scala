@@ -35,22 +35,36 @@ import lib.Validation._
 import scalaz._
 import Scalaz._
 
-trait UserPreferencesController extends ApplicationController with SoftwareUpdateChecker {
-
+object UserPreferencesController {
   val baseUrl = "/user-preferences"
+  val enableFeedbackUrl = "/user-preferences/enable-feedback"
+  val disableFeedbackUrl = "/user-preferences/disable-feedback"
+}
+
+
+trait UserPreferencesController extends ApplicationController with SoftwareUpdateChecker {
 
   def updateUserPreferences(userPreferences: UserPreferences)
   def userPreferences: UserPreferences
 
-  get(baseUrl) {
+  get(UserPreferencesController.baseUrl) {
     new views.UserPreferencesView(userPreferences, messages = feedbackMessages)
   }
+  
+  get(UserPreferencesController.enableFeedbackUrl) {
+      updateUserPreferences(userPreferences.copy(enableFeedback = Some(true)))
+      new views.UserPreferencesView(userPreferences, messages = Seq(SuccessMessage("Thank you for enabling feedback.")))
+  }
+  get(UserPreferencesController.disableFeedbackUrl) {
+      updateUserPreferences(userPreferences.copy(enableFeedback = Some(false)))
+      new views.UserPreferencesView(userPreferences, messages = Seq(SuccessMessage("You have chosen to disable feedback.")))
+  }
 
-  post(baseUrl) {
+  post(UserPreferencesController.baseUrl) {
     submittedUserPreferences match {
       case Success(userPreferences) =>
         updateUserPreferences(userPreferences)
-        new views.UserPreferencesView(userPreferences, messages = Seq(SuccessMessage("Your preferences have been updated. Changes will take effect on next update.")))
+        new views.UserPreferencesView(userPreferences, messages = Seq(SuccessMessage("Your preferences have been updated.")))
       case Failure(errors) =>
         new views.UserPreferencesView(userPreferences, messages = errors)
     }
@@ -59,7 +73,9 @@ trait UserPreferencesController extends ApplicationController with SoftwareUpdat
   private def submittedUserPreferences: ValidationNEL[FeedbackMessage, UserPreferences] = {
     val enableUpdateChecks = validateParameter("enable-update-checks", parseCheckBoxValue)
     val maxStale = validateParameter("max-stale-days", required(parseNonNegativeInt))
+    val enableFeedback = validateParameter("enable-feedback", parseCheckBoxValue).map(b => Some(b))
 
-    (enableUpdateChecks |@| maxStale).apply(UserPreferences)
+    (enableUpdateChecks |@| maxStale |@| enableFeedback).apply(UserPreferences)
   }
 }
+

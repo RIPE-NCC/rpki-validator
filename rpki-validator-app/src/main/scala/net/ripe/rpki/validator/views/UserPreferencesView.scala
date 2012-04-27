@@ -34,6 +34,8 @@ import scala.xml._
 import lib.UserPreferences
 import lib.Validation._
 
+import controllers.UserPreferencesController
+
 class UserPreferencesView(val userPreferences: UserPreferences, val messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
 
   private val fieldNameToText = Map("enable-update-checks" -> "Check for updates", "max-stale-days" -> "Maximum days out of date")
@@ -65,6 +67,15 @@ class UserPreferencesView(val userPreferences: UserPreferences, val messages: Se
               </span>
               days.
             </label>
+            <label class="checkbox">
+              {
+                userPreferences.enableFeedback match {
+                  case Some(true) => <input name="enable-feedback" type="checkbox" checked="checked"/>
+                  case _ => <input name="enable-feedback" type="checkbox"/>
+                }
+              }
+              Enable feedback of validation statistics to the RIPE NCC
+            </label>
           </div>
           <div>
             <br/>
@@ -82,3 +93,45 @@ $(function () {
 //--></script>
   }
 }
+
+object EnableFeedbackPrompt {
+
+  def optionalFeedBackEnablePrompt(userPreferences: UserPreferences) = {
+    userPreferences.enableFeedback match {
+      case None => {
+        <div>
+          Do you want to help us gain insight in the reliability of the global RPKI repositories by enabling feedback?
+          { createEnableOrDisableButton(userPreferences, true) } { createEnableOrDisableButton(userPreferences, false) }
+        </div>
+      }
+      case _ => NodeSeq.Empty
+    }
+  }
+
+  private def createEnableOrDisableButton(userPreferences: UserPreferences, enable: Boolean) = {
+    // See application.css for style of this form
+    <form method="POST" action={ UserPreferencesController.baseUrl } class="inline-feedback-option-form">
+      {
+        userPreferences.updateAlertActive match {
+          case true => <input type="hidden" name="enable-update-checks" value="1"/>
+          case _  => NodeSeq.Empty
+        }
+      }
+      <input type="hidden" name="max-stale-days" value={ Text(userPreferences.maxStaleDays.toString) } />
+      
+      {  
+        enable match {
+          case true => {
+              <input type="hidden" name="enable-feedback" value="1" />
+              <button type="submit" class="btn small">Yes</button>
+          }
+          case false => {
+              <button type="submit" class="btn small">No</button>
+          }
+        }
+      }
+    </form>
+  }
+
+}
+
