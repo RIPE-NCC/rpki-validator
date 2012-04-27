@@ -37,8 +37,6 @@ import Scalaz._
 
 object UserPreferencesController {
   val baseUrl = "/user-preferences"
-  val enableFeedbackUrl = "/user-preferences/enable-feedback"
-  val disableFeedbackUrl = "/user-preferences/disable-feedback"
 }
 
 
@@ -49,15 +47,6 @@ trait UserPreferencesController extends ApplicationController with SoftwareUpdat
 
   get(UserPreferencesController.baseUrl) {
     new views.UserPreferencesView(userPreferences, messages = feedbackMessages)
-  }
-  
-  get(UserPreferencesController.enableFeedbackUrl) {
-      updateUserPreferences(userPreferences.copy(enableFeedback = Some(true)))
-      new views.UserPreferencesView(userPreferences, messages = Seq(SuccessMessage("Thank you for enabling feedback.")))
-  }
-  get(UserPreferencesController.disableFeedbackUrl) {
-      updateUserPreferences(userPreferences.copy(enableFeedback = Some(false)))
-      new views.UserPreferencesView(userPreferences, messages = Seq(SuccessMessage("You have chosen to disable feedback.")))
   }
 
   post(UserPreferencesController.baseUrl) {
