@@ -68,7 +68,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     implicit val actorSystem = akka.actor.ActorSystem()
     val trustAnchors: TrustAnchors = new TrustAnchors(Seq.empty)
     val validatedObjects: ValidatedObjects = new ValidatedObjects(Map.empty)
-    cache = scala.concurrent.stm.Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects, UserPreferences(false)))
+    cache = scala.concurrent.stm.Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects))
     server = new RTRServer(
       port = port,
       noCloseOnError = false,
@@ -91,7 +91,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     cache.single.transform {
       val trustAnchors: TrustAnchors = new TrustAnchors(Seq.empty)
       val validatedObjects: ValidatedObjects = new ValidatedObjects(Map.empty)
-      db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects, UserPreferences(false))
+      db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects)
     }
     client.close()
   }

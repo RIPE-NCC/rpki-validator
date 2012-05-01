@@ -48,6 +48,8 @@ case class NewVersionDetails(version: String, url: URI)
 // Note enableFeedback is an option so that we can see detect if users never made this choice, and prompt them.
 case class UserPreferences(updateAlertActive: Boolean = true, maxStaleDays: Int = 0, enableFeedback: Option[Boolean] = None) {
   require(maxStaleDays >= 0)
+  
+  def isFeedbackEnabled = enableFeedback.getOrElse(false)
 }
 
 trait SoftwareUpdateChecker extends Logging {

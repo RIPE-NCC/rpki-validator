@@ -49,6 +49,7 @@ import net.ripe.commons.certification.crl.X509Crl
 import net.ripe.commons.certification.validation.ValidationOptions
 import net.ripe.certification.validator.util.{ TrustAnchorExtractor }
 import net.ripe.rpki.validator.statistics.FeedbackMetrics
+import org.apache.http.impl.client.DefaultHttpClient
 
 object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
@@ -81,19 +82,20 @@ class Main(options: Options) { main =>
   val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
   val roas = ValidatedObjects(new TrustAnchors(trustAnchors.filter(ta => ta.enabled)))
 
+  val feedbackMetrics = new FeedbackMetrics(new DefaultHttpClient)
+
+  val userPreferences = Ref(data.userPreferences)
+  feedbackMetrics.enabled = data.userPreferences.isFeedbackEnabled
+
   val memoryImage = Ref(
-    MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors), roas, data.userPreferences))
+    MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors), roas))
 
   val rtrServer = runRtrServer()
   runWebServer()
 
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 2 hours) { refreshRisDumps() }
-  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 1 hour) {
-    if (memoryImage.single.get.userPreferences.enableFeedback.getOrElse(false)) {
-      FeedbackMetrics.sendMetrics()
-    }
-  }
+  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 1 hour) { feedbackMetrics.sendMetrics() }
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
@@ -138,7 +140,7 @@ class Main(options: Options) { main =>
           logger.info("Loaded trust anchor from location " + certificate.getLocation())
 
           val options = new ValidationOptions();
-          options.setMaxStaleDays(memoryImage.single.get.userPreferences.maxStaleDays)
+          options.setMaxStaleDays(userPreferences.single.get.maxStaleDays)
 
           val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate, options)
 
@@ -219,16 +221,24 @@ class Main(options: Options) { main =>
     root.addServlet(defaultServletHolder, "/*")
     root.addFilter(new FilterHolder(new WebFilter {
       private val dataFileLock = new Object()
-      private def updateAndPersist(f: MemoryImage => MemoryImage) {
+      private def updateAndPersist(f: InTxn => Unit) {
         dataFileLock synchronized {
-          atomic { implicit transaction =>
-            memoryImage.transform(f)
-            bgpAnnouncementValidator.startUpdate(main.bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
-            rtrServer.notify(memoryImage().version)
+          val (image, userPreferences) = atomic { implicit transaction =>
+            val oldVersion = memoryImage().version
+
+            f(transaction)
+
+            if (oldVersion != memoryImage().version) {
+              bgpAnnouncementValidator.startUpdate(main.bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
+              rtrServer.notify(memoryImage().version)
+            }
+
+            feedbackMetrics.enabled = main.userPreferences.get.isFeedbackEnabled
+
+            (memoryImage.get, main.userPreferences.get)
           }
-          val image = memoryImage.single.get
           PersistentDataSerialiser.write(
-            PersistentData(filters = image.filters, whitelist = image.whitelist, userPreferences = image.userPreferences,
+            PersistentData(filters = image.filters, whitelist = image.whitelist, userPreferences = userPreferences,
               trustAnchorData = image.trustAnchors.all.map(ta => ta.name -> TrustAnchorData(ta.enabled))(collection.breakOut)),
             dataFile)
         }
@@ -242,12 +252,12 @@ class Main(options: Options) { main =>
       override protected def lastUpdateTime = memoryImage.single.get.lastUpdateTime
 
       override protected def filters = memoryImage.single.get.filters
-      override protected def addFilter(filter: IgnoreFilter) = updateAndPersist { _.addFilter(filter) }
-      override protected def removeFilter(filter: IgnoreFilter) = updateAndPersist { _.removeFilter(filter) }
+      override protected def addFilter(filter: IgnoreFilter) = updateAndPersist { implicit transaction => memoryImage.transform(_.addFilter(filter)) }
+      override protected def removeFilter(filter: IgnoreFilter) = updateAndPersist { implicit transaction => memoryImage.transform(_.removeFilter(filter)) }
 
       override protected def whitelist = memoryImage.single.get.whitelist
-      override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.addWhitelistEntry(entry) }
-      override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { _.removeWhitelistEntry(entry) }
+      override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { implicit transaction => memoryImage.transform(_.addWhitelistEntry(entry)) }
+      override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { implicit transaction => memoryImage.transform(_.removeWhitelistEntry(entry)) }
 
       override protected def bgpRisDumps = main.bgpRisDumps.single.get
       override protected def validatedAnnouncements = bgpAnnouncementValidator.validatedAnnouncements
@@ -260,10 +270,11 @@ class Main(options: Options) { main =>
       override def newVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version, () => scala.io.Source.fromURL(new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties"), "UTF-8").mkString)
 
       // UserPreferences
-      override def userPreferences = memoryImage.single.get.userPreferences
-      override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { _.updateUserPreferences(userPreferences) }
+      override def userPreferences = main.userPreferences.single.get
+      override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { implicit transaction => main.userPreferences.set(userPreferences) }
 
-      override protected def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean) = updateAndPersist { image => image.updateTrustAnchorState(trustAnchorName, enabled)
+      override protected def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean) = updateAndPersist { implicit transaction =>
+        memoryImage.transform(_.updateTrustAnchorState(trustAnchorName, enabled))
       }
     }), "/*", FilterMapping.ALL)
 

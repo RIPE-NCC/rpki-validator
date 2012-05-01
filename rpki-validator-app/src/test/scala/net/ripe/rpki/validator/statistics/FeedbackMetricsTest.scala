@@ -67,6 +67,7 @@ class FeedbackMetricsTest extends FunSuite with ShouldMatchers with BeforeAndAft
 
   before {
     resetHttpClient()
+    subject.enabled = true
   }
 
   test("should post statistics once") {
@@ -144,6 +145,30 @@ class FeedbackMetricsTest extends FunSuite with ShouldMatchers with BeforeAndAft
     subject.queuedMetrics.single.get should have size (100)
   }
 
+  test("sending metrics does not support STM transaction") {
+    import scala.concurrent.stm._
+
+    intercept[RuntimeException] {
+      atomic { implicit transaction =>
+        subject.sendMetrics()
+      }
+    }
+  }
+  
+  test("should clear metrics when feedback is disabled") {
+    subject.store(testMetrics)
+    
+    subject.enabled = false
+    
+    subject.queuedMetrics.single.get should have size (0)
+  }
+
+  test("should not store metrics when feedback is disabled") {
+    subject.enabled = false
+    subject.store(testMetrics)
+    subject.queuedMetrics.single.get should have size (0)
+  }
+  
   def expectPost(callback: HttpPost => Unit) = {
     val capture = ArgumentCaptor.forClass(classOf[HttpPost])
     verify(mockHttpClient, times(1)).execute(capture.capture)

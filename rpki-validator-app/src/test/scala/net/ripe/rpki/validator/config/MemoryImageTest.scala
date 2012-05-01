@@ -48,7 +48,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
 
   test("Should find distinct ROA prefixes") {
 
-    subject = new MemoryImage(Filters(), Whitelist(), trustAnchors, ROAS, UserPreferences(updateAlertActive = false))
+    subject = new MemoryImage(Filters(), Whitelist(), trustAnchors, ROAS)
     val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
 
     distinctRoaPrefixes.size should equal(4)
@@ -59,7 +59,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
   }
 
   test("Should list whitelist entries when no roas") {
-    subject = new MemoryImage(Filters(), WHITELIST, trustAnchors, ValidatedObjects(trustAnchors), UserPreferences(updateAlertActive = false))
+    subject = new MemoryImage(Filters(), WHITELIST, trustAnchors, ValidatedObjects(trustAnchors))
     val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
 
     distinctRoaPrefixes.size should equal(1)
@@ -69,7 +69,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
   test("Should mix whitelist entries with roas for same prefix") {
     val whitelist = WHITELIST.addEntry(ASN1_TO_ROA_PREFIX_V4_2)
 
-    subject = new MemoryImage(Filters(), whitelist, trustAnchors, ROAS, UserPreferences(updateAlertActive = false))
+    subject = new MemoryImage(Filters(), whitelist, trustAnchors, ROAS)
     val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
 
     distinctRoaPrefixes.size should equal(5)
@@ -83,7 +83,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
   test("Should mix whitelist entries with roas for same prefix and a filter") {
     val whitelist = WHITELIST.addEntry(ASN1_TO_ROA_PREFIX_V4_2)
 
-    subject = new MemoryImage(FILTERS, whitelist, trustAnchors, ROAS, UserPreferences(updateAlertActive = false))
+    subject = new MemoryImage(FILTERS, whitelist, trustAnchors, ROAS)
     val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
 
     distinctRoaPrefixes.size should equal(4)
@@ -98,7 +98,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
 
     val filters: Filters = FILTERS.addFilter(new IgnoreFilter(UNUSED_PREFIX_FOR_FILTER))
 
-    subject = new MemoryImage(filters, whitelist, trustAnchors, ROAS, UserPreferences(updateAlertActive = false))
+    subject = new MemoryImage(filters, whitelist, trustAnchors, ROAS)
     val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
 
     distinctRoaPrefixes.size should equal(4)
@@ -111,7 +111,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
   test("Should prevail whitelist entry over roa prefix filtered out by filter") {
     val whitelist = WHITELIST.addEntry(ASN1_TO_ROA_PREFIX_V6_1)
 
-    subject = new MemoryImage(FILTERS, whitelist, trustAnchors, ROAS, UserPreferences(updateAlertActive = false))
+    subject = new MemoryImage(FILTERS, whitelist, trustAnchors, ROAS)
     val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
 
     distinctRoaPrefixes.size should equal(5)
@@ -120,13 +120,5 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
     distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V6_1)
     distinctRoaPrefixes should contain (ASN2_TO_ROA_PREFIX_V4_1)
     distinctRoaPrefixes should contain (ASN3_TO_WHITELIST1)
-  }
-  
-  test("should not increase version when updating software update preferences") {
-    subject = new MemoryImage(FILTERS, WHITELIST, trustAnchors, ROAS, UserPreferences(updateAlertActive = false))
-    val currentVersion = subject.version
-
-    subject.updateUserPreferences(UserPreferences(true))
-    subject.version should equal (currentVersion)
   }
 }

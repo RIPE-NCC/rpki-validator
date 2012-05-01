@@ -40,7 +40,7 @@ import lib.UserPreferences
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
 
-case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, userPreferences: UserPreferences, version: Int = 0) {
+case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, version: Int = 0) {
   val lastUpdateTime: DateTime = new DateTime
 
   def startProcessingTrustAnchor(tal: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(tal, description))
@@ -61,8 +61,6 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
   def addFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.addFilter(filter))
 
   def removeFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.removeFilter(filter))
-
-  def updateUserPreferences(newUserPreferences: UserPreferences) = copy(userPreferences = newUserPreferences)
 
   def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean) = {
     val newValidatedObjects = enabled match {

@@ -50,13 +50,26 @@ class FeedbackMetrics(val httpClient: HttpClient) extends Logging {
 
   type Metrics = Seq[Metric]
 
+  private val enabledRef = Ref(false)
   private[statistics] val queuedMetrics: Ref[Seq[Metrics]] = Ref(Vector.empty)
 
-  def store(metrics: Metrics): Unit = {
-    queuedMetrics.single.transform { queued => queued :+ metrics takeRight 100 }
+  def enabled(implicit mt: MaybeTxn) = enabledRef.single.get
+  def enabled_=(value: Boolean)(implicit mt: MaybeTxn) = atomic { implicit transaction =>
+    enabledRef.set(value)
+    if (!value) {
+      queuedMetrics.set(Vector.empty)
+    }
+  }
+
+  def store(metrics: Metrics)(implicit mt: MaybeTxn): Unit = atomic { implicit transaction =>
+    if (enabledRef.get) {
+      queuedMetrics.transform { queued => queued :+ metrics takeRight 100 }
+    }
   }
 
   def sendMetrics(): Unit = {
+    Txn.findCurrent foreach { _ => throw new RuntimeException("transaction not supported") }
+
     val post = new HttpPost(serverUri)
 
     val metrics = queuedMetrics.single.swap(Vector.empty)
@@ -102,5 +115,3 @@ class FeedbackMetrics(val httpClient: HttpClient) extends Logging {
   }
 
 }
-
-object FeedbackMetrics extends FeedbackMetrics(new DefaultHttpClient())
