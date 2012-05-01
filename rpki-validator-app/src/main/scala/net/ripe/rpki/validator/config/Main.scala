@@ -47,7 +47,8 @@ import akka.dispatch.Future
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
 import net.ripe.commons.certification.validation.ValidationOptions
-import net.ripe.certification.validator.util.{TrustAnchorExtractor}
+import net.ripe.certification.validator.util.{ TrustAnchorExtractor }
+import net.ripe.rpki.validator.statistics.FeedbackMetrics
 
 object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
@@ -67,7 +68,6 @@ class Main(options: Options) { main =>
   val logger = Logger[this.type]
 
   implicit val actorSystem = akka.actor.ActorSystem()
-
 
   val bgpRisDumps = Ref(Seq(
     BgpRisDump("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz"),
@@ -89,6 +89,11 @@ class Main(options: Options) { main =>
 
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 2 hours) { refreshRisDumps() }
+  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 1 hour) {
+    if (memoryImage.single.get.userPreferences.enableFeedback.getOrElse(false)) {
+      FeedbackMetrics.sendMetrics()
+    }
+  }
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
@@ -253,7 +258,7 @@ class Main(options: Options) { main =>
 
       // Software Update checker
       override def newVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version, () => scala.io.Source.fromURL(new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties"), "UTF-8").mkString)
-      
+
       // UserPreferences
       override def userPreferences = memoryImage.single.get.userPreferences
       override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { _.updateUserPreferences(userPreferences) }
