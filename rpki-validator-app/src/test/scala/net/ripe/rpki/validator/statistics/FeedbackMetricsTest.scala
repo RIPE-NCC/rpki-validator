@@ -110,6 +110,7 @@ class FeedbackMetricsTest extends FunSuite with ShouldMatchers with BeforeAndAft
     expectPost { post =>
       post.getMethod should be("POST")
       post.getURI.toString should endWith("/metrics/rpki-validator")
+      Option(post.getFirstHeader("content-type")).map(_.getValue) should be(Some("application/json"))
       EntityUtils.toString(post.getEntity) should be("""{"metrics":[{"name":"name","value":"value","measuredAt":%d}]}""" format now)
     }
   }

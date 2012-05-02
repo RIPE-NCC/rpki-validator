@@ -50,6 +50,9 @@ import net.ripe.commons.certification.validation.ValidationOptions
 import net.ripe.certification.validator.util.{ TrustAnchorExtractor }
 import net.ripe.rpki.validator.statistics.FeedbackMetrics
 import org.apache.http.impl.client.DefaultHttpClient
+import org.joda.time.DateTimeUtils
+import net.ripe.rpki.validator.statistics.Metric
+import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
 
 object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
@@ -82,7 +85,7 @@ class Main(options: Options) { main =>
   val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
   val roas = ValidatedObjects(new TrustAnchors(trustAnchors.filter(ta => ta.enabled)))
 
-  val feedbackMetrics = new FeedbackMetrics(new DefaultHttpClient, options.feedbackUri)
+  val feedbackMetrics = new FeedbackMetrics(new DefaultHttpClient(new ThreadSafeClientConnManager), options.feedbackUri)
 
   val userPreferences = Ref(data.userPreferences)
   feedbackMetrics.enabled = data.userPreferences.isFeedbackEnabled
@@ -95,7 +98,7 @@ class Main(options: Options) { main =>
 
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 2 hours) { refreshRisDumps() }
-  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 1 hour) { feedbackMetrics.sendMetrics() }
+  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { feedbackMetrics.sendMetrics() }
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
@@ -134,9 +137,12 @@ class Main(options: Options) { main =>
     }
     for (ta <- tasToValidate) {
       Future {
+        val metricsBuilder = Vector.newBuilder[Metric]
+        val start = DateTimeUtils.currentTimeMillis
         try {
           val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
           memoryImage.single.transform { _.startProcessingTrustAnchor(ta.locator, "Updating ROAs") }
+          metricsBuilder += Metric("trust.anchor[%s].extracted.elapsed.ms" format ta.locator.getCertificateLocation, (DateTimeUtils.currentTimeMillis - start).toString, DateTimeUtils.currentTimeMillis)
           logger.info("Loaded trust anchor from location " + certificate.getLocation())
 
           val options = new ValidationOptions();
@@ -150,9 +156,7 @@ class Main(options: Options) { main =>
           val crl = for {
             mft <- manifest
             crlUri <- Option(mft.getCrlUri)
-            crl <- validatedObjects.get(crlUri).collect {
-              case ValidObject(_, _, crl: X509Crl) => crl
-            }
+            ValidObject(_, _, crl: X509Crl) <- validatedObjects.get(crlUri)
           } yield crl
 
           atomic { implicit transaction =>
@@ -167,13 +171,19 @@ class Main(options: Options) { main =>
               case _ =>
             }
           }
+          metricsBuilder += Metric("trust.anchor[%s].validation" format ta.locator.getCertificateLocation, "OK", DateTimeUtils.currentTimeMillis)
         } catch {
           case e: Exception =>
             val message = if (e.getMessage != null) e.getMessage else e.toString
             memoryImage.single.transform {
               _.finishedProcessingTrustAnchor(ta.locator, Failure(message), None, None)
             }
+            metricsBuilder += Metric("trust.anchor[%s].validation" format ta.locator.getCertificateLocation, "failed: " + e, DateTimeUtils.currentTimeMillis)
             logger.error("Error while validating trust anchor " + ta.locator.getCertificateLocation() + ": " + e, e)
+        } finally {
+          val stop = DateTimeUtils.currentTimeMillis
+          metricsBuilder += Metric("trust.anchor[%s].validation.elapsed.ms" format ta.locator.getCertificateLocation, (stop - start).toString, DateTimeUtils.currentTimeMillis)
+          feedbackMetrics.store(metricsBuilder.result)
         }
       }
     }

@@ -70,13 +70,7 @@ case class ValidRoa(uri: URI, checks: Set[ValidationCheck], roa: RoaCms) extends
 
 class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
   def validationStatusCounts: Map[String, Map[ValidationStatus, Int]] = for ((trustAnchorName, validatedObjects) <- all) yield {
-    trustAnchorName -> {
-      var counters = collection.mutable.Map.empty[ValidationStatus, Int].withDefaultValue(0)
-      for (validatedObject <- validatedObjects) {
-        counters(validatedObject.validationStatus) += 1
-      }
-      counters.toMap
-    }
+    trustAnchorName -> validatedObjects.groupBy(_.validationStatus).map(p => p._1 -> p._2.size)
   }
 
   def getValidatedRtrPrefixes = {
@@ -92,7 +86,7 @@ class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
   def update(trustAnchorName: String, validatedObjects: Seq[ValidatedObject]) = {
     new ValidatedObjects(all.updated(trustAnchorName, validatedObjects))
   }
-  
+
   def removeTrustAnchor(trustAnchorName: String) = {
     new ValidatedObjects(all.filterKeys(key => !key.equals(trustAnchorName)))
   }
@@ -106,7 +100,7 @@ object ValidatedObjects {
     new ValidatedObjects(trustAnchors.all.map(ta => ta.locator.getCaName() -> Seq.empty[ValidatedObject])(collection.breakOut))
   }
 
-  def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext, options: ValidationOptions) = {
+  def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext, options: ValidationOptions): Map[URI, ValidatedObject] = {
     import net.ripe.commons.certification.rsync.Rsync
 
     val rsync = new Rsync()
