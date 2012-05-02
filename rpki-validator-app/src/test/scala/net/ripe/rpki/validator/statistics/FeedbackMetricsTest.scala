@@ -56,7 +56,7 @@ class FeedbackMetricsTest extends FunSuite with ShouldMatchers with BeforeAndAft
 
   val now = DateTimeUtils.currentTimeMillis
   val mockHttpClient = mock[HttpClient]
-  val subject = new FeedbackMetrics(mockHttpClient)
+  val subject = new FeedbackMetrics(mockHttpClient, "http://feedback.ripe.net/metrics/rpki-validator")
   val testMetrics = List(Metric("name", "value", now))
 
   def resetHttpClient() {

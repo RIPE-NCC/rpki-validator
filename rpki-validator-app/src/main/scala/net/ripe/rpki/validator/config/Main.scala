@@ -82,7 +82,7 @@ class Main(options: Options) { main =>
   val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
   val roas = ValidatedObjects(new TrustAnchors(trustAnchors.filter(ta => ta.enabled)))
 
-  val feedbackMetrics = new FeedbackMetrics(new DefaultHttpClient)
+  val feedbackMetrics = new FeedbackMetrics(new DefaultHttpClient, options.feedbackUri)
 
   val userPreferences = Ref(data.userPreferences)
   feedbackMetrics.enabled = data.userPreferences.isFeedbackEnabled

@@ -66,10 +66,8 @@ object Metric {
   }
 }
 
-class FeedbackMetrics(val httpClient: HttpClient) extends Logging {
+class FeedbackMetrics(httpClient: HttpClient, feedbackUri: String) extends Logging {
   private implicit val formats: Formats = DefaultFormats
-
-  val serverUri = "https://ba-feedback-server.ripe.net/metrics/rpki-validator"
 
   type Metrics = Seq[Metric]
 
@@ -91,9 +89,9 @@ class FeedbackMetrics(val httpClient: HttpClient) extends Logging {
   }
 
   def sendMetrics(): Unit = {
-    Txn.findCurrent foreach { _ => throw new RuntimeException("transaction not supported") }
+    require(Txn.findCurrent.isEmpty, "STM transaction not supported")
 
-    val post = new HttpPost(serverUri)
+    val post = new HttpPost(feedbackUri)
 
     val metrics = queuedMetrics.single.swap(Vector.empty)
     try {
@@ -110,14 +108,13 @@ class FeedbackMetrics(val httpClient: HttpClient) extends Logging {
           case code if code >= 200 && code < 300 => // all is well
           case _ =>
             queuedMetrics.single.transform { queued => metrics ++ queued }
-            warn("failed to submit usage metrics to %s: %s".format(serverUri, response.getStatusLine))
+            warn("failed to submit usage metrics to %s: %s".format(feedbackUri, response.getStatusLine))
         }
       }
     } catch {
       case e: Exception =>
         queuedMetrics.single.transform { queued => metrics ++ queued }
-        warn("failed to submit usage metrics to %s: %s".format(serverUri, e), e)
+        warn("failed to submit usage metrics to %s: %s".format(feedbackUri, e), e)
     }
-
   }
 }

@@ -53,12 +53,14 @@ class Options(args: Array[String]) {
   private val noCloseOption = parser.flag[Boolean](List("n", "no-close-on-error"), "Stop the server from closing connections when it receives fatal errors.")
   private val noNotifyOption = parser.flag[Boolean](List("s", "silent"), "Stop the server from sending notify messages when it has updates.")
   private val dataFileNameOption = parser.option[String](List("f", "data-file"), "FILE", "Specify the data file used to load and store configuration. Default: " + Options.DEFAULT_DATA_FILE_NAME)
+  private val feedbackUriOption = parser.option[String](List("feedback-uri"), "URI", "Specify the URI used to send back feedback metrics to RIPE NCC.")
 
   def rtrPort: Int = rtrPortOption.value.getOrElse(Options.DEFAULT_RTR_PORT)
   def httpPort: Int = httpPortOption.value.getOrElse(Options.DEFAULT_HTTP_PORT)
   def noCloseOnError: Boolean = noCloseOption.value.getOrElse(false)
   def noNotify: Boolean = noNotifyOption.value.getOrElse(false)
   def dataFileName: String = dataFileNameOption.value.getOrElse(Options.DEFAULT_DATA_FILE_NAME)
+  def feedbackUri: String = feedbackUriOption.value.getOrElse("https://certification.ripe.net/metrics/rpki-validator")
 
   parser.parse(args)
 }
