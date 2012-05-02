@@ -29,22 +29,24 @@
  */
 package net.ripe.rpki.validator.statistics
 
-import org.apache.http.client.methods.HttpPost
+import scala.concurrent.stm.atomic
+
+import org.apache.http.HttpVersion
 import org.apache.http.client.HttpClient
+import org.apache.http.client.methods.HttpPost
 import org.apache.http.message.BasicHttpResponse
 import org.apache.http.message.BasicStatusLine
 import org.apache.http.util.EntityUtils
-import org.apache.http.HttpVersion
 import org.joda.time.DateTimeUtils
 import org.junit.runner.RunWith
-import org.mockito.Matchers.any
-import org.mockito.Mockito._
 import org.mockito.ArgumentCaptor
+import org.mockito.Matchers._
+import org.mockito.Mockito._
+import org.scalatest.BeforeAndAfter
+import org.scalatest.FunSuite
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.BeforeAndAfter
-import org.scalatest.FunSuite
 
 import javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR
 import javax.servlet.http.HttpServletResponse.SC_OK
@@ -52,12 +54,12 @@ import javax.servlet.http.HttpServletResponse.SC_OK
 @RunWith(classOf[JUnitRunner])
 class FeedbackMetricsTest extends FunSuite with ShouldMatchers with BeforeAndAfter with MockitoSugar {
 
+  val now = DateTimeUtils.currentTimeMillis
   val mockHttpClient = mock[HttpClient]
   val subject = new FeedbackMetrics(mockHttpClient)
-  val now = DateTimeUtils.currentTimeMillis
   val testMetrics = List(Metric("name", "value", now))
 
-  def resetHttpClient() = {
+  def resetHttpClient() {
     reset(mockHttpClient)
 
     val statusLine = new BasicStatusLine(HttpVersion.HTTP_1_1, SC_OK, "OK")
@@ -68,6 +70,21 @@ class FeedbackMetricsTest extends FunSuite with ShouldMatchers with BeforeAndAft
   before {
     resetHttpClient()
     subject.enabled = true
+  }
+
+  test("should measure validator information") {
+    // Not all properties are tested here.
+    val startedAt = now - 5000
+    val metrics = Metric.validatorMetrics(now, startedAt, "version")
+    metrics should contain(Metric("validator.started.at", startedAt.toString, now))
+    metrics should contain(Metric("validator.version", "version", now))
+  }
+
+  test("should measure JVM information") {
+    // Not all properties are tested here.
+    val metrics = Metric.baseMetrics(now)
+    metrics should contain(Metric("java.vm.version", System.getProperty("java.vm.version"), now))
+    metrics should contain(Metric("runtime.processors.available", Runtime.getRuntime.availableProcessors.toString, now))
   }
 
   test("should post statistics once") {
@@ -154,12 +171,12 @@ class FeedbackMetricsTest extends FunSuite with ShouldMatchers with BeforeAndAft
       }
     }
   }
-  
+
   test("should clear metrics when feedback is disabled") {
     subject.store(testMetrics)
-    
+
     subject.enabled = false
-    
+
     subject.queuedMetrics.single.get should have size (0)
   }
 
@@ -168,7 +185,7 @@ class FeedbackMetricsTest extends FunSuite with ShouldMatchers with BeforeAndAft
     subject.store(testMetrics)
     subject.queuedMetrics.single.get should have size (0)
   }
-  
+
   def expectPost(callback: HttpPost => Unit) = {
     val capture = ArgumentCaptor.forClass(classOf[HttpPost])
     verify(mockHttpClient, times(1)).execute(capture.capture)

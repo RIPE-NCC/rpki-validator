@@ -42,6 +42,29 @@ import grizzled.slf4j.Logging
 
 // See also ba-feedback-server for data and json format that it expects.
 case class Metric(name: String, value: String, measuredAt: Long)
+object Metric {
+  def validatorMetrics(now: Long, startedAt: Long, version: String) = {
+    Vector(Metric("validator.started.at", startedAt.toString, now), Metric("validator.version", version, now))
+  }
+  def baseMetrics(now: Long): Seq[Metric] = {
+    val systemMetrics = {
+      val systemProperties = Vector("java.vm.version", "java.vm.vendor", "java.vm.name", "java.version", "java.vendor", "os.name", "os.arch", "os.version")
+      systemProperties.map {
+        p => Metric(p, System.getProperty(p, ""), now)
+      }
+    }
+    val runtimeMetrics = {
+      val runTime = Runtime.getRuntime
+      Vector(
+        Metric("runtime.processors.available", runTime.availableProcessors.toString, now),
+        Metric("runtime.memory.total", runTime.totalMemory.toString, now),
+        Metric("runtime.memory.free", runTime.freeMemory.toString, now),
+        Metric("runtime.memory.max", runTime.maxMemory.toString, now))
+    }
+
+    systemMetrics ++ runtimeMetrics
+  }
+}
 
 class FeedbackMetrics(val httpClient: HttpClient) extends Logging {
   private implicit val formats: Formats = DefaultFormats
@@ -97,21 +120,4 @@ class FeedbackMetrics(val httpClient: HttpClient) extends Logging {
     }
 
   }
-
-  def getJvmStats = {
-
-    val now = DateTimeUtils.currentTimeMillis
-
-    val systemProperties = List("java.vm.version", "java.vm.vendor", "java.vm.name", "java.version", "java.vendor", "os.name", "os.arch", "os.version")
-    val runTime = Runtime.getRuntime
-
-    systemProperties.map {
-      p => Metric(p, System.getProperty(p, ""), now)
-    } ++ List(
-      Metric("runtime.processors.available", runTime.availableProcessors.toString, now),
-      Metric("runtime.memory.total", runTime.totalMemory.toString, now),
-      Metric("runtime.memory.free", runTime.freeMemory.toString, now),
-      Metric("runtime.memory.max", runTime.maxMemory.toString, now))
-  }
-
 }
