@@ -54,6 +54,9 @@ import net.ripe.commons.certification.validation._
 import net.ripe.certification.validator.commands.TopDownWalker
 import net.ripe.certification.validator.fetchers._
 import net.ripe.certification.validator.util.UriToFileMapper
+import com.yammer.metrics.core.MetricsRegistry
+import java.util.concurrent.TimeUnit
+import com.yammer.metrics.core.Timer
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -285,6 +288,62 @@ trait MeasureValidationProcess extends ValidationProcess {
   }
 
   lazy val metrics = metricsBuilder.result
+}
+
+trait MeasureRsyncExecution extends ValidationProcess {
+  private[this] val registry = new MetricsRegistry
+  override def objectFetcherListeners = super.objectFetcherListeners :+ RsyncExecution
+
+  private object RsyncExecution extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
+    override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
+      update("rsync.prefetch.failure", uri, RsyncCertificateRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC, result)
+    }
+    override def afterPrefetchSuccess(uri: URI, result: ValidationResult) {
+      update("rsync.prefetch.success", uri, RsyncCertificateRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC, result)
+    }
+    override def afterFetchFailure(uri: URI, result: ValidationResult) {
+      update("rsync.fetch.file.failure", uri, RsyncCertificateRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC, result)
+    }
+    override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
+      update("rsync.fetch.file.success", uri, RsyncCertificateRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC, result)
+    }
+
+    private[this] def update(callback: String, uri: URI, name: String, result: ValidationResult) {
+      val metric = result.getMetrics(new ValidationLocation(uri)).asScala.find(_.getName == name)
+      metric foreach { metric =>
+        try {
+          val elapsedTime = metric.getValue.toLong
+          registry.newTimer(classOf[MeasureRsyncExecution], "%s[%s]" format (name, uri.getHost)).update(elapsedTime, TimeUnit.MILLISECONDS)
+        } catch {
+          case _: NumberFormatException => // Ignore
+        }
+      }
+    }
+  }
+
+  def rsyncMetrics: Seq[Metric] = {
+    val now = DateTimeUtils.currentTimeMillis
+    registry.allMetrics.asScala.flatMap {
+      case (name, timer: Timer) =>
+        Vector(
+          Metric(name.getName + ".count", timer.count.toString, now),
+          Metric(name.getName + ".mean", timer.mean.toString, now),
+          Metric(name.getName + ".min", timer.min.toString, now),
+          Metric(name.getName + ".max", timer.max.toString, now),
+          Metric(name.getName + ".stdDev", timer.stdDev.toString, now),
+          Metric(name.getName + ".75p", timer.getSnapshot.get75thPercentile.toString, now),
+          Metric(name.getName + ".95p", timer.getSnapshot.get95thPercentile.toString, now),
+          Metric(name.getName + ".98p", timer.getSnapshot.get98thPercentile.toString, now),
+          Metric(name.getName + ".99p", timer.getSnapshot.get99thPercentile.toString, now),
+          Metric(name.getName + ".999p", timer.getSnapshot.get999thPercentile.toString, now),
+          Metric(name.getName + ".median", timer.getSnapshot.getMedian.toString, now),
+          Metric(name.getName + ".rate.1m", timer.oneMinuteRate.toString, now),
+          Metric(name.getName + ".rate.5m", timer.fiveMinuteRate.toString, now),
+          Metric(name.getName + ".rate.15m", timer.fifteenMinuteRate.toString, now))
+      case _ =>
+        Vector.empty
+    }.toIndexedSeq
+  }
 }
 
 trait ValidationProcessLogger extends ValidationProcess {

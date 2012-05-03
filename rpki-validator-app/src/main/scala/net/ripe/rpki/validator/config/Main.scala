@@ -154,7 +154,7 @@ class Main(options: Options) { main =>
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays) with TrackValidationProcess with MeasureValidationProcess with ValidationProcessLogger {
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays) with TrackValidationProcess with MeasureValidationProcess with MeasureRsyncExecution with ValidationProcessLogger {
           override val memoryImage = main.memoryImage
         }
         try {
@@ -165,7 +165,7 @@ class Main(options: Options) { main =>
           }
         } finally {
           val now = DateTimeUtils.currentTimeMillis
-          feedbackMetrics.store(process.metrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt, ReleaseInfo.version))
+          feedbackMetrics.store(process.metrics ++ process.rsyncMetrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt, ReleaseInfo.version))
         }
       }
     }
