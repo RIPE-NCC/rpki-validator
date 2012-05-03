@@ -42,6 +42,7 @@ import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.roa.RoaCms
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.commons.certification.validation._
+import statistics.MeasuringCertificateRepositoryObjectFetcher
 
 sealed trait ValidatedObject {
   val uri: URI
@@ -106,7 +107,8 @@ object ValidatedObjects {
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
     val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchor.getFile().getName())))
-    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher, options);
+    val measuringFetcher = new MeasuringCertificateRepositoryObjectFetcher(rsyncFetcher)
+    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(measuringFetcher, options);
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
     validatingFetcher.setOuterMostDecorator(cachingFetcher);
