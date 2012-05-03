@@ -43,7 +43,7 @@ import net.ripe.commons.certification.validation.ValidationResult;
 
 import org.apache.log4j.Logger;
 
-public class ObjectFetcherResultLogger implements NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
+public class ObjectFetcherResultLogger implements NotifyingCertificateRepositoryObjectFetcher.Listener {
     private static final Logger LOG = Logger.getLogger(ObjectFetcherResultLogger.class);
     private boolean logValidObjects;
 

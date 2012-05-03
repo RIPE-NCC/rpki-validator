@@ -68,7 +68,7 @@ public class SingleObjectWalkerTest {
     private CertificateRepositoryObjectValidationContext context;
     private Specification<byte[]> fileContentSpecification;
     private List<CertificateRepositoryObjectValidationContext> trustAnchors;
-	private NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback chainBuildLogger;
+	private NotifyingCertificateRepositoryObjectFetcher.Listener chainBuildLogger;
 
 
 
@@ -80,7 +80,7 @@ public class SingleObjectWalkerTest {
 
         chainBuildFetcher = createMock(CertificateRepositoryObjectFetcher.class);
         validatingFetcher = createMock(CertificateRepositoryObjectFetcher.class);
-        chainBuildLogger = createMock(NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback.class);
+        chainBuildLogger = createMock(NotifyingCertificateRepositoryObjectFetcher.Listener.class);
 
         subject = new SingleObjectWalker(grandChild, SECOND_CHILD_CERTIFICATE_LOCATION, chainBuildFetcher, chainBuildLogger, validatingFetcher);
         certificateChain = new ArrayList<URI>();

@@ -47,6 +47,13 @@ import org.joda.time.DateTimeUtils
 import scala.concurrent.stm._
 import net.ripe.rpki.validator.config.MemoryImage
 import grizzled.slf4j.Logger
+import net.ripe.commons.certification.CertificateRepositoryObject
+import net.ripe.commons.certification.cms.roa.RoaCms
+import net.ripe.commons.certification.rsync.Rsync
+import net.ripe.commons.certification.validation._
+import net.ripe.certification.validator.commands.TopDownWalker
+import net.ripe.certification.validator.fetchers._
+import net.ripe.certification.validator.util.UriToFileMapper
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -158,6 +165,8 @@ trait ValidationProcess {
     }
   }
 
+  def objectFetcherListeners: Seq[NotifyingCertificateRepositoryObjectFetcher.Listener] = Seq.empty
+
   def extractTrustAnchorLocator(): CertificateRepositoryObjectValidationContext
   def validateObjects(certificate: CertificateRepositoryObjectValidationContext): Map[URI, ValidatedObject]
   def exceptionHandler: PartialFunction[Throwable, Validation[String, Nothing]]
@@ -165,14 +174,6 @@ trait ValidationProcess {
 }
 
 abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int) extends ValidationProcess {
-  import net.ripe.commons.certification.CertificateRepositoryObject
-  import net.ripe.commons.certification.cms.roa.RoaCms
-  import net.ripe.commons.certification.rsync.Rsync
-  import net.ripe.commons.certification.validation._
-  import net.ripe.certification.validator.commands.TopDownWalker
-  import net.ripe.certification.validator.fetchers._
-  import net.ripe.certification.validator.util.UriToFileMapper
-
   private val options = new ValidationOptions()
   options.setMaxStaleDays(maxStaleDays)
 
@@ -180,7 +181,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
 
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
     val builder = Map.newBuilder[URI, ValidatedObject]
-    val fetcher = createFetcher(new RoaCollector(trustAnchorLocator, builder))
+    val fetcher = createFetcher(new RoaCollector(trustAnchorLocator, builder) +: objectFetcherListeners: _*)
 
     trustAnchorLocator.getPrefetchUris().asScala.foreach { prefetchUri =>
       logger.info("Prefetching '" + prefetchUri + "'")
@@ -196,7 +197,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
     builder.result()
   }
 
-  private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback*): CertificateRepositoryObjectFetcher = {
+  private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.Listener*): CertificateRepositoryObjectFetcher = {
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
     val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
@@ -210,28 +211,17 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
     cachingFetcher
   }
 
-  private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[(URI, ValidatedObject), _]) extends NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback {
-    override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
-      logger.warn("Failed to prefetch '" + uri + "'")
-    }
-
-    override def afterPrefetchSuccess(uri: URI, result: ValidationResult) {
-      logger.debug("Prefetched '" + uri + "'")
-    }
-
+  private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[(URI, ValidatedObject), _]) extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
     override def afterFetchFailure(uri: URI, result: ValidationResult) {
       objects += uri -> new InvalidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
-      logger.warn("Failed to validate '" + uri + "': " + result.getFailuresForCurrentLocation().asScala.map(_.toString()).mkString(", "))
     }
 
     override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
       obj match {
         case roa: RoaCms =>
-          logger.debug("Validated ROA '" + uri + "'")
           objects += uri -> new ValidRoa(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, roa)
         case _ =>
           objects += uri -> new ValidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, obj)
-          logger.debug("Validated OBJECT '" + uri + "'")
       }
     }
   }
@@ -298,6 +288,8 @@ trait MeasureValidationProcess extends ValidationProcess {
 }
 
 trait ValidationProcessLogger extends ValidationProcess {
+  override def objectFetcherListeners = super.objectFetcherListeners :+ ObjectFetcherLogger
+
   abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
     logger.info("Loaded trust anchor " + trustAnchorLocator.getCaName() + " from location " + certificate.getLocation() + ", starting validation")
     val objects = super.validateObjects(certificate)
@@ -309,5 +301,20 @@ trait ValidationProcessLogger extends ValidationProcess {
     case e: Exception =>
       logger.error("Error while validating trust anchor " + trustAnchorLocator.getCaName() + ": " + e, e)
       super.exceptionHandler(e)
+  }
+
+  private object ObjectFetcherLogger extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
+    override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
+      logger.warn("Failed to prefetch '" + uri + "'")
+    }
+    override def afterPrefetchSuccess(uri: URI, result: ValidationResult) {
+      logger.debug("Prefetched '" + uri + "'")
+    }
+    override def afterFetchFailure(uri: URI, result: ValidationResult) {
+      logger.warn("Failed to validate '" + uri + "': " + result.getFailuresForCurrentLocation().asScala.map(_.toString()).mkString(", "))
+    }
+    override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
+      logger.debug("Validated OBJECT '" + uri + "'")
+    }
   }
 }

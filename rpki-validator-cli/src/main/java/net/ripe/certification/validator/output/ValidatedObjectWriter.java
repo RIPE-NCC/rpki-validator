@@ -33,7 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback;
+import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
 import net.ripe.certification.validator.util.UriToFileMapper;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.validation.ValidationResult;
@@ -45,7 +45,7 @@ import org.apache.log4j.Logger;
 /**
  * Writes validated objects to the location as specified by the {@link UriToFileMapper}.
  */
-public class ValidatedObjectWriter implements FetchNotificationCallback {
+public class ValidatedObjectWriter implements Listener {
     private static final Logger LOG = Logger.getLogger(ValidatedObjectWriter.class);
 
     private UriToFileMapper uriToFileMapper;

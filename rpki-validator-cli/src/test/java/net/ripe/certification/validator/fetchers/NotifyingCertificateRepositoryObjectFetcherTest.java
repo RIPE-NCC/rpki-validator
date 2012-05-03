@@ -58,8 +58,8 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
     private ValidationResult result;
     private CertificateRepositoryObjectValidationContext context;
     private CertificateRepositoryObjectFetcher fetcher;
-    private NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback firstCallback;
-    private NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback secondCallback;
+    private NotifyingCertificateRepositoryObjectFetcher.Listener firstCallback;
+    private NotifyingCertificateRepositoryObjectFetcher.Listener secondCallback;
     private NotifyingCertificateRepositoryObjectFetcher subject;
     private Object[] mocks;
 
@@ -71,8 +71,8 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
 
         context = CertificateRepositoryObjectValidationContextTest.create();
         fetcher = createMock(CertificateRepositoryObjectFetcher.class);
-        firstCallback = createMock(NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback.class);
-        secondCallback = createMock(NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback.class);
+        firstCallback = createMock(NotifyingCertificateRepositoryObjectFetcher.Listener.class);
+        secondCallback = createMock(NotifyingCertificateRepositoryObjectFetcher.Listener.class);
         mocks = new Object[] { fetcher, firstCallback, secondCallback };
 
         subject = new NotifyingCertificateRepositoryObjectFetcher(fetcher);

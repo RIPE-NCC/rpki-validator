@@ -48,7 +48,8 @@ import org.apache.commons.lang.Validate;
  */
 public class NotifyingCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {
 
-    public interface FetchNotificationCallback {
+    public static interface Listener {
+
 
         /**
          * Called after a failure of
@@ -102,16 +103,37 @@ public class NotifyingCertificateRepositoryObjectFetcher implements CertificateR
 
     }
 
+    /**
+     * Adapter that provides empty implementations.
+     */
+    public static class ListenerAdapter implements Listener {
+        @Override
+        public void afterPrefetchFailure(URI uri, ValidationResult result) {
+        }
+
+        @Override
+        public void afterPrefetchSuccess(URI uri, ValidationResult result) {
+        }
+
+        @Override
+        public void afterFetchFailure(URI uri, ValidationResult result) {
+        }
+
+        @Override
+        public void afterFetchSuccess(URI uri, CertificateRepositoryObject object, ValidationResult result) {
+        }
+    }
+
     private final CertificateRepositoryObjectFetcher fetcher;
-    private final List<FetchNotificationCallback> callbacks;
+    private final List<Listener> callbacks;
 
     public NotifyingCertificateRepositoryObjectFetcher(CertificateRepositoryObjectFetcher fetcher) {
         Validate.notNull(fetcher);
         this.fetcher = fetcher;
-        this.callbacks = new ArrayList<FetchNotificationCallback>();
+        this.callbacks = new ArrayList<Listener>();
     }
 
-    public void addCallback(FetchNotificationCallback callback) {
+    public void addCallback(Listener callback) {
         Validate.notNull(callback);
         callbacks.add(callback);
     }
@@ -142,11 +164,11 @@ public class NotifyingCertificateRepositoryObjectFetcher implements CertificateR
     public void prefetch(URI uri, ValidationResult result) {
         fetcher.prefetch(uri, result);
         if (result.hasFailureForCurrentLocation()) {
-            for (FetchNotificationCallback callback : callbacks) {
+            for (Listener callback : callbacks) {
                 callback.afterPrefetchFailure(uri, result);
             }
         } else {
-            for (FetchNotificationCallback callback : callbacks) {
+            for (Listener callback : callbacks) {
                 callback.afterPrefetchSuccess(uri, result);
             }
         }
@@ -154,11 +176,11 @@ public class NotifyingCertificateRepositoryObjectFetcher implements CertificateR
 
     private void notifyAfterFetch(URI uri, CertificateRepositoryObject object, ValidationResult result) {
         if (result.hasFailureForCurrentLocation()) {
-            for (FetchNotificationCallback callback : callbacks) {
+            for (Listener callback : callbacks) {
                 callback.afterFetchFailure(uri, result);
             }
         } else {
-            for (FetchNotificationCallback callback : callbacks) {
+            for (Listener callback : callbacks) {
                 callback.afterFetchSuccess(uri, object, result);
             }
         }

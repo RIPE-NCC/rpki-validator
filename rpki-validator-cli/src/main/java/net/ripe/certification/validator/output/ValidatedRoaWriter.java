@@ -36,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.ripe.certification.csv.CsvFormatter;
-import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback;
+import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.ValidityPeriod;
 import net.ripe.commons.certification.cms.roa.RoaCms;
@@ -58,7 +58,7 @@ import org.joda.time.format.DateTimeFormatter;
  * Note that there should be a ValidatingCROF *below* this NotifyingCROF
  * to ensure that the RoaCms objects are actually *valid*.
  */
-public class ValidatedRoaWriter implements FetchNotificationCallback {
+public class ValidatedRoaWriter implements Listener {
 
     private static final Logger LOG = Logger.getLogger(ValidatedRoaWriter.class);
 

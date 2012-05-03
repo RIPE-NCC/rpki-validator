@@ -35,7 +35,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback;
+import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.roa.RoaCms;
 import net.ripe.commons.certification.cms.roa.RoaPrefix;
@@ -48,7 +48,7 @@ import net.ripe.ipresource.IpResourceType;
 import net.ripe.ipresource.UniqueIpResource;
 
 
-public class ValidationSummaryCollector implements FetchNotificationCallback {
+public class ValidationSummaryCollector implements Listener {
 
     private static final BigInteger ROA_IPV6_PREFIX_COUNT_UNIT = BigInteger.valueOf(2l).pow(80);
 

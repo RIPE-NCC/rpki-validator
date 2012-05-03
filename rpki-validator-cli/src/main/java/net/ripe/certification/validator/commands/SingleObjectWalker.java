@@ -62,12 +62,12 @@ public class SingleObjectWalker {
     private URI startingPointUri;
 
     private CertificateRepositoryObjectFetcher chainBuildFetcher;
-    private NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback chainBuildLogger;
+    private NotifyingCertificateRepositoryObjectFetcher.Listener chainBuildLogger;
     private CertificateRepositoryObjectFetcher validationFetcher;
     private List<URI> parentCertificateChain = new ArrayList<URI>();
     private ValidationResult result = new ValidationResult();
 
-    public SingleObjectWalker(CertificateRepositoryObject startingPoint, URI startingPointUri, CertificateRepositoryObjectFetcher chainBuildFetcher, NotifyingCertificateRepositoryObjectFetcher.FetchNotificationCallback chainBuildLogger, CertificateRepositoryObjectFetcher validationFetcher) {
+    public SingleObjectWalker(CertificateRepositoryObject startingPoint, URI startingPointUri, CertificateRepositoryObjectFetcher chainBuildFetcher, NotifyingCertificateRepositoryObjectFetcher.Listener chainBuildLogger, CertificateRepositoryObjectFetcher validationFetcher) {
         this.startingPoint = startingPoint;
         this.startingPointUri = startingPointUri;
         this.chainBuildFetcher = chainBuildFetcher;
