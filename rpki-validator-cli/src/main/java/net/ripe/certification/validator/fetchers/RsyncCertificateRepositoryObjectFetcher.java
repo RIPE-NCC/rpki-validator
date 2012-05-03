@@ -53,6 +53,9 @@ import org.apache.log4j.Logger;
 
 public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {
 
+    public static final String RSYNC_PREFETCH_VALIDATION_METRIC = "rsync.prefetch";
+    public static final String RSYNC_FETCH_FILE_VALIDATION_METRIC = "rsync.fetch.file";
+
     private static final Logger LOG = Logger.getLogger(RsyncCertificateRepositoryObjectFetcher.class);
 
     private static final String[] STANDARD_OPTIONS = { "--update", "--times", "--copy-links" };
@@ -149,6 +152,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
 
         destinationDirectory.mkdirs();
         int rc = rsync.execute();
+        result.addMetric(RSYNC_PREFETCH_VALIDATION_METRIC, String.valueOf(rsync.elapsedTime()));
         result.rejectIfFalse(rc == 0, VALIDATOR_RSYNC_COMMAND, uri.toString());
         if (rc == 0) {
             uriCache.add(uri);
@@ -169,6 +173,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
 
         destinationFile.getParentFile().mkdirs();
         int rc = rsync.execute();
+        result.addMetric(RSYNC_FETCH_FILE_VALIDATION_METRIC, String.valueOf(rsync.elapsedTime()));
         result.rejectIfFalse(rc == 0, VALIDATOR_RSYNC_COMMAND, uri.toString());
         if (rc == 0) {
             uriCache.add(uri);
