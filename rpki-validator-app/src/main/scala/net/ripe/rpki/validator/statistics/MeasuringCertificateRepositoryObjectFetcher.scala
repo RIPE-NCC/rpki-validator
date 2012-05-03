@@ -35,8 +35,11 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.util.Specification
 import com.yammer.metrics.Metrics
+import com.yammer.metrics.core.{MetricsRegistry, Timer}
 
 class MeasuringCertificateRepositoryObjectFetcher(fetcher: CertificateRepositoryObjectFetcher) extends CertificateRepositoryObjectFetcher {
+
+  private[this] var registry = new MetricsRegistry()
 
   def prefetch(uri: URI, result: ValidationResult) = {
     measure { fetcher.prefetch(uri, result) } (uri.getHost)
@@ -54,8 +57,18 @@ class MeasuringCertificateRepositoryObjectFetcher(fetcher: CertificateRepository
     measure { fetcher.getCrl(uri, context, result) } (uri.getHost)
   }
 
+  def reset() = {
+    registry.shutdown()
+    registry = new MetricsRegistry()
+
+  }
+
+  def metrics() = {
+    registry.allMetrics()
+  }
+
   private def measure[B](block: => B)(metricName: String): B = {
-    val timer = Metrics.newTimer(classOf[MeasuringCertificateRepositoryObjectFetcher], metricName);
+    val timer = registry.newTimer(classOf[MeasuringCertificateRepositoryObjectFetcher], metricName);
     val context = timer.time();
     try {
       block

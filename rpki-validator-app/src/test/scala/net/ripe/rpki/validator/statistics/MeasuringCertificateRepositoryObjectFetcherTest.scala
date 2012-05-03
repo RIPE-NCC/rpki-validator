@@ -39,9 +39,9 @@ import org.scalatest.mock.MockitoSugar
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher
 import java.net.URI
 import net.ripe.commons.certification.validation.ValidationResult
-import com.yammer.metrics.Metrics
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.commons.certification.util.Specification
+import scala.collection.JavaConverters._
 
 @RunWith(classOf[JUnitRunner])
 class MeasuringCertificateRepositoryObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter with MockitoSugar {
@@ -51,9 +51,11 @@ class MeasuringCertificateRepositoryObjectFetcherTest extends FunSuite with Shou
   val mockContext = mock[CertificateRepositoryObjectValidationContext]
 
   val subject = new MeasuringCertificateRepositoryObjectFetcher(mockFetcher)
-  val uri = URI.create("rsync://rpki.ripe.net/root.cer")
-  val registry = Metrics.defaultRegistry()
+  val uri = URI.create("rsync://rpki.ripe.net/ta/ripe-ncc-ta.cer")
 
+  after {
+    subject.reset()
+  }
 
   test("should measure prefetch per host") {
     checkForMetrics { subject.prefetch(uri, mockResult) }
@@ -71,24 +73,34 @@ class MeasuringCertificateRepositoryObjectFetcherTest extends FunSuite with Shou
     checkForMetrics { subject.getCrl(uri, mockContext, mockResult) }
   }
 
+  test("should have separate metrics for different hosts") {
+    val apnicUri = URI.create("rsync://rpki.apnic.net/repository/APNIC.cer")
+
+    subject.prefetch(uri, mockResult)
+    subject.prefetch(apnicUri, mockResult)
+
+    subject.metrics().values should have size(2)
+    metricNames should contain(apnicUri.getHost)
+    metricNames should contain(uri.getHost)
+  }
+
+  test("should reuse metric for the same host") {
+    subject.getCrl(uri, mockContext, mockResult)
+    subject.getCrl(uri, mockContext, mockResult)
+
+    subject.metrics().values should have size(1)
+  }
+
   private def checkForMetrics[B](block: => B) = {
-    val metricCount = registry.groupedMetrics().size()
+    val metricCount = subject.metrics().size()
 
     block
 
-    registry.groupedMetrics().values should have size(metricCount + 1)
-    firstMetricOwner() should be (classOf[MeasuringCertificateRepositoryObjectFetcher].getCanonicalName)
-    firstMetricName().getName should be ("rpki.ripe.net")
-
-    registry.removeMetric(firstMetricName())
+    subject.metrics().values should have size(metricCount + 1)
+    metricNames should contain(uri.getHost)
   }
 
-  def firstMetricOwner() = {
-    registry.groupedMetrics().firstKey()
-  }
-
-  def firstMetricName() = {
-    val firstValue = registry.groupedMetrics().values().iterator().next()
-    firstValue.keySet().iterator().next()
+  def metricNames  = {
+    for (metric <- subject.metrics().keySet().asScala) yield metric.getName()
   }
 }
