@@ -115,9 +115,9 @@ class TrustAnchors(val all: Seq[TrustAnchor]) {
     })
   }
 
-  def updateTrustAnchorState(name: String, enabled: Boolean) = {
+  def updateTrustAnchorState(locator: TrustAnchorLocator, enabled: Boolean) = {
     new TrustAnchors(all.map { ta =>
-      if (ta.name == name) ta.copy(enabled = enabled)
+      if (ta.locator == locator) ta.copy(enabled = enabled)
       else ta
     })
   }

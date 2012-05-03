@@ -31,7 +31,6 @@ package net.ripe.rpki.validator
 package support
 
 import org.junit.runner.RunWith
-
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
@@ -42,6 +41,7 @@ import org.scalatra.test.scalatest.ScalatraFeatureSpec
 import org.joda.time.DateTime
 import models._
 import lib.UserPreferences
+import net.ripe.certification.validator.util.TrustAnchorLocator
 
 @RunWith(classOf[JUnitRunner])
 abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatchers with MockitoSugar {
@@ -65,6 +65,6 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
     override def userPreferences = UserPreferences(updateAlertActive = false)
     override def newVersionDetailFetcher = sys.error("TODO")
     override def updateUserPreferences(userPreferences: UserPreferences) = sys.error("TODO")
-    override protected def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean) {}
+    override protected def updateTrustAnchorState(locator: TrustAnchorLocator, enabled: Boolean) {}
   }, "/*")
 }

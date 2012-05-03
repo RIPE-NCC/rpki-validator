@@ -50,7 +50,7 @@ abstract class RoaTableData(validatedObjects: ValidatedObjects) extends DataTabl
             record.asn.toString().contains(searchString) ||
             record.prefix.toString().contains(searchString) ||
             record.maxPrefixLength.toString().contains(searchString) ||
-            record.trustAnchorName.get.toUpperCase().contains(searchString))
+            record.trustAnchorLocator.map(_.getCaName.toUpperCase().contains(searchString)).getOrElse(false))
       case _ => _ => true
     }
   }
@@ -60,13 +60,13 @@ abstract class RoaTableData(validatedObjects: ValidatedObjects) extends DataTabl
       case 0 => AsnOrdering.on(_.asn)
       case 1 => IpRangeOrdering.on(_.prefix)
       case 2 => implicitly[Ordering[Int]].on(_.effectiveMaxPrefixLength)
-      case 3 => implicitly[Ordering[String]].on(_.trustAnchorName.get)
+      case 3 => implicitly[Ordering[Option[String]]].on(_.trustAnchorLocator.map(_.getCaName))
       case _ => sys.error("unknown sort column: " + sortColumn)
     }
   }
 
   override def getValuesForRecord(record: RtrPrefix) = {
     List(record.asn.getValue().toString(), record.prefix.toString(), record.effectiveMaxPrefixLength.toString(),
-      record.trustAnchorName.getOrElse(""))
+      record.trustAnchorLocator.map(_.getCaName).getOrElse(""))
   }
 }

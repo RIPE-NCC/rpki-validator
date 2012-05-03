@@ -40,15 +40,15 @@ import lib.Java
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class RoaTableDataTest extends FunSuite with ShouldMatchers {
 
-  val ROA_TABLE_RECORD_1 = RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix(), Java.toOption(ROA_PREFIX_V4_1.getMaximumLength), Option(TAL.getCaName()))
-  val ROA_TABLE_RECORD_2 = RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix(), Java.toOption(ROA_PREFIX_V4_2.getMaximumLength), Option(TAL.getCaName()))
-  val ROA_TABLE_RECORD_3 = RtrPrefix(ASN1, ROA_PREFIX_V6_1.getPrefix(), Java.toOption(ROA_PREFIX_V6_1.getMaximumLength), Option(TAL.getCaName()))
-  val ROA_TABLE_RECORD_4 = RtrPrefix(ASN2, ROA_PREFIX_V4_1.getPrefix(), Java.toOption(ROA_PREFIX_V4_1.getMaximumLength), Option(TAL.getCaName()))
+  val ROA_TABLE_RECORD_1 = RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix(), Java.toOption(ROA_PREFIX_V4_1.getMaximumLength), Option(TAL))
+  val ROA_TABLE_RECORD_2 = RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix(), Java.toOption(ROA_PREFIX_V4_2.getMaximumLength), Option(TAL))
+  val ROA_TABLE_RECORD_3 = RtrPrefix(ASN1, ROA_PREFIX_V6_1.getPrefix(), Java.toOption(ROA_PREFIX_V6_1.getMaximumLength), Option(TAL))
+  val ROA_TABLE_RECORD_4 = RtrPrefix(ASN2, ROA_PREFIX_V4_1.getPrefix(), Java.toOption(ROA_PREFIX_V4_1.getMaximumLength), Option(TAL))
 
   val subject = new RoaTableData(ROAS) {
     override def getParam(name: String) = "1"
   }
-  
+
   test("should get roas") {
     val records = subject.getAllRecords()
     records should have length 6 // NOTE: There are duplicates
@@ -77,7 +77,7 @@ class RoaTableDataTest extends FunSuite with ShouldMatchers {
     filtered should have length 1
     filtered should contain(ROA_TABLE_RECORD_2)
   }
-  
+
   test("should sort by AS") {
     val sorted = subject.sortRecords(subject.getAllRecords().distinct, 0)
     sorted should have length 4
@@ -86,7 +86,7 @@ class RoaTableDataTest extends FunSuite with ShouldMatchers {
     sorted(2).asn should equal (ASN1)
     sorted(3).asn should equal (ASN2)
   }
-  
+
   test("should sort by Prefix") {
     val sorted = subject.sortRecords(subject.getAllRecords().distinct, 1)
     sorted should have length 4
@@ -95,7 +95,7 @@ class RoaTableDataTest extends FunSuite with ShouldMatchers {
     sorted(2).prefix should equal (ROA_PREFIX_V4_1.getPrefix())
     sorted(3).prefix should equal (ROA_PREFIX_V6_1.getPrefix())
   }
-  
+
   test("should sort by effective max length") {
     val sorted = subject.sortRecords(subject.getAllRecords().distinct, 2)
     sorted should have length 4
@@ -104,6 +104,6 @@ class RoaTableDataTest extends FunSuite with ShouldMatchers {
     sorted(2).effectiveMaxPrefixLength should equal (ROA_PREFIX_V4_1.getEffectiveMaximumLength())
     sorted(3).effectiveMaxPrefixLength should equal (ROA_PREFIX_V6_1.getEffectiveMaximumLength())
   }
-  
+
 
 }

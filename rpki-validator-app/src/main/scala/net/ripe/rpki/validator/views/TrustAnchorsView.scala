@@ -38,8 +38,9 @@ import lib.DateAndTime._
 import lib.Validation._
 import models._
 import net.ripe.commons.certification.validation.ValidationStatus
+import net.ripe.certification.validator.util.TrustAnchorLocator
 
-class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[String, Map[ValidationStatus, Int]], now: DateTime = new DateTime, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
+class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[TrustAnchorLocator, Map[ValidationStatus, Int]], now: DateTime = new DateTime, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   def tab = Tabs.TrustAnchorsTab
   def title = Text("Configured Trust Anchors")
   def body = {
@@ -78,7 +79,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[S
               </form>
             </td>
             <td><span rel="twipsy" data-original-title={ ta.certificate.map(_.getCertificate.getSubject.toString).getOrElse("") }>{ ta.name }</span></td>
-            <td nowrap="nowrap">{ renderCounters(ta, validationStatusCounts.getOrElse(ta.name, Map.empty)) }</td>{
+            <td nowrap="nowrap">{ renderCounters(ta, validationStatusCounts.getOrElse(ta.locator, Map.empty)) }</td>{
               ta.certificate match {
                 case Some(certificate) =>
                   val notValidAfter = certificate.getCertificate().getValidityPeriod().getNotValidAfter()

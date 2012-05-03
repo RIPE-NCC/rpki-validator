@@ -101,10 +101,10 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
 
   def getValidationResults = {
     val records = for {
-      (trustAnchorName, validatedObjects) <- validatedObjects.all.par
+      (trustAnchorLocator, validatedObjects) <- validatedObjects.all.par
       validatedObject <- validatedObjects.filterNot(_.validationStatus == ValidationStatus.PASSED)
     } yield {
-      ValidatedObjectResult(trustAnchorName, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
+      ValidatedObjectResult(trustAnchorLocator.getCaName, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
     }
     records.seq.toIndexedSeq
   }

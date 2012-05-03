@@ -33,10 +33,11 @@ package controllers
 import scalaz._, Scalaz._
 import models._
 import lib.Validation._
+import net.ripe.certification.validator.util.TrustAnchorLocator
 
 trait TrustAnchorsController extends ApplicationController {
   protected def trustAnchors: TrustAnchors
-  protected def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean)
+  protected def updateTrustAnchorState(locator: TrustAnchorLocator, enabled: Boolean)
   protected def validatedObjects: ValidatedObjects
   protected def startTrustAnchorValidation(trustAnchors: Seq[String])
 
@@ -59,7 +60,7 @@ trait TrustAnchorsController extends ApplicationController {
     validateParameter("name", required(trustAnchorByName)) match {
       case Success(trustAnchor) =>
         val enabled = !trustAnchor.enabled
-        updateTrustAnchorState(trustAnchor.name, enabled)
+        updateTrustAnchorState(trustAnchor.locator, enabled)
         if (enabled) {
           startTrustAnchorValidation(Seq(trustAnchor.name))
           redirectWithFeedbackMessages("/trust-anchors", Seq(InfoMessage("Trust anchor '" + trustAnchor.name + "' has been enabled.")))

@@ -32,6 +32,7 @@ package views
 
 import scala.xml._
 import models.ValidatedObjects
+import net.ripe.certification.validator.util.TrustAnchorLocator
 
 class RoasView(validatedObjects: ValidatedObjects) extends View {
   def tab = Tabs.RoasTab
@@ -70,6 +71,6 @@ $(document).ready(function() {
   }
 
   private def optional(condition: Boolean, body: => NodeSeq) = if (condition) body else NodeSeq.Empty
-  private def listTrustAnchorNames(elements: Seq[String]): NodeSeq =
-    elements.sorted.map(name => <strong>{ name }</strong>: NodeSeq).reduce(_ ++ Text(", ") ++ _)
+  private def listTrustAnchorNames(elements: Seq[TrustAnchorLocator]): NodeSeq =
+    elements.map(_.getCaName).sorted.map(name => <strong>{ name }</strong>: NodeSeq).reduce(_ ++ Text(", ") ++ _)
 }

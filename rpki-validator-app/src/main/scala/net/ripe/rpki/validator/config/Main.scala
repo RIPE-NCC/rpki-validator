@@ -53,6 +53,7 @@ import org.apache.http.impl.client.DefaultHttpClient
 import org.joda.time.DateTimeUtils
 import net.ripe.rpki.validator.statistics.Metric
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
+import net.ripe.certification.validator.util.TrustAnchorLocator
 
 object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
@@ -257,8 +258,8 @@ class Main(options: Options) { main =>
       override def userPreferences = main.userPreferences.single.get
       override def updateUserPreferences(userPreferences: UserPreferences) = updateAndPersist { implicit transaction => main.userPreferences.set(userPreferences) }
 
-      override protected def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean) = updateAndPersist { implicit transaction =>
-        memoryImage.transform(_.updateTrustAnchorState(trustAnchorName, enabled))
+      override protected def updateTrustAnchorState(locator: TrustAnchorLocator, enabled: Boolean) = updateAndPersist { implicit transaction =>
+        memoryImage.transform(_.updateTrustAnchorState(locator, enabled))
       }
     }), "/*", FilterMapping.ALL)
 

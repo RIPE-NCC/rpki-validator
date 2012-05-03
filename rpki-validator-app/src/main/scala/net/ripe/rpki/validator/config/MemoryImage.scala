@@ -44,15 +44,15 @@ import java.net.URI
 case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, version: Int = 0) {
   val lastUpdateTime: DateTime = new DateTime
 
-  def startProcessingTrustAnchor(tal: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(tal, description))
+  def startProcessingTrustAnchor(locator: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(locator, description))
 
-  def finishedProcessingTrustAnchor(tal: TrustAnchorLocator, result: Validation[String, (CertificateRepositoryObjectValidationContext, Map[URI, ValidatedObject])]) =
-    copy(trustAnchors = trustAnchors.finishedProcessing(tal, result))
+  def finishedProcessingTrustAnchor(locator: TrustAnchorLocator, result: Validation[String, (CertificateRepositoryObjectValidationContext, Map[URI, ValidatedObject])]) =
+    copy(trustAnchors = trustAnchors.finishedProcessing(locator, result))
 
-  def updateValidatedObjects(tal: TrustAnchorLocator, newValidatedObjects: Seq[ValidatedObject]) = {
-    trustAnchors.all.find(_.locator == tal) match {
+  def updateValidatedObjects(locator: TrustAnchorLocator, newValidatedObjects: Seq[ValidatedObject]) = {
+    trustAnchors.all.find(_.locator == locator) match {
       case Some(trustAnchor) if trustAnchor.enabled =>
-        copy(version = version + 1, validatedObjects = validatedObjects.update(tal.getCaName, newValidatedObjects))
+        copy(version = version + 1, validatedObjects = validatedObjects.update(locator, newValidatedObjects))
       case _ =>
         this
     }
@@ -69,11 +69,11 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
 
   def removeFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.removeFilter(filter))
 
-  def updateTrustAnchorState(trustAnchorName: String, enabled: Boolean) = {
+  def updateTrustAnchorState(locator: TrustAnchorLocator, enabled: Boolean) = {
     val newValidatedObjects = enabled match {
-      case true => validatedObjects.update(trustAnchorName, Seq.empty[ValidatedObject])
-      case false => validatedObjects.removeTrustAnchor(trustAnchorName)
+      case true => validatedObjects.update(locator, Seq.empty[ValidatedObject])
+      case false => validatedObjects.removeTrustAnchor(locator)
     }
-    copy(version = version + 1, trustAnchors = trustAnchors.updateTrustAnchorState(trustAnchorName, enabled), validatedObjects = newValidatedObjects)
+    copy(version = version + 1, trustAnchors = trustAnchors.updateTrustAnchorState(locator, enabled), validatedObjects = newValidatedObjects)
   }
 }

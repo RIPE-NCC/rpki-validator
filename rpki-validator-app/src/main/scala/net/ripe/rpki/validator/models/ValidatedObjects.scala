@@ -69,27 +69,27 @@ case class ValidRoa(uri: URI, checks: Set[ValidationCheck], roa: RoaCms) extends
   override val isValid = true
 }
 
-class ValidatedObjects(val all: Map[String, Seq[ValidatedObject]]) {
-  def validationStatusCounts: Map[String, Map[ValidationStatus, Int]] = for ((trustAnchorName, validatedObjects) <- all) yield {
-    trustAnchorName -> validatedObjects.groupBy(_.validationStatus).map(p => p._1 -> p._2.size)
+class ValidatedObjects(val all: Map[TrustAnchorLocator, Seq[ValidatedObject]]) {
+  def validationStatusCounts: Map[TrustAnchorLocator, Map[ValidationStatus, Int]] = for ((locator, validatedObjects) <- all) yield {
+    locator -> validatedObjects.groupBy(_.validationStatus).map(p => p._1 -> p._2.size)
   }
 
   def getValidatedRtrPrefixes = {
     for {
-      (trustAnchorName, validatedObjects) <- all
+      (locator, validatedObjects) <- all
       ValidRoa(_, _, roa) <- validatedObjects
       roaPrefix <- roa.getPrefixes().asScala
     } yield {
-      RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(trustAnchorName))
+      RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(locator))
     }
   }
 
-  def update(trustAnchorName: String, validatedObjects: Seq[ValidatedObject]) = {
-    new ValidatedObjects(all.updated(trustAnchorName, validatedObjects))
+  def update(locator: TrustAnchorLocator, validatedObjects: Seq[ValidatedObject]) = {
+    new ValidatedObjects(all.updated(locator, validatedObjects))
   }
 
-  def removeTrustAnchor(trustAnchorName: String) = {
-    new ValidatedObjects(all.filterKeys(key => !key.equals(trustAnchorName)))
+  def removeTrustAnchor(locator: TrustAnchorLocator) = {
+    new ValidatedObjects(all.filterKeys(key => !key.equals(locator)))
   }
 
 }
@@ -98,7 +98,7 @@ object ValidatedObjects {
   private val logger = Logger[this.type]
 
   def apply(trustAnchors: TrustAnchors): ValidatedObjects = {
-    new ValidatedObjects(trustAnchors.all.map(ta => ta.locator.getCaName() -> Seq.empty[ValidatedObject])(collection.breakOut))
+    new ValidatedObjects(trustAnchors.all.map(ta => ta.locator -> Seq.empty[ValidatedObject])(collection.breakOut))
   }
 
   def fetchObjects(trustAnchor: TrustAnchorLocator, certificate: CertificateRepositoryObjectValidationContext, options: ValidationOptions): Map[URI, ValidatedObject] = {

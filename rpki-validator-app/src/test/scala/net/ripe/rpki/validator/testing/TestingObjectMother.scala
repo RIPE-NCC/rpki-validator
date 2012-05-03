@@ -57,13 +57,7 @@ object TestingObjectMother {
   val WHITELIST_PREFIX_1: IpRange = IpRange.parse("10.0.0.0/8")
   val UNUSED_PREFIX_FOR_FILTER = IpRange.parse("192.168.1.0/24")
 
-  val ASN1_TO_ROA_PREFIX_V4_1: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix, Some(ROA_PREFIX_V4_1.getMaximumLength), Some("test ca"))
-  val ASN1_TO_ROA_PREFIX_V4_2: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix, None, Some("test ca"))
-  val ASN1_TO_ROA_PREFIX_V6_1: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V6_1.getPrefix, None, Some("test ca"))
-  val ASN2_TO_ROA_PREFIX_V4_1: RtrPrefix = RtrPrefix(ASN2, ROA_PREFIX_V4_1.getPrefix, Some(ROA_PREFIX_V4_1.getMaximumLength), Some("test ca"))
-  val ASN3_TO_WHITELIST1: RtrPrefix = RtrPrefix(ASN3, WHITELIST_PREFIX_1, None, Some("test ca"))
-
-  def TAL = {
+  val TAL = {
     val file: File = new File("/tmp")
     val caName = "test ca"
     val location: URI = URI.create("rsync://example.com/")
@@ -72,6 +66,12 @@ object TestingObjectMother {
 
     new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
   }
+
+  val ASN1_TO_ROA_PREFIX_V4_1: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix, Some(ROA_PREFIX_V4_1.getMaximumLength), Some(TAL))
+  val ASN1_TO_ROA_PREFIX_V4_2: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix, None, Some(TAL))
+  val ASN1_TO_ROA_PREFIX_V6_1: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V6_1.getPrefix, None, Some(TAL))
+  val ASN2_TO_ROA_PREFIX_V4_1: RtrPrefix = RtrPrefix(ASN2, ROA_PREFIX_V4_1.getPrefix, Some(ROA_PREFIX_V4_1.getMaximumLength), Some(TAL))
+  val ASN3_TO_WHITELIST1: RtrPrefix = RtrPrefix(ASN3, WHITELIST_PREFIX_1, None, Some(TAL))
 
   def ROAS = {
     val prefixes1 = List[RoaPrefix](
@@ -101,7 +101,7 @@ object TestingObjectMother {
     val validatedRoa3: ValidRoa = new ValidRoa(roa3Uri, Set.empty[ValidationCheck], roa3)
 
     val roas = Seq(validatedRoa1, validatedRoa2, validatedRoa3)
-    new ValidatedObjects(Map(TAL.getCaName -> roas))
+    new ValidatedObjects(Map(TAL -> roas))
   }
 
 
