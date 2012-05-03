@@ -36,10 +36,16 @@ import grizzled.slf4j.Logging
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import org.joda.time.DateTime
-import scalaz.{Validation, Failure, Success}
+import scalaz.{ Validation, Failure, Success }
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
 import net.ripe.rpki.validator.lib.DateAndTime._
+import net.ripe.certification.validator.util.TrustAnchorExtractor
+import net.ripe.commons.certification.validation.ValidationOptions
+import net.ripe.rpki.validator.statistics.Metric
+import org.joda.time.DateTimeUtils
+import scala.concurrent.stm._
+import net.ripe.rpki.validator.config.MemoryImage
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -55,13 +61,13 @@ case class Running(description: String) extends ProcessingStatus {
 case class TrustAnchorData(enabled: Boolean = true)
 
 case class TrustAnchor(
-  locator: TrustAnchorLocator,
-  status: ProcessingStatus,
-  enabled: Boolean,
-  certificate: Option[CertificateRepositoryObjectValidationContext],
-  manifest: Option[ManifestCms],
-  crl: Option[X509Crl],
-  lastUpdated: Option[DateTime] = None) {
+    locator: TrustAnchorLocator,
+    status: ProcessingStatus,
+    enabled: Boolean = true,
+    certificate: Option[CertificateRepositoryObjectValidationContext] = None,
+    manifest: Option[ManifestCms] = None,
+    crl: Option[X509Crl] = None,
+    lastUpdated: Option[DateTime] = None) {
   def name: String = locator.getCaName()
   def prefetchUris: Seq[URI] = locator.getPrefetchUris().asScala
 
@@ -70,6 +76,28 @@ case class TrustAnchor(
   }
 
   def crlNextUpdateTime: Option[DateTime] = crl.map(_.getNextUpdateTime)
+
+  def finishProcessing(result: Validation[String, (CertificateRepositoryObjectValidationContext, Map[URI, ValidatedObject])]) = {
+    val now = new DateTime
+
+    result match {
+      case Success((certificate, validatedObjects)) =>
+        val nextUpdate = now.plusHours(4)
+        val manifest = validatedObjects.get(certificate.getManifestURI).collect {
+          case ValidObject(_, _, manifest: ManifestCms) => manifest
+        }
+        val crl = for {
+          mft <- manifest
+          crlUri <- Option(mft.getCrlUri)
+          ValidObject(_, _, crl: X509Crl) <- validatedObjects.get(crlUri)
+        } yield crl
+
+        copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = Some(certificate), manifest = manifest, crl = crl)
+      case Failure(errorMessage) =>
+        val nextUpdate = now.plusHours(1)
+        copy(lastUpdated = Some(now), status = Idle(nextUpdate, Some(errorMessage)))
+    }
+  }
 }
 
 class TrustAnchors(val all: Seq[TrustAnchor]) {
@@ -79,23 +107,15 @@ class TrustAnchors(val all: Seq[TrustAnchor]) {
       else ta
     })
   }
-  def finishedProcessing(locator: TrustAnchorLocator, result: Validation[String, CertificateRepositoryObjectValidationContext], manifest: Option[ManifestCms], crl: Option[X509Crl]): TrustAnchors = {
-    val now = new DateTime
+  def finishedProcessing(locator: TrustAnchorLocator, result: Validation[String, (CertificateRepositoryObjectValidationContext, Map[URI, ValidatedObject])]): TrustAnchors = {
     new TrustAnchors(all.map { ta =>
-      if (ta.locator == locator) {
-        result match {
-          case Success(certificate) =>
-            val nextUpdate = now.plusHours(4)
-            ta.copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = Some(certificate), manifest = manifest, crl = crl)
-          case Failure(errorMessage) =>
-            val nextUpdate = now.plusHours(1)
-            ta.copy(lastUpdated = Some(now), status = Idle(nextUpdate, Some(errorMessage)))
-        }
-      } else ta
+      if (ta.locator == locator)
+        ta.finishProcessing(result)
+      else ta
     })
   }
 
-  def updateTrustAnchorState(name: String, enabled: Boolean)= {
+  def updateTrustAnchorState(name: String, enabled: Boolean) = {
     new TrustAnchors(all.map { ta =>
       if (ta.name == name) ta.copy(enabled = enabled)
       else ta
@@ -118,5 +138,111 @@ object TrustAnchors extends Logging {
         crl = None)
     }
     new TrustAnchors(trustAnchors)
+  }
+}
+
+trait ValidationProcess {
+  def trustAnchorLocator: TrustAnchorLocator
+
+  def runProcess(): Validation[String, Map[URI, ValidatedObject]] = {
+    try {
+      val certificate = extractTrustAnchorLocator()
+      Success(validateObjects(certificate))
+    } catch {
+      exceptionHandler
+    } finally {
+      finishProcessing()
+    }
+  }
+
+  def extractTrustAnchorLocator(): CertificateRepositoryObjectValidationContext
+  def validateObjects(certificate: CertificateRepositoryObjectValidationContext): Map[URI, ValidatedObject]
+  def exceptionHandler: PartialFunction[Throwable, Validation[String, Nothing]]
+  def finishProcessing(): Unit = {}
+}
+
+abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int) extends ValidationProcess {
+  override def extractTrustAnchorLocator() = new TrustAnchorExtractor().extractTA(trustAnchorLocator, "tmp/tals")
+  override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
+    val options = new ValidationOptions()
+    options.setMaxStaleDays(maxStaleDays)
+    ValidatedObjects.fetchObjects(trustAnchorLocator, certificate, options)
+  }
+}
+
+trait TrackValidationProcess extends ValidationProcess {
+  def memoryImage: Ref[MemoryImage]
+
+  abstract override def runProcess() = {
+    val start = atomic { implicit transaction =>
+      (for (
+        ta <- memoryImage().trustAnchors.all.find(_.locator == trustAnchorLocator);
+        if ta.status.isIdle && ta.enabled
+      ) yield {
+        memoryImage.transform { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
+      }).isDefined
+    }
+    if (start) super.runProcess()
+    else Failure("Trust anchor not idle or enabled")
+  }
+  abstract override def extractTrustAnchorLocator() = {
+    super.extractTrustAnchorLocator()
+  }
+  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
+    memoryImage.single.transform { _.startProcessingTrustAnchor(trustAnchorLocator, "Updating ROAs") }
+    val validatedObjects = super.validateObjects(certificate)
+    memoryImage.single.transform {
+      _.finishedProcessingTrustAnchor(trustAnchorLocator, Success((certificate, validatedObjects)))
+    }
+    validatedObjects
+  }
+  abstract override def finishProcessing() = {
+    super.finishProcessing()
+    // update memory image
+  }
+  override def exceptionHandler = {
+    case e: Exception =>
+      val message = if (e.getMessage != null) e.getMessage else e.toString
+      memoryImage.single.transform {
+        _.finishedProcessingTrustAnchor(trustAnchorLocator, Failure(message))
+      }
+      Failure(message)
+  }
+}
+
+trait MeasureValidationProcess extends ValidationProcess {
+  private[this] val metricsBuilder = Vector.newBuilder[Metric]
+  private[this] val startedAt = DateTimeUtils.currentTimeMillis
+
+  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
+    metricsBuilder += Metric("trust.anchor[%s].extracted.elapsed.ms" format trustAnchorLocator.getCertificateLocation, (DateTimeUtils.currentTimeMillis - startedAt).toString, DateTimeUtils.currentTimeMillis)
+    val result = super.validateObjects(certificate)
+    metricsBuilder += Metric("trust.anchor[%s].validation" format trustAnchorLocator.getCertificateLocation, "OK", DateTimeUtils.currentTimeMillis)
+    result
+  }
+
+  abstract override def finishProcessing() = {
+    super.finishProcessing()
+    val stop = DateTimeUtils.currentTimeMillis
+    metricsBuilder += Metric("trust.anchor[%s].validation.elapsed.ms" format trustAnchorLocator.getCertificateLocation, (stop - startedAt).toString, DateTimeUtils.currentTimeMillis)
+  }
+  abstract override def exceptionHandler = {
+    case e: Exception =>
+      metricsBuilder += Metric("trust.anchor[%s].validation" format trustAnchorLocator.getCertificateLocation, "failed: " + e, DateTimeUtils.currentTimeMillis)
+      super.exceptionHandler(e)
+  }
+
+  lazy val metrics = metricsBuilder.result
+}
+
+trait ValidationProcessLogger extends ValidationProcess with Logging {
+  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
+    info("Loaded trust anchor from location " + certificate.getLocation())
+    super.validateObjects(certificate)
+  }
+  abstract override def exceptionHandler = {
+    case e: Exception =>
+      error("Error while validating trust anchor " + trustAnchorLocator.getCertificateLocation() + ": " + e, e)
+      super.exceptionHandler(e)
   }
 }

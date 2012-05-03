@@ -39,17 +39,24 @@ import scalaz.Validation
 import lib.UserPreferences
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
+import java.net.URI
 
 case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, version: Int = 0) {
   val lastUpdateTime: DateTime = new DateTime
 
   def startProcessingTrustAnchor(tal: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(tal, description))
 
-  def finishedProcessingTrustAnchor(tal: TrustAnchorLocator, result: Validation[String, CertificateRepositoryObjectValidationContext], manifest: Option[ManifestCms], crl: Option[X509Crl]) =
-    copy(trustAnchors = trustAnchors.finishedProcessing(tal, result, manifest, crl))
+  def finishedProcessingTrustAnchor(tal: TrustAnchorLocator, result: Validation[String, (CertificateRepositoryObjectValidationContext, Map[URI, ValidatedObject])]) =
+    copy(trustAnchors = trustAnchors.finishedProcessing(tal, result))
 
-  def updateValidatedObjects(tal: TrustAnchorLocator, newValidatedObjects: Seq[ValidatedObject]) =
-    copy(version = version + 1, validatedObjects = validatedObjects.update(tal.getCaName, newValidatedObjects))
+  def updateValidatedObjects(tal: TrustAnchorLocator, newValidatedObjects: Seq[ValidatedObject]) = {
+    trustAnchors.all.find(_.locator == tal) match {
+      case Some(trustAnchor) if trustAnchor.enabled =>
+        copy(version = version + 1, validatedObjects = validatedObjects.update(tal.getCaName, newValidatedObjects))
+      case _ =>
+        this
+    }
+  }
 
   def addWhitelistEntry(entry: RtrPrefix) = copy(version = version + 1, whitelist = whitelist.addEntry(entry))
 

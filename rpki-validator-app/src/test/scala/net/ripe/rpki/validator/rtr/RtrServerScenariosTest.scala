@@ -63,10 +63,18 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   var cache: scala.concurrent.stm.Ref[MemoryImage] = null
 
   var nonce: Short = new Random().nextInt(65536).toShort
+  var tal: TrustAnchorLocator = null
+
 
   override def beforeAll() = {
     implicit val actorSystem = akka.actor.ActorSystem()
-    val trustAnchors: TrustAnchors = new TrustAnchors(Seq.empty)
+    var file: File = new File("/tmp")
+    var caName = "test ca"
+    var location: URI = URI.create("rsync://example.com/")
+    var publicKeyInfo = "info"
+    var prefetchUris: java.util.List[URI] = new java.util.ArrayList[URI]()
+    tal = new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
+    val trustAnchors: TrustAnchors = new TrustAnchors(Seq(TrustAnchor(locator = tal, status = Idle(new DateTime, None), enabled = true)))
     val validatedObjects: ValidatedObjects = new ValidatedObjects(Map.empty)
     cache = scala.concurrent.stm.Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects))
     server = new RTRServer(
@@ -99,13 +107,6 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.1
   test("Server should answer with data to ResetQuery") {
 
-    var file: File = new File("/tmp")
-    var caName = "test ca"
-    var location: URI = URI.create("rsync://example.com/")
-    var publicKeyInfo = "info"
-    var prefetchUris: java.util.List[URI] = new java.util.ArrayList[URI]()
-
-    var tal: TrustAnchorLocator = new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
 
     // TODO: use the method that allows explicit list of roa prefixes for testing
 

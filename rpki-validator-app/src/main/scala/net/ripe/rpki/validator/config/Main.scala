@@ -73,6 +73,8 @@ class Main(options: Options) { main =>
 
   implicit val actorSystem = akka.actor.ActorSystem()
 
+  val startedAt = System.currentTimeMillis
+
   val bgpRisDumps = Ref(Seq(
     BgpRisDump("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz"),
     BgpRisDump("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz")))
@@ -94,6 +96,19 @@ class Main(options: Options) { main =>
 
   val memoryImage = Ref(
     MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors), roas))
+
+  def updateMemoryImage(f: MemoryImage => MemoryImage)(implicit transaction: MaybeTxn) {
+    atomic { implicit transaction =>
+      val oldVersion = memoryImage().version
+
+      memoryImage.transform(f)
+
+      if (oldVersion != memoryImage().version) {
+        bgpAnnouncementValidator.startUpdate(main.bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
+        rtrServer.notify(memoryImage().version)
+      }
+    }
+  }
 
   val rtrServer = runRtrServer()
   runWebServer()
@@ -130,62 +145,26 @@ class Main(options: Options) { main =>
     runValidator(needUpdating)
   }
 
-  private def runValidator(trustAnchors: Seq[String]) {
-    val tasToValidate = atomic { implicit transaction =>
-      for (ta <- memoryImage().trustAnchors.all; if ta.status.isIdle && ta.enabled && trustAnchors.contains(ta.name)) yield {
-        memoryImage.transform { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
-        ta
-      }
-    }
-    for (ta <- tasToValidate) {
+  private def runValidator(trustAnchorNames: Seq[String]) {
+    val maxStaleDays = userPreferences.single.get.maxStaleDays
+    val trustAnchors = memoryImage.single.get.trustAnchors.all
+
+    val taLocators = trustAnchorNames.flatMap { name => trustAnchors.find(_.name == name) }.map(_.locator)
+
+    for (trustAnchorLocator <- taLocators) {
       Future {
-        val metricsBuilder = Vector.newBuilder[Metric]
-        val start = DateTimeUtils.currentTimeMillis
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays) with TrackValidationProcess with MeasureValidationProcess with ValidationProcessLogger {
+          override val memoryImage = main.memoryImage
+        }
         try {
-          val certificate = new TrustAnchorExtractor().extractTA(ta.locator, "tmp/tals")
-          memoryImage.single.transform { _.startProcessingTrustAnchor(ta.locator, "Updating ROAs") }
-          metricsBuilder += Metric("trust.anchor[%s].extracted.elapsed.ms" format ta.locator.getCertificateLocation, (DateTimeUtils.currentTimeMillis - start).toString, DateTimeUtils.currentTimeMillis)
-          logger.info("Loaded trust anchor from location " + certificate.getLocation())
-
-          val options = new ValidationOptions();
-          options.setMaxStaleDays(userPreferences.single.get.maxStaleDays)
-
-          val validatedObjects = ValidatedObjects.fetchObjects(ta.locator, certificate, options)
-
-          val manifest = validatedObjects.get(certificate.getManifestURI).collect {
-            case ValidObject(_, _, manifest: ManifestCms) => manifest
+          process.runProcess match {
+            case Success(validatedObjects) =>
+              updateMemoryImage { _.updateValidatedObjects(trustAnchorLocator, validatedObjects.values.toSeq) }
+            case Failure(_) =>
           }
-          val crl = for {
-            mft <- manifest
-            crlUri <- Option(mft.getCrlUri)
-            ValidObject(_, _, crl: X509Crl) <- validatedObjects.get(crlUri)
-          } yield crl
-
-          atomic { implicit transaction =>
-            memoryImage.transform { _.finishedProcessingTrustAnchor(ta.locator, Success(certificate), manifest, crl) }
-            memoryImage.get.trustAnchors.all.find(_.name == ta.name) match {
-              case Some(trustAnchor) if trustAnchor.enabled =>
-                memoryImage.transform {
-                  _.updateValidatedObjects(ta.locator, validatedObjects.values.toSeq)
-                }
-                bgpAnnouncementValidator.startUpdate(bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
-                rtrServer.notify(memoryImage().version)
-              case _ =>
-            }
-          }
-          metricsBuilder += Metric("trust.anchor[%s].validation" format ta.locator.getCertificateLocation, "OK", DateTimeUtils.currentTimeMillis)
-        } catch {
-          case e: Exception =>
-            val message = if (e.getMessage != null) e.getMessage else e.toString
-            memoryImage.single.transform {
-              _.finishedProcessingTrustAnchor(ta.locator, Failure(message), None, None)
-            }
-            metricsBuilder += Metric("trust.anchor[%s].validation" format ta.locator.getCertificateLocation, "failed: " + e, DateTimeUtils.currentTimeMillis)
-            logger.error("Error while validating trust anchor " + ta.locator.getCertificateLocation() + ": " + e, e)
         } finally {
-          val stop = DateTimeUtils.currentTimeMillis
-          metricsBuilder += Metric("trust.anchor[%s].validation.elapsed.ms" format ta.locator.getCertificateLocation, (stop - start).toString, DateTimeUtils.currentTimeMillis)
-          feedbackMetrics.store(metricsBuilder.result)
+          val now = DateTimeUtils.currentTimeMillis
+          feedbackMetrics.store(process.metrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt, ReleaseInfo.version))
         }
       }
     }
@@ -236,14 +215,7 @@ class Main(options: Options) { main =>
       private def updateAndPersist(f: InTxn => Unit) {
         dataFileLock synchronized {
           val (image, userPreferences) = atomic { implicit transaction =>
-            val oldVersion = memoryImage().version
-
             f(transaction)
-
-            if (oldVersion != memoryImage().version) {
-              bgpAnnouncementValidator.startUpdate(main.bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
-              rtrServer.notify(memoryImage().version)
-            }
 
             feedbackMetrics.enabled = main.userPreferences.get.isFeedbackEnabled
 
@@ -264,12 +236,12 @@ class Main(options: Options) { main =>
       override protected def lastUpdateTime = memoryImage.single.get.lastUpdateTime
 
       override protected def filters = memoryImage.single.get.filters
-      override protected def addFilter(filter: IgnoreFilter) = updateAndPersist { implicit transaction => memoryImage.transform(_.addFilter(filter)) }
-      override protected def removeFilter(filter: IgnoreFilter) = updateAndPersist { implicit transaction => memoryImage.transform(_.removeFilter(filter)) }
+      override protected def addFilter(filter: IgnoreFilter) = updateAndPersist { implicit transaction => updateMemoryImage(_.addFilter(filter)) }
+      override protected def removeFilter(filter: IgnoreFilter) = updateAndPersist { implicit transaction => updateMemoryImage(_.removeFilter(filter)) }
 
       override protected def whitelist = memoryImage.single.get.whitelist
-      override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { implicit transaction => memoryImage.transform(_.addWhitelistEntry(entry)) }
-      override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { implicit transaction => memoryImage.transform(_.removeWhitelistEntry(entry)) }
+      override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { implicit transaction => updateMemoryImage(_.addWhitelistEntry(entry)) }
+      override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { implicit transaction => updateMemoryImage(_.removeWhitelistEntry(entry)) }
 
       override protected def bgpRisDumps = main.bgpRisDumps.single.get
       override protected def validatedAnnouncements = bgpAnnouncementValidator.validatedAnnouncements
