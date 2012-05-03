@@ -45,12 +45,16 @@ import org.apache.commons.io.IOUtils
 import org.apache.http.impl.cookie.DateUtils
 import org.joda.time.DateTime
 import java.util.Date
+import org.scalatest.mock.MockitoSugar
+import org.apache.http.client.HttpClient
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class BgpRisDumpDownloaderTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers {
+class BgpRisDumpDownloaderTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers with MockitoSugar {
 
+  val mockHttpClient = mock[HttpClient]
   val http11Protocol = new ProtocolVersion("http", 1, 1)
   val dump = BgpRisDump(url = "http://no.where/dump.4.gz")
+  val BgpRisDumpDownloader = new BgpRisDumpDownloader(mockHttpClient)
 
   test("should stick to old dump, if new dump cannot be retrieved") {
 
@@ -78,16 +82,16 @@ class BgpRisDumpDownloaderTest extends FunSuite with BeforeAndAfterAll with Shou
     // then
     dumpFromResponse should equal(dump)
   }
-  
+
   test("should stick to old dump if new dump can't be parsed") {
       // given
       val responseHandler = BgpRisDumpDownloader.makeResponseHandler(dump)
               val statusLine = new BasicStatusLine(http11Protocol, SC_NOT_MODIFIED, null)
       val response = new BasicHttpResponse(statusLine)
-      
+
       // when
       val dumpFromResponse = responseHandler.handleResponse(response)
-      
+
       // then
       dumpFromResponse should equal(dump)
   }

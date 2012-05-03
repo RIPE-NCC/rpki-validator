@@ -85,9 +85,11 @@ class Main(options: Options) { main =>
   val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
   val roas = ValidatedObjects(new TrustAnchors(trustAnchors.filter(ta => ta.enabled)))
 
-  val feedbackMetrics = new FeedbackMetrics(new DefaultHttpClient(new ThreadSafeClientConnManager), options.feedbackUri)
-
   val userPreferences = Ref(data.userPreferences)
+
+  val httpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
+  val bgpRisDumpDownloader = new BgpRisDumpDownloader(httpClient)
+  val feedbackMetrics = new FeedbackMetrics(httpClient, options.feedbackUri)
   feedbackMetrics.enabled = data.userPreferences.isFeedbackEnabled
 
   val memoryImage = Ref(
@@ -98,7 +100,7 @@ class Main(options: Options) { main =>
 
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 2 hours) { refreshRisDumps() }
-  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { feedbackMetrics.sendMetrics() }
+  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 1 hour) { feedbackMetrics.sendMetrics() }
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
@@ -107,7 +109,7 @@ class Main(options: Options) { main =>
   }
 
   private def refreshRisDumps() {
-    Future.traverse(bgpRisDumps.single.get)(BgpRisDumpDownloader.download) foreach { dumps =>
+    Future.traverse(bgpRisDumps.single.get)(bgpRisDumpDownloader.download) foreach { dumps =>
       atomic { implicit transaction =>
         bgpRisDumps() = dumps
         bgpAnnouncementValidator.startUpdate(dumps.flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
