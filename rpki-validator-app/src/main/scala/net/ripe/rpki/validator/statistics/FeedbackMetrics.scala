@@ -111,14 +111,14 @@ class FeedbackMetrics(httpClient: HttpClient, feedbackUri: String) extends Loggi
         response.getStatusLine.getStatusCode match {
           case code if code >= 200 && code < 300 => // all is well
           case _ =>
+            logger.warn("failed to submit usage metrics to %s: %s".format(feedbackUri, response.getStatusLine))
             queuedMetrics.single.transform { queued => metrics ++ queued }
-            warn("failed to submit usage metrics to %s: %s".format(feedbackUri, response.getStatusLine))
         }
       }
     } catch {
       case e: Exception =>
+        logger.warn("failed to submit usage metrics to %s: %s".format(feedbackUri, e), e)
         queuedMetrics.single.transform { queued => metrics ++ queued }
-        warn("failed to submit usage metrics to %s: %s".format(feedbackUri, e), e)
     }
   }
 }

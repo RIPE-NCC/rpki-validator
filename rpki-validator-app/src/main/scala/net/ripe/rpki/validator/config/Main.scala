@@ -54,6 +54,7 @@ import org.joda.time.DateTimeUtils
 import net.ripe.rpki.validator.statistics.Metric
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
 import net.ripe.certification.validator.util.TrustAnchorLocator
+import org.apache.http.params.HttpConnectionParams
 
 object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
@@ -91,6 +92,10 @@ class Main(options: Options) { main =>
   val userPreferences = Ref(data.userPreferences)
 
   val httpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
+  val httpParams = httpClient.getParams
+  HttpConnectionParams.setConnectionTimeout(httpParams, 2 * 60 * 1000);
+  HttpConnectionParams.setSoTimeout(httpParams, 2 * 60 * 1000);
+
   val bgpRisDumpDownloader = new BgpRisDumpDownloader(httpClient)
   val feedbackMetrics = new FeedbackMetrics(httpClient, options.feedbackUri)
   feedbackMetrics.enabled = data.userPreferences.isFeedbackEnabled
