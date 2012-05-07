@@ -32,17 +32,12 @@ package models
 
 import lib.Java
 import scala.collection.JavaConverters._
-import java.io.File
 import java.net.URI
 import grizzled.slf4j.Logger
-import net.ripe.certification.validator.fetchers._
 import net.ripe.certification.validator.util._
-import net.ripe.certification.validator.commands.TopDownWalker
 import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.roa.RoaCms
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.commons.certification.validation._
-import statistics.MeasuringCertificateRepositoryObjectFetcher
 
 sealed trait ValidatedObject {
   val uri: URI
