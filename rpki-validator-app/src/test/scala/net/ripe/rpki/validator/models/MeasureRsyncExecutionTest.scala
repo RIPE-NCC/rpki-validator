@@ -120,7 +120,7 @@ class MyRsyncValidationProcess extends ValidationProcess {
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = Map.empty[URI, ValidatedObject]
   override def finishProcessing() {}
   override def trustAnchorLocator = mock(classOf[TrustAnchorLocator])
-  override def extractTrustAnchorLocator() = { throw new RuntimeException("Make validation process fail") }
+  override def extractTrustAnchorLocator() = { throw new RuntimeException() }
 }
 
 class MyMeasureRsyncExecution extends MyRsyncValidationProcess with MeasureRsyncExecution {
