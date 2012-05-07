@@ -97,7 +97,7 @@ class Main(options: Options) { main =>
   HttpConnectionParams.setSoTimeout(httpParams, 2 * 60 * 1000);
 
   val bgpRisDumpDownloader = new BgpRisDumpDownloader(httpClient)
-  val feedbackMetrics = new FeedbackMetrics(httpClient, options.feedbackUri)
+  val feedbackMetrics = new FeedbackMetrics(httpClient, options.feedbackUri + "/" + ReleaseInfo.version)
   feedbackMetrics.enabled = data.userPreferences.isFeedbackEnabled
 
   val memoryImage = Ref(
@@ -170,7 +170,7 @@ class Main(options: Options) { main =>
           }
         } finally {
           val now = DateTimeUtils.currentTimeMillis
-          feedbackMetrics.store(process.metrics ++ process.rsyncMetrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt, ReleaseInfo.version))
+          feedbackMetrics.store(process.metrics ++ process.rsyncMetrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt))
         }
       }
     }

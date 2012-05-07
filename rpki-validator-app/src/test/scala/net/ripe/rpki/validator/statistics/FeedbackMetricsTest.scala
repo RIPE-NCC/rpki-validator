@@ -75,9 +75,8 @@ class FeedbackMetricsTest extends FunSuite with ShouldMatchers with BeforeAndAft
   test("should measure validator information") {
     // Not all properties are tested here.
     val startedAt = now - 5000
-    val metrics = Metric.validatorMetrics(now, startedAt, "version")
+    val metrics = Metric.validatorMetrics(now, startedAt)
     metrics should contain(Metric("validator.started.at", startedAt.toString, now))
-    metrics should contain(Metric("validator.version", "version", now))
   }
 
   test("should measure JVM information") {

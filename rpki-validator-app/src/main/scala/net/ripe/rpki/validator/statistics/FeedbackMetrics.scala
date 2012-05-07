@@ -44,8 +44,8 @@ import org.apache.http.util.EntityUtils
 // See also ba-feedback-server for data and json format that it expects.
 case class Metric(name: String, value: String, measuredAt: Long)
 object Metric {
-  def validatorMetrics(now: Long, startedAt: Long, version: String) = {
-    Vector(Metric("validator.started.at", startedAt.toString, now), Metric("validator.version", version, now))
+  def validatorMetrics(now: Long, startedAt: Long) = {
+    Vector(Metric("validator.started.at", startedAt.toString, now))
   }
   def baseMetrics(now: Long): Seq[Metric] = {
     val systemMetrics = {
