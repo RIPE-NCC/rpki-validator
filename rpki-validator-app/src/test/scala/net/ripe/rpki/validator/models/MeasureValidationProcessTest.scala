@@ -29,25 +29,30 @@
  */
 package net.ripe.rpki.validator.models
 
-import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import scalaz.Failure
 import java.net.URI
 import net.ripe.certification.validator.util.TrustAnchorLocator
-import org.mockito.ArgumentCaptor
-import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.joda.time.{DateTimeUtils, DateTime}
+import org.scalatest.{BeforeAndAfter, FunSuite}
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class MeasureValidationProcessTest extends FunSuite with ShouldMatchers {
+class MeasureValidationProcessTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
 
   val now = new DateTime()
 
+  before {
+    DateTimeUtils.setCurrentMillisFixed(now.getMillis())
+  }
+
+  after {
+    DateTimeUtils.setCurrentMillisSystem()
+  }
+
   test("should generate metric when processing is finished") {
     val subject = new MyTrustAnchorValidationProcess
-    DateTimeUtils.setCurrentMillisFixed(now.getMillis())
 
     subject.finishProcessing()
 
@@ -56,13 +61,10 @@ class MeasureValidationProcessTest extends FunSuite with ShouldMatchers {
     metrics(0).name should include(subject.certificateUri.toString)
     metrics(0).name should include("validation.elapsed")
     metrics(0).measuredAt should equal(now.getMillis)
-
-    DateTimeUtils.setCurrentMillisSystem()
   }
 
   test("should generate metric when validating objects") {
     val subject = new MyTrustAnchorValidationProcess
-    DateTimeUtils.setCurrentMillisFixed(now.getMillis())
     subject.validateObjects(null)
 
     val metrics = subject.metrics
@@ -76,13 +78,10 @@ class MeasureValidationProcessTest extends FunSuite with ShouldMatchers {
     metrics(1).name should include("validation")
     metrics(1).value should be("OK")
     metrics(1).measuredAt should equal(now.getMillis)
-
-    DateTimeUtils.setCurrentMillisSystem()
   }
 
   test("should generate metric when exception is thrown during validation") {
     val subject = new MyTrustAnchorValidationProcess
-    DateTimeUtils.setCurrentMillisFixed(now.getMillis())
 
     subject.runProcess()
 
@@ -91,8 +90,6 @@ class MeasureValidationProcessTest extends FunSuite with ShouldMatchers {
     metrics(0).name should include(subject.certificateUri.toString)
     metrics(0).value should include("failed")
     metrics(0).measuredAt should equal(now.getMillis)
-
-    DateTimeUtils.setCurrentMillisSystem()
   }
 }
 
