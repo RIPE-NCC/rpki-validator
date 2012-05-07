@@ -52,7 +52,7 @@ class MeasureValidationProcessTest extends FunSuite with ShouldMatchers with Bef
   }
 
   test("should generate metric when processing is finished") {
-    val subject = new MyTrustAnchorValidationProcess
+    val subject = new MyMeasureValidationProcess
 
     subject.finishProcessing()
 
@@ -64,7 +64,7 @@ class MeasureValidationProcessTest extends FunSuite with ShouldMatchers with Bef
   }
 
   test("should generate metric when validating objects") {
-    val subject = new MyTrustAnchorValidationProcess
+    val subject = new MyMeasureValidationProcess
     subject.validateObjects(null)
 
     val metrics = subject.metrics
@@ -81,7 +81,7 @@ class MeasureValidationProcessTest extends FunSuite with ShouldMatchers with Bef
   }
 
   test("should generate metric when exception is thrown during validation") {
-    val subject = new MyTrustAnchorValidationProcess
+    val subject = new MyMeasureValidationProcess
 
     subject.runProcess()
 
@@ -108,5 +108,5 @@ class MyValidationProcess extends ValidationProcess {
   override def extractTrustAnchorLocator() = { throw new RuntimeException("Make validation process fail") }
 }
 
-class MyTrustAnchorValidationProcess extends MyValidationProcess with MeasureValidationProcess {
+class MyMeasureValidationProcess extends MyValidationProcess with MeasureValidationProcess {
 }
