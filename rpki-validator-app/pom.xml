@@ -273,6 +273,10 @@
                             <goal>testCompile</goal>
                         </goals>
                         <configuration>
+                            <jvmArgs>
+                                <arg>-XX:+TieredCompilation</arg> <!-- Much faster Scala compilation -->
+                                <arg>-XX:CICompilerCount=1</arg> <!-- Number of HotSpot background compiler threads -->
+                            </jvmArgs>
                             <args>
                                 <arg>-deprecation</arg>
                                 <arg>-unchecked</arg>
