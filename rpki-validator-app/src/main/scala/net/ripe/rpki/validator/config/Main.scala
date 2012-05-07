@@ -55,6 +55,7 @@ import net.ripe.rpki.validator.statistics.Metric
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import org.apache.http.params.HttpConnectionParams
+import net.ripe.rpki.validator.statistics.NetworkConnectivityMetrics
 
 object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
@@ -122,6 +123,7 @@ class Main(options: Options) { main =>
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 2 hours) { refreshRisDumps() }
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 1 hour) { feedbackMetrics.sendMetrics() }
+  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 24 hours) { networkMetrics() }
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
@@ -174,6 +176,14 @@ class Main(options: Options) { main =>
         }
       }
     }
+  }
+
+  private def networkMetrics() {
+    val networkMetrics = memoryImage.single().trustAnchors.all.flatMap { ta =>
+      new NetworkConnectivityMetrics(ta.locator.getCertificateLocation).metrics
+    }
+    val now = DateTimeUtils.currentTimeMillis
+    feedbackMetrics.store(networkMetrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt))
   }
 
   private def runWebServer() {
