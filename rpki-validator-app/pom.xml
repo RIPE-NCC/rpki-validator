@@ -349,20 +349,6 @@
                             <pluginExecutions>
                                 <pluginExecution>
                                     <pluginExecutionFilter>
-                                        <groupId>org.scala-tools</groupId>
-                                        <artifactId>maven-scala-plugin</artifactId>
-                                        <versionRange>[2.15.2,)</versionRange>
-                                        <goals>
-                                            <goal>compile</goal>
-                                            <goal>testCompile</goal>
-                                        </goals>
-                                    </pluginExecutionFilter>
-                                    <action>
-                                        <ignore />
-                                    </action>
-                                </pluginExecution>
-                                <pluginExecution>
-                                    <pluginExecutionFilter>
                                         <groupId>com.mycila.maven-license-plugin</groupId>
                                         <artifactId>maven-license-plugin</artifactId>
                                         <versionRange>[1.9.0,)</versionRange>
