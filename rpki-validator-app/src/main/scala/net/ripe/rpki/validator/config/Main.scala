@@ -120,10 +120,10 @@ class Main(options: Options) { main =>
   val rtrServer = runRtrServer()
   runWebServer()
 
-  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { runValidator() }
+  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 4 hours) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 2 hours) { refreshRisDumps() }
-  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { feedbackMetrics.sendMetrics() }
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 24 hours) { networkMetrics() }
+  actorSystem.scheduler.schedule(initialDelay = 5 minutes, frequency = 1 hour) { feedbackMetrics.sendMetrics() }
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
