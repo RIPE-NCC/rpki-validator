@@ -74,7 +74,7 @@ class UserPreferencesView(val userPreferences: UserPreferences, val messages: Se
                   case _ => <input name="enable-feedback" type="checkbox"/>
                 }
               }
-              Enable feedback of validation statistics to the RIPE NCC
+              Submit performance data to the RIPE NCC (<a href="https://www.ripe.net/certification/rpki-validator-metrics">Learn More&hellip;</a>)
             </label>
           </div>
           <div>
@@ -96,16 +96,16 @@ $(function () {
 
 object EnableFeedbackPrompt {
 
-  def optionalFeedBackEnablePrompt(userPreferences: UserPreferences) = {
-    userPreferences.enableFeedback match {
-      case None => {
-        <div>
-          Do you want to help us gain insight in the reliability of the global RPKI repositories by enabling feedback?
-          { createEnableOrDisableButton(userPreferences, true) } { createEnableOrDisableButton(userPreferences, false) }
-        </div>
-      }
-      case _ => NodeSeq.Empty
-    }
+  def optionalFeedBackEnablePrompt(userPreferences: UserPreferences) = userPreferences.enableFeedback match {
+    case None =>
+      <div>
+        Do you want to help the RIPE NCC gather information on the efficiency and reliability of the global RPKI system
+        by submitting performance data?<br/>
+        <a href="https://www.ripe.net/certification/rpki-validator-metrics">Learn More&hellip;</a>
+        { createEnableOrDisableButton(userPreferences, true) }{ createEnableOrDisableButton(userPreferences, false) }
+      </div>
+    case _ =>
+      NodeSeq.Empty
   }
 
   private def createEnableOrDisableButton(userPreferences: UserPreferences, enable: Boolean) = {
@@ -118,8 +118,8 @@ object EnableFeedbackPrompt {
         }
       }
       <input type="hidden" name="max-stale-days" value={ Text(userPreferences.maxStaleDays.toString) } />
-      
-      {  
+
+      {
         enable match {
           case true => {
               <input type="hidden" name="enable-feedback" value="1" />
