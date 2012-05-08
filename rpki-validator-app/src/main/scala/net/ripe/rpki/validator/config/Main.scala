@@ -122,7 +122,7 @@ class Main(options: Options) { main =>
 
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 2 hours) { refreshRisDumps() }
-  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 1 hour) { feedbackMetrics.sendMetrics() }
+  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { feedbackMetrics.sendMetrics() }
   actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 24 hours) { networkMetrics() }
 
   private def loadTrustAnchors(): TrustAnchors = {
@@ -161,7 +161,7 @@ class Main(options: Options) { main =>
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays) with TrackValidationProcess with MeasureValidationProcess with MeasureRsyncExecution with ValidationProcessLogger {
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays) with TrackValidationProcess with MeasureValidationProcess with MeasureRsyncExecution with ValidationProcessLogger with MeasureInconsistentRepositories {
           override val memoryImage = main.memoryImage
         }
         try {
@@ -172,7 +172,7 @@ class Main(options: Options) { main =>
           }
         } finally {
           val now = DateTimeUtils.currentTimeMillis
-          feedbackMetrics.store(process.metrics ++ process.rsyncMetrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt))
+          feedbackMetrics.store(process.metrics ++ process.rsyncMetrics ++ process.inconsistencyMetrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt))
         }
       }
     }

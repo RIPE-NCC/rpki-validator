@@ -85,7 +85,10 @@ class FeedbackMetrics(httpClient: HttpClient, feedbackUri: String) extends Loggi
 
   def store(metrics: Metrics)(implicit mt: MaybeTxn): Unit = atomic { implicit transaction =>
     if (enabledRef.get) {
+      debug("storing %s metrics" format metrics.size)
       queuedMetrics.transform { queued => queued :+ metrics takeRight 100 }
+    } else {
+      debug("NOT storing %s metrics, did you enable feedback?" format metrics.size)
     }
   }
 
@@ -93,9 +96,9 @@ class FeedbackMetrics(httpClient: HttpClient, feedbackUri: String) extends Loggi
     require(Txn.findCurrent.isEmpty, "STM transaction not supported")
 
     val metrics = queuedMetrics.single.swap(Vector.empty)
+    info("sending " + metrics.size + " usage metrics to " + feedbackUri)
     try {
       if (metrics.nonEmpty) {
-        info("sending " + metrics.size + " usage metrics to " + feedbackUri)
 
         val metricsJsonList = Extraction.decompose(metrics.flatten)
         val body = JObject(List(JField("metrics", metricsJsonList)))

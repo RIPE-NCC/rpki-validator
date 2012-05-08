@@ -153,7 +153,7 @@ public class TopDownCertificateRepositoryValidatorTest {
     private class MockTopDownWalker extends TopDownWalker {
 
         public MockTopDownWalker(CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher) {
-            super(workQueue, certificateRepositoryObjectFetcher);
+            super(workQueue, certificateRepositoryObjectFetcher, new ValidationResult() );
         }
 
         @Override

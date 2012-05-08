@@ -50,13 +50,20 @@ public class TopDownWalker {
     private final ValidationResult validationResult;
 
     public TopDownWalker(CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher) {
-    	this(new LinkedList<CertificateRepositoryObjectValidationContext>(), certificateRepositoryObjectFetcher);
+    	this(new LinkedList<CertificateRepositoryObjectValidationContext>(), certificateRepositoryObjectFetcher, new ValidationResult());
+    }
+    
+    public TopDownWalker(CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher, ValidationResult validationResult) {
+        this(new LinkedList<CertificateRepositoryObjectValidationContext>(), certificateRepositoryObjectFetcher, validationResult);
     }
 
-    public TopDownWalker(Queue<CertificateRepositoryObjectValidationContext> workQueue, CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher) {
+    /**
+     * Convenience constructor for unit testing, allowing injection of the work queue
+     */
+    TopDownWalker(Queue<CertificateRepositoryObjectValidationContext> workQueue, CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher, ValidationResult validationResult) {
     	this.certificateRepositoryObjectFetcher = certificateRepositoryObjectFetcher;
     	this.workQueue = new TopDownWalkerWorkQueue(workQueue);
-        this.validationResult = new ValidationResult();
+        this.validationResult = validationResult;
     }
 
     public void addTrustAnchor(CertificateRepositoryObjectValidationContext trustAnchor) {

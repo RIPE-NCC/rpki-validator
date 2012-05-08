@@ -57,6 +57,7 @@ import net.ripe.certification.validator.util.UriToFileMapper
 import com.yammer.metrics.core.MetricsRegistry
 import java.util.concurrent.TimeUnit
 import com.yammer.metrics.core.Timer
+import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -72,13 +73,13 @@ case class Running(description: String) extends ProcessingStatus {
 case class TrustAnchorData(enabled: Boolean = true)
 
 case class TrustAnchor(
-    locator: TrustAnchorLocator,
-    status: ProcessingStatus,
-    enabled: Boolean = true,
-    certificate: Option[CertificateRepositoryObjectValidationContext] = None,
-    manifest: Option[ManifestCms] = None,
-    crl: Option[X509Crl] = None,
-    lastUpdated: Option[DateTime] = None) {
+  locator: TrustAnchorLocator,
+  status: ProcessingStatus,
+  enabled: Boolean = true,
+  certificate: Option[CertificateRepositoryObjectValidationContext] = None,
+  manifest: Option[ManifestCms] = None,
+  crl: Option[X509Crl] = None,
+  lastUpdated: Option[DateTime] = None) {
   def name: String = locator.getCaName()
   def prefetchUris: Seq[URI] = locator.getPrefetchUris().asScala
 
@@ -376,4 +377,39 @@ trait ValidationProcessLogger extends ValidationProcess {
       logger.debug("Validated OBJECT '" + uri + "'")
     }
   }
+}
+
+/**
+ * Checks the Validated Objects for inconsistent repositories and reports metrics for this.
+ */
+trait MeasureInconsistentRepositories extends ValidationProcess {
+
+  private[this] val metricsBuilder = Vector.newBuilder[Metric]
+
+  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
+    val objects = super.validateObjects(certificate)
+    extractInconsistencies(objects)
+    objects
+  }
+
+  private[models] def extractInconsistencies(objects: Map[URI, ValidatedObject]) = {
+    val now = DateTimeUtils.currentTimeMillis
+    val inconsistencyStats = InconsistentRepositoryChecker.check(objects)
+
+    val totalRepositoriesMetric = Metric("trust.anchor[%s].repositories.total.count" format trustAnchorLocator.getCertificateLocation, inconsistencyStats.size.toString, now)
+
+    metricsBuilder += totalRepositoriesMetric
+
+    val inconsistentRepositories = inconsistencyStats.filter(_._2 == true).keys
+    val totalInconsistentRepoMetric = Metric("trust.anchor[%s].repositories.inconsistent.count" format trustAnchorLocator.getCertificateLocation, inconsistentRepositories.size.toString, now)
+
+    metricsBuilder += totalInconsistentRepoMetric
+    for (uri <- inconsistentRepositories) {
+      val inconsistentRepoMetric = Metric("trust.anchor[%s].repository.is.inconsistent" format trustAnchorLocator.getCertificateLocation, uri.toString, now)
+      metricsBuilder += inconsistentRepoMetric
+    }
+  }
+
+  lazy val inconsistencyMetrics = metricsBuilder.result
+
 }

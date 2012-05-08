@@ -90,6 +90,7 @@ public class TopDownWalkerTest {
     private CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher;
     private X509ResourceCertificate ta;
 	private CertificateRepositoryObjectValidationContext taContext;
+	private ValidationResult validitionResult;
 
     private Object[] mocks;
 
@@ -102,7 +103,8 @@ public class TopDownWalkerTest {
         ta = getRootResourceCertificate();
         taContext = new CertificateRepositoryObjectValidationContext(URI.create("rsync://host/ta"), ta);
         workQueue = new LinkedList<CertificateRepositoryObjectValidationContext>();
-        subject = new TopDownWalker(workQueue, certificateRepositoryObjectFetcher);
+        validitionResult = new ValidationResult();
+        subject = new TopDownWalker(workQueue, certificateRepositoryObjectFetcher, validitionResult);
     }
 
 
@@ -122,7 +124,7 @@ public class TopDownWalkerTest {
         final MutableBoolean fetchManifestCalled = new MutableBoolean(false);
         final MutableBoolean processedManifestFilesCalled = new MutableBoolean(false);
 
-        subject = new TopDownWalker(workQueue, certificateRepositoryObjectFetcher) {
+        subject = new TopDownWalker(workQueue, certificateRepositoryObjectFetcher, validitionResult) {
             @Override
             ManifestCms fetchManifest(URI manifestURI, CertificateRepositoryObjectValidationContext context) {
                 fetchManifestCalled.setValue(true);
