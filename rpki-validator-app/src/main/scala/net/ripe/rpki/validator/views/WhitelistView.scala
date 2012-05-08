@@ -129,10 +129,10 @@ class WhitelistView(whitelist: Whitelist, validatedAnnouncements: Seq[BgpValidat
                   <td>{ entry.prefix }</td>
                   <td>{ entry.maxPrefixLength.getOrElse("") }</td>
                   <td>
-                    <span rel="popover" data-content={ Xhtml.toXhtml(makeDetailsTable(validated)) } data-original-title="Details">{ validated.size + " prefix(es)" }</span>
+                    <span rel="popover" data-content={ Xhtml.toXhtml(makeDetailsTable(validated)) } data-original-title="Details">{ validated.size + " announcement(s)" }</span>
                   </td>
                   <td>
-                    <span rel="popover" data-content={ Xhtml.toXhtml(makeDetailsTable(invalidated)) } data-original-title="Details">{ invalidated.size + " prefix(es)" }</span>
+                    <span rel="popover" data-content={ Xhtml.toXhtml(makeDetailsTable(invalidated)) } data-original-title="Details">{ invalidated.size + " announcement(s)" }</span>
                   </td>
                   <td>
                     <form method="POST" action="/whitelist" style="padding:0;margin:0;">
