@@ -43,7 +43,7 @@ import org.joda.time.DateTime
 object RtrPduLog {
   private var _pduLog = Vector[RtrPduLogEntry]()
   def pduLog = this.synchronized { _pduLog }
-  
+
   def log(entry: RtrPduLogEntry) {
     this.synchronized {
       _pduLog = _pduLog.takeRight(1999) :+ entry
@@ -71,20 +71,17 @@ class PduEncoder extends OneToOneEncoder {
   val logger = Logger[this.type]
 
   override def encode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = msg match {
+    case responsePdus: Seq[_] =>
+      val pdus = responsePdus.collect { case pdu: Pdu => pdu }
 
-    case responsePdus: Seq[Pdu] =>
-      var length: Int = 0
-      responsePdus.foreach(pdu => length += pdu.length)
-
+      val length = pdus.foldLeft(0) { _ + _.length }
       val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, length)
-      responsePdus.foreach {
-        pdu =>
-          {
-            buffer.writeBytes(Pdus.encode(pdu))
 
-            // Hardcoded to "server" for now -> only the server sends lists of pdus
-            RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), Right(pdu), "server"))
-          }
+      for (pdu <- pdus) {
+        buffer.writeBytes(Pdus.encode(pdu))
+
+        // Hardcoded to "server" for now -> only the server sends lists of pdus
+        RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), Right(pdu), "server"))
       }
       buffer
 
