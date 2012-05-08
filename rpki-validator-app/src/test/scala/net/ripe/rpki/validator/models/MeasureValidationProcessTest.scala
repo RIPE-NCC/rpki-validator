@@ -37,9 +37,14 @@ import net.ripe.certification.validator.util.TrustAnchorLocator
 import org.mockito.Mockito._
 import org.joda.time.{DateTimeUtils, DateTime}
 import org.scalatest.{BeforeAndAfter, FunSuite}
+import java.io.File
+import java.util.Collections
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class MeasureValidationProcessTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
+
+  private class MyMeasureValidationProcess extends MyValidationProcess with MeasureValidationProcess {
+  }
 
   val now = new DateTime()
 
@@ -96,17 +101,11 @@ class MeasureValidationProcessTest extends FunSuite with ShouldMatchers with Bef
 class MyValidationProcess extends ValidationProcess {
   val certificateUri = URI.create("rsync://rpki.ripe.net/rootcer")
 
-  val tal = mock(classOf[TrustAnchorLocator])
-  when(tal.getCertificateLocation).thenReturn(certificateUri)
-
   override def exceptionHandler = {
     case e: Exception => Failure("")
   }
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = Map.empty[URI, ValidatedObject]
   override def finishProcessing() {}
-  override def trustAnchorLocator = tal
+  override val trustAnchorLocator = new TrustAnchorLocator(new File(""), "caName", certificateUri, "publicKeyInfo", Collections.emptyList())
   override def extractTrustAnchorLocator() = { throw new RuntimeException("Make validation process fail") }
-}
-
-class MyMeasureValidationProcess extends MyValidationProcess with MeasureValidationProcess {
 }

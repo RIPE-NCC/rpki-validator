@@ -44,6 +44,10 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class MeasureRsyncExecutionTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
+
+  private class MyMeasureRsyncExecution extends MyValidationProcess with MeasureRsyncExecution {
+  }
+
   val now = new DateTime()
 
   val certificateUri = URI.create("rsync://rpki.ripe.net/rootcer")
@@ -110,18 +114,4 @@ class MeasureRsyncExecutionTest extends FunSuite with ShouldMatchers with Before
     validationResult.addMetric(name, "123")
     validationResult
   }
-}
-
-
-class MyRsyncValidationProcess extends ValidationProcess {
-  override def exceptionHandler = {
-    case e: Exception => Failure("")
-  }
-  override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = Map.empty[URI, ValidatedObject]
-  override def finishProcessing() {}
-  override def trustAnchorLocator = mock(classOf[TrustAnchorLocator])
-  override def extractTrustAnchorLocator() = { throw new RuntimeException() }
-}
-
-class MyMeasureRsyncExecution extends MyRsyncValidationProcess with MeasureRsyncExecution {
 }
