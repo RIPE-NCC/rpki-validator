@@ -53,7 +53,7 @@ class MeasureInconsistentRepositoriesTest extends FunSuite with ShouldMatchers {
 
   }
 
-  class TestMeasureInconsistentRepositories extends MyStubValidationProcess with MeasureInconsistentRepositories {
+  class TestMeasureInconsistentRepositories extends MyValidationProcess with MeasureInconsistentRepositories {
 
     import net.ripe.certification.validator.util.TrustAnchorLocator
     import java.util.ArrayList
