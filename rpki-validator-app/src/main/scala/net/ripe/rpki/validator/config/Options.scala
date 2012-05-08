@@ -46,7 +46,7 @@ object Options {
 }
 
 class Options(args: Array[String]) {
-  val DefaultFeedbackUri = "https://certification.ripe.net/metrics/rpki-validator"
+  private val DefaultFeedbackUri = "https://ba-feedback-server.ripe.net/metrics/rpki-validator"
 
   private val parser = new ArgotParser(programName = "rpki-validator")
 
