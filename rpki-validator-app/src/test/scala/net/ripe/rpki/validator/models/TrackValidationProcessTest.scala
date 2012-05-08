@@ -45,56 +45,31 @@ import java.util.{Collections, Date}
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TrackValidationProcessTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
 
+  class MyTrackValidationProcessTrustAnchor(trustAnchors: Seq[TrustAnchor]) extends MyValidationProcess with TrackValidationProcess {
+    override val memoryImage = Ref(MemoryImage(Filters(), Whitelist(), new TrustAnchors(trustAnchors), ValidatedObjects(new TrustAnchors(trustAnchors))))
+    override def runProcess() = { super.runProcess() }
+  }
+
+  val tal = new TrustAnchorLocator(new File(""), "caName", URI.create("rsync://rpki.ripe.net/root.cer"), "publicKeyInfo", Collections.emptyList())
+
   test("should fail with no processable trust anchor") {
-    val subject = new MyTrackValidationProcessWithoutTrustAnchor
+    val subject = new MyTrackValidationProcessTrustAnchor(Seq.empty[TrustAnchor])
 
     val result = subject.runProcess()
     result should equal(Failure("Trust anchor not idle or enabled"));
   }
 
   test("should not process disabled trust anchors") {
-    val subject = new MyTrackValidationProcessWithRunningTrustAnchor
+    val subject = new MyTrackValidationProcessTrustAnchor(Seq(TrustAnchor(tal, Idle(new DateTime()), false)))
 
     val result = subject.runProcess()
     result should equal(Failure("Trust anchor not idle or enabled"));
   }
 
   test("should not process already running trust anchors") {
-    val subject = new MyTrackValidationProcessWithDisabledTrustAnchor
+    val subject = new MyTrackValidationProcessTrustAnchor(Seq(TrustAnchor(tal, Running(""), true)))
 
     val result = subject.runProcess()
     result should equal(Failure("Trust anchor not idle or enabled"));
   }
-}
-
-class MyTrackValidationProcessWithoutTrustAnchor extends MyValidationProcess with TrackValidationProcess {
-  val trustAnchors = new TrustAnchors(Seq.empty[TrustAnchor])
-  override val memoryImage = Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, ValidatedObjects(trustAnchors)))
-  override def runProcess() = { super.runProcess() }
-}
-
-class MyTrackValidationProcessWithRunningTrustAnchor extends MyValidationProcess with TrackValidationProcess {
-  val trustAnchor = mock(classOf[TrustAnchor])
-  when(trustAnchor.locator).thenReturn(trustAnchorLocator)
-  when(trustAnchor.status).thenReturn(Running(""))
-  when(trustAnchor.enabled).thenReturn(true)
-
-  val trustAnchors = new TrustAnchors(Seq(trustAnchor))
-
-  override val memoryImage = Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, ValidatedObjects(trustAnchors)))
-
-  override def runProcess() = { super.runProcess() }
-}
-
-class MyTrackValidationProcessWithDisabledTrustAnchor extends MyValidationProcess with TrackValidationProcess {
-  val trustAnchor = mock(classOf[TrustAnchor])
-  when(trustAnchor.locator).thenReturn(trustAnchorLocator)
-  when(trustAnchor.status).thenReturn(Idle(new DateTime()))
-  when(trustAnchor.enabled).thenReturn(false)
-
-  val trustAnchors = new TrustAnchors(Seq(trustAnchor))
-
-  override val memoryImage = Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, ValidatedObjects(trustAnchors)))
-
-  override def runProcess() = { super.runProcess() }
 }

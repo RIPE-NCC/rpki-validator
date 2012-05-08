@@ -34,7 +34,6 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 import scalaz.Failure
 import java.net.URI
 import net.ripe.certification.validator.util.TrustAnchorLocator
-import org.mockito.Mockito._
 import org.joda.time.{DateTimeUtils, DateTime}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import java.io.File

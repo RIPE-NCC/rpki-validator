@@ -32,11 +32,8 @@ package net.ripe.rpki.validator.models
 import org.scalatest.matchers.ShouldMatchers
 import java.net.URI
 import org.mockito.Mockito._
-import scalaz.Failure
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.validation.{ValidationLocation, ValidationResult}
-import net.ripe.certification.validator.util.TrustAnchorLocator
 import net.ripe.certification.validator.fetchers.RsyncCertificateRepositoryObjectFetcher
 import scala.Predef._
 import org.joda.time.{DateTimeUtils, DateTime}
