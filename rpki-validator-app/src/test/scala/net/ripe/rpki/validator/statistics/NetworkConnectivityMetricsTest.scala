@@ -38,8 +38,8 @@ class NetworkConnectivityMetricsTest extends FunSuite with ShouldMatchers {
   test("should check IPv4 connectivity") {
     val metrics = new NetworkConnectivityMetrics(URI.create("rsync://127.0.0.1/")).metrics.map(x => (x.name, x.value)).toMap
 
-    metrics should contain("network.connectivity[127.0.0.1].ipv4" -> "true")
-    metrics should contain("network.connectivity[127.0.0.1].ipv6" -> "false")
+    metrics should contain("network.connectivity[127.0.0.1].ipv4.count" -> "1")
+    metrics should contain("network.connectivity[127.0.0.1].ipv6.count" -> "0")
     metrics should contain key("network.connectivity[/127.0.0.1].status")
     metrics should contain key("network.connectivity[/127.0.0.1].elapsed.ms")
   }
@@ -47,8 +47,8 @@ class NetworkConnectivityMetricsTest extends FunSuite with ShouldMatchers {
   test("should check IPv6 connectivity") {
     val metrics = new NetworkConnectivityMetrics(URI.create("rsync://[::1]/")).metrics.map(x => (x.name, x.value)).toMap
 
-    metrics should contain("network.connectivity[[::1]].ipv4" -> "false")
-    metrics should contain("network.connectivity[[::1]].ipv6" -> "true")
+    metrics should contain("network.connectivity[[::1]].ipv4.count" -> "0")
+    metrics should contain("network.connectivity[[::1]].ipv6.count" -> "1")
     metrics should contain key("network.connectivity[/0:0:0:0:0:0:0:1].status")
     metrics should contain key("network.connectivity[/0:0:0:0:0:0:0:1].elapsed.ms")
   }

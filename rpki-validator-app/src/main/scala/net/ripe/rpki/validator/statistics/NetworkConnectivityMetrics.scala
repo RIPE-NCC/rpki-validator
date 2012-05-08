@@ -33,29 +33,39 @@ import java.net._
 import org.joda.time.DateTimeUtils
 import org.apache.commons.io.IOUtils
 import java.io.IOException
+import grizzled.slf4j.Logger
 
 /**
  * Gather metrics on (rsync) certificate repository connectivity based on IPv4 and IPv6.
  */
 class NetworkConnectivityMetrics(repositoryUri: URI) {
+  private[this] val logger = Logger[NetworkConnectivityMetrics]
   private[this] val DEFAULT_RSYNC_PORT = 873
 
   val hostname = repositoryUri.getHost
   val port = if (repositoryUri.getPort == -1) DEFAULT_RSYNC_PORT else repositoryUri.getPort
 
-  def metrics: Seq[Metric] = dnsMetrics ++ connectivityMetrics
+  def metrics: Seq[Metric] = try dnsMetrics ++ connectivityMetrics catch {
+    case e: Exception =>
+      logger.debug("Error checking connectivity to %s: %s" format (repositoryUri, e), e)
+      Seq(Metric("network.connectivity[%s].exception" format hostname, e.toString, DateTimeUtils.currentTimeMillis))
+  }
 
-  private[this] def dnsMetrics = Seq(
-    Metric("network.connectivity[%s].ipv4" format hostname, addresses.exists(_.isInstanceOf[Inet4Address]).toString, DateTimeUtils.currentTimeMillis),
-    Metric("network.connectivity[%s].ipv6" format hostname, addresses.exists(_.isInstanceOf[Inet6Address]).toString, DateTimeUtils.currentTimeMillis))
+  private[this] def dnsMetrics = {
+    val now = DateTimeUtils.currentTimeMillis
+    Seq(
+      Metric("network.connectivity[%s].ipv4.count" format hostname, addresses.count(_.isInstanceOf[Inet4Address]).toString, now),
+      Metric("network.connectivity[%s].ipv6.count" format hostname, addresses.count(_.isInstanceOf[Inet6Address]).toString, now))
+  }
 
   private[this] def connectivityMetrics = addresses.flatMap { address =>
-    val now = DateTimeUtils.currentTimeMillis
+    val start = DateTimeUtils.currentTimeMillis
     val status = tryConnect(address)
-    val elapsed = DateTimeUtils.currentTimeMillis - now
+    val stop = DateTimeUtils.currentTimeMillis
+    val elapsed = stop - start
     Seq(
-      Metric("network.connectivity[%s].status" format address, status, DateTimeUtils.currentTimeMillis),
-      Metric("network.connectivity[%s].elapsed.ms" format address, elapsed.toString, DateTimeUtils.currentTimeMillis))
+      Metric("network.connectivity[%s].status" format address, status, stop),
+      Metric("network.connectivity[%s].elapsed.ms" format address, elapsed.toString, stop))
   }
 
   private[this] lazy val addresses = try InetAddress.getAllByName(hostname) catch {
