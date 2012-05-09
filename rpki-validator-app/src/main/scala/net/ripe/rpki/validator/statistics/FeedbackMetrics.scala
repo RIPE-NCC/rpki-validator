@@ -96,9 +96,9 @@ class FeedbackMetrics(httpClient: HttpClient, feedbackUri: String) extends Loggi
     require(Txn.findCurrent.isEmpty, "STM transaction not supported")
 
     val metrics = queuedMetrics.single.swap(Vector.empty)
-    info("sending " + metrics.size + " usage metrics to " + feedbackUri)
     try {
       if (metrics.nonEmpty) {
+        info("sending " + metrics.size + " telemetry metrics to " + feedbackUri)
 
         val metricsJsonList = Extraction.decompose(metrics.flatten)
         val body = JObject(List(JField("metrics", metricsJsonList)))
