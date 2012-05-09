@@ -3,12 +3,12 @@
 	<name>RPKI Validator</name>
 	<groupId>net.ripe.rpki-validator</groupId>
 	<artifactId>rpki-validator-parent</artifactId>
-	<version>2.3-SNAPSHOT</version>
+	<version>2.3</version>
 	<packaging>pom</packaging>
 	<inceptionYear>2008</inceptionYear>
 
 	<scm>
-		<connection>scm:svn:https://svn.ripe.net/svn/ba/certification/rpki-validator/trunk</connection>
+		<connection>scm:svn:https://svn.ripe.net/svn/ba/certification/rpki-validator/tags/rpki-validator-parent-2.3</connection>
 	</scm>
 
 	<distributionManagement>
