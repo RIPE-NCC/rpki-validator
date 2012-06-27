@@ -324,6 +324,7 @@
                         <exclude>**/*.txt</exclude>
                         <exclude>**/*.IPv4</exclude>
                         <exclude>**/*.IPv6</exclude>
+                        <exclude>**/*.sql</exclude>
                         <exclude>pom.xslt</exclude>
                         <exclude>src/main/resources/public/javascript/datatables/**</exclude>
                         <exclude>src/main/resources/public/javascript/bootstrap/**</exclude>
