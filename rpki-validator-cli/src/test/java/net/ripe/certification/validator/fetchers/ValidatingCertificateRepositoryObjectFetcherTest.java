@@ -118,7 +118,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         X509Crl crlFromRepository = getRootCrl();
         expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
 
-        ManifestCms manifestFromRsync = getRootManifestCmsWithEntry("bar%20space.crl", HASH_1);
+        ManifestCms manifestFromRsync = getRootManifestCmsWithEntry("bar%20space.crl", CONTENT_FOO);
         expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
         replayMocks();
 

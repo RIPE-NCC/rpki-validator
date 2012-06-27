@@ -77,8 +77,10 @@ public class RepositoryObjectsSetUpHelper {
     public static final X500Principal MANIFEST_CERTIFICATE_NAME = new X500Principal("CN=Manifest");
     public static final DateTime THIS_UPDATE_TIME = new DateTime();
     public static final DateTime NEXT_UPDATE_TIME = new DateTime().plusDays(1);
-    public static final byte[] HASH_1 = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 };
-    public static final byte[] HASH_2 = { 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
+    public static final byte[] CONTENT_FOO = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 };
+
+    public static final byte[] CONTENT_BAR = {32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6,
+            5, 4, 3, 2, 1};
 
     // Child cert data
     private static final KeyPair FIRST_CHILD_KEY_PAIR = KeyPairFactory.getInstance().generate(512, DEFAULT_KEYPAIR_GENERATOR_PROVIDER);
@@ -163,15 +165,14 @@ public class RepositoryObjectsSetUpHelper {
         return builder;
     }
 
-    @SuppressWarnings("deprecation")
     private static ManifestCmsBuilder getRootManifestBuilder() {
         ManifestCmsBuilder builder = new ManifestCmsBuilder();
         builder.withCertificate(getManifestEEResourceCertificateBuilder().build());
         builder.withManifestNumber(BigInteger.valueOf(68));
         builder.withThisUpdateTime(THIS_UPDATE_TIME).withNextUpdateTime(NEXT_UPDATE_TIME);
         builder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER);
-        builder.putFile("foo1", HASH_1);
-        builder.putFile("BaR", HASH_2);
+        builder.addFile("foo1", CONTENT_FOO);
+        builder.addFile("BaR", CONTENT_BAR);
         return builder;
     }
 

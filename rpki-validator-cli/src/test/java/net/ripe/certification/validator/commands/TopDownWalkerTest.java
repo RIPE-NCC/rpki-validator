@@ -81,8 +81,10 @@ public class TopDownWalkerTest {
     // Manifest data
     public static final DateTime THIS_UPDATE_TIME = new DateTime(2008, 9, 1, 22, 43, 29, 0, DateTimeZone.UTC);
     public static final DateTime NEXT_UPDATE_TIME = new DateTime(2008, 9, 2, 6, 43, 29, 0, DateTimeZone.UTC);
-    public static final byte[] HASH_1 = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 };
-    public static final byte[] HASH_2 = { 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
+    public static final byte[] FOO_CONTENT = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 };
+
+    public static final byte[] BAR_CONTENT = {32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6,
+            5, 4, 3, 2, 1};
 
 
     private Queue<CertificateRepositoryObjectValidationContext> workQueue;
@@ -225,13 +227,12 @@ public class TopDownWalkerTest {
     }
 
 
-    @SuppressWarnings("deprecation")
     public static ManifestCms getRootManifestCms() {
         ManifestCmsBuilder builder = new ManifestCmsBuilder();
         builder.withCertificate(createManifestEECertificate()).withManifestNumber(BigInteger.valueOf(68));
         builder.withThisUpdateTime(THIS_UPDATE_TIME).withNextUpdateTime(NEXT_UPDATE_TIME);
-        builder.putFile("foo1", HASH_1);
-        builder.putFile("BaR", HASH_2);
+        builder.addFile("foo1", FOO_CONTENT);
+        builder.addFile("BaR", BAR_CONTENT);
         builder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER);
         return builder.build(ROOT_KEY_PAIR.getPrivate());
     }

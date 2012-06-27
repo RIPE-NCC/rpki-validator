@@ -38,6 +38,7 @@ import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 
+
 public interface CertificateRepositoryObjectFetcher extends CrlLocator {
 
     void prefetch(URI uri, ValidationResult result);
