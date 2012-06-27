@@ -34,14 +34,13 @@ import store.RepositoryObjectStore
 import models.RetrievedRepositoryObject
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.commons.certification.util.Specification
+import net.ripe.commons.certification.util.{CertificateRepositoryObjectFactory, Specification, Specifications}
 import net.ripe.commons.certification.cms.manifest.ManifestCms
-import net.ripe.commons.certification.CertificateRepositoryObject
+import org.apache.commons.codec.binary.Base64
 import net.ripe.certification.validator.fetchers._
 import java.net.URI
 import scala.collection.JavaConverters._
 import net.ripe.commons.certification.validation.ValidationLocation
-import net.ripe.commons.certification.util.Specifications
 import net.ripe.commons.certification.crl.X509Crl
 
 class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetcher, store: RepositoryObjectStore) extends CertificateRepositoryObjectFetcher {
@@ -68,7 +67,12 @@ class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetc
     getObject(uri, context, Specifications.alwaysTrue[Array[Byte]], result).asInstanceOf[X509Crl]
   }
 
-  def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, specification: Specification[Array[Byte]], result: ValidationResult) = null
+  def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, specification: Specification[Array[Byte]], result: ValidationResult) = {
+    store.retrieveByUrl(uri) match {
+      case Some(repositoryObject) => CertificateRepositoryObjectFactory.createCertificateRepositoryObject(Base64.decodeBase64(repositoryObject.encodedObject))
+      case _ => null //TODO: error if object not in store
+    }
+  }
 
   def fetchConsistentObjectSet(manifestUri: URI) = {
     val fetchResults = new ValidationResult

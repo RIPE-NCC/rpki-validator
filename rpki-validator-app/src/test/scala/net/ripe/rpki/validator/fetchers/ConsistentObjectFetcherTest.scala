@@ -146,6 +146,21 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     store.retrieveByUrl(mftWrongHashUri) should equal(None)
   }
 
+  test("Should get certificate repository objects from the store") {
+    val entries = Map(
+      mftUri -> mft,
+      crlUri -> crl,
+      roaUri -> roa)
+
+    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(entries)
+    val subject = new ConsistentObjectFetcher(rsyncFetcher = rsyncFetcher, store = store)
+    val validationResult = new ValidationResult
+
+    subject.getManifest(mftUri, baseValidationContext, validationResult) should equal (mft)
+    subject.getObject(roaUri, null, null, validationResult) should equal (roa)
+    subject.getCrl(crlUri, null, validationResult) should equal (crl)
+  }
+
 }
 
 class TestRsyncCertificateRepositoryObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RsyncCertificateRepositoryObjectFetcher(new Rsync, new UriToFileMapper(new File(System.getProperty("java.io.tmpdir")))) {
