@@ -51,15 +51,16 @@ import net.ripe.commons.certification.crl.X509CrlTest
 import net.ripe.commons.certification.cms.roa.RoaCmsTest
 import net.ripe.commons.certification.validation.ValidationLocation
 import net.ripe.commons.certification.x509cert.X509ResourceCertificateTest
-import net.ripe.rpki.validator.models.RetrievedRepositoryObject
+import net.ripe.rpki.validator.models.StoredRepositoryObject
 import scala.util.Random
 import org.scalatest.BeforeAndAfter
+import net.ripe.commons.certification.validation.ValidationString
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
 
   val store = new RepositoryObjectStore(InMemoryDataSource)
-  after {
+  before {
     store.clear
   }
 
@@ -98,9 +99,9 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     subject.getManifest(mftUri, baseValidationContext, validationResult)
 
     validationResult.hasFailures should be(false)
-    store.retrieveByUrl(mftUri) should equal(Some(RetrievedRepositoryObject(url = mftUri, repositoryObject = mft)))
-    store.retrieveByUrl(crlUri) should equal(Some(RetrievedRepositoryObject(url = crlUri, repositoryObject = crl)))
-    store.retrieveByUrl(roaUri) should equal(Some(RetrievedRepositoryObject(url = roaUri, repositoryObject = roa)))
+    store.getLatestByUrl(mftUri) should equal(Some(StoredRepositoryObject(uri = mftUri, repositoryObject = mft)))
+    store.getLatestByUrl(crlUri) should equal(Some(StoredRepositoryObject(uri = crlUri, repositoryObject = crl)))
+    store.getLatestByUrl(roaUri) should equal(Some(StoredRepositoryObject(uri = roaUri, repositoryObject = roa)))
   }
 
   test("Should not store mft when entry is missing") {
@@ -115,8 +116,9 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
     subject.getManifest(mftUri, baseValidationContext, validationResult)
 
-    validationResult.getWarnings should not be ('empty)
-    store.retrieveByUrl(mftUri) should equal(None)
+    validationResult.getWarnings should have size 1
+    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
+    store.getLatestByUrl(mftUri) should equal(None)
 
   }
 
@@ -142,23 +144,70 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
     subject.getManifest(mftWrongHashUri, baseValidationContext, validationResult)
 
-    //    validationResult.hasFailures should be(true)
-    store.retrieveByUrl(mftWrongHashUri) should equal(None)
+    // Should see warnings
+    validationResult.getWarnings should have size 1
+    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCONSISTENT)
+
+    // And metrics
+    val metrics = validationResult.getMetrics(new ValidationLocation(mftWrongHashUri))
+    metrics should have size 1
+    metrics.get(0).getName should equal(ValidationString.VALIDATOR_REPOSITORY_INCONSISTENT)
+
+    // And since it's not in the cache, also errors
+    val failures = validationResult.getFailures(new ValidationLocation(mftWrongHashUri))
+    failures should have size 1
+    failures.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)
+    store.getLatestByUrl(mftWrongHashUri) should equal(None)
   }
 
   test("Should get certificate repository objects from the store") {
-    val entries = Map(
-      mftUri -> mft,
-      crlUri -> crl,
-      roaUri -> roa)
 
-    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(entries)
+    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(Map.empty)
     val subject = new ConsistentObjectFetcher(rsyncFetcher = rsyncFetcher, store = store)
     val validationResult = new ValidationResult
 
-    subject.getManifest(mftUri, baseValidationContext, validationResult) should equal (mft)
-    subject.getObject(roaUri, null, null, validationResult) should equal (roa)
-    subject.getCrl(crlUri, null, validationResult) should equal (crl)
+    store.put(StoredRepositoryObject(uri = mftUri, repositoryObject = mft))
+    store.put(StoredRepositoryObject(uri = roaUri, repositoryObject = roa))
+    store.put(StoredRepositoryObject(uri = crlUri, repositoryObject = crl))
+
+    // Should get it from store
+    subject.getManifest(mftUri, baseValidationContext, validationResult) should equal(mft)
+    subject.getObject(roaUri, null, null, validationResult) should equal(roa)
+    subject.getCrl(crlUri, null, validationResult) should equal(crl)
+
+    // But should see warnings about fetching
+    validationResult.getWarnings should have size 1
+    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
+    validationResult.getFailuresForCurrentLocation should have size 0
+
+    // And metrics
+    val metrics = validationResult.getMetrics(new ValidationLocation(mftUri))
+    metrics should have size 1
+    metrics.get(0).getName should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
+  }
+
+  test("Should get object by hash if we can") {
+    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(Map.empty)
+    val subject = new ConsistentObjectFetcher(rsyncFetcher = rsyncFetcher, store = store)
+    val validationResult = new ValidationResult
+
+    store.put(StoredRepositoryObject(uri = mftUri, repositoryObject = mft))
+    val nonExistentUri = URI.create("rsync://some.host/doesnotexist.roa")
+    store.put(StoredRepositoryObject(uri = nonExistentUri, repositoryObject = roa))
+    store.put(StoredRepositoryObject(uri = crlUri, repositoryObject = crl))
+
+    subject.getObject(nonExistentUri, null, mft.getFileContentSpecification(roaFileName), validationResult) should equal(roa)
+  }
+
+  test("Should give an error in case we can not get the object from the store") {
+    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(Map.empty)
+    val subject = new ConsistentObjectFetcher(rsyncFetcher = rsyncFetcher, store = store)
+    val validationResult = new ValidationResult
+
+    subject.getManifest(mftUri, baseValidationContext, validationResult) should equal(null)
+    validationResult.getWarnings should have size 1
+    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
+    validationResult.getFailures(new ValidationLocation(mftUri)) should have size 1
   }
 
 }

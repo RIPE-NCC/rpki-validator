@@ -38,39 +38,62 @@ import net.ripe.commons.certification.cms.manifest.ManifestCms
 import java.net.URI
 import org.scalatest.BeforeAndAfter
 import net.ripe.commons.certification.cms.roa.RoaCmsTest
+import org.apache.commons.codec.binary.Base64
+import org.joda.time.DateTimeUtils
+import org.joda.time.DateTime
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class RepositoryObjectStoreTest extends FunSuite with BeforeAndAfter with ShouldMatchers {
 
   val EXAMPLE_MANIFEST = ManifestCmsTest.getRootManifestCms
   val EXAMPLE_MANIFEST_URI = URI.create("rsync://some.host/example.mft")
-  val EXAMPLE_MANIFEST_OBJECT = RetrievedRepositoryObject(url = EXAMPLE_MANIFEST_URI, repositoryObject = EXAMPLE_MANIFEST)
+  val EXAMPLE_MANIFEST_OBJECT = StoredRepositoryObject(uri = EXAMPLE_MANIFEST_URI, repositoryObject = EXAMPLE_MANIFEST)
 
   val store = new RepositoryObjectStore(InMemoryDataSource)
 
   before {
-    store.put(EXAMPLE_MANIFEST_OBJECT)
+    store.clear
   }
 
   test("Storing data should be idempotent") {
     store.put(EXAMPLE_MANIFEST_OBJECT)
+    store.put(EXAMPLE_MANIFEST_OBJECT)
   }
 
-  test("Should retrieve Repository Object by url") {
-    store.retrieveByUrl(EXAMPLE_MANIFEST_URI) should equal(Some(EXAMPLE_MANIFEST_OBJECT))
+  test("Should retrieve *latest* Repository Object by url") {
+
+    val mft_uri = URI.create("rsync://some.host/foo/bar/mft.mft")
+    val now = new DateTime
+
+    DateTimeUtils.setCurrentMillisFixed(now.getMillis)
+    val mft_now = ManifestCmsTest.getRootManifestCms
+    val manifest_now_stored = StoredRepositoryObject(uri = mft_uri, repositoryObject = mft_now)
+
+    DateTimeUtils.setCurrentMillisFixed(now.plusDays(1).getMillis)
+    val mft_tomorrow = ManifestCmsTest.getRootManifestCms
+    val mft_tomorrow_stored = StoredRepositoryObject(uri = mft_uri, repositoryObject = mft_tomorrow)
+
+    DateTimeUtils.setCurrentMillisSystem // Don't forget to restore normality
+
+    store.put(mft_tomorrow_stored)
+    store.put(manifest_now_stored)
+
+    store.getLatestByUrl(mft_uri) should equal(Some(mft_tomorrow_stored))
   }
 
   test("Should retrieve Repository Object by hash") {
-    store.retrieveByHash(EXAMPLE_MANIFEST_OBJECT.encodedHash) should equal(Some(EXAMPLE_MANIFEST_OBJECT))
+    store.put(EXAMPLE_MANIFEST_OBJECT)
+    store.getByHash(EXAMPLE_MANIFEST_OBJECT.hash.toArray) should equal(Some(EXAMPLE_MANIFEST_OBJECT))
   }
 
   test("Should store multiple objects including already existing") {
     val ROA_OBJECT = RoaCmsTest.getRoaCms
-    val ROA_RETRIEVED_OBJECT = RetrievedRepositoryObject(url = URI.create("rsync://some.host/example.roa"), repositoryObject = ROA_OBJECT)
+    val ROA_RETRIEVED_OBJECT = StoredRepositoryObject(uri = URI.create("rsync://some.host/example.roa"), repositoryObject = ROA_OBJECT)
 
+    store.put(EXAMPLE_MANIFEST_OBJECT)
     store.put(Seq(EXAMPLE_MANIFEST_OBJECT, ROA_RETRIEVED_OBJECT))
 
-    store.retrieveByHash(ROA_RETRIEVED_OBJECT.encodedHash) should equal(Some(ROA_RETRIEVED_OBJECT))
+    store.getByHash(ROA_RETRIEVED_OBJECT.hash.toArray) should equal(Some(ROA_RETRIEVED_OBJECT))
   }
 
 }

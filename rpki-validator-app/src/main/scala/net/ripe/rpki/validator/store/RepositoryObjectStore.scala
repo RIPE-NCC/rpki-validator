@@ -30,22 +30,22 @@
 package net.ripe.rpki.validator
 package store
 
-import models.RetrievedRepositoryObject
-import org.apache.commons.dbcp.BasicDataSource
-import com.googlecode.flyway.core.dbsupport.h2.H2JdbcTemplate
-import java.sql.Connection
-import org.h2.jdbc.JdbcConnection
-import com.googlecode.flyway.core.Flyway
-import com.googlecode.flyway.core.validation.ValidationMode
-import javax.sql.DataSource
 import java.net.URI
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.jdbc.core.RowMapper
 import java.sql.ResultSet
-import net.ripe.rpki.validator.models.RetrievedRepositoryObject
-import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory
-import org.springframework.dao.IncorrectResultSizeDataAccessException
+
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.dbcp.BasicDataSource
+import org.joda.time.DateTime
 import org.springframework.dao.DuplicateKeyException
+import org.springframework.dao.EmptyResultDataAccessException
+import org.springframework.jdbc.core.RowMapper
+import org.springframework.jdbc.core.JdbcTemplate
+
+import com.googlecode.flyway.core.Flyway
+
+import akka.util.ByteString
+import javax.sql.DataSource
+import models.StoredRepositoryObject
 
 trait DbMigrations {
 
@@ -71,15 +71,19 @@ class RepositoryObjectStore(datasource: DataSource) extends DbMigrations {
 
   val template: JdbcTemplate = new JdbcTemplate(datasource)
 
-  def put(retrievedObject: RetrievedRepositoryObject): Unit = {
+  def put(retrievedObject: StoredRepositoryObject): Unit = {
     try {
-      template.update("insert into retrieved_objects (hash, url, encoded_object) values(?,?,?)", retrievedObject.encodedHash, retrievedObject.url.toString, retrievedObject.encodedObject)
+      template.update("insert into retrieved_objects (hash, url, encoded_object, time_seen) values (?, ?, ?, ?)",
+        Base64.encodeBase64String(retrievedObject.hash.toArray),
+        retrievedObject.uri.toString,
+        Base64.encodeBase64String(retrievedObject.binaryObject.toArray),
+        new java.sql.Timestamp(new DateTime().getMillis))
     } catch {
       case e: DuplicateKeyException => // object already exists, ignore this so that putting is idempotent
     }
   }
 
-  def put(retrievedObjects: Seq[RetrievedRepositoryObject]): Unit = {
+  def put(retrievedObjects: Seq[StoredRepositoryObject]): Unit = {
     retrievedObjects.foreach(put(_))
   }
 
@@ -87,29 +91,33 @@ class RepositoryObjectStore(datasource: DataSource) extends DbMigrations {
     template.update("truncate table retrieved_objects")
   }
 
-  def retrieveByUrl(url: URI) = {
-    val selectString = "select * from retrieved_objects where url = ?"
+  def getLatestByUrl(url: URI) = {
+    val selectString = "select * from retrieved_objects where url = ? order by time_seen desc limit 1"
     val selectArgs = Array[Object](url.toString)
     getOptionalResult(selectString, selectArgs)
   }
 
-  def retrieveByHash(encodedHash: String) = {
+  def getByHash(hash: Array[Byte]) = {
+    val encodedHash = Base64.encodeBase64String(hash)
     val selectString = "select * from retrieved_objects where hash = ?"
     val selectArgs = Array[Object](encodedHash)
     getOptionalResult(selectString, selectArgs)
   }
 
-  private def getOptionalResult(selectString: String, selectArgs: Array[Object]): Option[RetrievedRepositoryObject] = {
+  private def getOptionalResult(selectString: String, selectArgs: Array[Object]): Option[StoredRepositoryObject] = {
     try {
-      Some(template.queryForObject(selectString, selectArgs, new RetrievedObjectMapper()))
+      Some(template.queryForObject(selectString, selectArgs, new StoredObjectMapper()))
     } catch {
-      case e: IncorrectResultSizeDataAccessException => None
+      case e: EmptyResultDataAccessException => None
     }
   }
 
-  private class RetrievedObjectMapper extends RowMapper[RetrievedRepositoryObject] {
+  private class StoredObjectMapper extends RowMapper[StoredRepositoryObject] {
     override def mapRow(rs: ResultSet, rowNum: Int) = {
-      RetrievedRepositoryObject(encodedHash = rs.getString("hash"), url = URI.create(rs.getString("url")), encodedObject = rs.getString("encoded_object"))
+      StoredRepositoryObject(
+        hash = ByteString(Base64.decodeBase64(rs.getString("hash"))),
+        uri = URI.create(rs.getString("url")),
+        binaryObject = ByteString(Base64.decodeBase64(rs.getString("encoded_object"))))
     }
   }
 

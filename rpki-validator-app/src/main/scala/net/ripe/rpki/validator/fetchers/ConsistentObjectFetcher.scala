@@ -30,18 +30,30 @@
 package net.ripe.rpki.validator
 package fetchers
 
-import store.RepositoryObjectStore
-import models.RetrievedRepositoryObject
-import net.ripe.commons.certification.validation.ValidationResult
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.commons.certification.util.{CertificateRepositoryObjectFactory, Specification, Specifications}
-import net.ripe.commons.certification.cms.manifest.ManifestCms
-import org.apache.commons.codec.binary.Base64
-import net.ripe.certification.validator.fetchers._
 import java.net.URI
-import scala.collection.JavaConverters._
-import net.ripe.commons.certification.validation.ValidationLocation
+
+import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters.asScalaSetConverter
+
+import models.StoredRepositoryObject
+import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher
+import net.ripe.certification.validator.fetchers.RsyncCertificateRepositoryObjectFetcher
+import net.ripe.commons.certification.cms.manifest.ManifestCms.FileContentSpecification
+import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
+import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory
+import net.ripe.commons.certification.util.Specification
+import net.ripe.commons.certification.util.Specifications
+import net.ripe.commons.certification.validation.ValidationString.VALIDATOR_FILE_CONTENT
+import net.ripe.commons.certification.validation.ValidationString.VALIDATOR_READ_FILE
+import net.ripe.commons.certification.validation.ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE
+import net.ripe.commons.certification.validation.ValidationString.VALIDATOR_REPOSITORY_INCONSISTENT
+import net.ripe.commons.certification.validation.ValidationString.VALIDATOR_REPOSITORY_UNKNOWN
+import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.commons.certification.validation.ValidationLocation
+import net.ripe.commons.certification.validation.ValidationResult
+import net.ripe.commons.certification.validation.ValidationString
+import store.RepositoryObjectStore
 
 class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetcher, store: RepositoryObjectStore) extends CertificateRepositoryObjectFetcher {
 
@@ -68,9 +80,16 @@ class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetc
   }
 
   def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, specification: Specification[Array[Byte]], result: ValidationResult) = {
-    store.retrieveByUrl(uri) match {
-      case Some(repositoryObject) => CertificateRepositoryObjectFactory.createCertificateRepositoryObject(Base64.decodeBase64(repositoryObject.encodedObject))
-      case _ => null //TODO: error if object not in store
+
+    val storedObject = specification match {
+      case filecontentSpec: FileContentSpecification => store.getByHash(filecontentSpec.getHash)
+      case _ => store.getLatestByUrl(uri)
+    }
+    storedObject match {
+      case Some(repositoryObject) => CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.binaryObject.toArray)
+      case None =>
+        result.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString)
+        null
     }
   }
 
@@ -80,14 +99,14 @@ class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetc
     val mft = rsyncFetcher.getManifest(manifestUri, null, fetchResults)
 
     if (!fetchResults.hasFailures) {
-      val retrievedObjects: Seq[RetrievedRepositoryObject] =
-        Seq(RetrievedRepositoryObject(url = manifestUri, repositoryObject = mft)) ++
+      val retrievedObjects: Seq[StoredRepositoryObject] =
+        Seq(StoredRepositoryObject(uri = manifestUri, repositoryObject = mft)) ++
           mft.getFileNames.asScala.toSeq.flatMap {
             fileName =>
               val objectUri = manifestUri.resolve(fileName)
               rsyncFetcher.getObject(objectUri, null, mft.getFileContentSpecification(fileName), fetchResults) match {
                 case null => Seq.empty
-                case repositoryObject => Seq(RetrievedRepositoryObject(url = objectUri, repositoryObject = repositoryObject))
+                case repositoryObject => Seq(StoredRepositoryObject(uri = objectUri, repositoryObject = repositoryObject))
               }
           }
       if (!fetchResults.hasFailures) {
@@ -97,7 +116,7 @@ class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetc
     fetchResults
   }
 
-  private def warnAboutFetchFailures(uri: java.net.URI, result: net.ripe.commons.certification.validation.ValidationResult, fetchResults: net.ripe.commons.certification.validation.ValidationResult): Unit = {
+  private def warnAboutFetchFailures(mftUri: java.net.URI, result: net.ripe.commons.certification.validation.ValidationResult, fetchResults: net.ripe.commons.certification.validation.ValidationResult): Unit = {
 
     import net.ripe.commons.certification.validation.ValidationString._
 
@@ -106,12 +125,15 @@ class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetc
     }.map { failure => failure.getKey }.toSet
 
     val oldLocation = result.getCurrentLocation
-    result.setLocation(new ValidationLocation(uri))
-    val publicationPoint = uri.resolve("").toString
+    result.setLocation(new ValidationLocation(mftUri))
     fetchFailureKeys.foreach(key => key match {
-      case VALIDATOR_READ_FILE => result.warn(VALIDATOR_REPOSITORY_INCOMPLETE, publicationPoint);
-      case VALIDATOR_FILE_CONTENT => result.warn(VALIDATOR_REPOSITORY_INCONSISTENT, publicationPoint)
-      case _ => result.warn(VALIDATOR_REPOSITORY_UNKNOWN, publicationPoint)
+      case VALIDATOR_READ_FILE =>
+        result.warn(VALIDATOR_REPOSITORY_INCOMPLETE, mftUri.toString);
+        result.addMetric(VALIDATOR_REPOSITORY_INCOMPLETE, mftUri.toString)
+      case VALIDATOR_FILE_CONTENT =>
+        result.warn(VALIDATOR_REPOSITORY_INCONSISTENT, mftUri.toString)
+        result.addMetric(VALIDATOR_REPOSITORY_INCONSISTENT, mftUri.toString)
+      case _ => result.warn(VALIDATOR_REPOSITORY_UNKNOWN, mftUri.toString)
     })
     result.setLocation(oldLocation)
   }
