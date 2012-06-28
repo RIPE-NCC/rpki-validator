@@ -68,15 +68,14 @@ class RepositoryObjectStoreTest extends FunSuite with BeforeAndAfter with Should
     DateTimeUtils.setCurrentMillisFixed(now.getMillis)
     val mft_now = ManifestCmsTest.getRootManifestCms
     val manifest_now_stored = StoredRepositoryObject(uri = mft_uri, repositoryObject = mft_now)
+    store.put(manifest_now_stored)
 
     DateTimeUtils.setCurrentMillisFixed(now.plusDays(1).getMillis)
     val mft_tomorrow = ManifestCmsTest.getRootManifestCms
     val mft_tomorrow_stored = StoredRepositoryObject(uri = mft_uri, repositoryObject = mft_tomorrow)
+    store.put(mft_tomorrow_stored)
 
     DateTimeUtils.setCurrentMillisSystem // Don't forget to restore normality
-
-    store.put(mft_tomorrow_stored)
-    store.put(manifest_now_stored)
 
     store.getLatestByUrl(mft_uri) should equal(Some(mft_tomorrow_stored))
   }
