@@ -102,18 +102,24 @@ class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetc
     val mft = rsyncFetcher.getManifest(manifestUri, null, fetchResults)
 
     if (!fetchResults.hasFailures) {
-      val retrievedObjects: Seq[StoredRepositoryObject] =
-        Seq(StoredRepositoryObject(uri = manifestUri, repositoryObject = mft)) ++
-          mft.getFileNames.asScala.toSeq.flatMap {
-            fileName =>
-              val objectUri = manifestUri.resolve(fileName)
-              rsyncFetcher.getObject(objectUri, null, mft.getFileContentSpecification(fileName), fetchResults) match {
-                case null => Seq.empty
-                case repositoryObject => Seq(StoredRepositoryObject(uri = objectUri, repositoryObject = repositoryObject))
+      val mftStoredRepositoryObject = StoredRepositoryObject(uri = manifestUri, repositoryObject = mft)
+
+      store.getByHash(mftStoredRepositoryObject.hash.toArray) match {
+        case None =>
+          val retrievedObjects: Seq[StoredRepositoryObject] =
+            Seq(mftStoredRepositoryObject) ++
+              mft.getFileNames.asScala.toSeq.flatMap {
+                fileName =>
+                  val objectUri = manifestUri.resolve(fileName)
+                  rsyncFetcher.getObject(objectUri, null, mft.getFileContentSpecification(fileName), fetchResults) match {
+                    case null => Seq.empty
+                    case repositoryObject => Seq(StoredRepositoryObject(uri = objectUri, repositoryObject = repositoryObject))
+                  }
               }
+          if (!fetchResults.hasFailures) {
+            store.put(retrievedObjects)
           }
-      if (!fetchResults.hasFailures) {
-        store.put(retrievedObjects)
+        case Some(_) =>
       }
     }
 
