@@ -59,7 +59,7 @@ import java.util.concurrent.TimeUnit
 import com.yammer.metrics.core.Timer
 import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
 import net.ripe.rpki.validator.fetchers.ConsistentObjectFetcher
-import net.ripe.rpki.validator.store.{RepositoryObjectStore, DurableDataSource}
+import net.ripe.rpki.validator.store.{ RepositoryObjectStore, DurableDataSource }
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -194,6 +194,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
       val validationResult = new ValidationResult();
       validationResult.setLocation(new ValidationLocation(prefetchUri));
       fetcher.prefetch(prefetchUri, validationResult);
+      logger.info("Done prefetching for '" + prefetchUri + "'")
     }
 
     val walker = new TopDownWalker(fetcher)

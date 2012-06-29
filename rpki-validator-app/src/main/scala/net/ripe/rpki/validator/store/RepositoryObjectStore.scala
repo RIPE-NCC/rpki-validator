@@ -73,7 +73,7 @@ class RepositoryObjectStore(datasource: DataSource) extends DbMigrations {
 
   def put(retrievedObject: StoredRepositoryObject): Unit = {
     try {
-      template.update("insert into retrieved_objects (hash, url, encoded_object, time_seen) values (?, ?, ?, ?)",
+      template.update("insert into retrieved_objects (hash, uri, encoded_object, time_seen) values (?, ?, ?, ?)",
         Base64.encodeBase64String(retrievedObject.hash.toArray),
         retrievedObject.uri.toString,
         Base64.encodeBase64String(retrievedObject.binaryObject.toArray),
@@ -92,7 +92,7 @@ class RepositoryObjectStore(datasource: DataSource) extends DbMigrations {
   }
 
   def getLatestByUrl(url: URI) = {
-    val selectString = "select * from retrieved_objects where url = ? order by time_seen desc limit 1"
+    val selectString = "select * from retrieved_objects where uri = ? order by time_seen desc limit 1"
     val selectArgs = Array[Object](url.toString)
     getOptionalResult(selectString, selectArgs)
   }
@@ -116,7 +116,7 @@ class RepositoryObjectStore(datasource: DataSource) extends DbMigrations {
     override def mapRow(rs: ResultSet, rowNum: Int) = {
       StoredRepositoryObject(
         hash = ByteString(Base64.decodeBase64(rs.getString("hash"))),
-        uri = URI.create(rs.getString("url")),
+        uri = URI.create(rs.getString("uri")),
         binaryObject = ByteString(Base64.decodeBase64(rs.getString("encoded_object"))))
     }
   }

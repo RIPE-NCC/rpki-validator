@@ -70,9 +70,12 @@ class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetc
    * If it is, we put the new manifest and all the contents in our durable object store for future use, and return the new manifest.
    */
   def getManifest(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): ManifestCms = {
-    val fetchResults = fetchConsistentObjectSet(uri)
+    val (mftOption, fetchResults) = fetchConsistentObjectSet(uri)
     warnAboutFetchFailures(uri, result, fetchResults)
-    getObject(uri, context, Specifications.alwaysTrue[Array[Byte]], result).asInstanceOf[ManifestCms]
+    mftOption match {
+      case Some(mft) => mft
+      case None => getObject(uri, context, Specifications.alwaysTrue[Array[Byte]], result).asInstanceOf[ManifestCms]
+    }
   }
 
   def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): X509Crl = {
@@ -113,7 +116,13 @@ class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetc
         store.put(retrievedObjects)
       }
     }
-    fetchResults
+
+    val mftOption = fetchResults.hasFailures match {
+      case false => Some(mft)
+      case true => None
+    }
+
+    (mftOption, fetchResults)
   }
 
   private def warnAboutFetchFailures(mftUri: java.net.URI, result: net.ripe.commons.certification.validation.ValidationResult, fetchResults: net.ripe.commons.certification.validation.ValidationResult): Unit = {
