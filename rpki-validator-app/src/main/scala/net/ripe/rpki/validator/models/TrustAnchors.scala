@@ -58,6 +58,8 @@ import com.yammer.metrics.core.MetricsRegistry
 import java.util.concurrent.TimeUnit
 import com.yammer.metrics.core.Timer
 import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
+import net.ripe.rpki.validator.fetchers.ConsistentObjectFetcher
+import net.ripe.rpki.validator.store.{RepositoryObjectStore, DurableDataSource}
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -205,7 +207,8 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
     val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
-    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher, options);
+    val consistentObjectFercher = new ConsistentObjectFetcher(rsyncFetcher, new RepositoryObjectStore(DurableDataSource))
+    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(consistentObjectFercher, options);
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
     validatingFetcher.setOuterMostDecorator(cachingFetcher);

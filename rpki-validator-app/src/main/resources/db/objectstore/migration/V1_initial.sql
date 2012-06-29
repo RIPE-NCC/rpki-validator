@@ -1,6 +1,6 @@
 CREATE TABLE retrieved_objects (
     hash CHARACTER VARYING(2000) NOT NULL UNIQUE,
     url CHARACTER VARYING(2000) NOT NULL,
-    encoded_object CHARACTER VARYING(8000) NOT NULL,
+    encoded_object CHARACTER VARYING NOT NULL,
     time_seen DATETIME NOT NULL
 );
