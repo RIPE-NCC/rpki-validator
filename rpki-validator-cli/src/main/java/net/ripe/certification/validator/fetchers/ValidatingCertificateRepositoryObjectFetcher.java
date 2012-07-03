@@ -50,7 +50,7 @@ import org.apache.log4j.Logger;
 
 
 public class ValidatingCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {
-    
+
     private static final Logger log = Logger.getLogger(ValidatingCertificateRepositoryObjectFetcher.class);
 
     private final CertificateRepositoryObjectFetcher fetcher;
@@ -69,7 +69,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
         this.options = new ValidationOptions();
         this.outerMostDecorator = this;
     }
-    
+
     /**
      * A validating CROFetcher. All objects retrieved are being validated. Invalid objects result in
      * null values being returned instead. Note that validation requires a CrlLocator. Because other
@@ -94,6 +94,20 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
         Validate.notNull(context);
         Validate.notNull(result);
         Validate.notNull(uri);
+
+        /*
+         * Now that we have the ConsistentObjectFetcher I believe we can simplify this code. We have
+         * already checked the hash, a lookup by url here will hit the the store.
+         * 
+         * So we don't need to do step 2 and 3. Just get it.
+         * 
+         * Note: the manifest will actually use this code for its own validation. So in the unlikely
+         * case that we have a manifest that mentions a crl that invalidates that manifest the
+         * manifest is still rejected.
+         * 
+         * I am not sure if we should care about this. This is a serious error on the publication
+         * side, and recovering from it here is quite painful.
+         */
 
         /*
          * Three step process:
