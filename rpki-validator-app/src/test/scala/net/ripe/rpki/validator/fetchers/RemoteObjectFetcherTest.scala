@@ -61,66 +61,42 @@ class RemoteObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAn
   }
 
   test("Should delegate prefetch to http if a uri mapping exists") {
-    mockHttpFetcher.prefetch(mappedUri, new ValidationResult)
-
-    subject.prefetch(mappableUri, new ValidationResult)
-
-    verify(mockHttpFetcher)
+    subject.prefetch(mappableUri, null)
+    verify(mockHttpFetcher).prefetch(mappedUri, null)
   }
 
   test("Should delegate prefetch to rsync if no mapping exists for the given uri") {
-    mockRsyncFetcher.prefetch(nonMappableUri, new ValidationResult)
-
-    subject.prefetch(nonMappableUri, new ValidationResult)
-
-    verify(mockRsyncFetcher)
+    subject.prefetch(nonMappableUri, null)
+    verify(mockRsyncFetcher).prefetch(nonMappableUri, null)
   }
 
   test("Should delegate manifest fetching to http if a uri mapping exists") {
-    mockHttpFetcher.getManifest(mappedUri, null, null)
-
     subject.getManifest(mappableUri, null, null)
-
-    verify(mockHttpFetcher)
+    verify(mockHttpFetcher).getManifest(mappedUri, null, null)
   }
 
   test("Should delegate manifest fetching to rsync if no mapping exists for the given uri") {
-    mockRsyncFetcher.getManifest(nonMappableUri, null, null)
-
     subject.getManifest(nonMappableUri, null, null)
-
-    verify(mockRsyncFetcher)
+    verify(mockRsyncFetcher).getManifest(nonMappableUri, null, null)
   }
 
   test("Should delegate crl fetching to http if a uri mapping exists") {
-    mockHttpFetcher.getCrl(mappedUri, null, null)
-
     subject.getCrl(mappableUri, null, null)
-
-    verify(mockHttpFetcher)
+    verify(mockHttpFetcher).getCrl(mappedUri, null, null)
   }
 
   test("Should delegate crl fetching to rsync if no mapping exists for the given uri") {
-    mockRsyncFetcher.getCrl(nonMappableUri, null, null)
-
     subject.getCrl(nonMappableUri, null, null)
-
-    verify(mockRsyncFetcher)
+    verify(mockRsyncFetcher).getCrl(nonMappableUri, null, null)
   }
 
   test("Should delegate object fetching to http if a uri mapping exists") {
-    mockHttpFetcher.getObject(mappedUri, null, null, null)
-
     subject.getObject(mappableUri, null, null, null)
-
-    verify(mockHttpFetcher)
+    verify(mockHttpFetcher).getObject(mappedUri, null, null, null)
   }
 
   test("Should delegate object fetching to rsync if no mapping exists for the given uri") {
-    mockRsyncFetcher.getObject(nonMappableUri, null, null, null)
-
     subject.getObject(nonMappableUri, null, null, null)
-
-    verify(mockRsyncFetcher)
+    verify(mockRsyncFetcher).getObject(nonMappableUri, null, null, null)
   }
 }
