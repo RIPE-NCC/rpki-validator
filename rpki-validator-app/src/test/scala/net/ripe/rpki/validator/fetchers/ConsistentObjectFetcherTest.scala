@@ -55,6 +55,7 @@ import net.ripe.rpki.validator.models.StoredRepositoryObject
 import scala.util.Random
 import org.scalatest.BeforeAndAfter
 import net.ripe.commons.certification.validation.ValidationString
+import org.apache.http.impl.client.DefaultHttpClient
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
@@ -90,9 +91,9 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
       crlUri -> crl,
       roaUri -> roa)
 
-    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(entries)
+    val rsyncFetcher = new TestRemoteObjectFetcher(entries)
 
-    val subject = new ConsistentObjectFetcher(rsyncFetcher = rsyncFetcher, store = store)
+    val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
 
     val validationResult = new ValidationResult
 
@@ -109,9 +110,9 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
       mftUri -> mft,
       roaUri -> roa)
 
-    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(entries)
+    val rsyncFetcher = new TestRemoteObjectFetcher(entries)
 
-    val subject = new ConsistentObjectFetcher(rsyncFetcher = rsyncFetcher, store = store)
+    val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = new ValidationResult
 
     subject.getManifest(mftUri, baseValidationContext, validationResult)
@@ -137,9 +138,9 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
       crlUri -> crl,
       roaUri -> roa)
 
-    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(entries)
+    val rsyncFetcher = new TestRemoteObjectFetcher(entries)
 
-    val subject = new ConsistentObjectFetcher(rsyncFetcher = rsyncFetcher, store = store)
+    val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = new ValidationResult
 
     subject.getManifest(mftWrongHashUri, baseValidationContext, validationResult)
@@ -162,8 +163,8 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
   test("Should get certificate repository objects from the store") {
 
-    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(Map.empty)
-    val subject = new ConsistentObjectFetcher(rsyncFetcher = rsyncFetcher, store = store)
+    val rsyncFetcher = new TestRemoteObjectFetcher(Map.empty)
+    val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = new ValidationResult
 
     store.put(StoredRepositoryObject(uri = mftUri, repositoryObject = mft))
@@ -187,8 +188,8 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
   }
 
   test("Should get object by hash if we can") {
-    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(Map.empty)
-    val subject = new ConsistentObjectFetcher(rsyncFetcher = rsyncFetcher, store = store)
+    val rsyncFetcher = new TestRemoteObjectFetcher(Map.empty)
+    val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = new ValidationResult
 
     store.put(StoredRepositoryObject(uri = mftUri, repositoryObject = mft))
@@ -200,8 +201,8 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
   }
 
   test("Should give an error in case we can not get the object from the store") {
-    val rsyncFetcher = new TestRsyncCertificateRepositoryObjectFetcher(Map.empty)
-    val subject = new ConsistentObjectFetcher(rsyncFetcher = rsyncFetcher, store = store)
+    val rsyncFetcher = new TestRemoteObjectFetcher(Map.empty)
+    val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = new ValidationResult
 
     subject.getManifest(mftUri, baseValidationContext, validationResult) should equal(null)
@@ -212,7 +213,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
 }
 
-class TestRsyncCertificateRepositoryObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RsyncCertificateRepositoryObjectFetcher(new Rsync, new UriToFileMapper(new File(System.getProperty("java.io.tmpdir")))) {
+class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RemoteObjectFetcher(new RsyncCertificateRepositoryObjectFetcher(new Rsync, new UriToFileMapper(new File(System.getProperty("java.io.tmpdir")))), new HttpObjectFetcher(new DefaultHttpClient())) {
 
   val ALWAYS_TRUE_SPECIFICATION = Specifications.alwaysTrue[Array[Byte]]
 

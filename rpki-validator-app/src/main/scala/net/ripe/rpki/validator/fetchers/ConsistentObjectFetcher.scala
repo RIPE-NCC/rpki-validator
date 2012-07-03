@@ -55,12 +55,12 @@ import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.ValidationString
 import store.RepositoryObjectStore
 
-class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetcher, store: RepositoryObjectStore) extends CertificateRepositoryObjectFetcher {
+class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: RepositoryObjectStore) extends CertificateRepositoryObjectFetcher {
 
   /**
-   * Pass this on to the rsync fetcher
+   * Pass this on to the remote object fetcher
    */
-  def prefetch(uri: URI, result: ValidationResult) = rsyncFetcher.prefetch(uri, result)
+  def prefetch(uri: URI, result: ValidationResult) = remoteObjectFetcher.prefetch(uri, result)
 
   /**
    * Triggers that we fetch all objects on the manifest and check that it is a consistent set.
@@ -99,7 +99,7 @@ class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetc
   def fetchConsistentObjectSet(manifestUri: URI) = {
     val fetchResults = new ValidationResult
     fetchResults.setLocation(new ValidationLocation(manifestUri))
-    val mft = rsyncFetcher.getManifest(manifestUri, null, fetchResults)
+    val mft = remoteObjectFetcher.getManifest(manifestUri, null, fetchResults)
 
     if (!fetchResults.hasFailures) {
       val mftStoredRepositoryObject = StoredRepositoryObject(uri = manifestUri, repositoryObject = mft)
@@ -111,7 +111,7 @@ class ConsistentObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetc
               mft.getFileNames.asScala.toSeq.flatMap {
                 fileName =>
                   val objectUri = manifestUri.resolve(fileName)
-                  rsyncFetcher.getObject(objectUri, null, mft.getFileContentSpecification(fileName), fetchResults) match {
+                  remoteObjectFetcher.getObject(objectUri, null, mft.getFileContentSpecification(fileName), fetchResults) match {
                     case null => Seq.empty
                     case repositoryObject => Seq(StoredRepositoryObject(uri = objectUri, repositoryObject = repositoryObject))
                   }
