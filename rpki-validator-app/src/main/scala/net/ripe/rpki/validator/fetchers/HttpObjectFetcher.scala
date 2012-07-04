@@ -37,14 +37,9 @@ import net.ripe.commons.certification.util.{CertificateRepositoryObjectParserExc
 import org.apache.http.client.{ResponseHandler, HttpClient}
 import org.apache.http.client.methods.HttpGet
 import grizzled.slf4j.Logging
-import akka.dispatch.{ExecutionContext, Future}
-import net.ripe.commons.certification.CertificateRepositoryObject
 import org.apache.http.HttpResponse
 import javax.servlet.http.HttpServletResponse.SC_OK
 import org.apache.http.util.EntityUtils
-import net.ripe.certification.validator.util.UriToFileMapper
-import java.io.{FileOutputStream, File}
-import org.apache.commons.io.IOUtils
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
 
@@ -59,10 +54,10 @@ class HttpObjectFetcher(httpClient: HttpClient) extends CertificateRepositoryObj
       case null =>
         null
       case cro: X509Crl =>
-        result.pass(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_CRL);
+        result.pass(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_CRL)
         cro
       case _ =>
-        result.error(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_CRL);
+        result.error(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_CRL)
         null
     }
   }
@@ -72,10 +67,10 @@ class HttpObjectFetcher(httpClient: HttpClient) extends CertificateRepositoryObj
       case null =>
         null
       case cro: ManifestCms =>
-        result.pass(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_MANIFEST);
+        result.pass(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_MANIFEST)
         cro
       case _ =>
-        result.error(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_MANIFEST);
+        result.error(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_MANIFEST)
         null
     }
   }
@@ -84,18 +79,18 @@ class HttpObjectFetcher(httpClient: HttpClient) extends CertificateRepositoryObj
     downloadFile(uri, result) match {
       case Some(content: Array[Byte]) =>
         if (fileContentSpecification.isSatisfiedBy(content)) {
-          result.pass(ValidationString.VALIDATOR_FILE_CONTENT, uri.toString());
+          result.pass(ValidationString.VALIDATOR_FILE_CONTENT, uri.toString)
           try {
             val cro = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(content)
-            result.pass(ValidationString.KNOWN_OBJECT_TYPE, uri.toString())
+            result.pass(ValidationString.KNOWN_OBJECT_TYPE, uri.toString)
             cro
           } catch {
             case e: CertificateRepositoryObjectParserException =>
-              result.error(ValidationString.KNOWN_OBJECT_TYPE, uri.toString())
+              result.error(ValidationString.KNOWN_OBJECT_TYPE, uri.toString)
               null
           }
         } else {
-          result.error(ValidationString.VALIDATOR_FILE_CONTENT, uri.toString());
+          result.error(ValidationString.VALIDATOR_FILE_CONTENT, uri.toString)
           null
         }
       case None =>
@@ -108,25 +103,25 @@ class HttpObjectFetcher(httpClient: HttpClient) extends CertificateRepositoryObj
       val now = System.currentTimeMillis()
       httpClient.execute(new HttpGet(uri), responseHandler(uri)) match {
         case Some(content) =>
-          result.pass(ValidationString.VALIDATOR_HTTP_DOWNLOAD, uri.toString());
-          result.addMetric(HTTP_DOWNLOAD_METRIC, String.valueOf(System.currentTimeMillis()-now));
+          result.pass(ValidationString.VALIDATOR_HTTP_DOWNLOAD, uri.toString)
+          result.addMetric(HTTP_DOWNLOAD_METRIC, String.valueOf(System.currentTimeMillis()-now))
           Some(content)
         case None =>
-          result.error(ValidationString.VALIDATOR_HTTP_DOWNLOAD, uri.toString());
+          result.error(ValidationString.VALIDATOR_HTTP_DOWNLOAD, uri.toString)
           None
       }
     } catch {
       case e: Exception =>
-        result.error(ValidationString.VALIDATOR_HTTP_DOWNLOAD, uri.toString());
+        result.error(ValidationString.VALIDATOR_HTTP_DOWNLOAD, uri.toString)
         None
     }
   }
 
   def responseHandler(uri: URI): ResponseHandler[Option[Array[Byte]]] = new ResponseHandler[Option[Array[Byte]]]() {
     override def handleResponse(response: HttpResponse): Option[Array[Byte]] = {
-      response.getStatusLine().getStatusCode() match {
+      response.getStatusLine.getStatusCode match {
         case SC_OK =>
-          Some(EntityUtils.toByteArray(response.getEntity()))
+          Some(EntityUtils.toByteArray(response.getEntity))
         case _ =>
           EntityUtils.consume(response.getEntity)
           None
