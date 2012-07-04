@@ -41,7 +41,6 @@ import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
 import net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.certification.validator.util.TrustAnchorExtractor
-import net.ripe.commons.certification.validation.ValidationOptions
 import net.ripe.rpki.validator.statistics.Metric
 import org.joda.time.DateTimeUtils
 import scala.concurrent.stm._
@@ -181,7 +180,7 @@ trait ValidationProcess {
   def finishProcessing(): Unit = {}
 }
 
-abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int) extends ValidationProcess {
+abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, httpSupport: Boolean) extends ValidationProcess {
   private val options = new ValidationOptions()
   options.setMaxStaleDays(maxStaleDays)
 
@@ -211,8 +210,16 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
     rsync.setTimeoutInSeconds(300)
     val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
     var httpClient: DefaultHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
-    val httpFetcher = new HttpObjectFetcher(httpClient)
-    val remoteFetcher = new RemoteObjectFetcher(rsyncFetcher, httpFetcher)
+
+
+
+    val remoteFetcher = httpSupport match {
+      case true =>
+        val httpFetcher = new HttpObjectFetcher(httpClient)
+        new RemoteObjectFetcher(rsyncFetcher, Some(httpFetcher))
+      case false =>
+        new RemoteObjectFetcher(rsyncFetcher, None)
+    }
     val consistentObjectFercher = new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DurableDataSource))
     val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(consistentObjectFercher, options);
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);

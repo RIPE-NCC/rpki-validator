@@ -36,50 +36,69 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.util.Specification
 
-class RemoteObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetcher, httpFetcher: HttpObjectFetcher) extends CertificateRepositoryObjectFetcher with Logging {
+class RemoteObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetcher, httpFetcherOption: Option[HttpObjectFetcher]) extends CertificateRepositoryObjectFetcher with Logging {
 
   val uriMap: Map[URI, URI] = Map(
     URI.create("rsync://rpki.ripe.net/") -> URI.create("http://certification.ripe.net/certification/repository/"),
     URI.create("rsync://localhost:10873/online/") -> URI.create("http://localhost:8080/certification/repository/online/"))
 
   def prefetch(uri: URI, result: ValidationResult) {
-    mapRsynctoHttpUri(uri) match {
-      case Some(httpUri) =>
-        httpFetcher.prefetch(httpUri, result)
+    httpFetcherOption match {
+      case Some(httpFetcher) =>
+        mapRsynctoHttpUri(uri) match {
+          case Some(httpUri) =>
+            httpFetcher.prefetch(httpUri, result)
+          case None =>
+            rsyncFetcher.prefetch(uri, result)
+        }
       case None =>
         rsyncFetcher.prefetch(uri, result)
     }
   }
 
   def getManifest(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult) = {
-    mapRsynctoHttpUri(uri) match {
-      case Some(httpUri) =>
-        httpFetcher.getManifest(httpUri, context, result)
+    httpFetcherOption match {
+      case Some(httpFetcher) =>
+        mapRsynctoHttpUri(uri) match {
+          case Some(httpUri) =>
+            httpFetcher.getManifest(httpUri, context, result)
+          case None =>
+            rsyncFetcher.getManifest(uri, context, result)
+        }
       case None =>
         rsyncFetcher.getManifest(uri, context, result)
     }
   }
 
   def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, fileContentSpecification: Specification[Array[Byte]], result: ValidationResult) = {
-    mapRsynctoHttpUri(uri) match {
-      case Some(httpUri) =>
-        httpFetcher.getObject(httpUri, context, fileContentSpecification, result)
+    httpFetcherOption match {
+      case Some(httpFetcher) =>
+        mapRsynctoHttpUri(uri) match {
+          case Some(httpUri) =>
+            httpFetcher.getObject(httpUri, context, fileContentSpecification, result)
+          case None =>
+            rsyncFetcher.getObject(uri, context, fileContentSpecification, result)
+        }
       case None =>
         rsyncFetcher.getObject(uri, context, fileContentSpecification, result)
     }
   }
 
   def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult) = {
-    mapRsynctoHttpUri(uri) match {
-      case Some(httpUri) =>
-        httpFetcher.getCrl(httpUri, context, result)
+    httpFetcherOption match {
+      case Some(httpFetcher) =>
+        mapRsynctoHttpUri(uri) match {
+          case Some(httpUri) =>
+            httpFetcher.getCrl(httpUri, context, result)
+          case None =>
+            rsyncFetcher.getCrl(uri, context, result)
+        }
       case None =>
         rsyncFetcher.getCrl(uri, context, result)
     }
   }
 
   def mapRsynctoHttpUri(uri: URI) = {
-    //TODO: don't map if commandline option is not set!
     uriMap.find(p => uri.toString.startsWith(p._1.toString)) match {
       case Some((rsyncUri, httpUri)) =>
         Some(URI.create(uri.toString.replace(rsyncUri.toString, httpUri.toString)))

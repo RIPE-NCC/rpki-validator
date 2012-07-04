@@ -213,7 +213,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
 }
 
-class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RemoteObjectFetcher(new RsyncCertificateRepositoryObjectFetcher(new Rsync, new UriToFileMapper(new File(System.getProperty("java.io.tmpdir")))), new HttpObjectFetcher(new DefaultHttpClient())) {
+class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RemoteObjectFetcher(new RsyncCertificateRepositoryObjectFetcher(new Rsync, new UriToFileMapper(new File(System.getProperty("java.io.tmpdir")))), Some(new HttpObjectFetcher(new DefaultHttpClient()))) {
 
   val ALWAYS_TRUE_SPECIFICATION = Specifications.alwaysTrue[Array[Byte]]
 

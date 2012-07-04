@@ -43,7 +43,7 @@ class RemoteObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAn
   val mockRsyncFetcher = mock[RsyncCertificateRepositoryObjectFetcher]
   val mockHttpFetcher = mock[HttpObjectFetcher]
 
-  val subject = new RemoteObjectFetcher(mockRsyncFetcher, mockHttpFetcher) {
+  val subject = new RemoteObjectFetcher(mockRsyncFetcher, Some(mockHttpFetcher)) {
     override val uriMap = Map(URI.create("rsync://rpki.ripe.net/") -> URI.create("http://foo.ripe.net/bar/"))
   }
 

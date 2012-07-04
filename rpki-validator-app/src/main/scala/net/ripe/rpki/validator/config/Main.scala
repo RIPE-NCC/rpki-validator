@@ -161,7 +161,7 @@ class Main(options: Options) { main =>
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays) with TrackValidationProcess with MeasureValidationProcess with MeasureRsyncExecution with ValidationProcessLogger with MeasureInconsistentRepositories {
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays, options.httpSupport) with TrackValidationProcess with MeasureValidationProcess with MeasureRsyncExecution with ValidationProcessLogger with MeasureInconsistentRepositories {
           override val memoryImage = main.memoryImage
         }
         try {
