@@ -49,7 +49,7 @@ class RepositoryObjectStoreTest extends FunSuite with BeforeAndAfter with Should
   val EXAMPLE_MANIFEST_URI = URI.create("rsync://some.host/example.mft")
   val EXAMPLE_MANIFEST_OBJECT = StoredRepositoryObject(uri = EXAMPLE_MANIFEST_URI, repositoryObject = EXAMPLE_MANIFEST)
 
-  val store = new RepositoryObjectStore(InMemoryDataSource)
+  val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
 
   before {
     store.clear

@@ -31,7 +31,7 @@ package net.ripe.rpki.validator.fetchers
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
-import net.ripe.rpki.validator.store.InMemoryDataSource
+import net.ripe.rpki.validator.store.DataSources
 import net.ripe.rpki.validator.store.RepositoryObjectStore
 import net.ripe.certification.validator.fetchers.RsyncCertificateRepositoryObjectFetcher
 import net.ripe.commons.certification.rsync.Rsync
@@ -60,7 +60,7 @@ import org.apache.http.impl.client.DefaultHttpClient
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
 
-  val store = new RepositoryObjectStore(InMemoryDataSource)
+  val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
   before {
     store.clear
   }

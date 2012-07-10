@@ -58,7 +58,7 @@ import java.util.concurrent.TimeUnit
 import com.yammer.metrics.core.Timer
 import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
 import net.ripe.rpki.validator.fetchers.{RemoteObjectFetcher, HttpObjectFetcher, ConsistentObjectFetcher}
-import net.ripe.rpki.validator.store.{ RepositoryObjectStore, DurableDataSource }
+import net.ripe.rpki.validator.store.{ RepositoryObjectStore, DataSources }
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
 
@@ -220,7 +220,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
       case false =>
         new RemoteObjectFetcher(rsyncFetcher, None)
     }
-    val consistentObjectFercher = new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DurableDataSource))
+    val consistentObjectFercher = new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DataSources.DurableDataSource))
     val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(consistentObjectFercher, options);
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);

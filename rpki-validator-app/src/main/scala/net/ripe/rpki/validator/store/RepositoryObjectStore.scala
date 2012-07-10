@@ -123,20 +123,26 @@ class RepositoryObjectStore(datasource: DataSource) extends DbMigrations {
 
 }
 
-/**
- * Store data on disk.
- */
-object DurableDataSource extends BasicDataSource {
-  setUrl("jdbc:h2:data/rpki-objects")
-  setDriverClassName("org.h2.Driver")
-  setDefaultAutoCommit(true)
-}
+object DataSources {
+  /**
+   * Store data on disk.
+   */
+  lazy val DurableDataSource = {
+    val result = new BasicDataSource
+    result.setUrl("jdbc:h2:data/rpki-objects")
+    result.setDriverClassName("org.h2.Driver")
+    result.setDefaultAutoCommit(true)
+    result
+  }
 
-/**
- * For unit testing
- */
-object InMemoryDataSource extends BasicDataSource {
-  setUrl("jdbc:h2:mem:rpki-objects")
-  setDriverClassName("org.h2.Driver")
-  setDefaultAutoCommit(true)
+  /**
+   * For unit testing
+   */
+  lazy val InMemoryDataSource = {
+    val result = new BasicDataSource
+    result.setUrl("jdbc:h2:mem:rpki-objects")
+    result.setDriverClassName("org.h2.Driver")
+    result.setDefaultAutoCommit(true)
+    result
+  }
 }
