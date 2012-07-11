@@ -27,7 +27,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.models
+package net.ripe.rpki.validator
+package models
+
+import statistics.InconsistentRepositoryChecker
+import fetchers.{RemoteObjectFetcher, HttpObjectFetcher, ConsistentObjectFetcher, ValidatedObjectCollector}
+import store.RepositoryObjectStore
+import store.DataSources.DurableDataSource
+import lib.DateAndTime._
+import statistics.Metric
 
 import scala.collection.JavaConverters._
 import java.io.File
@@ -39,9 +47,7 @@ import org.joda.time.DateTime
 import scalaz.{ Validation, Failure, Success }
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
-import net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.certification.validator.util.TrustAnchorExtractor
-import net.ripe.rpki.validator.statistics.Metric
 import org.joda.time.DateTimeUtils
 import scala.concurrent.stm._
 import net.ripe.rpki.validator.config.MemoryImage
@@ -56,9 +62,6 @@ import net.ripe.certification.validator.util.UriToFileMapper
 import com.yammer.metrics.core.MetricsRegistry
 import java.util.concurrent.TimeUnit
 import com.yammer.metrics.core.Timer
-import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
-import net.ripe.rpki.validator.fetchers.{RemoteObjectFetcher, HttpObjectFetcher, ConsistentObjectFetcher}
-import net.ripe.rpki.validator.store.{ RepositoryObjectStore, DataSources }
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
 
@@ -188,7 +191,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
 
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
     val builder = Map.newBuilder[URI, ValidatedObject]
-    val fetcher = createFetcher(new RoaCollector(trustAnchorLocator, builder) +: objectFetcherListeners: _*)
+    val fetcher = createFetcher(new ValidatedObjectCollector(trustAnchorLocator, builder) +: objectFetcherListeners: _*)
 
     trustAnchorLocator.getPrefetchUris().asScala.foreach { prefetchUri =>
       logger.info("Prefetching '" + prefetchUri + "'")
@@ -220,7 +223,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
       case false =>
         new RemoteObjectFetcher(rsyncFetcher, None)
     }
-    val consistentObjectFercher = new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DataSources.DurableDataSource))
+    val consistentObjectFercher = new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DurableDataSource))
     val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(consistentObjectFercher, options);
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
@@ -231,20 +234,6 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
     cachingFetcher
   }
 
-  private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[(URI, ValidatedObject), _]) extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
-    override def afterFetchFailure(uri: URI, result: ValidationResult) {
-      objects += uri -> new InvalidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
-    }
-
-    override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
-      obj match {
-        case roa: RoaCms =>
-          objects += uri -> new ValidRoa(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, roa)
-        case _ =>
-          objects += uri -> new ValidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, obj)
-      }
-    }
-  }
 }
 
 trait TrackValidationProcess extends ValidationProcess {
