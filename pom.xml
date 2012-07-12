@@ -27,6 +27,8 @@
 	</distributionManagement>
 
 	<properties>
+        <scala.version>2.9.1</scala.version>
+        <scalatra.version>2.0.0</scalatra.version>
 		<rpki.commons.version>1.0.18-SNAPSHOT</rpki.commons.version>
 		<org.springframework.version>3.1.1.RELEASE</org.springframework.version>
 		<wicket.version>1.4.15</wicket.version>
@@ -256,6 +258,21 @@
 					</executions>
 				</plugin>
 
+                <plugin>
+                    <groupId>net.alchim31.maven</groupId>
+                    <artifactId>scala-maven-plugin</artifactId>
+                    <version>3.0.2</version>
+                    <configuration>
+                        <scalaVersion>${scala.version}</scalaVersion>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.scala-lang</groupId>
+                            <artifactId>jline</artifactId>
+                            <version>${scala.version}</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
 			</plugins>
 		</pluginManagement>
 	</build>

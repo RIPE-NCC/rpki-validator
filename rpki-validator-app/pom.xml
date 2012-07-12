@@ -11,8 +11,6 @@
     </parent>
 
     <properties>
-        <scalatra.version>2.0.0</scalatra.version>
-        <scala.version>2.9.1</scala.version>
         <jetty.version>7.5.1.v20110908</jetty.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <main.class>net.ripe.rpki.validator.config.Main</main.class>
@@ -283,9 +281,8 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.scala-tools</groupId>
-                <artifactId>maven-scala-plugin</artifactId>
-                <version>2.15.2</version>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
                 <executions>
                     <execution>
                         <goals>
