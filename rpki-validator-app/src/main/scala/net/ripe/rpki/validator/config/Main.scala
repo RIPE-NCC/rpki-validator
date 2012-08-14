@@ -173,6 +173,7 @@ class Main(options: Options) { main =>
         } finally {
           val now = DateTimeUtils.currentTimeMillis
           feedbackMetrics.store(process.metrics ++ process.rsyncMetrics ++ process.inconsistencyMetrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt))
+          process.shutdown()
         }
       }
     }

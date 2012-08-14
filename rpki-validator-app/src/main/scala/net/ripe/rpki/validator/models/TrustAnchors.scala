@@ -178,6 +178,8 @@ trait ValidationProcess {
   def validateObjects(certificate: CertificateRepositoryObjectValidationContext): Map[URI, ValidatedObject]
   def exceptionHandler: PartialFunction[Throwable, Validation[String, Nothing]]
   def finishProcessing(): Unit = {}
+
+  def shutdown(): Unit = {}
 }
 
 abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, httpSupport: Boolean) extends ValidationProcess {
@@ -360,6 +362,11 @@ trait MeasureRsyncExecution extends ValidationProcess {
       case _ =>
         Vector.empty
     }.toIndexedSeq
+  }
+
+  abstract override def shutdown(): Unit = {
+    registry.shutdown()
+    super.shutdown()
   }
 }
 
