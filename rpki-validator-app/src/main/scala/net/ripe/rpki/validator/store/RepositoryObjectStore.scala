@@ -47,27 +47,10 @@ import akka.util.ByteString
 import javax.sql.DataSource
 import models.StoredRepositoryObject
 
-trait DbMigrations {
-
-  def getDataSource: DataSource
-  def getSqlMigrationsDir: String
-  def getCodeMigrationsPackage: String
-
-  private val flyway = new Flyway
-  flyway.setDataSource(getDataSource)
-  flyway.setBaseDir(getSqlMigrationsDir)
-  flyway.setBasePackage(getCodeMigrationsPackage)
-  flyway.migrate
-}
-
 /**
  * Used to store/retrieve consistent sets of rpki objects seen for certificate authorities
  */
-class RepositoryObjectStore(datasource: DataSource) extends DbMigrations {
-
-  override def getDataSource = datasource
-  override def getSqlMigrationsDir = "/db/objectstore/migration"
-  override def getCodeMigrationsPackage = "net.ripe.rpki.validator.store.migration"
+class RepositoryObjectStore(datasource: DataSource) {
 
   val template: JdbcTemplate = new JdbcTemplate(datasource)
 
@@ -132,6 +115,7 @@ object DataSources {
     result.setUrl("jdbc:h2:data/rpki-objects")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
+    migrate(result)
     result
   }
 
@@ -143,6 +127,15 @@ object DataSources {
     result.setUrl("jdbc:h2:mem:rpki-objects")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
+    migrate(result)
     result
+  }
+
+  private def migrate(dataSource: DataSource) {
+    val flyway = new Flyway
+    flyway.setDataSource(dataSource)
+    flyway.setBaseDir("/db/objectstore/migration")
+    flyway.setBasePackage("net.ripe.rpki.validator.store.migration")
+    flyway.migrate
   }
 }
