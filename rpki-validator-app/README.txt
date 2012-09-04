@@ -37,7 +37,7 @@ Requirements
 Usage
 -----
 
-= Unzip (we think you've done that or you wouldn't be reading this...)
+= Unzip the downloaded package
 = Run the RPKI Validator from the root folder
 
     ./bin/rpki-validator [OPTIONS]
@@ -60,8 +60,7 @@ Usage
 
 = The validator will start up and start logging to standard output. You can stop it
   by sending it CTRL-C. There is currently no example script provided to run this
-  as a background service logging to a file, but... you can probably build your own
-  for the time being if you need it..
+  as a background service logging to a file.
 
 = Once started you can access the User Interface here:
   http://yourhost:http-port/    (eg. http://localhost:8080/)
@@ -73,14 +72,22 @@ Configuration of Trust Anchors
 This validator will automatically pick up any file matching this pattern:  
   <root-folder>/conf/tal/*.tal
 
-Four example files are included with this distribution with the Trust Anchor details
-as they are known to us for: Afrinic, Apnic, Lacnic and RIPE NCC. 
+Four files are included with this distribution with the Trust Anchor details
+as they are known to us for AFRINIC, APNIC, LACNIC and RIPE NCC. 
 
-If you compare these files to the Trust Anchor format defined here:
+To access ARIN's TAL, the relying party will have to agree to ARIN's Relying
+Party Agreement. After that, the TAL will be emailed to the recipient. Please
+visit this ARIN web page for more information (starting late September 2012):
+http://www.arin.net/public/rpki/tal/index.xhtml
+
+After obtaining ARIN's TAL, please copy it to the following location to use it:
+  <root-folder>/conf/tal/
+
+If you compare the format of the included files to the Trust Anchor format defined here:
 http://tools.ietf.org/html/draft-ietf-sidr-ta-07
 
-You will notice that the format used here is slightly different. We are using key-value
-pairs to allow specifying some additional stuff. Make sure that you enter a value for ca.name.
+You will notice that the format used here is slightly different. We are using key-value pairs
+to allow specifying some additional information. Make sure that you enter a value for ca.name.
 The certificate.location and public.key.info correspond to the location and subjectPublicKeyInfo
 fields in the standard. The prefecth.uris field is optional. You may specify a comma separated
 list of rsync URIs for directories here, that will be 'pre-fetched'. This helps performance
@@ -113,8 +120,6 @@ Known Issues
   
 = The validator does not check for revocations or expiration times in between validation runs
 
-= The validator treats expired CRLs and Manifest as a warning
-
 = The validator does not support incremental updates as defined here, yet:
   http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.2
   
@@ -124,12 +129,53 @@ Known Issues
 = We have found that some routers require the -n and -s options. This is due to interoperability
   issues that are being worked on.
 
-If you find any other problems, please let us know.
+If you find any other problems, please contact us at <certification@ripe.net>.
+
+
+Version History
+---------------
+
+2.5 - 4 September 2012
+= Fixed a thread leak bug
+= Cleaned up experimental and pilot TAL files. Release now only includes TALs of these four RIRs: 
+  AFRINIC, LACNIC, APNIC and RIPE NCC
+= Added information to the README.txt how to obtain and use ARIN's TAL
+
+2.4 - 2 July 2012
+= Cache repository objects for re-use in case of problems retrieving objects (expired objects are 
+  still rejected / warned about as per configuration)
+
+2.3 - 9 May 2012
+= Added performance metrics to the RPKI Validator
+= Small UI changes on White List page
+
+2.1 - 24 April 2012
+= Fixed a bug where in some cases fetching RIS Route Collector data would be slow or failed
+= Trust Anchors can now be easily enabled or disabled with a check mark
+= Added a dedicated User Preferences page
+
+2.0.4 - 10 April 2012
+= Added a "Process Items" section to Trust Anchor page, displaying number of accepted items, warnings and errors
+= Added a dedicated Validation results page for inspecting errors and warnings
+= Fetching route collector data for the BGP Preview is more robust and indicates the time of the last retrieval
+
+2.0.3 - 16 February 2012
+= Fixed a bug that caused certain types of IPv6 notation to break the BGP Preview
+= The validator can optionally check for updates of the application
+
+2.0.1 - 3 January 2012
+= Performance and stability improvements
+
+2.0 - 13 December 2011
+= Initial release of the next generation RPKI Validator toolset:
+= It runs as a service and has an intuitive web-based interface
+= It allows manual controls and overrides through filters and white lists
+= It allows integration in existing (RPSL based) workflows
+= It is capable of communicating with RPKI-capable routers
 
 
 Support
 -------
 
-Please contact certification@ripe.net with any questions relating to the
-Certification Validator Tool or the RIPE NCC resource certification service.
-
+Please contact <certification@ripe.net> with any questions relating to the
+RIPE NCC RPKI Validator or the RIPE NCC Resource Certification (RPKI) service.
