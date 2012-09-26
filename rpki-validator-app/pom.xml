@@ -313,6 +313,7 @@
                         <exclude>**/.*</exclude>
                         <exclude>data/**</exclude>
                         <exclude>.idea/**</exclude>
+                        <exclude>.worksheet/**</exclude>
                         <exclude>log/**</exclude>
                         <exclude>tmp/**</exclude>
                         <exclude>**/*.jmx</exclude>

@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<name>RPKI Validator</name>
 	<groupId>net.ripe.rpki-validator</groupId>
@@ -27,8 +28,8 @@
 	</distributionManagement>
 
 	<properties>
-        <scala.version>2.9.1</scala.version>
-        <scalatra.version>2.0.0</scalatra.version>
+		<scala.version>2.9.1</scala.version>
+		<scalatra.version>2.0.0</scalatra.version>
 		<rpki.commons.version>1.0.18</rpki.commons.version>
 		<org.springframework.version>3.1.1.RELEASE</org.springframework.version>
 
@@ -131,39 +132,37 @@
 				<version>${slf4j.version}</version>
 			</dependency>
 
-            <!-- Spring framework -->
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-context</artifactId>
-                <version>${org.springframework.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-tx</artifactId>
-                <version>${org.springframework.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-context-support</artifactId>
-                <version>${org.springframework.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-orm</artifactId>
-                <version>${org.springframework.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-jdbc</artifactId>
-                <version>${org.springframework.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-web</artifactId>
-                <version>${org.springframework.version}</version>
-            </dependency>
-
-
+			<!-- Spring framework -->
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-context</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-tx</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-context-support</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-orm</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-jdbc</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-web</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -257,21 +256,21 @@
 					</executions>
 				</plugin>
 
-                <plugin>
-                    <groupId>net.alchim31.maven</groupId>
-                    <artifactId>scala-maven-plugin</artifactId>
-                    <version>3.1.0</version>
-                    <configuration>
-                        <scalaVersion>${scala.version}</scalaVersion>
-                    </configuration>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.scala-lang</groupId>
-                            <artifactId>jline</artifactId>
-                            <version>${scala.version}</version>
-                        </dependency>
-                    </dependencies>
-                </plugin>
+				<plugin>
+					<groupId>net.alchim31.maven</groupId>
+					<artifactId>scala-maven-plugin</artifactId>
+					<version>3.1.0</version>
+					<configuration>
+						<scalaVersion>${scala.version}</scalaVersion>
+					</configuration>
+					<dependencies>
+						<dependency>
+							<groupId>org.scala-lang</groupId>
+							<artifactId>jline</artifactId>
+							<version>${scala.version}</version>
+						</dependency>
+					</dependencies>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 	</build>

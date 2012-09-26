@@ -1,6 +1,7 @@
 .classpath
 .project
 .settings
+.worksheet/
 target
 velocity.log
 *.log
