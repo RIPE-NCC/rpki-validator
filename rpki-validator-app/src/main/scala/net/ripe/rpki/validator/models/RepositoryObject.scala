@@ -35,6 +35,11 @@ import java.net.URI
 import org.apache.commons.codec.binary.Base64
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import akka.util.ByteString
+import org.joda.time.DateTime
+import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory
+import net.ripe.commons.certification.x509cert.X509ResourceCertificate
+import net.ripe.commons.certification.cms.roa.RoaCms
+import net.ripe.commons.certification.crl.X509Crl
 
 object StoredRepositoryObject {
 
@@ -43,8 +48,15 @@ object StoredRepositoryObject {
     val binaryObject = ByteString(repositoryObject.getEncoded)
     val hash = ByteString(ManifestCms.hashContents(repositoryObject.getEncoded))
 
-    StoredRepositoryObject(hash = hash, uri = uri, binaryObject = binaryObject)
+    val expires = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.getEncoded) match {
+      case cert: X509ResourceCertificate => cert.getValidityPeriod().getNotValidAfter
+      case mft: ManifestCms => mft.getNotValidAfter
+      case roa: RoaCms => roa.getValidityPeriod.getNotValidAfter
+      case crl: X509Crl => crl.getNextUpdateTime
+    }
+
+    StoredRepositoryObject(hash = hash, uri = uri, binaryObject = binaryObject, expires = expires)
   }
 }
 
-case class StoredRepositoryObject(hash: ByteString, uri: URI, binaryObject: ByteString)
+case class StoredRepositoryObject(hash: ByteString, uri: URI, binaryObject: ByteString, expires: DateTime)

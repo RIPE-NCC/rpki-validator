@@ -192,6 +192,10 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
     val builder = Map.newBuilder[URI, ValidatedObject]
     val fetcher = createFetcher(new RoaCollector(trustAnchorLocator, builder) +: objectFetcherListeners: _*)
 
+    // purge cache
+    val cache = new RepositoryObjectStore(DataSources.DurableDataSource)
+    cache.purgeExpired(maxStaleDays)
+
     trustAnchorLocator.getPrefetchUris().asScala.foreach { prefetchUri =>
       logger.info("Prefetching '" + prefetchUri + "'")
       val validationResult = new ValidationResult();
@@ -211,9 +215,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
     val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
-    var httpClient: DefaultHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
-
-
+    val httpClient: DefaultHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
 
     val remoteFetcher = httpSupport match {
       case true =>

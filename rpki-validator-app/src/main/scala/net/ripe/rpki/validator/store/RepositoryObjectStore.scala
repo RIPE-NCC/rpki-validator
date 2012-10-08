@@ -32,7 +32,6 @@ package store
 
 import java.net.URI
 import java.sql.ResultSet
-
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.dbcp.BasicDataSource
 import org.joda.time.DateTime
@@ -40,12 +39,14 @@ import org.springframework.dao.DuplicateKeyException
 import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.JdbcTemplate
-
 import com.googlecode.flyway.core.Flyway
-
 import akka.util.ByteString
 import javax.sql.DataSource
 import models.StoredRepositoryObject
+import org.joda.time.format.DateTimeParser
+import org.springframework.format.datetime.joda.DateTimeParser
+import org.joda.time.format.DateTimeFormatter
+import org.joda.time.DateTimeZone
 
 /**
  * Used to store/retrieve consistent sets of rpki objects seen for certificate authorities
@@ -56,10 +57,11 @@ class RepositoryObjectStore(datasource: DataSource) {
 
   def put(retrievedObject: StoredRepositoryObject): Unit = {
     try {
-      template.update("insert into retrieved_objects (hash, uri, encoded_object, time_seen) values (?, ?, ?, ?)",
+      template.update("insert into retrieved_objects (hash, uri, encoded_object, expires, time_seen) values (?, ?, ?, ?, ?)",
         Base64.encodeBase64String(retrievedObject.hash.toArray),
         retrievedObject.uri.toString,
         Base64.encodeBase64String(retrievedObject.binaryObject.toArray),
+        new java.sql.Timestamp(retrievedObject.expires.getMillis),
         new java.sql.Timestamp(new DateTime().getMillis))
     } catch {
       case e: DuplicateKeyException => // object already exists, ignore this so that putting is idempotent
@@ -68,6 +70,11 @@ class RepositoryObjectStore(datasource: DataSource) {
 
   def put(retrievedObjects: Seq[StoredRepositoryObject]): Unit = {
     retrievedObjects.foreach(put(_))
+  }
+
+  def purgeExpired(maxStaleDays: Int = 0): Unit = {
+    val mustBeValidAfter = new DateTime().minusDays(maxStaleDays)
+    template.update("delete from retrieved_objects where expires < ?", new java.sql.Timestamp(mustBeValidAfter.getMillis))
   }
 
   def clear(): Unit = {
@@ -100,7 +107,8 @@ class RepositoryObjectStore(datasource: DataSource) {
       StoredRepositoryObject(
         hash = ByteString(Base64.decodeBase64(rs.getString("hash"))),
         uri = URI.create(rs.getString("uri")),
-        binaryObject = ByteString(Base64.decodeBase64(rs.getString("encoded_object"))))
+        binaryObject = ByteString(Base64.decodeBase64(rs.getString("encoded_object"))),
+        expires = new DateTime(rs.getTimestamp("expires")).withZone(DateTimeZone.UTC))
     }
   }
 
