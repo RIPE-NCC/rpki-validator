@@ -30,7 +30,7 @@
 	<properties>
 		<scala.version>2.9.1</scala.version>
 		<scalatra.version>2.0.0</scalatra.version>
-		<rpki.commons.version>1.0.20-SNAPSHOT</rpki.commons.version>
+		<rpki.commons.version>1.0.20</rpki.commons.version>
 		<org.springframework.version>3.1.1.RELEASE</org.springframework.version>
 
 		<dist.repo.url>nexus.ripe.net</dist.repo.url>
