@@ -81,7 +81,7 @@ class HttpObjectFetcher(httpClient: HttpClient) extends CertificateRepositoryObj
         if (fileContentSpecification.isSatisfiedBy(content)) {
           result.pass(ValidationString.VALIDATOR_FILE_CONTENT, uri.toString)
           try {
-            val cro = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(content)
+            val cro = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(content, result)
             result.pass(ValidationString.KNOWN_OBJECT_TYPE, uri.toString)
             cro
           } catch {

@@ -34,7 +34,6 @@ import static net.ripe.commons.certification.validation.ValidationString.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-
 import net.ripe.certification.validator.util.HierarchicalUriCache;
 import net.ripe.certification.validator.util.UriToFileMapper;
 import net.ripe.commons.certification.CertificateRepositoryObject;
@@ -47,7 +46,6 @@ import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.util.Specifications;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
@@ -124,7 +122,7 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
 
         CertificateRepositoryObject cro;
         try {
-            cro = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(contents);
+            cro = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(contents, result);
         } catch (CertificateRepositoryObjectParserException ex) {
             cro = null;
         }

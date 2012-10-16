@@ -31,12 +31,11 @@ package net.ripe.certification.validator.util;
 
 import java.io.File;
 import java.io.IOException;
-
 import net.ripe.certification.validator.runtimeproblems.ValidatorIOException;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory;
+import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-
 import org.apache.commons.io.FileUtils;
 
 public final class CertificateRepositoryObjectLocalFileHelper {
@@ -56,7 +55,7 @@ public final class CertificateRepositoryObjectLocalFileHelper {
         } catch (IOException e) {
             throw new ValidatorIOException("Can't read file: " + file.getAbsolutePath(), e);
         }
-        return CertificateRepositoryObjectFactory.createCertificateRepositoryObject(contents);
+        return CertificateRepositoryObjectFactory.createCertificateRepositoryObject(contents, new ValidationResult());
     }
 
 }

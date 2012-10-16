@@ -89,7 +89,7 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: R
       case _ => store.getLatestByUrl(uri)
     }
     storedObject match {
-      case Some(repositoryObject) => CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.binaryObject.toArray)
+      case Some(repositoryObject) => CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.binaryObject.toArray, result)
       case None =>
         result.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString)
         null

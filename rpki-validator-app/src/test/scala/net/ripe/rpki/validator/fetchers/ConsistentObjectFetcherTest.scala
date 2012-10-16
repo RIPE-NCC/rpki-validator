@@ -56,6 +56,7 @@ import scala.util.Random
 import org.scalatest.BeforeAndAfter
 import net.ripe.commons.certification.validation.ValidationString
 import org.apache.http.impl.client.DefaultHttpClient
+import net.ripe.commons.certification.validation.ValidationStatus
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
@@ -177,8 +178,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     subject.getCrl(crlUri, null, validationResult) should equal(crl)
 
     // But should see warnings about fetching
-    validationResult.getWarnings should have size 1
-    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
+    validationResult.getResult(new ValidationLocation(mftUri), ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE).getStatus() should be(ValidationStatus.WARNING)
     validationResult.getFailuresForCurrentLocation should have size 0
 
     // And metrics

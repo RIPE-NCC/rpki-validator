@@ -40,6 +40,7 @@ import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate
 import net.ripe.commons.certification.cms.roa.RoaCms
 import net.ripe.commons.certification.crl.X509Crl
+import net.ripe.commons.certification.validation.ValidationResult
 
 object StoredRepositoryObject {
 
@@ -48,7 +49,7 @@ object StoredRepositoryObject {
     val binaryObject = ByteString(repositoryObject.getEncoded)
     val hash = ByteString(ManifestCms.hashContents(repositoryObject.getEncoded))
 
-    val expires = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.getEncoded) match {
+    val expires = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.getEncoded, new ValidationResult) match {
       case cert: X509ResourceCertificate => cert.getValidityPeriod().getNotValidAfter
       case mft: ManifestCms => mft.getNotValidAfter
       case roa: RoaCms => roa.getValidityPeriod.getNotValidAfter
