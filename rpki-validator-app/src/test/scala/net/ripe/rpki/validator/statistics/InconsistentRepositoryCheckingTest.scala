@@ -57,7 +57,7 @@ import net.ripe.commons.certification.validation.ValidationStatus
 import net.ripe.commons.certification.validation.ValidationString
 
 object InconsistentRepositoryCheckingTest {
-  
+
   val TA_CER_URI = URI.create("rsync://host/ta.cer")
   val TA_CER_REPO_URI = URI.create("rsync://host/")
   val TA_MFT_URI = URI.create("rsync://host/ta.mft")
@@ -159,7 +159,7 @@ object InconsistentRepositoryCheckingTest {
 
     builder.build(TA_MFT_KEY_PAIR.getPrivate)
   }
-  
+
   val INCONSISTENT_TA_MFT_VALIDATED_OBJECT = new ValidObject(uri = TA_MFT_URI, checks = Set.empty, repositoryObject = INCONSISTENT_TA_MFT_OBJECT)
 
   val CONSISTENT_OBJECT_SET = List(
@@ -182,7 +182,7 @@ object InconsistentRepositoryCheckingTest {
 @RunWith(classOf[JUnitRunner])
 class InconsistentRepositoryCheckingTest extends FunSuite with ShouldMatchers {
 
-  
+
   test("should find valid certificates in objects") {
     val validCerts = InconsistentRepositoryChecker.validCaCertificates(InconsistentRepositoryCheckingTest.INCONSISTENT_OBJECT_SET.values.toSeq)
     validCerts should have size (1)
