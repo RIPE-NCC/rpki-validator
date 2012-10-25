@@ -290,6 +290,8 @@
                                 <arg>-XX:+TieredCompilation</arg> <!-- Much faster Scala compilation -->
                                 <arg>-XX:CICompilerCount=1</arg> <!-- Number of HotSpot background compiler threads -->
                             </jvmArgs>
+                            <recompileMode>incremental</recompileMode>
+                            <useZincServer>true</useZincServer>
                             <args>
                                 <arg>-deprecation</arg>
                                 <arg>-unchecked</arg>
