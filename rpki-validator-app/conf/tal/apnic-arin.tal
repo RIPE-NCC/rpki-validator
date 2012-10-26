@@ -1,0 +1,4 @@
+ca.name = APNIC from ARIN RPKI Root
+certificate.location = rsync://rpki.apnic.net/repository/apnic-rpki-root-arin-origin.cer
+public.key.info = MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp6vscYtzhe0CfFk5Ro44llPhsInXtfAxqfYmK7m9V3khkqK3d3/ZAW6pcJm7qW8XhEGl+F5mUeeLIm5JoIhrkT5B5M6uL0VlCCkZJH4h76ybOa83vWITNZEDy9L3c3nK4S+Basu3vYoE4ICXGG+J7zg5Iw9saV+p03E2w1g16pt1QI3Cnggp6edkeWClEz3aPw/ULOIHb7YmatWwdERltL9LsuMSKszQLUY7F4XVpxey/rJYAZgzDUh+b6813WAClCkkydNjsbviuekAWJbxsW7Mcw53u30K4g8MP03CjkDOubyoR4Qo99R1UQJCdrRsFKbSSfN/fOA4y7ikc3xsjQIDAQAB
+prefetch.uris = rsync://rpki.apnic.net/member_repository/
