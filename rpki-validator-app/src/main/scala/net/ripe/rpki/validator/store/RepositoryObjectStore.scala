@@ -64,7 +64,11 @@ class RepositoryObjectStore(datasource: DataSource) {
         new java.sql.Timestamp(retrievedObject.expires.getMillis),
         new java.sql.Timestamp(new DateTime().getMillis))
     } catch {
-      case e: DuplicateKeyException => // object already exists, ignore this so that putting is idempotent
+      case e: DuplicateKeyException =>
+        // Object already exists, update the last seen time only.
+        template.update("update retrieved_objects set time_seen = ? where hash = ?",
+          new java.sql.Timestamp(new DateTime().getMillis),
+          Base64.encodeBase64String(retrievedObject.hash.toArray))
     }
   }
 

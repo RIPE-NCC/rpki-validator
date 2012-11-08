@@ -31,13 +31,10 @@ package net.ripe.rpki.validator
 package fetchers
 
 import java.net.URI
-
-import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.collection.JavaConverters.asScalaSetConverter
-
 import models.StoredRepositoryObject
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher
 import net.ripe.certification.validator.fetchers.RsyncCertificateRepositoryObjectFetcher
+import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.manifest.ManifestCms.FileContentSpecification
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
@@ -53,6 +50,7 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 import net.ripe.commons.certification.validation.ValidationLocation
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.ValidationString
+import scala.collection.JavaConverters._
 import store.RepositoryObjectStore
 
 class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: RepositoryObjectStore) extends CertificateRepositoryObjectFetcher {
@@ -72,9 +70,9 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: R
   def getManifest(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): ManifestCms = {
     val (mftOption, fetchResults) = fetchConsistentObjectSet(uri)
     warnAboutFetchFailures(uri, result, fetchResults)
-    mftOption match {
-      case Some(mft) => mft
-      case None => getObject(uri, context, Specifications.alwaysTrue[Array[Byte]], result).asInstanceOf[ManifestCms]
+    mftOption.getOrElse {
+      val cachedManifest = store.getLatestByUrl(uri)
+      storedObjectToCro(uri, cachedManifest, result).asInstanceOf[ManifestCms]
     }
   }
 
@@ -82,21 +80,29 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: R
     getObject(uri, context, Specifications.alwaysTrue[Array[Byte]], result).asInstanceOf[X509Crl]
   }
 
-  def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, specification: Specification[Array[Byte]], result: ValidationResult) = {
-
+  def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, specification: Specification[Array[Byte]], result: ValidationResult): CertificateRepositoryObject = {
     val storedObject = specification match {
-      case filecontentSpec: FileContentSpecification => store.getByHash(filecontentSpec.getHash)
-      case _ => store.getLatestByUrl(uri)
+      case filecontentSpec: FileContentSpecification =>
+        store.getByHash(filecontentSpec.getHash)
+      case _ =>
+        val cro = Option(remoteObjectFetcher.getObject(uri, context, specification, new ValidationResult))
+        cro.foreach(cro => store.put(StoredRepositoryObject(uri = uri, repositoryObject = cro)))
+        store.getLatestByUrl(uri)
     }
+    storedObjectToCro(uri, storedObject, result)
+  }
+
+  private[this] def storedObjectToCro(uri: URI, storedObject: Option[StoredRepositoryObject], result: ValidationResult): CertificateRepositoryObject = {
     storedObject match {
-      case Some(repositoryObject) => CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.binaryObject.toArray, result)
+      case Some(repositoryObject) =>
+        CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.binaryObject.toArray, result)
       case None =>
         result.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString)
         null
     }
   }
 
-  def fetchConsistentObjectSet(manifestUri: URI) = {
+  private[this] def fetchConsistentObjectSet(manifestUri: URI) = {
     val fetchResults = new ValidationResult
     fetchResults.setLocation(new ValidationLocation(manifestUri))
     val mft = remoteObjectFetcher.getManifest(manifestUri, null, fetchResults)
@@ -107,14 +113,10 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: R
       store.getByHash(mftStoredRepositoryObject.hash.toArray) match {
         case None =>
           val retrievedObjects: Seq[StoredRepositoryObject] =
-            Seq(mftStoredRepositoryObject) ++
-              mft.getFileNames.asScala.toSeq.flatMap {
-                fileName =>
-                  val objectUri = manifestUri.resolve(fileName)
-                  remoteObjectFetcher.getObject(objectUri, null, mft.getFileContentSpecification(fileName), fetchResults) match {
-                    case null => Seq.empty
-                    case repositoryObject => Seq(StoredRepositoryObject(uri = objectUri, repositoryObject = repositoryObject))
-                  }
+            mftStoredRepositoryObject +: mft.getFileNames.asScala.toSeq.flatMap { fileName =>
+                val objectUri = manifestUri.resolve(fileName)
+                val cro = Option(remoteObjectFetcher.getObject(objectUri, null, mft.getFileContentSpecification(fileName), fetchResults))
+                cro.map(cro => StoredRepositoryObject(uri = objectUri, repositoryObject = cro))
               }
           if (!fetchResults.hasFailures) {
             store.put(retrievedObjects)
@@ -123,21 +125,18 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: R
       }
     }
 
-    val mftOption = fetchResults.hasFailures match {
-      case false => Some(mft)
-      case true => None
-    }
+    val mftOption = if (fetchResults.hasFailures) None else Some(mft)
 
     (mftOption, fetchResults)
   }
 
-  private def warnAboutFetchFailures(mftUri: java.net.URI, result: net.ripe.commons.certification.validation.ValidationResult, fetchResults: net.ripe.commons.certification.validation.ValidationResult): Unit = {
+  private[this] def warnAboutFetchFailures(mftUri: URI, result: net.ripe.commons.certification.validation.ValidationResult, fetchResults: net.ripe.commons.certification.validation.ValidationResult): Unit = {
 
     import net.ripe.commons.certification.validation.ValidationString._
 
     val fetchFailureKeys = fetchResults.getValidatedLocations.asScala.toSeq.flatMap {
       location => fetchResults.getFailures(location).asScala
-    }.map { failure => failure.getKey }.toSet
+    }.map { _.getKey }.toSet
 
     val oldLocation = result.getCurrentLocation
     result.setLocation(new ValidationLocation(mftUri))
@@ -154,4 +153,3 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: R
   }
 
 }
-
