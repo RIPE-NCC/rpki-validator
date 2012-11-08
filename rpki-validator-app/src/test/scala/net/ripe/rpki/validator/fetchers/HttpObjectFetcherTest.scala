@@ -90,7 +90,7 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
     val validationResult = validationResultForLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(Some(content))
 
-    subject.getObject(uri, null, Specifications.alwaysTrue(), validationResult) should equal (crl)
+    subject.fetch(uri, Specifications.alwaysTrue(), validationResult) should equal (crl)
     validationResult.getFailuresForAllLocations should be ('empty)
   }
 
@@ -98,7 +98,7 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
     val validationResult = validationResultForLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(Some(content))
 
-    subject.getObject(uri, null, Specifications.alwaysFalse(), validationResult) should be (null)
+    subject.fetch(uri, Specifications.alwaysFalse(), validationResult) should be (null)
     validationResult.getFailuresForAllLocations should contain (new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_FILE_CONTENT, uri.toString))
   }
 
@@ -106,7 +106,7 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
     val validationResult = validationResultForLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(Some(Array[Byte](1)))
 
-    subject.getObject(uri, null, Specifications.alwaysTrue(), validationResult) should be (null)
+    subject.fetch(uri, Specifications.alwaysTrue(), validationResult) should be (null)
     validationResult.getFailuresForAllLocations should contain (new ValidationCheck(ValidationStatus.ERROR, ValidationString.KNOWN_OBJECT_TYPE, uri.toString))
   }
 
@@ -114,23 +114,7 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
     val validationResult = validationResultForLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(None)
 
-    subject.getObject(uri, null, Specifications.alwaysTrue(), validationResult) should be (null)
+    subject.fetch(uri, Specifications.alwaysTrue(), validationResult) should be (null)
     validationResult.getFailuresForAllLocations should contain (new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_HTTP_DOWNLOAD, uri.toString))
-  }
-
-  test("should get crl") {
-    val validationResult = validationResultForLocation(uri)
-    when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(Some(content))
-
-    subject.getCrl(uri, null, validationResult) should equal (crl)
-    validationResult.getFailuresForAllLocations should be ('empty)
-  }
-
-  test("should get manifest") {
-    val validationResult = validationResultForLocation(uri)
-    when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(Some(mft.getEncoded))
-
-    subject.getManifest(uri, null, validationResult) should equal (mft)
-    validationResult.getFailuresForAllLocations should be ('empty)
   }
 }

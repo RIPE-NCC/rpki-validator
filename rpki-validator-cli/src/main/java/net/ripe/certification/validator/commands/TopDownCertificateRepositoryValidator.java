@@ -34,11 +34,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-
 import net.ripe.certification.validator.fetchers.CachingCertificateRepositoryObjectFetcher;
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
 import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
-import net.ripe.certification.validator.fetchers.RsyncCertificateRepositoryObjectFetcher;
+import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcherAdapter;
+import net.ripe.certification.validator.fetchers.RsyncRpkiRepositoryObjectFetcher;
 import net.ripe.certification.validator.fetchers.ValidatingCertificateRepositoryObjectFetcher;
 import net.ripe.certification.validator.output.ObjectFetcherResultLogger;
 import net.ripe.certification.validator.output.ValidatedObjectWriter;
@@ -51,7 +51,6 @@ import net.ripe.commons.certification.rsync.Rsync;
 import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.log4j.Logger;
@@ -117,7 +116,7 @@ public class TopDownCertificateRepositoryValidator {
     }
 
     private CachingCertificateRepositoryObjectFetcher createCertificateRepositoryObjectFetcher() {
-        RsyncCertificateRepositoryObjectFetcher rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(getUnvalidatedOutputDirectory()));
+        CertificateRepositoryObjectFetcher rsyncFetcher = new RpkiRepositoryObjectFetcherAdapter(new RsyncRpkiRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(getUnvalidatedOutputDirectory())));
 
         ValidatingCertificateRepositoryObjectFetcher validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
 

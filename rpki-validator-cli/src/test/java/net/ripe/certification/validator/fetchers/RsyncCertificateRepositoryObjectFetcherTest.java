@@ -29,18 +29,12 @@
  */
 package net.ripe.certification.validator.fetchers;
 
-import static net.ripe.commons.certification.validation.ValidationString.KNOWN_OBJECT_TYPE;
-import static net.ripe.commons.certification.validation.ValidationString.VALIDATOR_FILE_CONTENT;
-import static net.ripe.commons.certification.validation.ValidationString.VALIDATOR_READ_FILE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static net.ripe.commons.certification.validation.ValidationString.*;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-
 import net.ripe.certification.validator.RepositoryObjectsSetUpHelper;
 import net.ripe.certification.validator.commands.TopDownWalkerTest;
 import net.ripe.certification.validator.util.UriToFileMapper;
@@ -52,7 +46,6 @@ import net.ripe.commons.certification.validation.ValidationCheck;
 import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationStatus;
-
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -69,7 +62,7 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
     private static final File TEST_REPOSITORY_DIRECTORY = new File(TEST_TARGET_DIRECTORY, "localhost:9999/repo/ca%20repo/");
 
     private static final URI VALIDATION_URI = TEST_REPOSITORY_URI.resolve("validated-object");
-    
+
     private static final URI TEST_OBJECT_CERT_URI = TEST_REPOSITORY_URI.resolve("object.cer");
     private static final File TEST_OBJECT_CERT_FILE = new File(TEST_TARGET_DIRECTORY, "localhost:9999/repo/ca%20repo/object.cer");
 
@@ -83,7 +76,7 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
     private ManifestCms manifest;
     private X509Crl crl;
     private ValidationResult validationResult;
-    private RsyncCertificateRepositoryObjectFetcher subject;
+    private CertificateRepositoryObjectFetcher subject;
 
     @Before
     public void setUp() {
@@ -105,7 +98,7 @@ public class RsyncCertificateRepositoryObjectFetcherTest {
         crl = RepositoryObjectsSetUpHelper.getRootCrl();
         validationResult = new ValidationResult();
         validationResult.setLocation(new ValidationLocation(VALIDATION_URI));
-        subject = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(TEST_TARGET_DIRECTORY));
+        subject = new RpkiRepositoryObjectFetcherAdapter(new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(TEST_TARGET_DIRECTORY)));
     }
 
     @After

@@ -29,20 +29,19 @@
  */
 package net.ripe.rpki.validator.fetchers
 
-import net.ripe.certification.validator.fetchers.{RsyncCertificateRepositoryObjectFetcher, CertificateRepositoryObjectFetcher}
 import grizzled.slf4j.Logging
 import java.net.URI
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.certification.validator.fetchers.{ RpkiRepositoryObjectFetcher, RsyncRpkiRepositoryObjectFetcher }
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.util.Specification
 
-class RemoteObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetcher, httpFetcherOption: Option[HttpObjectFetcher]) extends CertificateRepositoryObjectFetcher with Logging {
+class RemoteObjectFetcher(rsyncFetcher: RsyncRpkiRepositoryObjectFetcher, httpFetcherOption: Option[HttpObjectFetcher]) extends RpkiRepositoryObjectFetcher with Logging {
 
   val uriMap: Map[URI, URI] = Map(
     URI.create("rsync://rpki.ripe.net/") -> URI.create("http://certification.ripe.net/certification/repository/"),
     URI.create("rsync://localhost:10873/online/") -> URI.create("http://localhost:8080/certification/repository/online/"))
 
-  def prefetch(uri: URI, result: ValidationResult) {
+  override def prefetch(uri: URI, result: ValidationResult) {
     httpFetcherOption match {
       case Some(httpFetcher) =>
         mapRsynctoHttpUri(uri) match {
@@ -56,45 +55,17 @@ class RemoteObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetcher,
     }
   }
 
-  def getManifest(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult) = {
+  override def fetch(uri: URI, fileContentSpecification: Specification[Array[Byte]], result: ValidationResult) = {
     httpFetcherOption match {
       case Some(httpFetcher) =>
         mapRsynctoHttpUri(uri) match {
           case Some(httpUri) =>
-            httpFetcher.getManifest(httpUri, context, result)
+            httpFetcher.fetch(httpUri, fileContentSpecification, result)
           case None =>
-            rsyncFetcher.getManifest(uri, context, result)
+            rsyncFetcher.fetch(uri, fileContentSpecification, result)
         }
       case None =>
-        rsyncFetcher.getManifest(uri, context, result)
-    }
-  }
-
-  def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, fileContentSpecification: Specification[Array[Byte]], result: ValidationResult) = {
-    httpFetcherOption match {
-      case Some(httpFetcher) =>
-        mapRsynctoHttpUri(uri) match {
-          case Some(httpUri) =>
-            httpFetcher.getObject(httpUri, context, fileContentSpecification, result)
-          case None =>
-            rsyncFetcher.getObject(uri, context, fileContentSpecification, result)
-        }
-      case None =>
-        rsyncFetcher.getObject(uri, context, fileContentSpecification, result)
-    }
-  }
-
-  def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult) = {
-    httpFetcherOption match {
-      case Some(httpFetcher) =>
-        mapRsynctoHttpUri(uri) match {
-          case Some(httpUri) =>
-            httpFetcher.getCrl(httpUri, context, result)
-          case None =>
-            rsyncFetcher.getCrl(uri, context, result)
-        }
-      case None =>
-        rsyncFetcher.getCrl(uri, context, result)
+        rsyncFetcher.fetch(uri, fileContentSpecification, result)
     }
   }
 

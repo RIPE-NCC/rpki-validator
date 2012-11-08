@@ -214,7 +214,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
   private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.Listener*): CertificateRepositoryObjectFetcher = {
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
-    val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
+    val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
     val httpClient: DefaultHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
 
     val remoteFetcher = httpSupport match {
@@ -225,7 +225,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
         new RemoteObjectFetcher(rsyncFetcher, None)
     }
     val consistentObjectFercher = new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DataSources.DurableDataSource))
-    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(consistentObjectFercher, options);
+    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(new RpkiRepositoryObjectFetcherAdapter(consistentObjectFercher), options);
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
     validatingFetcher.setOuterMostDecorator(cachingFetcher);
@@ -317,16 +317,16 @@ trait MeasureRsyncExecution extends ValidationProcess {
 
   private object RsyncExecution extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
     override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
-      update("rsync.prefetch.failure", uri, RsyncCertificateRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC, result)
+      update("rsync.prefetch.failure", uri, RsyncRpkiRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC, result)
     }
     override def afterPrefetchSuccess(uri: URI, result: ValidationResult) {
-      update("rsync.prefetch.success", uri, RsyncCertificateRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC, result)
+      update("rsync.prefetch.success", uri, RsyncRpkiRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC, result)
     }
     override def afterFetchFailure(uri: URI, result: ValidationResult) {
-      update("rsync.fetch.file.failure", uri, RsyncCertificateRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC, result)
+      update("rsync.fetch.file.failure", uri, RsyncRpkiRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC, result)
     }
     override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
-      update("rsync.fetch.file.success", uri, RsyncCertificateRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC, result)
+      update("rsync.fetch.file.success", uri, RsyncRpkiRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC, result)
     }
 
     private[this] def update(callback: String, uri: URI, name: String, result: ValidationResult) {

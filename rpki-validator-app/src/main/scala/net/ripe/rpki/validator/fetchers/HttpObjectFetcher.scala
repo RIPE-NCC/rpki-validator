@@ -29,53 +29,27 @@
  */
 package net.ripe.rpki.validator.fetchers
 
-import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher
-import java.net.URI
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.commons.certification.validation.{ValidationString, ValidationResult}
-import net.ripe.commons.certification.util.{CertificateRepositoryObjectParserException, Specifications, CertificateRepositoryObjectFactory, Specification}
-import org.apache.http.client.{ResponseHandler, HttpClient}
-import org.apache.http.client.methods.HttpGet
 import grizzled.slf4j.Logging
-import org.apache.http.HttpResponse
+import java.net.URI
 import javax.servlet.http.HttpServletResponse.SC_OK
-import org.apache.http.util.EntityUtils
+import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcher
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
+import net.ripe.commons.certification.util.{CertificateRepositoryObjectParserException, Specifications, CertificateRepositoryObjectFactory, Specification}
+import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.commons.certification.validation.{ValidationString, ValidationResult}
+import org.apache.http.HttpResponse
+import org.apache.http.client.{ResponseHandler, HttpClient}
+import org.apache.http.client.methods.HttpGet
+import org.apache.http.util.EntityUtils
 
-class HttpObjectFetcher(httpClient: HttpClient) extends CertificateRepositoryObjectFetcher with Logging {
+class HttpObjectFetcher(httpClient: HttpClient) extends RpkiRepositoryObjectFetcher with Logging {
 
   val HTTP_DOWNLOAD_METRIC = "http.download.file"
 
-  def prefetch(uri: URI, result: ValidationResult) {}
+  override def prefetch(uri: URI, result: ValidationResult) {}
 
-  def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult) = {
-    getObject(uri, context, Specifications.alwaysTrue[Array[Byte]](), result) match {
-      case null =>
-        null
-      case cro: X509Crl =>
-        result.pass(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_CRL)
-        cro
-      case _ =>
-        result.error(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_CRL)
-        null
-    }
-  }
-
-  def getManifest(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult) = {
-    getObject(uri, context, Specifications.alwaysTrue[Array[Byte]](), result) match {
-      case null =>
-        null
-      case cro: ManifestCms =>
-        result.pass(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_MANIFEST)
-        cro
-      case _ =>
-        result.error(ValidationString.VALIDATOR_FETCHED_OBJECT_IS_MANIFEST)
-        null
-    }
-  }
-
-  def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, fileContentSpecification: Specification[Array[Byte]], result: ValidationResult) = {
+  override def fetch(uri: URI, fileContentSpecification: Specification[Array[Byte]], result: ValidationResult) = {
     downloadFile(uri, result) match {
       case Some(content: Array[Byte]) =>
         if (fileContentSpecification.isSatisfiedBy(content)) {
