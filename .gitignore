@@ -1,15 +1,20 @@
-.classpath
-.project
-.settings
-.worksheet/
-target
-velocity.log
-*.log
-/log
-rpki-validator-service/validated-tas/
-
-# Intellj
+# Maven
+target/
+ 
+# Intellij
 *.iml
 *.ipr
 *.iws
 .idea/
+ 
+# Eclipse
+*.settings/
+*.classpath
+*.project
+
+rpki-validator-app/log
+rpki-validator-app/tmp
+rpki-validator-app/.scala_dependencies
+rpki-validator-app/.cache
+rpki-validator-app/data
+
