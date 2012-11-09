@@ -295,6 +295,8 @@
                             <args>
                                 <arg>-deprecation</arg>
                                 <arg>-unchecked</arg>
+                                <arg>-Xmax-classfile-name</arg>
+                                <arg>130</arg>
                             </args>
                         </configuration>
                     </execution>
