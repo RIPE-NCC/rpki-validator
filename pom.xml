@@ -9,7 +9,7 @@
 	<inceptionYear>2008</inceptionYear>
 
 	<scm>
-		<connection>scm:svn:https://svn.ripe.net/svn/ba/certification/rpki-validator/trunk</connection>
+		<connection>scm:git:ssh://git.db.ripe.net/certification/rpki-validator</connection>
 	</scm>
 
 	<distributionManagement>
