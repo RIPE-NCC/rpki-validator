@@ -57,10 +57,15 @@ import com.yammer.metrics.core.MetricsRegistry
 import java.util.concurrent.TimeUnit
 import com.yammer.metrics.core.Timer
 import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
-import net.ripe.rpki.validator.fetchers.{RemoteObjectFetcher, HttpObjectFetcher, ConsistentObjectFetcher}
+import net.ripe.rpki.validator.fetchers.{ RemoteObjectFetcher, HttpObjectFetcher, ConsistentObjectFetcher }
 import net.ripe.rpki.validator.store.{ RepositoryObjectStore, DataSources }
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
+import net.ripe.rpki.validator.fetchers.ConsistentObjectFetcher
+import net.ripe.commons.certification.x509cert.X509ResourceCertificate
+import net.ripe.commons.certification.util.Specifications
+import net.ripe.commons.certification.x509cert.X509CertificateUtil
+import net.ripe.certification.validator.util.TrustAnchorExtractorException
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -186,7 +191,16 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
   private val options = new ValidationOptions()
   options.setMaxStaleDays(maxStaleDays)
 
-  override def extractTrustAnchorLocator() = new TrustAnchorExtractor().extractTA(trustAnchorLocator, "tmp/tals")
+  override def extractTrustAnchorLocator() = {
+    val validationResult = new ValidationResult
+    val cro = consistentObjectFetcher.fetch(trustAnchorLocator.getCertificateLocation(), Specifications.alwaysTrue(), validationResult)
+    cro match {
+      case certificate: X509ResourceCertificate if trustAnchorLocator.getPublicKeyInfo() == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.getCertificate()) =>
+        new CertificateRepositoryObjectValidationContext(trustAnchorLocator.getCertificateLocation(), certificate)
+      case _ =>
+        throw new TrustAnchorExtractorException("Problem loading remote Trust Anchor")
+    }
+  }
 
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
     val builder = Map.newBuilder[URI, ValidatedObject]
@@ -212,6 +226,17 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
   }
 
   private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.Listener*): CertificateRepositoryObjectFetcher = {
+    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(new RpkiRepositoryObjectFetcherAdapter(consistentObjectFetcher), options);
+    val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
+    val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
+    validatingFetcher.setOuterMostDecorator(cachingFetcher);
+
+    listeners.foreach(notifyingFetcher.addCallback)
+
+    cachingFetcher
+  }
+
+  private[this] lazy val consistentObjectFetcher = {
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
     val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
@@ -224,15 +249,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
       case false =>
         new RemoteObjectFetcher(rsyncFetcher, None)
     }
-    val consistentObjectFercher = new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DataSources.DurableDataSource))
-    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(new RpkiRepositoryObjectFetcherAdapter(consistentObjectFercher), options);
-    val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
-    val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
-    validatingFetcher.setOuterMostDecorator(cachingFetcher);
-
-    listeners.foreach(notifyingFetcher.addCallback)
-
-    cachingFetcher
+    new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DataSources.DurableDataSource))
   }
 
   private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[(URI, ValidatedObject), _]) extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
