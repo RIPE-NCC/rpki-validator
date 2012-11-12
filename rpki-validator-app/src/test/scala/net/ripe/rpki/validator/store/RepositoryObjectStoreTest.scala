@@ -55,13 +55,16 @@ class RepositoryObjectStoreTest extends FunSuite with BeforeAndAfter with Should
     store.clear
   }
 
-  test("Storing data should be idempotent") {
+  after {
+    DateTimeUtils.setCurrentMillisSystem // Don't forget to restore normality
+  }
+
+  test("Storing same object multiple times should not fail") {
     store.put(EXAMPLE_MANIFEST_OBJECT)
     store.put(EXAMPLE_MANIFEST_OBJECT)
   }
 
   test("Should retrieve *latest* Repository Object by url") {
-
     val mft_uri = URI.create("rsync://some.host/foo/bar/mft.mft")
     val now = new DateTime
 
@@ -74,8 +77,6 @@ class RepositoryObjectStoreTest extends FunSuite with BeforeAndAfter with Should
     val mft_tomorrow = ManifestCmsTest.getRootManifestCms
     val mft_tomorrow_stored = StoredRepositoryObject(uri = mft_uri, repositoryObject = mft_tomorrow)
     store.put(mft_tomorrow_stored)
-
-    DateTimeUtils.setCurrentMillisSystem // Don't forget to restore normality
 
     store.getLatestByUrl(mft_uri) should equal(Some(mft_tomorrow_stored))
   }

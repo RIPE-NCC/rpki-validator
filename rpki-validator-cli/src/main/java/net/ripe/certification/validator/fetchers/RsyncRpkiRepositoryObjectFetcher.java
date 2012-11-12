@@ -37,24 +37,20 @@ import java.net.URI;
 import net.ripe.certification.validator.util.HierarchicalUriCache;
 import net.ripe.certification.validator.util.UriToFileMapper;
 import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.cms.manifest.ManifestCms;
-import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.rsync.Rsync;
 import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory;
 import net.ripe.commons.certification.util.CertificateRepositoryObjectParserException;
 import net.ripe.commons.certification.util.Specification;
-import net.ripe.commons.certification.util.Specifications;
 import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 
-public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {
+public class RsyncRpkiRepositoryObjectFetcher implements RpkiRepositoryObjectFetcher {
 
     public static final String RSYNC_PREFETCH_VALIDATION_METRIC = "rsync.prefetch";
     public static final String RSYNC_FETCH_FILE_VALIDATION_METRIC = "rsync.fetch.file";
 
-    private static final Logger LOG = Logger.getLogger(RsyncCertificateRepositoryObjectFetcher.class);
+    private static final Logger LOG = Logger.getLogger(RsyncRpkiRepositoryObjectFetcher.class);
 
     private static final String[] STANDARD_OPTIONS = { "--update", "--times", "--copy-links" };
     private static final String[] PREFETCH_OPTIONS = { "--recursive", "--delete" };
@@ -64,42 +60,14 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
     private final Rsync rsync;
     private final UriToFileMapper uriToFileMapper;
 
-    public RsyncCertificateRepositoryObjectFetcher(Rsync rsync, UriToFileMapper uriToFileMapper) {
+    public RsyncRpkiRepositoryObjectFetcher(Rsync rsync, UriToFileMapper uriToFileMapper) {
         this.rsync = rsync;
         this.uriToFileMapper = uriToFileMapper;
         this.uriCache = new HierarchicalUriCache();
     }
 
     @Override
-    public X509Crl getCrl(URI uri, CertificateRepositoryObjectValidationContext context, ValidationResult result) {
-        CertificateRepositoryObject object = getObject(uri, context, Specifications.<byte[]>alwaysTrue(), result);
-        if (result.hasFailureForCurrentLocation()) {
-            return null;
-        }
-
-        result.rejectIfFalse(object instanceof X509Crl, VALIDATOR_FETCHED_OBJECT_IS_CRL);
-        if (result.hasFailureForCurrentLocation()) {
-            return null;
-        }
-        return (X509Crl) object;
-    }
-
-    @Override
-    public ManifestCms getManifest(URI uri, CertificateRepositoryObjectValidationContext context, ValidationResult result) {
-        CertificateRepositoryObject object = getObject(uri, context, Specifications.<byte[]>alwaysTrue(), result);
-        if (result.hasFailureForCurrentLocation()) {
-            return null;
-        }
-
-        result.rejectIfFalse(object instanceof ManifestCms, VALIDATOR_FETCHED_OBJECT_IS_MANIFEST);
-        if (result.hasFailureForCurrentLocation()) {
-            return null;
-        }
-        return (ManifestCms) object;
-    }
-
-    @Override
-    public CertificateRepositoryObject getObject(URI uri, CertificateRepositoryObjectValidationContext context, Specification<byte[]> fileContentSpecification, ValidationResult result) {
+    public CertificateRepositoryObject fetch(URI uri, Specification<byte[]> fileContentSpecification, ValidationResult result) {
         File destinationFile = uriToFileMapper.map(uri, result);
         if (destinationFile == null) {
             return null;

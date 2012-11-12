@@ -78,11 +78,11 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[T
                 }
               </form>
             </td>
-            <td><span rel="twipsy" data-original-title={ ta.certificate.map(_.getCertificate.getSubject.toString).getOrElse("") }>{ ta.name }</span></td>
+            <td><span rel="twipsy" data-original-title={ ta.certificate.map(_.getSubject.toString).getOrElse("") }>{ ta.name }</span></td>
             <td nowrap="nowrap">{ renderCounters(ta, validationStatusCounts.getOrElse(ta.locator, Map.empty)) }</td>{
               ta.certificate match {
                 case Some(certificate) =>
-                  val notValidAfter = certificate.getCertificate().getValidityPeriod().getNotValidAfter()
+                  val notValidAfter = certificate.getValidityPeriod().getNotValidAfter()
                   <td><span rel="twipsy" data-original-title={ formatDateTime(notValidAfter) }>{ expiresIn(notValidAfter) }</span></td>
                 case None =>
                   <td></td>

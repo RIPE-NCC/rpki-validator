@@ -31,13 +31,9 @@ package net.ripe.rpki.validator
 package fetchers
 
 import java.net.URI
-
-import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.collection.JavaConverters.asScalaSetConverter
-
 import models.StoredRepositoryObject
-import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher
-import net.ripe.certification.validator.fetchers.RsyncCertificateRepositoryObjectFetcher
+import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcher
+import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.cms.manifest.ManifestCms.FileContentSpecification
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.crl.X509Crl
@@ -53,14 +49,15 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 import net.ripe.commons.certification.validation.ValidationLocation
 import net.ripe.commons.certification.validation.ValidationResult
 import net.ripe.commons.certification.validation.ValidationString
+import scala.collection.JavaConverters._
 import store.RepositoryObjectStore
 
-class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: RepositoryObjectStore) extends CertificateRepositoryObjectFetcher {
+class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, store: RepositoryObjectStore) extends RpkiRepositoryObjectFetcher {
 
   /**
    * Pass this on to the remote object fetcher
    */
-  def prefetch(uri: URI, result: ValidationResult) = remoteObjectFetcher.prefetch(uri, result)
+  override def prefetch(uri: URI, result: ValidationResult) = remoteObjectFetcher.prefetch(uri, result)
 
   /**
    * Triggers that we fetch all objects on the manifest and check that it is a consistent set.
@@ -69,89 +66,86 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: R
    *
    * If it is, we put the new manifest and all the contents in our durable object store for future use, and return the new manifest.
    */
-  def getManifest(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): ManifestCms = {
-    val (mftOption, fetchResults) = fetchConsistentObjectSet(uri)
-    warnAboutFetchFailures(uri, result, fetchResults)
-    mftOption match {
-      case Some(mft) => mft
-      case None => getObject(uri, context, Specifications.alwaysTrue[Array[Byte]], result).asInstanceOf[ManifestCms]
-    }
-  }
-
-  def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): X509Crl = {
-    getObject(uri, context, Specifications.alwaysTrue[Array[Byte]], result).asInstanceOf[X509Crl]
-  }
-
-  def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, specification: Specification[Array[Byte]], result: ValidationResult) = {
-
+  override def fetch(uri: URI, specification: Specification[Array[Byte]], result: ValidationResult): CertificateRepositoryObject = {
     val storedObject = specification match {
-      case filecontentSpec: FileContentSpecification => store.getByHash(filecontentSpec.getHash)
-      case _ => store.getLatestByUrl(uri)
+      case filecontentSpec: FileContentSpecification =>
+        store.getByHash(filecontentSpec.getHash)
+      case _ =>
+        fetchAndStoreObject(uri, specification, result)
+        store.getLatestByUrl(uri)
     }
+    storedObjectToCro(uri, storedObject, result)
+  }
+
+  private[this] def fetchAndStoreObject(uri: URI, specification: Specification[Array[Byte]], result: ValidationResult) {
+    val cro = Option {
+      val fetchResults = new ValidationResult
+      fetchResults.setLocation(new ValidationLocation(uri))
+      val cro = remoteObjectFetcher.fetch(uri, specification, fetchResults)
+      warnAboutFetchFailures(uri, result, fetchResults)
+      cro
+    }
+    cro foreach {
+      case manifest: ManifestCms =>
+        val fetchResults2 = fetchAndStoreConsistentObjectSet(uri, manifest)
+        warnAboutFetchFailures(uri, result, fetchResults2)
+      case cro =>
+        store.put(StoredRepositoryObject(uri = uri, repositoryObject = cro))
+    }
+  }
+
+  private[this] def storedObjectToCro(uri: URI, storedObject: Option[StoredRepositoryObject], result: ValidationResult): CertificateRepositoryObject = {
     storedObject match {
-      case Some(repositoryObject) => CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.binaryObject.toArray, result)
+      case Some(repositoryObject) =>
+        CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.binaryObject.toArray, result)
       case None =>
         result.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString)
         null
     }
   }
 
-  def fetchConsistentObjectSet(manifestUri: URI) = {
+  private[this] def fetchAndStoreConsistentObjectSet(manifestUri: URI, mft: ManifestCms): ValidationResult = {
     val fetchResults = new ValidationResult
     fetchResults.setLocation(new ValidationLocation(manifestUri))
-    val mft = remoteObjectFetcher.getManifest(manifestUri, null, fetchResults)
 
-    if (!fetchResults.hasFailures) {
-      val mftStoredRepositoryObject = StoredRepositoryObject(uri = manifestUri, repositoryObject = mft)
+    val mftStoredRepositoryObject = StoredRepositoryObject(uri = manifestUri, repositoryObject = mft)
 
-      store.getByHash(mftStoredRepositoryObject.hash.toArray) match {
-        case None =>
-          val retrievedObjects: Seq[StoredRepositoryObject] =
-            Seq(mftStoredRepositoryObject) ++
-              mft.getFileNames.asScala.toSeq.flatMap {
-                fileName =>
-                  val objectUri = manifestUri.resolve(fileName)
-                  remoteObjectFetcher.getObject(objectUri, null, mft.getFileContentSpecification(fileName), fetchResults) match {
-                    case null => Seq.empty
-                    case repositoryObject => Seq(StoredRepositoryObject(uri = objectUri, repositoryObject = repositoryObject))
-                  }
-              }
-          if (!fetchResults.hasFailures) {
-            store.put(retrievedObjects)
+    store.getByHash(mftStoredRepositoryObject.hash.toArray) match {
+      case None =>
+        val retrievedObjects: Seq[StoredRepositoryObject] = mft.getFileNames.asScala.toSeq.flatMap { fileName =>
+            val objectUri = manifestUri.resolve(fileName)
+            fetchResults.setLocation(new ValidationLocation(objectUri))
+            val cro = Option(remoteObjectFetcher.fetch(objectUri, mft.getFileContentSpecification(fileName), fetchResults))
+            cro.map(cro => StoredRepositoryObject(uri = objectUri, repositoryObject = cro))
           }
-        case Some(_) =>
-      }
+        if (!fetchResults.hasFailures) {
+          store.put(mftStoredRepositoryObject +: retrievedObjects)
+        }
+      case Some(_) =>
     }
 
-    val mftOption = fetchResults.hasFailures match {
-      case false => Some(mft)
-      case true => None
-    }
-
-    (mftOption, fetchResults)
+    fetchResults
   }
 
-  private def warnAboutFetchFailures(mftUri: java.net.URI, result: net.ripe.commons.certification.validation.ValidationResult, fetchResults: net.ripe.commons.certification.validation.ValidationResult): Unit = {
+  private[this] def warnAboutFetchFailures(uri: URI, result: ValidationResult, fetchResults: ValidationResult): Unit = {
 
     import net.ripe.commons.certification.validation.ValidationString._
 
-    val fetchFailureKeys = fetchResults.getValidatedLocations.asScala.toSeq.flatMap {
-      location => fetchResults.getFailures(location).asScala
-    }.map { failure => failure.getKey }.toSet
-
+    val fetchFailureKeys = fetchResults.getFailuresForAllLocations().asScala.map(_.getKey()).toSet
     val oldLocation = result.getCurrentLocation
-    result.setLocation(new ValidationLocation(mftUri))
-    fetchFailureKeys.foreach(key => key match {
+    result.setLocation(new ValidationLocation(uri))
+    fetchFailureKeys.foreach {
+      case VALIDATOR_RSYNC_COMMAND =>
+        result.warn(VALIDATOR_RSYNC_COMMAND, uri.toString)
       case VALIDATOR_READ_FILE =>
-        result.warn(VALIDATOR_REPOSITORY_INCOMPLETE, mftUri.toString);
-        result.addMetric(VALIDATOR_REPOSITORY_INCOMPLETE, mftUri.toString)
+        result.warn(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString);
+        result.addMetric(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString)
       case VALIDATOR_FILE_CONTENT =>
-        result.warn(VALIDATOR_REPOSITORY_INCONSISTENT, mftUri.toString)
-        result.addMetric(VALIDATOR_REPOSITORY_INCONSISTENT, mftUri.toString)
-      case _ => result.warn(VALIDATOR_REPOSITORY_UNKNOWN, mftUri.toString)
-    })
+        result.warn(VALIDATOR_REPOSITORY_INCONSISTENT, uri.toString)
+        result.addMetric(VALIDATOR_REPOSITORY_INCONSISTENT, uri.toString)
+      case _ =>
+        result.warn(VALIDATOR_REPOSITORY_UNKNOWN, uri.toString)
+    }
     result.setLocation(oldLocation)
   }
-
 }
-

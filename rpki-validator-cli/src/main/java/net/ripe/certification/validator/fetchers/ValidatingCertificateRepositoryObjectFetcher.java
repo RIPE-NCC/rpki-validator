@@ -29,9 +29,10 @@
  */
 package net.ripe.certification.validator.fetchers;
 
+import static net.ripe.commons.certification.validation.ValidationString.*;
+
 import java.io.File;
 import java.net.URI;
-
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.crl.CrlLocator;
@@ -42,9 +43,6 @@ import net.ripe.commons.certification.validation.ValidationOptions;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-
-import static  net.ripe.commons.certification.validation.ValidationString.VALIDATOR_INTERNAL_ERROR;
-
 import org.apache.commons.lang.Validate;
 import org.apache.log4j.Logger;
 
@@ -65,9 +63,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
      * allow for the outermost decorator to be used for the CRL retrieval.
      */
     public ValidatingCertificateRepositoryObjectFetcher(CertificateRepositoryObjectFetcher fetcher) {
-        this.fetcher = fetcher;
-        this.options = new ValidationOptions();
-        this.outerMostDecorator = this;
+        this(fetcher, new ValidationOptions());
     }
 
     /**
@@ -98,13 +94,13 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
         /*
          * Now that we have the ConsistentObjectFetcher I believe we can simplify this code. We have
          * already checked the hash, a lookup by url here will hit the the store.
-         * 
+         *
          * So we don't need to do step 2 and 3. Just get it.
-         * 
+         *
          * Note: the manifest will actually use this code for its own validation. So in the unlikely
          * case that we have a manifest that mentions a crl that invalidates that manifest the
          * manifest is still rejected.
-         * 
+         *
          * I am not sure if we should care about this. This is a serious error on the publication
          * side, and recovering from it here is quite painful.
          */

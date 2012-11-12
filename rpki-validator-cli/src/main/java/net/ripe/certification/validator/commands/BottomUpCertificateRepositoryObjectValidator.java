@@ -33,11 +33,11 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
-
 import net.ripe.certification.validator.fetchers.CachingCertificateRepositoryObjectFetcher;
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
 import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
-import net.ripe.certification.validator.fetchers.RsyncCertificateRepositoryObjectFetcher;
+import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcherAdapter;
+import net.ripe.certification.validator.fetchers.RsyncRpkiRepositoryObjectFetcher;
 import net.ripe.certification.validator.fetchers.ValidatingCertificateRepositoryObjectFetcher;
 import net.ripe.certification.validator.output.ObjectFetcherResultLogger;
 import net.ripe.certification.validator.runtimeproblems.ValidatorIOException;
@@ -46,7 +46,6 @@ import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.rsync.Rsync;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-
 import org.apache.commons.io.FileUtils;
 
 public class BottomUpCertificateRepositoryObjectValidator {
@@ -94,10 +93,10 @@ public class BottomUpCertificateRepositoryObjectValidator {
     }
 
     private void wireUpFetcherForChainBuilding() {
-        RsyncCertificateRepositoryObjectFetcher rsyncCertificateRepositoryObjectFetcher = new RsyncCertificateRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(tempDir));
+        CertificateRepositoryObjectFetcher rsyncCertificateRepositoryObjectFetcher = new RpkiRepositoryObjectFetcherAdapter(new RsyncRpkiRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(tempDir)));
         CachingCertificateRepositoryObjectFetcher cachingCertificateRepositoryObjectFetcher = new CachingCertificateRepositoryObjectFetcher(rsyncCertificateRepositoryObjectFetcher);
         NotifyingCertificateRepositoryObjectFetcher notifyingCertificateRepositoryObjectFetcher = new NotifyingCertificateRepositoryObjectFetcher(cachingCertificateRepositoryObjectFetcher);
-		notifyingCertificateRepositoryObjectFetcher.addCallback(chainBuildResultLogger);
+        notifyingCertificateRepositoryObjectFetcher.addCallback(chainBuildResultLogger);
         cachingFetcher = cachingCertificateRepositoryObjectFetcher;
         chainBuildFetcher =  notifyingCertificateRepositoryObjectFetcher;
     }

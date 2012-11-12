@@ -33,7 +33,7 @@ import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 import net.ripe.rpki.validator.store.DataSources
 import net.ripe.rpki.validator.store.RepositoryObjectStore
-import net.ripe.certification.validator.fetchers.RsyncCertificateRepositoryObjectFetcher
+import net.ripe.certification.validator.fetchers.RsyncRpkiRepositoryObjectFetcher
 import net.ripe.commons.certification.rsync.Rsync
 import net.ripe.certification.validator.util.UriToFileMapper
 import java.io.File
@@ -57,9 +57,15 @@ import org.scalatest.BeforeAndAfter
 import net.ripe.commons.certification.validation.ValidationString
 import org.apache.http.impl.client.DefaultHttpClient
 import net.ripe.commons.certification.validation.ValidationStatus
+import org.scalatest.mock.MockitoSugar
+import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcher
+import org.mockito.Matchers._
+import org.mockito.Mockito._
+import org.mockito.stubbing.Answer
+import org.mockito.invocation.InvocationOnMock
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
+class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter with MockitoSugar {
 
   val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
   before {
@@ -98,7 +104,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
     val validationResult = new ValidationResult
 
-    subject.getManifest(mftUri, baseValidationContext, validationResult)
+    subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult)
 
     validationResult.hasFailures should be(false)
     store.getLatestByUrl(mftUri) should equal(Some(StoredRepositoryObject(uri = mftUri, repositoryObject = mft)))
@@ -116,7 +122,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = new ValidationResult
 
-    subject.getManifest(mftUri, baseValidationContext, validationResult)
+    subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult)
 
     validationResult.getWarnings should have size 1
     validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
@@ -144,7 +150,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = new ValidationResult
 
-    subject.getManifest(mftWrongHashUri, baseValidationContext, validationResult)
+    subject.fetch(mftWrongHashUri, Specifications.alwaysTrue(), validationResult)
 
     // Should see warnings
     validationResult.getWarnings should have size 1
@@ -173,9 +179,9 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     store.put(StoredRepositoryObject(uri = crlUri, repositoryObject = crl))
 
     // Should get it from store
-    subject.getManifest(mftUri, baseValidationContext, validationResult) should equal(mft)
-    subject.getObject(roaUri, null, null, validationResult) should equal(roa)
-    subject.getCrl(crlUri, null, validationResult) should equal(crl)
+    subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(mft)
+    subject.fetch(roaUri, Specifications.alwaysTrue(), validationResult) should equal(roa)
+    subject.fetch(crlUri, Specifications.alwaysTrue(), validationResult) should equal(crl)
 
     // But should see warnings about fetching
     validationResult.getResult(new ValidationLocation(mftUri), ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE).getStatus() should be(ValidationStatus.WARNING)
@@ -197,7 +203,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     store.put(StoredRepositoryObject(uri = nonExistentUri, repositoryObject = roa))
     store.put(StoredRepositoryObject(uri = crlUri, repositoryObject = crl))
 
-    subject.getObject(nonExistentUri, null, mft.getFileContentSpecification(roaFileName), validationResult) should equal(roa)
+    subject.fetch(nonExistentUri, mft.getFileContentSpecification(roaFileName), validationResult) should equal(roa)
   }
 
   test("Should give an error in case we can not get the object from the store") {
@@ -205,29 +211,42 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = new ValidationResult
 
-    subject.getManifest(mftUri, baseValidationContext, validationResult) should equal(null)
+    subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(null)
     validationResult.getWarnings should have size 1
     validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
     validationResult.getFailures(new ValidationLocation(mftUri)) should have size 1
   }
 
+  test("Should add a warning when object cannot be retrieved from remote repository due to an rsync failure") {
+    val rsyncFetcher = mock[RpkiRepositoryObjectFetcher]
+    val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
+    val validationResult = new ValidationResult
+    validationResult.setLocation(new ValidationLocation(mftUri))
+
+    when(rsyncFetcher.fetch(isA(classOf[URI]), isA(classOf[Specification[Array[Byte]]]), isA(classOf[ValidationResult]))).thenAnswer(new Answer[CertificateRepositoryObject] {
+      def answer(invocation: InvocationOnMock) = {
+        val result = invocation.getArguments()(2).asInstanceOf[ValidationResult]
+        result.error(ValidationString.VALIDATOR_RSYNC_COMMAND)
+        null
+      }
+    })
+
+    subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(null)
+
+    validationResult.getWarnings should have size 1
+    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_RSYNC_COMMAND)
+    validationResult.getFailures(new ValidationLocation(mftUri)) should have size 1
+  }
+
 }
 
-class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RemoteObjectFetcher(new RsyncCertificateRepositoryObjectFetcher(new Rsync, new UriToFileMapper(new File(System.getProperty("java.io.tmpdir")))), Some(new HttpObjectFetcher(new DefaultHttpClient()))) {
+class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RemoteObjectFetcher(new RsyncRpkiRepositoryObjectFetcher(new Rsync, new UriToFileMapper(new File(System.getProperty("java.io.tmpdir")))), Some(new HttpObjectFetcher(new DefaultHttpClient()))) {
 
   val ALWAYS_TRUE_SPECIFICATION = Specifications.alwaysTrue[Array[Byte]]
 
   override def prefetch(uri: URI, result: ValidationResult) = {}
 
-  override def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult) = {
-    getObject(uri, context, ALWAYS_TRUE_SPECIFICATION, result).asInstanceOf[X509Crl]
-  }
-
-  override def getManifest(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult) = {
-    getObject(uri, context, ALWAYS_TRUE_SPECIFICATION, result).asInstanceOf[ManifestCms]
-  }
-
-  override def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, specification: Specification[Array[Byte]], result: ValidationResult) = {
+  override def fetch(uri: URI, specification: Specification[Array[Byte]], result: ValidationResult) = {
     result.setLocation(new ValidationLocation(uri))
     entries.get(uri) match {
       case Some(repositoryObject) =>
@@ -241,6 +260,4 @@ class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) ex
         null
     }
   }
-
 }
-

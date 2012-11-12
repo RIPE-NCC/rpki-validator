@@ -34,7 +34,7 @@ import java.net.URI
 import org.mockito.Mockito._
 import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.validation.{ValidationLocation, ValidationResult}
-import net.ripe.certification.validator.fetchers.RsyncCertificateRepositoryObjectFetcher
+import net.ripe.certification.validator.fetchers.RsyncRpkiRepositoryObjectFetcher
 import scala.Predef._
 import org.joda.time.{DateTimeUtils, DateTime}
 import org.scalatest.{BeforeAndAfter, FunSuite}
@@ -69,7 +69,7 @@ class MeasureRsyncExecutionTest extends FunSuite with ShouldMatchers with Before
     val subject = new MyMeasureRsyncExecution
     val listener = subject.objectFetcherListeners.head
 
-    listener.afterPrefetchSuccess(certificateUri, validationResultWithMetricName(RsyncCertificateRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC))
+    listener.afterPrefetchSuccess(certificateUri, validationResultWithMetricName(RsyncRpkiRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC))
 
     subject.rsyncMetrics.forall(_.name.contains(certificateUri.getHost.toString)) should be(true)
     subject.rsyncMetrics.forall(_.measuredAt == now.getMillis) should be(true)
@@ -79,7 +79,7 @@ class MeasureRsyncExecutionTest extends FunSuite with ShouldMatchers with Before
     val subject = new MyMeasureRsyncExecution
     val listener = subject.objectFetcherListeners.head
 
-    listener.afterFetchSuccess(certificateUri, repositoryObject, validationResultWithMetricName(RsyncCertificateRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC))
+    listener.afterFetchSuccess(certificateUri, repositoryObject, validationResultWithMetricName(RsyncRpkiRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC))
 
     subject.rsyncMetrics.forall(_.name.contains(certificateUri.getHost.toString)) should be(true)
     subject.rsyncMetrics.forall(_.measuredAt == now.getMillis) should be(true)
@@ -89,7 +89,7 @@ class MeasureRsyncExecutionTest extends FunSuite with ShouldMatchers with Before
     val subject = new MyMeasureRsyncExecution
     val listener = subject.objectFetcherListeners.head
 
-    listener.afterPrefetchFailure(certificateUri, validationResultWithMetricName(RsyncCertificateRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC))
+    listener.afterPrefetchFailure(certificateUri, validationResultWithMetricName(RsyncRpkiRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC))
 
     subject.rsyncMetrics.forall(_.name.contains(certificateUri.getHost.toString)) should be(true)
     subject.rsyncMetrics.forall(_.measuredAt == now.getMillis) should be(true)
@@ -99,7 +99,7 @@ class MeasureRsyncExecutionTest extends FunSuite with ShouldMatchers with Before
     val subject = new MyMeasureRsyncExecution
     val listener = subject.objectFetcherListeners.head
 
-    listener.afterFetchFailure(certificateUri, validationResultWithMetricName(RsyncCertificateRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC))
+    listener.afterFetchFailure(certificateUri, validationResultWithMetricName(RsyncRpkiRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC))
 
     subject.rsyncMetrics.forall(_.name.contains(certificateUri.getHost.toString)) should be(true)
     subject.rsyncMetrics.forall(_.measuredAt == now.getMillis) should be(true)
