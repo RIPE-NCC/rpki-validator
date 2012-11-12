@@ -29,43 +29,52 @@
  */
 package net.ripe.rpki.validator.models
 
-import scala.collection.JavaConverters._
 import java.io.File
 import java.net.URI
-import grizzled.slf4j.Logging
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.certification.validator.util.TrustAnchorLocator
-import org.joda.time.DateTime
-import scalaz.{ Validation, Failure, Success }
-import net.ripe.commons.certification.cms.manifest.ManifestCms
-import net.ripe.commons.certification.crl.X509Crl
-import net.ripe.rpki.validator.lib.DateAndTime._
-import net.ripe.certification.validator.util.TrustAnchorExtractor
-import net.ripe.rpki.validator.statistics.Metric
-import org.joda.time.DateTimeUtils
-import scala.concurrent.stm._
-import net.ripe.rpki.validator.config.MemoryImage
-import grizzled.slf4j.Logger
-import net.ripe.commons.certification.CertificateRepositoryObject
-import net.ripe.commons.certification.cms.roa.RoaCms
-import net.ripe.commons.certification.rsync.Rsync
-import net.ripe.commons.certification.validation._
-import net.ripe.certification.validator.commands.TopDownWalker
-import net.ripe.certification.validator.fetchers._
-import net.ripe.certification.validator.util.UriToFileMapper
-import com.yammer.metrics.core.MetricsRegistry
 import java.util.concurrent.TimeUnit
-import com.yammer.metrics.core.Timer
-import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
-import net.ripe.rpki.validator.fetchers.{ RemoteObjectFetcher, HttpObjectFetcher, ConsistentObjectFetcher }
-import net.ripe.rpki.validator.store.{ RepositoryObjectStore, DataSources }
+
+import scala.collection.JavaConverters._
+import scala.concurrent.stm.Ref
+import scala.concurrent.stm.atomic
+
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
-import net.ripe.rpki.validator.fetchers.ConsistentObjectFetcher
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate
+import org.joda.time.DateTime
+import org.joda.time.DateTimeUtils
+
+import com.yammer.metrics.core.MetricsRegistry
+import com.yammer.metrics.core.Timer
+
+import grizzled.slf4j.Logger
+import grizzled.slf4j.Logging
+import net.ripe.certification.validator.commands.TopDownWalker
+import net.ripe.certification.validator.fetchers._
+import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher._
+import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.certification.validator.util.UriToFileMapper
+import net.ripe.commons.certification.CertificateRepositoryObject
+import net.ripe.commons.certification.cms.manifest.ManifestCms
+import net.ripe.commons.certification.cms.roa.RoaCms
+import net.ripe.commons.certification.crl.X509Crl
+import net.ripe.commons.certification.rsync.Rsync
 import net.ripe.commons.certification.util.Specifications
+import net.ripe.commons.certification.validation.ValidationLocation
+import net.ripe.commons.certification.validation.ValidationOptions
+import net.ripe.commons.certification.validation.ValidationResult
+import net.ripe.commons.certification.validation.ValidationString
+import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.commons.certification.x509cert.X509CertificateUtil
-import net.ripe.certification.validator.util.TrustAnchorExtractorException
+import net.ripe.commons.certification.x509cert.X509ResourceCertificate
+import net.ripe.rpki.validator.config.MemoryImage
+import net.ripe.rpki.validator.fetchers.ConsistentObjectFetcher
+import net.ripe.rpki.validator.fetchers.HttpObjectFetcher
+import net.ripe.rpki.validator.fetchers.RemoteObjectFetcher
+import net.ripe.rpki.validator.lib.DateAndTime._
+import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
+import net.ripe.rpki.validator.statistics.Metric
+import net.ripe.rpki.validator.store.DataSources
+import net.ripe.rpki.validator.store.RepositoryObjectStore
+import scalaz._
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -84,7 +93,7 @@ case class TrustAnchor(
   locator: TrustAnchorLocator,
   status: ProcessingStatus,
   enabled: Boolean = true,
-  certificate: Option[CertificateRepositoryObjectValidationContext] = None,
+  certificate: Option[X509ResourceCertificate] = None,
   manifest: Option[ManifestCms] = None,
   crl: Option[X509Crl] = None,
   lastUpdated: Option[DateTime] = None) {
@@ -97,22 +106,23 @@ case class TrustAnchor(
 
   def crlNextUpdateTime: Option[DateTime] = crl.map(_.getNextUpdateTime)
 
-  def finishProcessing(result: Validation[String, (CertificateRepositoryObjectValidationContext, Map[URI, ValidatedObject])]) = {
+  def finishProcessing(result: Validation[String, Map[URI, ValidatedObject]]) = {
     val now = new DateTime
 
     result match {
-      case Success((certificate, validatedObjects)) =>
+      case Success(validatedObjects) =>
         val nextUpdate = now.plusHours(4)
-        val manifest = validatedObjects.get(certificate.getManifestURI).collect {
+        val trustAnchor = validatedObjects.get(locator.getCertificateLocation()).collect {
+          case ValidObject(_, _, certificate: X509ResourceCertificate) => certificate
+        }
+        val manifest = trustAnchor.flatMap(ta => validatedObjects.get(ta.getManifestUri)).collect {
           case ValidObject(_, _, manifest: ManifestCms) => manifest
         }
-        val crl = for {
-          mft <- manifest
-          crlUri <- Option(mft.getCrlUri)
-          ValidObject(_, _, crl: X509Crl) <- validatedObjects.get(crlUri)
-        } yield crl
+        val crl = manifest.flatMap(mft => validatedObjects.get(mft.getCrlUri)).collect {
+          case ValidObject(_, _, crl: X509Crl) => crl
+        }
 
-        copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = Some(certificate), manifest = manifest, crl = crl)
+        copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = trustAnchor, manifest = manifest, crl = crl)
       case Failure(errorMessage) =>
         val nextUpdate = now.plusHours(1)
         copy(lastUpdated = Some(now), status = Idle(nextUpdate, Some(errorMessage)))
@@ -127,7 +137,7 @@ class TrustAnchors(val all: Seq[TrustAnchor]) {
       else ta
     })
   }
-  def finishedProcessing(locator: TrustAnchorLocator, result: Validation[String, (CertificateRepositoryObjectValidationContext, Map[URI, ValidatedObject])]): TrustAnchors = {
+  def finishedProcessing(locator: TrustAnchorLocator, result: Validation[String, Map[URI, ValidatedObject]]): TrustAnchors = {
     new TrustAnchors(all.map { ta =>
       if (ta.locator == locator)
         ta.finishProcessing(result)
@@ -183,11 +193,16 @@ trait ValidationProcess {
     }
   }
 
+  def exceptionHandler: PartialFunction[Throwable, Validation[String, Nothing]] = {
+    case e: Exception =>
+      val message = if (e.getMessage != null) e.getMessage else e.toString
+      Failure(message)
+  }
+
   def objectFetcherListeners: Seq[NotifyingCertificateRepositoryObjectFetcher.Listener] = Seq.empty
 
   def extractTrustAnchorLocator(): ValidatedObject
   def validateObjects(certificate: CertificateRepositoryObjectValidationContext): Map[URI, ValidatedObject]
-  def exceptionHandler: PartialFunction[Throwable, Validation[String, Nothing]]
   def finishProcessing(): Unit = {}
 
   def shutdown(): Unit = {}
@@ -198,16 +213,16 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
   options.setMaxStaleDays(maxStaleDays)
 
   override def extractTrustAnchorLocator() = {
-    val validationResult = new ValidationResult
-
     val uri = trustAnchorLocator.getCertificateLocation()
     val validationLocation = new ValidationLocation(uri)
+
+    val validationResult = new ValidationResult
     validationResult.setLocation(validationLocation)
+
     val cro = consistentObjectFetcher.fetch(uri, Specifications.alwaysTrue(), validationResult)
     cro match {
       case certificate: X509ResourceCertificate =>
         validationResult.rejectIfFalse(trustAnchorLocator.getPublicKeyInfo() == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.getCertificate()), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
-        println(validationResult.getAllValidationChecksForLocation(validationLocation))
         if (validationResult.hasFailureForCurrentLocation()) {
           InvalidObject(uri, validationResult.getAllValidationChecksForLocation(validationLocation).asScala.toSet)
         } else {
@@ -292,26 +307,18 @@ trait TrackValidationProcess extends ValidationProcess {
         memoryImage.transform { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
       }).isDefined
     }
-    if (start) super.runProcess()
-    else Failure("Trust anchor not idle or enabled")
+    if (start) {
+      val result = super.runProcess()
+      memoryImage.single.transform {
+        _.finishedProcessingTrustAnchor(trustAnchorLocator, result)
+      }
+      result
+    } else Failure("Trust anchor not idle or enabled")
   }
 
   abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
     memoryImage.single.transform { _.startProcessingTrustAnchor(trustAnchorLocator, "Updating ROAs") }
-    val validatedObjects = super.validateObjects(certificate)
-    memoryImage.single.transform {
-      _.finishedProcessingTrustAnchor(trustAnchorLocator, Success((certificate, validatedObjects)))
-    }
-    validatedObjects
-  }
-
-  override def exceptionHandler = {
-    case e: Exception =>
-      val message = if (e.getMessage != null) e.getMessage else e.toString
-      memoryImage.single.transform {
-        _.finishedProcessingTrustAnchor(trustAnchorLocator, Failure(message))
-      }
-      Failure(message)
+    super.validateObjects(certificate)
   }
 }
 
