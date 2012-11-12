@@ -135,6 +135,8 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, 
     val oldLocation = result.getCurrentLocation
     result.setLocation(new ValidationLocation(uri))
     fetchFailureKeys.foreach {
+      case VALIDATOR_RSYNC_COMMAND =>
+        result.warn(VALIDATOR_RSYNC_COMMAND, uri.toString)
       case VALIDATOR_READ_FILE =>
         result.warn(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString);
         result.addMetric(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString)

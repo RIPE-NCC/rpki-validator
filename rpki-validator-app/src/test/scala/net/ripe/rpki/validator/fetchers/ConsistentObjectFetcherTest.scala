@@ -226,7 +226,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     when(rsyncFetcher.fetch(isA(classOf[URI]), isA(classOf[Specification[Array[Byte]]]), isA(classOf[ValidationResult]))).thenAnswer(new Answer[CertificateRepositoryObject] {
       def answer(invocation: InvocationOnMock) = {
         val result = invocation.getArguments()(2).asInstanceOf[ValidationResult]
-        result.error(ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
+        result.error(ValidationString.VALIDATOR_RSYNC_COMMAND)
         null
       }
     })
@@ -234,7 +234,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(null)
 
     validationResult.getWarnings should have size 1
-    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_UNKNOWN)
+    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_RSYNC_COMMAND)
     validationResult.getFailures(new ValidationLocation(mftUri)) should have size 1
   }
 
