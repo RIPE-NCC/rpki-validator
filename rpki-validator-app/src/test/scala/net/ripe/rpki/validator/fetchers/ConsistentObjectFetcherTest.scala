@@ -57,9 +57,15 @@ import org.scalatest.BeforeAndAfter
 import net.ripe.commons.certification.validation.ValidationString
 import org.apache.http.impl.client.DefaultHttpClient
 import net.ripe.commons.certification.validation.ValidationStatus
+import org.scalatest.mock.MockitoSugar
+import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcher
+import org.mockito.Matchers._
+import org.mockito.Mockito._
+import org.mockito.stubbing.Answer
+import org.mockito.invocation.InvocationOnMock
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
+class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter with MockitoSugar {
 
   val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
   before {
@@ -208,6 +214,27 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(null)
     validationResult.getWarnings should have size 1
     validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
+    validationResult.getFailures(new ValidationLocation(mftUri)) should have size 1
+  }
+
+  test("Should add a warning when object cannot be retrieved from remote repository due to an rsync failure") {
+    val rsyncFetcher = mock[RpkiRepositoryObjectFetcher]
+    val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
+    val validationResult = new ValidationResult
+    validationResult.setLocation(new ValidationLocation(mftUri))
+
+    when(rsyncFetcher.fetch(isA(classOf[URI]), isA(classOf[Specification[Array[Byte]]]), isA(classOf[ValidationResult]))).thenAnswer(new Answer[CertificateRepositoryObject] {
+      def answer(invocation: InvocationOnMock) = {
+        val result = invocation.getArguments()(2).asInstanceOf[ValidationResult]
+        result.error(ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
+        null
+      }
+    })
+
+    subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(null)
+
+    validationResult.getWarnings should have size 1
+    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_UNKNOWN)
     validationResult.getFailures(new ValidationLocation(mftUri)) should have size 1
   }
 

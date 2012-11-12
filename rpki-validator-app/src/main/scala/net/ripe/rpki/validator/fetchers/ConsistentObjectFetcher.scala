@@ -52,7 +52,7 @@ import net.ripe.commons.certification.validation.ValidationString
 import scala.collection.JavaConverters._
 import store.RepositoryObjectStore
 
-class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: RepositoryObjectStore) extends RpkiRepositoryObjectFetcher {
+class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, store: RepositoryObjectStore) extends RpkiRepositoryObjectFetcher {
 
   /**
    * Pass this on to the remote object fetcher
@@ -127,23 +127,22 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RemoteObjectFetcher, store: R
     fetchResults
   }
 
-  private[this] def warnAboutFetchFailures(mftUri: URI, result: net.ripe.commons.certification.validation.ValidationResult, fetchResults: net.ripe.commons.certification.validation.ValidationResult): Unit = {
+  private[this] def warnAboutFetchFailures(uri: URI, result: ValidationResult, fetchResults: ValidationResult): Unit = {
 
     import net.ripe.commons.certification.validation.ValidationString._
 
     val fetchFailureKeys = fetchResults.getFailuresForAllLocations().asScala.map(_.getKey()).toSet
-
     val oldLocation = result.getCurrentLocation
-    result.setLocation(new ValidationLocation(mftUri))
+    result.setLocation(new ValidationLocation(uri))
     fetchFailureKeys.foreach {
       case VALIDATOR_READ_FILE =>
-        result.warn(VALIDATOR_REPOSITORY_INCOMPLETE, mftUri.toString);
-        result.addMetric(VALIDATOR_REPOSITORY_INCOMPLETE, mftUri.toString)
+        result.warn(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString);
+        result.addMetric(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString)
       case VALIDATOR_FILE_CONTENT =>
-        result.warn(VALIDATOR_REPOSITORY_INCONSISTENT, mftUri.toString)
-        result.addMetric(VALIDATOR_REPOSITORY_INCONSISTENT, mftUri.toString)
+        result.warn(VALIDATOR_REPOSITORY_INCONSISTENT, uri.toString)
+        result.addMetric(VALIDATOR_REPOSITORY_INCONSISTENT, uri.toString)
       case _ =>
-        result.warn(VALIDATOR_REPOSITORY_UNKNOWN, mftUri.toString)
+        result.warn(VALIDATOR_REPOSITORY_UNKNOWN, uri.toString)
     }
     result.setLocation(oldLocation)
   }

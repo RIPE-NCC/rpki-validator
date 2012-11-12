@@ -169,7 +169,13 @@ trait ValidationProcess {
   def runProcess(): Validation[String, Map[URI, ValidatedObject]] = {
     try {
       val certificate = extractTrustAnchorLocator()
-      Success(validateObjects(certificate))
+      certificate match {
+        case ValidObject(uri, checks, trustAnchor: X509ResourceCertificate) =>
+          val context = new CertificateRepositoryObjectValidationContext(uri, trustAnchor)
+          Success(validateObjects(context) + (uri -> certificate))
+        case _ =>
+          Success(Map(certificate.uri -> certificate))
+      }
     } catch {
       exceptionHandler
     } finally {
@@ -179,7 +185,7 @@ trait ValidationProcess {
 
   def objectFetcherListeners: Seq[NotifyingCertificateRepositoryObjectFetcher.Listener] = Seq.empty
 
-  def extractTrustAnchorLocator(): CertificateRepositoryObjectValidationContext
+  def extractTrustAnchorLocator(): ValidatedObject
   def validateObjects(certificate: CertificateRepositoryObjectValidationContext): Map[URI, ValidatedObject]
   def exceptionHandler: PartialFunction[Throwable, Validation[String, Nothing]]
   def finishProcessing(): Unit = {}
@@ -193,12 +199,22 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
 
   override def extractTrustAnchorLocator() = {
     val validationResult = new ValidationResult
-    val cro = consistentObjectFetcher.fetch(trustAnchorLocator.getCertificateLocation(), Specifications.alwaysTrue(), validationResult)
+
+    val uri = trustAnchorLocator.getCertificateLocation()
+    val validationLocation = new ValidationLocation(uri)
+    validationResult.setLocation(validationLocation)
+    val cro = consistentObjectFetcher.fetch(uri, Specifications.alwaysTrue(), validationResult)
     cro match {
-      case certificate: X509ResourceCertificate if trustAnchorLocator.getPublicKeyInfo() == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.getCertificate()) =>
-        new CertificateRepositoryObjectValidationContext(trustAnchorLocator.getCertificateLocation(), certificate)
+      case certificate: X509ResourceCertificate =>
+        validationResult.rejectIfFalse(trustAnchorLocator.getPublicKeyInfo() == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.getCertificate()), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
+        println(validationResult.getAllValidationChecksForLocation(validationLocation))
+        if (validationResult.hasFailureForCurrentLocation()) {
+          InvalidObject(uri, validationResult.getAllValidationChecksForLocation(validationLocation).asScala.toSet)
+        } else {
+          ValidObject(uri, validationResult.getAllValidationChecksForLocation(validationLocation).asScala.toSet, certificate)
+        }
       case _ =>
-        throw new TrustAnchorExtractorException("Problem loading remote Trust Anchor")
+        InvalidObject(uri, validationResult.getAllValidationChecksForLocation(validationLocation).asScala.toSet)
     }
   }
 
@@ -242,13 +258,9 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
     val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
     val httpClient: DefaultHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
 
-    val remoteFetcher = httpSupport match {
-      case true =>
-        val httpFetcher = new HttpObjectFetcher(httpClient)
-        new RemoteObjectFetcher(rsyncFetcher, Some(httpFetcher))
-      case false =>
-        new RemoteObjectFetcher(rsyncFetcher, None)
-    }
+    val httpFetcher = if (httpSupport) Some(new HttpObjectFetcher(httpClient)) else None
+    val remoteFetcher = new RemoteObjectFetcher(rsyncFetcher, httpFetcher)
+
     new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DataSources.DurableDataSource))
   }
 
