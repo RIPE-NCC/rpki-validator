@@ -307,7 +307,7 @@
                 <executions>
                     <execution>
                         <id>license-check</id>
-                        <phase>test</phase>
+                        <phase>verify</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>

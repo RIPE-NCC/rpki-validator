@@ -72,10 +72,12 @@
                         <exclude>**/*.tal</exclude>
                         <exclude>**/*.txt</exclude>
                         <exclude>pom.xslt</exclude>
+                        <exclude>.pregenerated-test-key-pairs.keystore</exclude>
                     </excludes>
                 </configuration>
                 <executions>
                     <execution>
+                        <phase>verify</phase>
                         <goals>
                             <goal>check</goal>
                         </goals>
