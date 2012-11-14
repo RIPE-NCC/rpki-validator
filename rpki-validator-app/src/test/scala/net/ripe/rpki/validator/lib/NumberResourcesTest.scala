@@ -30,11 +30,16 @@
 package net.ripe.rpki.validator
 package lib
 
-import org.scalatest.Spec
+import org.junit.runner.RunWith
+import org.scalatest.FunSpec
+import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
-import net.ripe.ipresource._
+
+import NumberResources.NumberResourceInterval
+import NumberResources.NumberResourceIntervalTree
+import net.ripe.ipresource.Asn
+import net.ripe.ipresource.IpRange
 import net.ripe.rpki.validator.models.RtrPrefix
-import NumberResources._
 
 object NumberResourcesTest {
   implicit def LongToAsn(asn: Long): Asn = new Asn(asn)
@@ -44,7 +49,7 @@ object NumberResourcesTest {
 }
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class NumberResourcesTest extends Spec with ShouldMatchers {
+class NumberResourcesTest extends FunSpec with ShouldMatchers {
   import NumberResourcesTest._
 
   val Prefix_10_8 = IpRange.parse("10/8")

@@ -32,19 +32,15 @@ package net.ripe.rpki.validator.models
 import java.io.File
 import java.net.URI
 import java.util.concurrent.TimeUnit
-
 import scala.collection.JavaConverters._
 import scala.concurrent.stm.Ref
 import scala.concurrent.stm.atomic
-
 import org.apache.http.impl.client.DefaultHttpClient
-import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
+import org.apache.http.impl.conn.PoolingClientConnectionManager
 import org.joda.time.DateTime
 import org.joda.time.DateTimeUtils
-
 import com.yammer.metrics.core.MetricsRegistry
 import com.yammer.metrics.core.Timer
-
 import grizzled.slf4j.Logger
 import grizzled.slf4j.Logging
 import net.ripe.certification.validator.commands.TopDownWalker
@@ -271,7 +267,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
     val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
-    val httpClient: DefaultHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
+    val httpClient: DefaultHttpClient = new DefaultHttpClient(new PoolingClientConnectionManager)
 
     val httpFetcher = if (httpSupport) Some(new HttpObjectFetcher(httpClient)) else None
     val remoteFetcher = new RemoteObjectFetcher(rsyncFetcher, httpFetcher)

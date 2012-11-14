@@ -52,10 +52,12 @@ import net.ripe.rpki.validator.statistics.FeedbackMetrics
 import org.apache.http.impl.client.DefaultHttpClient
 import org.joda.time.DateTimeUtils
 import net.ripe.rpki.validator.statistics.Metric
-import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import org.apache.http.params.HttpConnectionParams
 import net.ripe.rpki.validator.statistics.NetworkConnectivityMetrics
+import java.util.EnumSet
+import javax.servlet.DispatcherType
+import org.apache.http.impl.conn.PoolingClientConnectionManager
 
 object Main {
   private val nonce: Pdu.Nonce = Pdu.randomNonce()
@@ -92,7 +94,7 @@ class Main(options: Options) { main =>
 
   val userPreferences = Ref(data.userPreferences)
 
-  val httpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
+  val httpClient = new DefaultHttpClient(new PoolingClientConnectionManager)
   val httpParams = httpClient.getParams
   HttpConnectionParams.setConnectionTimeout(httpParams, 2 * 60 * 1000);
   HttpConnectionParams.setSoTimeout(httpParams, 2 * 60 * 1000);
@@ -277,7 +279,7 @@ class Main(options: Options) { main =>
       override protected def updateTrustAnchorState(locator: TrustAnchorLocator, enabled: Boolean) = updateAndPersist { implicit transaction =>
         memoryImage.transform(_.updateTrustAnchorState(locator, enabled))
       }
-    }), "/*", FilterMapping.ALL)
+    }), "/*", EnumSet.allOf(classOf[DispatcherType]))
 
     val requestLogHandler = {
       val handler = new RequestLogHandler()
