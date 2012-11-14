@@ -18,3 +18,4 @@ rpki-validator-app/.scala_dependencies
 rpki-validator-app/.cache
 rpki-validator-app/data
 
+.pregenerated-test-key-pairs.keystore

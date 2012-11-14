@@ -29,28 +29,24 @@
  */
 package net.ripe.certification.validator;
 
-import static net.ripe.commons.certification.util.KeyPairFactoryTest.*;
 import static net.ripe.commons.certification.x509cert.X509CertificateBuilderHelper.*;
 
 import java.math.BigInteger;
 import java.net.URI;
 import java.security.KeyPair;
-
 import javax.security.auth.x500.X500Principal;
-
 import net.ripe.commons.certification.ValidityPeriod;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.cms.manifest.ManifestCmsBuilder;
 import net.ripe.commons.certification.crl.X509Crl;
 import net.ripe.commons.certification.crl.X509CrlBuilder;
-import net.ripe.commons.certification.util.KeyPairFactory;
 import net.ripe.commons.certification.util.KeyPairFactoryTest;
+import net.ripe.commons.certification.util.PregeneratedKeyPairFactory;
 import net.ripe.commons.certification.x509cert.X509CertificateInformationAccessDescriptor;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder;
 import net.ripe.ipresource.InheritedIpResourceSet;
 import net.ripe.ipresource.IpResourceSet;
-
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.joda.time.DateTime;
 
@@ -70,7 +66,7 @@ public class RepositoryObjectsSetUpHelper {
     public static final IpResourceSet ROOT_RESOURCE_SET = IpResourceSet.parse("10.0.0.0/8, 192.168.0.0/16, ffce::/16, AS21212");
     public static final BigInteger ROOT_SERIAL_NUMBER = BigInteger.valueOf(900);
     public static final ValidityPeriod VALIDITY_PERIOD = new ValidityPeriod(new DateTime().minusMinutes(1), new DateTime().plusYears(1));
-    public static final KeyPair ROOT_KEY_PAIR = KeyPairFactory.getInstance().generate(512, DEFAULT_KEYPAIR_GENERATOR_PROVIDER);
+    public static final KeyPair ROOT_KEY_PAIR = PregeneratedKeyPairFactory.getInstance().generate(512);
 
     // Manifest data
     public static final KeyPair MANIFEST_KEY_PAIR = KeyPairFactoryTest.getKeyPair("Manifest");
@@ -83,8 +79,8 @@ public class RepositoryObjectsSetUpHelper {
             5, 4, 3, 2, 1};
 
     // Child cert data
-    private static final KeyPair FIRST_CHILD_KEY_PAIR = KeyPairFactory.getInstance().generate(512, DEFAULT_KEYPAIR_GENERATOR_PROVIDER);
-    private static final KeyPair SECOND_CHILD_KEY_PAIR = KeyPairFactory.getInstance().generate(512, DEFAULT_KEYPAIR_GENERATOR_PROVIDER);
+    private static final KeyPair FIRST_CHILD_KEY_PAIR = PregeneratedKeyPairFactory.getInstance().generate(512);
+    private static final KeyPair SECOND_CHILD_KEY_PAIR = PregeneratedKeyPairFactory.getInstance().generate(512);
 
     private static final X500Principal FIRST_CHILD_CERTIFICATE_NAME = new X500Principal("CN=For Testing Only, CN=First Child, C=NL");
 	private static final BigInteger FIRST_CHILD_SERIAL_NUMBER = ROOT_SERIAL_NUMBER.add(BigInteger.valueOf(1));
