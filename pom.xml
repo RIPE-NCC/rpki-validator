@@ -29,7 +29,7 @@
 
 	<properties>
 		<scala.version>2.9.2</scala.version>
-		<scalatra.version>2.0.0</scalatra.version>
+		<scalatra.version>2.0.4</scalatra.version>
 		<rpki.commons.version>1.0.21-SNAPSHOT</rpki.commons.version>
 		<org.springframework.version>3.1.1.RELEASE</org.springframework.version>
 
