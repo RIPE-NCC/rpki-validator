@@ -2,7 +2,7 @@
 #
 # The BSD License
 #
-# Copyright (c) 2010, 2011 RIPE NCC
+# Copyright (c) 2010-2012 RIPE NCC
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -68,7 +68,7 @@ for p in $PROJECTS; do
 	(cd $p && tar -c -f - --exclude ".*" --exclude target --exclude \*.iml --exclude create-source-zip.sh --exclude pom.xslt --exclude src/test --exclude rpki-vs.log --exclude validated-tas *) | (cd "target/sources/$name" && tar -x -f -)
 done
 
-LICENSE_FILE="src/main/release/LICENSE.txt"
+LICENSE_FILE="$CHECKOUT_DIR/rpki-validator/LICENSE.txt"
 [ -r "$LICENSE_FILE" ] || fail "license file does not exist"
 find target/sources -type f -name \*.java | while read FILENAME; do mv $FILENAME $FILENAME.bak; cat "$LICENSE_FILE" > $FILENAME; cat $FILENAME.bak >> $FILENAME; rm $FILENAME.bak; done
 

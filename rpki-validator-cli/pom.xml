@@ -67,7 +67,7 @@
                 <version>1.9.0</version>
                 <configuration>
                     <strictCheck>true</strictCheck>
-                    <header>src/main/release/LICENSE.txt</header>
+                    <header>../LICENSE.txt</header>
                     <excludes>
                         <exclude>**/*.tal</exclude>
                         <exclude>**/*.txt</exclude>
