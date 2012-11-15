@@ -29,10 +29,6 @@
  */
 package net.ripe.certification.validator.fetchers;
 
-import static net.ripe.commons.certification.validation.ValidationString.*;
-
-import java.io.File;
-import java.net.URI;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.crl.CrlLocator;
@@ -46,6 +42,11 @@ import net.ripe.commons.certification.validation.objectvalidators.CertificateRep
 import org.apache.commons.lang.Validate;
 import org.apache.log4j.Logger;
 
+import java.io.File;
+import java.net.URI;
+
+import static net.ripe.commons.certification.validation.ValidationString.VALIDATOR_INTERNAL_ERROR;
+
 
 public class ValidatingCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {
 
@@ -54,7 +55,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
     private final CertificateRepositoryObjectFetcher fetcher;
     private CertificateRepositoryObjectFetcher outerMostDecorator;
 
-	private ValidationOptions options;
+    private ValidationOptions options;
 
     /**
      * A validating CROFetcher. All objects retrieved are being validated. Invalid objects result in
@@ -73,9 +74,9 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
      * allow for the outermost decorator to be used for the CRL retrieval.
      */
     public ValidatingCertificateRepositoryObjectFetcher(CertificateRepositoryObjectFetcher fetcher, ValidationOptions options) {
-    	this.fetcher = fetcher;
-    	this.options = options;
-    	this.outerMostDecorator = this;
+        this.fetcher = fetcher;
+        this.options = options;
+        this.outerMostDecorator = this;
     }
 
     /**

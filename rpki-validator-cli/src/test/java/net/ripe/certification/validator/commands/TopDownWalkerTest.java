@@ -29,16 +29,6 @@
  */
 package net.ripe.certification.validator.commands;
 
-import static net.ripe.commons.certification.x509cert.X509CertificateBuilderHelper.*;
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-
-import java.math.BigInteger;
-import java.net.URI;
-import java.security.KeyPair;
-import java.util.LinkedList;
-import java.util.Queue;
-import javax.security.auth.x500.X500Principal;
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
 import net.ripe.commons.certification.ValidityPeriod;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
@@ -59,6 +49,18 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Before;
 import org.junit.Test;
+
+import javax.security.auth.x500.X500Principal;
+import java.math.BigInteger;
+import java.net.URI;
+import java.security.KeyPair;
+import java.util.LinkedList;
+import java.util.Queue;
+
+import static net.ripe.commons.certification.x509cert.X509CertificateBuilderHelper.DEFAULT_SIGNATURE_PROVIDER;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 
 public class TopDownWalkerTest {
@@ -87,8 +89,8 @@ public class TopDownWalkerTest {
     private TopDownWalker subject;
     private CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher;
     private X509ResourceCertificate ta;
-	private CertificateRepositoryObjectValidationContext taContext;
-	private ValidationResult validitionResult;
+    private CertificateRepositoryObjectValidationContext taContext;
+    private ValidationResult validitionResult;
 
     private Object[] mocks;
 
@@ -170,11 +172,11 @@ public class TopDownWalkerTest {
 
     @Test
     public void shouldAddObjectIssuerCertificatesToWorkQueue() {
-    	subject.addToWorkQueueIfObjectIssuer(taContext, taContext.getLocation(), ta);
+        subject.addToWorkQueueIfObjectIssuer(taContext, taContext.getLocation(), ta);
 
-    	assertTrue(workQueue.size() == 1);
-    	CertificateRepositoryObjectValidationContext context = workQueue.remove();
-		assertEquals(ta, context.getCertificate());
+        assertTrue(workQueue.size() == 1);
+        CertificateRepositoryObjectValidationContext context = workQueue.remove();
+        assertEquals(ta, context.getCertificate());
     }
 
     @Test
@@ -182,7 +184,7 @@ public class TopDownWalkerTest {
         X509ResourceCertificate certificate = createManifestEECertificate();
         X509Crl crl = getCrl();
 
-    	subject.addToWorkQueueIfObjectIssuer(taContext, URI.create("rsync://host/cert"), certificate);
+        subject.addToWorkQueueIfObjectIssuer(taContext, URI.create("rsync://host/cert"), certificate);
         assertTrue(workQueue.isEmpty());
 
         subject.addToWorkQueueIfObjectIssuer(taContext, URI.create("rsync://host/crl"), crl);

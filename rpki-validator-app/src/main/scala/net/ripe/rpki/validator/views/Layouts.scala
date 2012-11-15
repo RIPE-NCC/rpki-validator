@@ -65,7 +65,7 @@ object Layouts {
                 }, function(){
                         $(this).css("left","-5px");
                 });
-        		$(".dropdown").dropdown();
+            $(".dropdown").dropdown();
              });
         // --></script>
       </head>
@@ -92,10 +92,10 @@ object Layouts {
               }
               case None => NodeSeq.Empty
             }
-            
-            
+
+
             val enableFeedbackQuestion = EnableFeedbackPrompt.optionalFeedBackEnablePrompt(userPreferences)
-            
+
             (newVersionNotify ++ enableFeedbackQuestion) match {
               case NodeSeq.Empty => NodeSeq.Empty
               case messages => 
@@ -104,7 +104,7 @@ object Layouts {
                   { messages }
               </div>
             }
-            
+
           }
           <div class="page-header">
             <h1>{ view.title }</h1>

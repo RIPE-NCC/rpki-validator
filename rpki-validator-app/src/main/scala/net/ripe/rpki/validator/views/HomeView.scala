@@ -37,8 +37,8 @@ class HomeView extends View with ViewHelpers {
   def tab = views.Tabs.HomeTab
   def title = Text("Quick Overview of BGP Origin Validation")
   def body = {
-    
-    
+
+
     <br/>
 
         <div class="row">
@@ -47,8 +47,8 @@ class HomeView extends View with ViewHelpers {
             <div class="span2 offset1 stepOverhead"><img src="images/arrowTop.png" width="101" height="35" alt="ArrowTop" /></div>
             <div class="span2 offset1 stepOverhead">&nbsp;</div>
         </div>
-        
-        
+
+
         <div class="row">
             <div class="span3 stepTitle selected"><a href="#trustAnchors"><h3>Trust Anchors</h3></a></div>
             <div class="span3 stepTitle"><a href="#roas"><h3>ROAs</h3></a></div>
@@ -62,7 +62,7 @@ class HomeView extends View with ViewHelpers {
             <div class="span2 offset1 stepOverhead">&nbsp;</div>
             <div class="span2 offset1 stepOverhead"><img src="images/arrowBottom.png" width="101" height="35" alt="ArrowTop" /></div>
         </div>
-        
+
         <br/>
         <div class="row">
             <div id="trustAnchorsPointer" class="span3 stepArrow selected">&nbsp;</div>
@@ -106,7 +106,7 @@ class HomeView extends View with ViewHelpers {
                     <div id="ignoreFilters" class="stepDescription">
                         <p>
                           Because ROAs may invalidate certain announcements, and you as an operator may disagree with that invalidation,
-	  				      this validator tool allows you to <strong>ignore</strong> all ROAs that would otherwise affect certain prefixes.
+                  this validator tool allows you to <strong>ignore</strong> all ROAs that would otherwise affect certain prefixes.
                         </p>
                         <p>
                           If you use this option, it will be as though no ROAs exist for this prefix.
@@ -241,7 +241,7 @@ $(document).ready(function() {
 $(".stepTitle a").click(function(e){
                     navigate($(this), e);
                 });
-                
+
                 function navigate(el, event){
                     event.preventDefault();
                     $(".stepTitle").removeClass("selected");
@@ -253,7 +253,7 @@ $(".stepTitle a").click(function(e){
                 };
 });
 // --></script>
-        
+
   }
 
 }

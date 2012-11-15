@@ -82,8 +82,8 @@ class RTRClient(val port: Int) {
   def getResponse(expectedNumber: Int = 1, timeOut: Int = 1000): List[Pdu] = {
     var waited: Int = 0
     while(receivedPdus.size < expectedNumber && waited < timeOut) {
-    	Thread.sleep(5)
-    	waited += 5
+      Thread.sleep(5)
+      waited += 5
     }
     var result = receivedPdus.take(expectedNumber)
     receivedPdus = receivedPdus.drop(expectedNumber)

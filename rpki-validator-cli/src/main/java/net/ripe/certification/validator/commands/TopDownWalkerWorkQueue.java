@@ -29,15 +29,14 @@
  */
 package net.ripe.certification.validator.commands;
 
+import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
+import org.apache.commons.lang.Validate;
+
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
-
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-
-import org.apache.commons.lang.Validate;
 
 /**
  * A queue that keeps track of all certificates ever added and never allows the same certificate to be added twice.
@@ -57,7 +56,7 @@ public class TopDownWalkerWorkQueue {
     }
 
     public void add(CertificateRepositoryObjectValidationContext context) {
-    	Validate.isTrue(context.getCertificate() instanceof X509ResourceCertificate, "Top down walker can only handle resource certs");
+        Validate.isTrue(context.getCertificate() instanceof X509ResourceCertificate, "Top down walker can only handle resource certs");
         if (added.add((X509ResourceCertificate) context.getCertificate())) {
             queue.add(context);
         }

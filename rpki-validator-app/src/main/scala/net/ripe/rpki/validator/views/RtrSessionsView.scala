@@ -45,10 +45,10 @@ class RtrSessionsView(sessions: Iterable[RtrSessionData], now: DateTime = new Da
 
   def body = {
     <p>
-	  See below for a list routers that have connected to this validator.
+    See below for a list routers that have connected to this validator.
       See <a href={ RtrLogTab.url }>here</a> for debug logging of these connections. 
-	</p>
-    
+  </p>
+
     <table class="zebra-striped">
       <thead>
         <tr>

@@ -52,20 +52,20 @@ $CHECKOUT_DIR/rpki-commons
 "
 
 for p in $PROJECTS; do
-	check_dir "$p"
+    check_dir "$p"
 done
- 
+
 cd $CHECKOUT_DIR/rpki-validator/rpki-validator-cli
- 
+
 [ -d target/sources ] && rm -r target/sources
 [ -d target/rpki-validator-$VERSION-src ] && rm -r target/rpki-validator-$VERSION-src
 
 mkdir -p target/sources
 
 for p in $PROJECTS; do
-	name=`basename $p`
-	mkdir "target/sources/$name"
-	(cd $p && tar -c -f - --exclude ".*" --exclude target --exclude \*.iml --exclude create-source-zip.sh --exclude pom.xslt --exclude src/test --exclude rpki-vs.log --exclude validated-tas *) | (cd "target/sources/$name" && tar -x -f -)
+    name=`basename $p`
+    mkdir "target/sources/$name"
+    (cd $p && tar -c -f - --exclude ".*" --exclude target --exclude \*.iml --exclude create-source-zip.sh --exclude pom.xslt --exclude src/test --exclude rpki-vs.log --exclude validated-tas *) | (cd "target/sources/$name" && tar -x -f -)
 done
 
 LICENSE_FILE="$CHECKOUT_DIR/rpki-validator/LICENSE.txt"

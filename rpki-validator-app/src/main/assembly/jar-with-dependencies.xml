@@ -30,20 +30,20 @@
 
 -->
 <assembly>
-	<id>jar-with-dependencies</id>
-	<formats>
-		<format>jar</format>
-	</formats>
-	<includeBaseDirectory>false</includeBaseDirectory>
-	<dependencySets>
-		<dependencySet>
-			<unpack>true</unpack>
-			<scope>runtime</scope>
-		</dependencySet>
-	</dependencySets>
-	<fileSets>
-		<fileSet>
-			<directory>${project.build.outputDirectory}</directory>
-		</fileSet>
-	</fileSets>
+    <id>jar-with-dependencies</id>
+    <formats>
+        <format>jar</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <dependencySets>
+        <dependencySet>
+            <unpack>true</unpack>
+            <scope>runtime</scope>
+        </dependencySet>
+    </dependencySets>
+    <fileSets>
+        <fileSet>
+            <directory>${project.build.outputDirectory}</directory>
+        </fileSet>
+    </fileSets>
 </assembly>

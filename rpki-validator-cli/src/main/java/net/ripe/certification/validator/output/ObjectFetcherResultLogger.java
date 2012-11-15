@@ -32,16 +32,15 @@
  */
 package net.ripe.certification.validator.output;
 
-import java.net.URI;
-
 import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.validation.ValidationCheck;
 import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationMessage;
 import net.ripe.commons.certification.validation.ValidationResult;
-
 import org.apache.log4j.Logger;
+
+import java.net.URI;
 
 public class ObjectFetcherResultLogger implements NotifyingCertificateRepositoryObjectFetcher.Listener {
     private static final Logger LOG = Logger.getLogger(ObjectFetcherResultLogger.class);
@@ -49,14 +48,14 @@ public class ObjectFetcherResultLogger implements NotifyingCertificateRepository
 
 
     public ObjectFetcherResultLogger() {
-    	logValidObjects = true;
+        logValidObjects = true;
     }
 
     public ObjectFetcherResultLogger(boolean logValidObjects) {
-		this.logValidObjects = logValidObjects;
-	}
+        this.logValidObjects = logValidObjects;
+    }
 
-	@Override
+    @Override
     public void afterFetchFailure(URI uri, ValidationResult result) {
         logResults(uri, result);
         LOG.info(uri + " is INVALID");
@@ -66,7 +65,7 @@ public class ObjectFetcherResultLogger implements NotifyingCertificateRepository
     public void afterFetchSuccess(URI uri, CertificateRepositoryObject object, ValidationResult result) {
         logResults(uri, result);
         if (logValidObjects) {
-        	LOG.info(uri + " is VALID");
+            LOG.info(uri + " is VALID");
         }
     }
 
@@ -82,13 +81,13 @@ public class ObjectFetcherResultLogger implements NotifyingCertificateRepository
     }
 
     protected void logResults(URI uri, ValidationResult result) {
-    	
+
         for (ValidationCheck check: result.getAllValidationChecksForLocation(new ValidationLocation(uri))) {
             String message = uri + ": " + ValidationMessage.getMessage(check);
             if (check.isOk()) {
-            	if (logValidObjects) {
-            		LOG.debug(check.getStatus() + "->" + message);
-            	}
+                if (logValidObjects) {
+                    LOG.debug(check.getStatus() + "->" + message);
+                }
             } else {
                 LOG.error(check.getStatus() + "->" + message);
             }

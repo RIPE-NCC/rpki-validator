@@ -30,36 +30,36 @@
 
 -->
 <assembly>
-	<id>bin</id>
-	<formats>
-		<format>zip</format>
-	</formats>
-	<fileSets>
-		<fileSet>
-			<!-- Files in the bin directory should be executable. -->
-			<directory>${project.basedir}/src/main/release/bin</directory>
-			<outputDirectory>bin</outputDirectory>
-			<fileMode>0755</fileMode>
-		</fileSet>
-		<fileSet>
-			<directory>${project.basedir}/src/main/release</directory>
-			<outputDirectory></outputDirectory>
-			<includes>
-				<include>LICENSE*</include>
-				<include>NOTICE*</include>
-				<include>README*</include>
-			</includes>
-		</fileSet>
+    <id>bin</id>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <fileSets>
+        <fileSet>
+            <!-- Files in the bin directory should be executable. -->
+            <directory>${project.basedir}/src/main/release/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <fileMode>0755</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/main/release</directory>
+            <outputDirectory></outputDirectory>
+            <includes>
+                <include>LICENSE*</include>
+                <include>NOTICE*</include>
+                <include>README*</include>
+            </includes>
+        </fileSet>
         <fileSet>
             <directory>${project.basedir}/src/main/release/tal</directory>
             <outputDirectory>tal</outputDirectory>
         </fileSet>
-		<fileSet>
-			<directory>${project.build.directory}</directory>
-			<outputDirectory>jar</outputDirectory>
-			<includes>
-				<include>*with-dependencies.jar</include>
-			</includes>
-		</fileSet>
-	</fileSets>
+        <fileSet>
+            <directory>${project.build.directory}</directory>
+            <outputDirectory>jar</outputDirectory>
+            <includes>
+                <include>*with-dependencies.jar</include>
+            </includes>
+        </fileSet>
+    </fileSets>
 </assembly>

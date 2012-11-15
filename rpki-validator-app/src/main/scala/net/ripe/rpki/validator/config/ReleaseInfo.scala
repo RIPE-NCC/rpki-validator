@@ -40,7 +40,7 @@ object ReleaseInfo extends Logging {
     val props = new Properties
     val resourceStream = getClass().getResourceAsStream(releasePropertiesFilePath)
     if (resourceStream != null) {
-    	props.load(resourceStream)
+      props.load(resourceStream)
     }
     props.asScala.toMap
   }

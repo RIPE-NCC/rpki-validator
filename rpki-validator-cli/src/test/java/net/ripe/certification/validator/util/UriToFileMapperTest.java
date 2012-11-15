@@ -29,18 +29,16 @@
  */
 package net.ripe.certification.validator.util;
 
-import static net.ripe.commons.certification.validation.ValidationString.*;
-
-import static org.junit.Assert.*;
+import net.ripe.commons.certification.validation.ValidationLocation;
+import net.ripe.commons.certification.validation.ValidationResult;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
 import java.net.URI;
 
-import net.ripe.commons.certification.validation.ValidationLocation;
-import net.ripe.commons.certification.validation.ValidationResult;
-
-import org.junit.Before;
-import org.junit.Test;
+import static net.ripe.commons.certification.validation.ValidationString.*;
+import static org.junit.Assert.*;
 
 
 public class UriToFileMapperTest {
@@ -56,7 +54,7 @@ public class UriToFileMapperTest {
     @Before
     public void setUp() {
         validationResult = new ValidationResult();
-		validationResult.setLocation(TEST_LOCATION);
+        validationResult.setLocation(TEST_LOCATION);
         subject = new UriToFileMapper(TARGET_DIRECTORY);
     }
 

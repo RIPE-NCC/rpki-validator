@@ -29,12 +29,6 @@
  */
 package net.ripe.certification.validator;
 
-import static net.ripe.commons.certification.x509cert.X509CertificateBuilderHelper.*;
-
-import java.math.BigInteger;
-import java.net.URI;
-import java.security.KeyPair;
-import javax.security.auth.x500.X500Principal;
 import net.ripe.commons.certification.ValidityPeriod;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.cms.manifest.ManifestCmsBuilder;
@@ -49,6 +43,13 @@ import net.ripe.ipresource.InheritedIpResourceSet;
 import net.ripe.ipresource.IpResourceSet;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.joda.time.DateTime;
+
+import javax.security.auth.x500.X500Principal;
+import java.math.BigInteger;
+import java.net.URI;
+import java.security.KeyPair;
+
+import static net.ripe.commons.certification.x509cert.X509CertificateBuilderHelper.DEFAULT_SIGNATURE_PROVIDER;
 
 public class RepositoryObjectsSetUpHelper {
 
@@ -83,10 +84,10 @@ public class RepositoryObjectsSetUpHelper {
     private static final KeyPair SECOND_CHILD_KEY_PAIR = PregeneratedKeyPairFactory.getInstance().generate();
 
     private static final X500Principal FIRST_CHILD_CERTIFICATE_NAME = new X500Principal("CN=For Testing Only, CN=First Child, C=NL");
-	private static final BigInteger FIRST_CHILD_SERIAL_NUMBER = ROOT_SERIAL_NUMBER.add(BigInteger.valueOf(1));
-	private static final X500Principal SECOND_CHILD_CERTIFICATE_NAME = new X500Principal("CN=For Testing Only, CN=Second Child, C=NL");
-	private static final BigInteger SECOND_CHILD_SERIAL_NUMBER = FIRST_CHILD_SERIAL_NUMBER.add(BigInteger.valueOf(1));
-	private static final IpResourceSet SECOND_CHILD_RESOURCE_SET = IpResourceSet.parse("10.0.0.0/8, 192.168.0.0/17, ffce::/16, AS21212");
+    private static final BigInteger FIRST_CHILD_SERIAL_NUMBER = ROOT_SERIAL_NUMBER.add(BigInteger.valueOf(1));
+    private static final X500Principal SECOND_CHILD_CERTIFICATE_NAME = new X500Principal("CN=For Testing Only, CN=Second Child, C=NL");
+    private static final BigInteger SECOND_CHILD_SERIAL_NUMBER = FIRST_CHILD_SERIAL_NUMBER.add(BigInteger.valueOf(1));
+    private static final IpResourceSet SECOND_CHILD_RESOURCE_SET = IpResourceSet.parse("10.0.0.0/8, 192.168.0.0/17, ffce::/16, AS21212");
 
     public static ManifestCms getRootManifestCms() {
         return getRootManifestBuilder().build(MANIFEST_KEY_PAIR.getPrivate());
@@ -99,27 +100,27 @@ public class RepositoryObjectsSetUpHelper {
     }
 
     public static ManifestCms getFutureDatedManifestCms() {
-    	ManifestCmsBuilder rootManifestBuilder = getRootManifestBuilder();
-    	X509ResourceCertificate futureDatedCert = getManifestEEResourceCertificateBuilder().withValidityPeriod(new ValidityPeriod(new DateTime().plusMonths(1), new DateTime().plusMonths(2))).build();
-    	rootManifestBuilder.withCertificate(futureDatedCert);
-    	return rootManifestBuilder.build(MANIFEST_KEY_PAIR.getPrivate());
+        ManifestCmsBuilder rootManifestBuilder = getRootManifestBuilder();
+        X509ResourceCertificate futureDatedCert = getManifestEEResourceCertificateBuilder().withValidityPeriod(new ValidityPeriod(new DateTime().plusMonths(1), new DateTime().plusMonths(2))).build();
+        rootManifestBuilder.withCertificate(futureDatedCert);
+        return rootManifestBuilder.build(MANIFEST_KEY_PAIR.getPrivate());
     }
 
     public static X509Crl getRootCrl() {
-    	return getRootCrlBuilder().build(ROOT_KEY_PAIR.getPrivate());
+        return getRootCrlBuilder().build(ROOT_KEY_PAIR.getPrivate());
     }
 
     public static X509Crl getRootCrlWithInvalidSignature() {
-    	return getRootCrlBuilder().build(FIRST_CHILD_KEY_PAIR.getPrivate());
+        return getRootCrlBuilder().build(FIRST_CHILD_KEY_PAIR.getPrivate());
     }
 
     public static X509Crl getChildCrl() {
-    	return getRootCrlBuilder().build(FIRST_CHILD_KEY_PAIR.getPrivate());
+        return getRootCrlBuilder().build(FIRST_CHILD_KEY_PAIR.getPrivate());
     }
 
     public static X509ResourceCertificate getRootResourceCertificate() {
-    	X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder();
-    	return builder.build();
+        X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder();
+        return builder.build();
     }
 
     public static X509ResourceCertificate getRootResourceCertificate(IpResourceSet resources) {
@@ -134,20 +135,20 @@ public class RepositoryObjectsSetUpHelper {
     }
 
     public static X509ResourceCertificate getRootResourceCertificateWithAiaFieldPointingToItself() {
-    	X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder();
-    	X509CertificateInformationAccessDescriptor[] descriptors = {
+        X509ResourceCertificateBuilder builder = getRootResourceCertificateBuilder();
+        X509CertificateInformationAccessDescriptor[] descriptors = {
                 new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_CA_CA_ISSUERS, ROOT_CERTIFICATE_LOCATION),
         };
-    	builder.withAuthorityInformationAccess(descriptors);
-    	return builder.build();
+        builder.withAuthorityInformationAccess(descriptors);
+        return builder.build();
     }
 
     public static X509ResourceCertificate getChildResourceCertificate() {
-    	return createChildBuilder().build();
+        return createChildBuilder().build();
     }
 
     public static X509ResourceCertificate getSecondChildResourceCertificate() {
-    	return createSecondChildBuilder().build();
+        return createSecondChildBuilder().build();
     }
 
     private static X509CrlBuilder getRootCrlBuilder() {
@@ -212,9 +213,9 @@ public class RepositoryObjectsSetUpHelper {
     }
 
     private static X509ResourceCertificateBuilder createChildBuilder() {
-		X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
+        X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
 
-    	builder.withSubjectDN(FIRST_CHILD_CERTIFICATE_NAME);
+        builder.withSubjectDN(FIRST_CHILD_CERTIFICATE_NAME);
         builder.withIssuerDN(ROOT_CERTIFICATE_NAME);
         builder.withSerial(FIRST_CHILD_SERIAL_NUMBER);
         builder.withPublicKey(FIRST_CHILD_KEY_PAIR.getPublic());
@@ -232,13 +233,13 @@ public class RepositoryObjectsSetUpHelper {
         };
         builder.withAuthorityInformationAccess(descriptors);
 
-		return builder;
-	}
+        return builder;
+    }
 
-	private static X509ResourceCertificateBuilder createSecondChildBuilder() {
-		X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
+    private static X509ResourceCertificateBuilder createSecondChildBuilder() {
+        X509ResourceCertificateBuilder builder = new X509ResourceCertificateBuilder();
 
-    	builder.withSubjectDN(SECOND_CHILD_CERTIFICATE_NAME);
+        builder.withSubjectDN(SECOND_CHILD_CERTIFICATE_NAME);
         builder.withIssuerDN(FIRST_CHILD_CERTIFICATE_NAME);
         builder.withSerial(SECOND_CHILD_SERIAL_NUMBER);
         builder.withPublicKey(SECOND_CHILD_KEY_PAIR.getPublic());
@@ -246,17 +247,17 @@ public class RepositoryObjectsSetUpHelper {
         builder.withSigningKeyPair(FIRST_CHILD_KEY_PAIR);
         builder.withCa(true);
         builder.withKeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign);
-    	builder.withValidityPeriod(VALIDITY_PERIOD);
+        builder.withValidityPeriod(VALIDITY_PERIOD);
         builder.withSubjectKeyIdentifier(true);
-    	builder.withResources(SECOND_CHILD_RESOURCE_SET);
-    	builder.withCrlDistributionPoints(new URI[] { FIRST_CHILD_MANIFEST_CRL_LOCATION });
+        builder.withResources(SECOND_CHILD_RESOURCE_SET);
+        builder.withCrlDistributionPoints(new URI[] { FIRST_CHILD_MANIFEST_CRL_LOCATION });
 
         X509CertificateInformationAccessDescriptor[] descriptors = {
                 new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_CA_CA_ISSUERS, FIRST_CHILD_CERTIFICATE_LOCATION),
         };
         builder.withAuthorityInformationAccess(descriptors);
 
-		return builder;
-	}
+        return builder;
+    }
 }
 

@@ -29,10 +29,6 @@
  */
 package net.ripe.certification.validator.commands;
 
-import java.net.URI;
-import java.util.LinkedList;
-import java.util.Queue;
-
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
@@ -40,8 +36,11 @@ import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-
 import org.apache.commons.lang.Validate;
+
+import java.net.URI;
+import java.util.LinkedList;
+import java.util.Queue;
 
 public class TopDownWalker {
 
@@ -50,9 +49,9 @@ public class TopDownWalker {
     private final ValidationResult validationResult;
 
     public TopDownWalker(CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher) {
-    	this(new LinkedList<CertificateRepositoryObjectValidationContext>(), certificateRepositoryObjectFetcher, new ValidationResult());
+        this(new LinkedList<CertificateRepositoryObjectValidationContext>(), certificateRepositoryObjectFetcher, new ValidationResult());
     }
-    
+
     public TopDownWalker(CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher, ValidationResult validationResult) {
         this(new LinkedList<CertificateRepositoryObjectValidationContext>(), certificateRepositoryObjectFetcher, validationResult);
     }
@@ -61,8 +60,8 @@ public class TopDownWalker {
      * Convenience constructor for unit testing, allowing injection of the work queue
      */
     TopDownWalker(Queue<CertificateRepositoryObjectValidationContext> workQueue, CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher, ValidationResult validationResult) {
-    	this.certificateRepositoryObjectFetcher = certificateRepositoryObjectFetcher;
-    	this.workQueue = new TopDownWalkerWorkQueue(workQueue);
+        this.certificateRepositoryObjectFetcher = certificateRepositoryObjectFetcher;
+        this.workQueue = new TopDownWalkerWorkQueue(workQueue);
         this.validationResult = validationResult;
     }
 
@@ -72,11 +71,11 @@ public class TopDownWalker {
     }
 
     public void execute() {
-    	while (!workQueue.isEmpty()) {
-    		CertificateRepositoryObjectValidationContext context = workQueue.remove();
-    		prefetch(context);
-    		processManifest(context);
-    	}
+        while (!workQueue.isEmpty()) {
+            CertificateRepositoryObjectValidationContext context = workQueue.remove();
+            prefetch(context);
+            processManifest(context);
+        }
     }
 
     void prefetch(CertificateRepositoryObjectValidationContext context) {
@@ -87,10 +86,10 @@ public class TopDownWalker {
 
     void processManifest(CertificateRepositoryObjectValidationContext context) {
         URI manifestURI = context.getManifestURI();
-    	ManifestCms manifestCms = fetchManifest(manifestURI, context);
-    	if (manifestCms != null) {
-    		processManifestFiles(context, manifestCms);
-    	}
+        ManifestCms manifestCms = fetchManifest(manifestURI, context);
+        if (manifestCms != null) {
+            processManifestFiles(context, manifestCms);
+        }
     }
 
     ManifestCms fetchManifest(URI manifestURI, CertificateRepositoryObjectValidationContext context) {
@@ -101,7 +100,7 @@ public class TopDownWalker {
     void processManifestFiles(CertificateRepositoryObjectValidationContext context, ManifestCms manifestCms) {
         URI repositoryURI = context.getRepositoryURI();
         for (String fileName: manifestCms.getFileNames()) {
-			processManifestEntry(manifestCms, context, repositoryURI, fileName);
+            processManifestEntry(manifestCms, context, repositoryURI, fileName);
         }
     }
 
@@ -114,10 +113,10 @@ public class TopDownWalker {
 
     void addToWorkQueueIfObjectIssuer(CertificateRepositoryObjectValidationContext context, URI objectURI, CertificateRepositoryObject object) {
         if (object instanceof X509ResourceCertificate) {
-        	X509ResourceCertificate childCertificate = (X509ResourceCertificate) object;
-        	if (childCertificate.isObjectIssuer()) {
-        		workQueue.add(context.createChildContext(objectURI, childCertificate));
-        	}
+            X509ResourceCertificate childCertificate = (X509ResourceCertificate) object;
+            if (childCertificate.isObjectIssuer()) {
+                workQueue.add(context.createChildContext(objectURI, childCertificate));
+            }
         }
     }
 

@@ -29,48 +29,47 @@
  */
 package net.ripe.certification.validator.commands;
 
-import static org.junit.Assert.*;
+import net.ripe.commons.certification.validation.ValidationResult;
+import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
 import java.util.List;
 
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class BottomUpCertificateRepositoryObjectValidatorTest {
 
-	private BottomUpCertificateRepositoryObjectValidator validator;
+    private BottomUpCertificateRepositoryObjectValidator validator;
 
-	@Before
-	public void setUp() {
-		validator = new BottomUpCertificateRepositoryObjectValidator(null, null, null);
-	}
+    @Before
+    public void setUp() {
+        validator = new BottomUpCertificateRepositoryObjectValidator(null, null, null);
+    }
 
-	@Test
-	public void shouldCreateAndDeleteTempDirectory() {
-		SingleObjectWalker singleObjectWalker = new SingleObjectWalker(null, null, null, null, null) {
+    @Test
+    public void shouldCreateAndDeleteTempDirectory() {
+        SingleObjectWalker singleObjectWalker = new SingleObjectWalker(null, null, null, null, null) {
 
-			@Override
-			public ValidationResult execute(List<CertificateRepositoryObjectValidationContext> trustAnchors) {
-				// Do nothing for this test
-				return new ValidationResult();
-			}
+            @Override
+            public ValidationResult execute(List<CertificateRepositoryObjectValidationContext> trustAnchors) {
+                // Do nothing for this test
+                return new ValidationResult();
+            }
 
-			
 
-		};
-		validator.setSingleObjectWalker(singleObjectWalker);
 
-		File tempDir = validator.getTempDirectory();
-		assertTrue(tempDir.exists());
-		assertTrue(tempDir.canWrite());
+        };
+        validator.setSingleObjectWalker(singleObjectWalker);
 
-		validator.validate();
+        File tempDir = validator.getTempDirectory();
+        assertTrue(tempDir.exists());
+        assertTrue(tempDir.canWrite());
 
-		assertFalse(tempDir.exists());
+        validator.validate();
 
-	}
+        assertFalse(tempDir.exists());
+    }
 }

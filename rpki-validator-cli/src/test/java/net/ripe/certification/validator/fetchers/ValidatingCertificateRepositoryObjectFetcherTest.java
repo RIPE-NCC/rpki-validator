@@ -29,12 +29,6 @@
  */
 package net.ripe.certification.validator.fetchers;
 
-import static net.ripe.certification.validator.RepositoryObjectsSetUpHelper.*;
-
-import static org.junit.Assert.*;
-
-import static org.easymock.EasyMock.*;
-
 import net.ripe.certification.validator.RepositoryObjectsSetUpHelper;
 import net.ripe.commons.certification.CertificateRepositoryObject;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
@@ -45,10 +39,13 @@ import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.ValidationString;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-
 import org.easymock.IAnswer;
 import org.junit.Before;
 import org.junit.Test;
+
+import static net.ripe.certification.validator.RepositoryObjectsSetUpHelper.*;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 
 
 public class ValidatingCertificateRepositoryObjectFetcherTest {
@@ -186,7 +183,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
 
         assertNull(crlValidated);
         ValidationLocation rootManifestCrlValidationLocation = new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION);
-		assertTrue(result.hasFailureForLocation(rootManifestCrlValidationLocation));
+        assertTrue(result.hasFailureForLocation(rootManifestCrlValidationLocation));
         assertTrue(ValidationString.CRL_SIGNATURE_VALID.equals(result.getFailures(rootManifestCrlValidationLocation).get(0).getKey()));
     }
 
@@ -278,12 +275,12 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
 
     @Test
     public void shouldUseResourcesFromContextNotFromCertificate() {
-    	X509ResourceCertificate childCertificate = getChildResourceCertificate();
-    	X509ResourceCertificate grandchildCertificate = getSecondChildResourceCertificate();
-    	X509Crl crl = getChildCrl();
+        X509ResourceCertificate childCertificate = getChildResourceCertificate();
+        X509ResourceCertificate grandchildCertificate = getSecondChildResourceCertificate();
+        X509Crl crl = getChildCrl();
 
-    	Specification<byte[]> fileContentSpecification = null;
-    	CertificateRepositoryObjectValidationContext context = new CertificateRepositoryObjectValidationContext(FIRST_CHILD_CERTIFICATE_LOCATION, childCertificate, ROOT_RESOURCE_SET);
+        Specification<byte[]> fileContentSpecification = null;
+        CertificateRepositoryObjectValidationContext context = new CertificateRepositoryObjectValidationContext(FIRST_CHILD_CERTIFICATE_LOCATION, childCertificate, ROOT_RESOURCE_SET);
         expect(rsyncFetcher.getObject(SECOND_CHILD_CERTIFICATE_LOCATION, context, fileContentSpecification, result)).andReturn(grandchildCertificate);
         expect(decorator.getCrl(FIRST_CHILD_MANIFEST_CRL_LOCATION, context, result)).andReturn(crl);
 
@@ -306,7 +303,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
 
         assertNull(certificateFromValidatingFetcher);
         ValidationLocation rootCertValidationLocation = new ValidationLocation(ROOT_CERTIFICATE_LOCATION);
-		assertTrue(result.hasFailureForLocation(rootCertValidationLocation));
+        assertTrue(result.hasFailureForLocation(rootCertValidationLocation));
         assertTrue(ValidationString.NOT_VALID_AFTER.equals(result.getFailures(rootCertValidationLocation).get(0).getKey()));
     }
 
@@ -323,13 +320,13 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
     }
 
 
-	private void verifyMocks() {
-		verify(rsyncFetcher);
+    private void verifyMocks() {
+        verify(rsyncFetcher);
         verify(decorator);
-	}
+    }
 
-	private void replayMocks() {
-		replay(rsyncFetcher);
+    private void replayMocks() {
+        replay(rsyncFetcher);
         replay(decorator);
-	}
+    }
 }
