@@ -34,14 +34,13 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-
 import net.ripe.certification.validator.util.UriToFileMapper;
 import net.ripe.certification.validator.util.UriToFileMapperTest;
 import net.ripe.commons.certification.validation.ValidationLocation;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificateTest;
-
+import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -88,7 +87,7 @@ public class ValidatedObjectWriterTest {
         subject.afterFetchSuccess(TEST_OBJECT_URI, certificate, result);
 
         assertTrue("file created", TEST_OBJECT_FILE.exists());
-        assertEquals("123", FileUtils.readFileToString(TEST_OBJECT_FILE, null));
+        assertEquals("123", FileUtils.readFileToString(TEST_OBJECT_FILE, Charsets.UTF_8));
     }
 
     @Test(expected=IllegalArgumentException.class)

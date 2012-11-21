@@ -36,7 +36,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
@@ -50,8 +49,7 @@ public class TrustAnchorLocatorTest {
 
     @Test
     public void should_load_release_trust_anchor_locator_files() {
-        @SuppressWarnings("unchecked")
-        Collection<File> tals = (Collection<File>) FileUtils.listFiles(new File("src/main/release/tal"), new String[] {"tal"}, false);
+        Collection<File> tals = FileUtils.listFiles(new File("src/main/release/tal"), new String[] {"tal"}, false);
         for (File file : tals) {
             TrustAnchorLocator.fromFile(file);
         }

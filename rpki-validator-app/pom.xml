@@ -45,7 +45,6 @@
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
-            <version>${scala.version}</version>
         </dependency>
         <dependency>
             <!-- library for code completion and other nice stuff in mvn 
@@ -60,11 +59,6 @@
             <groupId>org.scalatra</groupId>
             <artifactId>scalatra</artifactId>
             <version>${scalatra.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.scala-tools</groupId>
-            <artifactId>scala-stm_${scala.version}</artifactId>
-            <version>0.5</version>
         </dependency>
         <dependency>
             <groupId>com.typesafe.akka</groupId>
@@ -173,12 +167,22 @@
             <version>${scalatra.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-validator</artifactId>
-            <version>3.1.0.GA</version>
-        </dependency>
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.scala-lang</groupId>
+                <artifactId>scala-library</artifactId>
+                <version>${scala.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.scala-lang</groupId>
+                <artifactId>scala-compiler</artifactId>
+                <version>${scala.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
