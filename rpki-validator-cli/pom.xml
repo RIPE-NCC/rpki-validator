@@ -5,8 +5,8 @@
     <name>RPKI Validator Command Line Interface</name>
 
     <parent>
-        <groupId>net.ripe.rpki-validator</groupId>
-        <artifactId>rpki-validator-parent</artifactId>
+        <groupId>net.ripe.rpki</groupId>
+        <artifactId>rpki-validator</artifactId>
         <version>2.6-SNAPSHOT</version>
     </parent>
 
@@ -17,7 +17,7 @@
     <dependencies>
         <!-- our stuff -->
         <dependency>
-            <groupId>net.ripe.rpki-commons</groupId>
+            <groupId>net.ripe.rpki</groupId>
             <artifactId>rpki-commons</artifactId>
             <type>test-jar</type>
             <scope>test</scope>

@@ -1,21 +1,43 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>net.ripe.rpki-validator</groupId>
-    <artifactId>rpki-validator-parent</artifactId>
+    <groupId>net.ripe.rpki</groupId>
+    <artifactId>rpki-validator</artifactId>
     <version>2.6-SNAPSHOT</version>
     <packaging>pom</packaging>
     <inceptionYear>2008</inceptionYear>
 
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
+
     <name>RPKI Validator</name>
     <description>RPKI Validator - Make better routing decisions based on the RPKI data set.</description>
+    <url>https://github.com/RIPE-NCC/rpki-validator</url>
     <organization>
         <name>RIPE NCC, the Netherlands</name>
         <url>http://www.ripe.net/</url>
     </organization>
 
+    <developers>
+        <developer>
+            <name>RIPE NCC - Business Applications Department</name>
+        </developer>
+    </developers>
+    <licenses>
+        <license>
+            <name>The BSD License</name>
+            <url>https://raw.github.com/RIPE-NCC/rpki-validator/master/LICENSE.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <scm>
-        <connection>scm:git:ssh://git.db.ripe.net/ba/certification/rpki-validator</connection>
+        <url>https://github.com/RIPE-NCC/rpki-validator.git</url>
+        <connection>scm:git:git@github.com:RIPE-NCC/rpki-validator.git</connection>
+        <developerConnection>scm:git:git@github.com:RIPE-NCC/rpki-validator.git</developerConnection>
     </scm>
 
     <distributionManagement>
@@ -51,8 +73,6 @@
 
         <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
         <sonar.clover.reportPath>target/site/clover/clover.xml</sonar.clover.reportPath>
-
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <modules>
@@ -63,7 +83,7 @@
     <dependencies>
 
         <dependency>
-            <groupId>net.ripe.rpki-commons</groupId>
+            <groupId>net.ripe.rpki</groupId>
             <artifactId>rpki-commons</artifactId>
         </dependency>
 
@@ -111,13 +131,13 @@
         <dependencies>
             <!--Intraproject dependencies -->
             <dependency>
-                <groupId>net.ripe.rpki-commons</groupId>
+                <groupId>net.ripe.rpki</groupId>
                 <artifactId>rpki-commons</artifactId>
                 <version>${rpki.commons.version}</version>
             </dependency>
 
             <dependency>
-                <groupId>net.ripe.rpki-commons</groupId>
+                <groupId>net.ripe.rpki</groupId>
                 <artifactId>rpki-commons</artifactId>
                 <version>${rpki.commons.version}</version>
                 <type>test-jar</type>
@@ -126,7 +146,7 @@
 
             <!--Interproject dependencies -->
             <dependency>
-                <groupId>net.ripe.rpki-validator</groupId>
+                <groupId>net.ripe.rpki</groupId>
                 <artifactId>rpki-validator-cli</artifactId>
                 <version>${project.version}</version>
             </dependency>

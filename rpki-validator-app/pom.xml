@@ -5,14 +5,13 @@
     <name>RPKI Validator Application</name>
 
     <parent>
-        <groupId>net.ripe.rpki-validator</groupId>
-        <artifactId>rpki-validator-parent</artifactId>
+        <groupId>net.ripe.rpki</groupId>
+        <artifactId>rpki-validator</artifactId>
         <version>2.6-SNAPSHOT</version>
     </parent>
 
     <properties>
         <jetty.version>8.1.3.v20120416</jetty.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <main.class>net.ripe.rpki.validator.config.Main</main.class>
     </properties>
 
@@ -31,13 +30,13 @@
     <dependencies>
         <!-- our stuff -->
         <dependency>
-            <groupId>net.ripe.rpki-commons</groupId>
+            <groupId>net.ripe.rpki</groupId>
             <artifactId>rpki-commons</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>net.ripe.rpki-validator</groupId>
+            <groupId>net.ripe.rpki</groupId>
             <artifactId>rpki-validator-cli</artifactId>
         </dependency>
 
