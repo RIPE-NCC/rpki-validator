@@ -40,29 +40,11 @@
         <developerConnection>scm:git:git@github.com:RIPE-NCC/rpki-validator.git</developerConnection>
     </scm>
 
-    <distributionManagement>
-        <repository>
-            <id>ripe-releases</id>
-            <name>BA repository (nexus)</name>
-            <url>http://${dist.repo.url}/nexus/content/repositories/releases</url>
-        </repository>
-        <snapshotRepository>
-            <id>bad-public-snapshots</id>
-            <name>BA snapshots repository (nexus)</name>
-            <url>http://${dist.repo.snapshot.url}/nexus/content/repositories/snapshots</url>
-            <!-- prevents timed snapshot to be created. -->
-            <uniqueVersion>false</uniqueVersion>
-        </snapshotRepository>
-    </distributionManagement>
-
     <properties>
         <scala.version>2.9.2</scala.version>
         <scalatra.version>2.1.1</scalatra.version>
         <rpki.commons.version>1.0.21-SNAPSHOT</rpki.commons.version>
         <org.springframework.version>3.1.1.RELEASE</org.springframework.version>
-
-        <dist.repo.url>nexus.ripe.net</dist.repo.url>
-        <dist.repo.snapshot.url>nexus.ripe.net</dist.repo.snapshot.url>
 
         <easymock.version>3.0</easymock.version>
         <commons.io.version>1.4</commons.io.version>
