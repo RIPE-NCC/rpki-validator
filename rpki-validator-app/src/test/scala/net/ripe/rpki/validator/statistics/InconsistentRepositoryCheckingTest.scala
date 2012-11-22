@@ -47,7 +47,6 @@ import net.ripe.commons.certification.util.KeyPairFactoryTest
 import net.ripe.ipresource.IpResourceSet
 import net.ripe.commons.certification.x509cert.X509CertificateInformationAccessDescriptor
 import net.ripe.commons.certification.x509cert.RpkiSignedObjectEeCertificateBuilder
-import net.ripe.ipresource.InheritedIpResourceSet
 import net.ripe.commons.certification.cms.manifest.ManifestCmsBuilder
 import net.ripe.commons.certification.crl.X509CrlBuilder
 import net.ripe.rpki.validator.models.InvalidObject
@@ -55,6 +54,8 @@ import net.ripe.rpki.validator.models.InvalidObject
 import net.ripe.commons.certification.validation.ValidationCheck
 import net.ripe.commons.certification.validation.ValidationStatus
 import net.ripe.commons.certification.validation.ValidationString
+import java.util.EnumSet
+import net.ripe.ipresource.IpResourceType
 
 object InconsistentRepositoryCheckingTest {
 
@@ -122,7 +123,7 @@ object InconsistentRepositoryCheckingTest {
     builder.withValidityPeriod(TA_MFT_VALIDITY)
     builder.withPublicKey(TA_MFT_KEY_PAIR.getPublic)
     builder.withSigningKeyPair(TA_CER_KEY_PAIR)
-    builder.withResources(InheritedIpResourceSet.getInstance)
+    builder.withInheritedResourceTypes(EnumSet.allOf(classOf[IpResourceType]))
     builder.withCrlUri(TA_CRL_URI)
     builder.withParentResourceCertificatePublicationUri(TA_CER_URI)
 

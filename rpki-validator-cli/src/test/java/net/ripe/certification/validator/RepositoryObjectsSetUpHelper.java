@@ -29,6 +29,13 @@
  */
 package net.ripe.certification.validator;
 
+import static net.ripe.commons.certification.x509cert.X509CertificateBuilderHelper.*;
+
+import java.math.BigInteger;
+import java.net.URI;
+import java.security.KeyPair;
+import java.util.EnumSet;
+import javax.security.auth.x500.X500Principal;
 import net.ripe.commons.certification.ValidityPeriod;
 import net.ripe.commons.certification.cms.manifest.ManifestCms;
 import net.ripe.commons.certification.cms.manifest.ManifestCmsBuilder;
@@ -39,17 +46,10 @@ import net.ripe.commons.certification.util.PregeneratedKeyPairFactory;
 import net.ripe.commons.certification.x509cert.X509CertificateInformationAccessDescriptor;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
 import net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder;
-import net.ripe.ipresource.InheritedIpResourceSet;
 import net.ripe.ipresource.IpResourceSet;
+import net.ripe.ipresource.IpResourceType;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.joda.time.DateTime;
-
-import javax.security.auth.x500.X500Principal;
-import java.math.BigInteger;
-import java.net.URI;
-import java.security.KeyPair;
-
-import static net.ripe.commons.certification.x509cert.X509CertificateBuilderHelper.DEFAULT_SIGNATURE_PROVIDER;
 
 public class RepositoryObjectsSetUpHelper {
 
@@ -179,7 +179,7 @@ public class RepositoryObjectsSetUpHelper {
         builder.withKeyUsage(KeyUsage.digitalSignature);
         builder.withPublicKey(MANIFEST_KEY_PAIR.getPublic());
         builder.withSigningKeyPair(ROOT_KEY_PAIR);
-        builder.withResources(InheritedIpResourceSet.getInstance());
+        builder.withInheritedResourceTypes(EnumSet.allOf(IpResourceType.class));
         builder.withValidityPeriod(new ValidityPeriod(THIS_UPDATE_TIME, NEXT_UPDATE_TIME));
         builder.withCrlDistributionPoints(ROOT_MANIFEST_CRL_LOCATION);
 
@@ -225,7 +225,7 @@ public class RepositoryObjectsSetUpHelper {
         builder.withKeyUsage(KeyUsage.keyCertSign | KeyUsage.cRLSign);
         builder.withValidityPeriod(VALIDITY_PERIOD);
         builder.withSubjectKeyIdentifier(true);
-        builder.withResources(InheritedIpResourceSet.getInstance());
+        builder.withInheritedResourceTypes(EnumSet.allOf(IpResourceType.class));
         builder.withCrlDistributionPoints(new URI[] { ROOT_MANIFEST_CRL_LOCATION });
 
         X509CertificateInformationAccessDescriptor[] descriptors = {
