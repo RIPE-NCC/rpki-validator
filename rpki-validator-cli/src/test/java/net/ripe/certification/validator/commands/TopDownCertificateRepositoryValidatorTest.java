@@ -29,9 +29,16 @@
  */
 package net.ripe.certification.validator.commands;
 
-import static net.ripe.certification.validator.commands.TopDownCertificateRepositoryValidator.*;
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
+import net.ripe.certification.validator.RepositoryObjectsSetUpHelper;
+import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
+import net.ripe.ipresource.IpResourceSet;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import org.apache.commons.io.FileUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,17 +48,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import net.ripe.certification.validator.RepositoryObjectsSetUpHelper;
-import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-import net.ripe.ipresource.IpResourceSet;
-
-import org.apache.commons.io.FileUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static net.ripe.certification.validator.commands.TopDownCertificateRepositoryValidator.*;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.*;
 
 public class TopDownCertificateRepositoryValidatorTest {
 

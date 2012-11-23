@@ -44,9 +44,9 @@ import bgp.preview._
 import scalaz.{ Success, Failure }
 import scala.concurrent.stm._
 import akka.dispatch.Future
-import net.ripe.commons.certification.cms.manifest.ManifestCms
-import net.ripe.commons.certification.crl.X509Crl
-import net.ripe.commons.certification.validation.ValidationOptions
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.crl.X509Crl
+import net.ripe.rpki.commons.validation.ValidationOptions
 import net.ripe.certification.validator.util.{ TrustAnchorExtractor }
 import net.ripe.rpki.validator.statistics.FeedbackMetrics
 import org.apache.http.impl.client.DefaultHttpClient

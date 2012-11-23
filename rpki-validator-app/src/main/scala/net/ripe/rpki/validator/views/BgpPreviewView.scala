@@ -35,7 +35,7 @@ import scala.xml.Text
 import scala.util.Random
 import bgp.preview._
 import lib.DateAndTime._
-import net.ripe.commons.certification.validation.roa.RouteValidityState
+import net.ripe.rpki.commons.validation.roa.RouteValidityState
 import net.ripe.ipresource.Asn
 import org.joda.time.format.DateTimeFormat
 

@@ -31,19 +31,19 @@ package net.ripe.certification.validator.commands;
 
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
 import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.util.Specifications;
-import net.ripe.commons.certification.validation.ValidationLocation;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.ValidationString;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.validation.ValidationString;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.util.Specifications;
+import net.ripe.rpki.commons.validation.ValidationLocation;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
-import static net.ripe.commons.certification.validation.ValidationString.*;
+import static net.ripe.rpki.commons.validation.ValidationString.*;
 
 
 /**

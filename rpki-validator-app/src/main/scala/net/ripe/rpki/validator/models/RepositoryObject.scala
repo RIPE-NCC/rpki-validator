@@ -30,17 +30,17 @@
 package net.ripe.rpki.validator
 package models
 
-import net.ripe.commons.certification.CertificateRepositoryObject
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import java.net.URI
 import org.apache.commons.codec.binary.Base64
-import net.ripe.commons.certification.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import akka.util.ByteString
 import org.joda.time.DateTime
-import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate
-import net.ripe.commons.certification.cms.roa.RoaCms
-import net.ripe.commons.certification.crl.X509Crl
-import net.ripe.commons.certification.validation.ValidationResult
+import net.ripe.rpki.commons.util.CertificateRepositoryObjectFactory
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
+import net.ripe.rpki.commons.crypto.crl.X509Crl
+import net.ripe.rpki.commons.validation.ValidationResult
 
 object StoredRepositoryObject {
 

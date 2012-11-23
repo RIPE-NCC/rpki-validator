@@ -29,27 +29,26 @@
  */
 package net.ripe.certification.validator.output;
 
+import net.ripe.rpki.csv.CsvFormatter;
+import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
+import net.ripe.ipresource.Asn;
+import net.ripe.ipresource.IpRange;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.crypto.ValidityPeriod;
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms;
+import net.ripe.rpki.commons.crypto.cms.roa.RoaPrefix;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import org.apache.log4j.Logger;
+import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-
-import net.ripe.certification.csv.CsvFormatter;
-import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.ValidityPeriod;
-import net.ripe.commons.certification.cms.roa.RoaCms;
-import net.ripe.commons.certification.cms.roa.RoaPrefix;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-import net.ripe.ipresource.Asn;
-import net.ripe.ipresource.IpRange;
-
-import org.apache.log4j.Logger;
-import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
 /**
  * This writer can added to the NotifyingCertififcateRepositoryObjectFetcher

@@ -33,22 +33,22 @@ package fetchers
 import java.net.URI
 import models.StoredRepositoryObject
 import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcher
-import net.ripe.commons.certification.CertificateRepositoryObject
-import net.ripe.commons.certification.cms.manifest.ManifestCms.FileContentSpecification
-import net.ripe.commons.certification.cms.manifest.ManifestCms
-import net.ripe.commons.certification.crl.X509Crl
-import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory
-import net.ripe.commons.certification.util.Specification
-import net.ripe.commons.certification.util.Specifications
-import net.ripe.commons.certification.validation.ValidationString.VALIDATOR_FILE_CONTENT
-import net.ripe.commons.certification.validation.ValidationString.VALIDATOR_READ_FILE
-import net.ripe.commons.certification.validation.ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE
-import net.ripe.commons.certification.validation.ValidationString.VALIDATOR_REPOSITORY_INCONSISTENT
-import net.ripe.commons.certification.validation.ValidationString.VALIDATOR_REPOSITORY_UNKNOWN
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.commons.certification.validation.ValidationLocation
-import net.ripe.commons.certification.validation.ValidationResult
-import net.ripe.commons.certification.validation.ValidationString
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms.FileContentSpecification
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.crl.X509Crl
+import net.ripe.rpki.commons.util.CertificateRepositoryObjectFactory
+import net.ripe.rpki.commons.util.Specification
+import net.ripe.rpki.commons.util.Specifications
+import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_FILE_CONTENT
+import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_READ_FILE
+import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE
+import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_REPOSITORY_INCONSISTENT
+import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_REPOSITORY_UNKNOWN
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.commons.validation.ValidationLocation
+import net.ripe.rpki.commons.validation.ValidationResult
+import net.ripe.rpki.commons.validation.ValidationString
 import scala.collection.JavaConverters._
 import store.RepositoryObjectStore
 
@@ -129,7 +129,7 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, 
 
   private[this] def warnAboutFetchFailures(uri: URI, result: ValidationResult, fetchResults: ValidationResult): Unit = {
 
-    import net.ripe.commons.certification.validation.ValidationString._
+    import net.ripe.rpki.commons.validation.ValidationString._
 
     val fetchFailureKeys = fetchResults.getFailuresForAllLocations().asScala.map(_.getKey()).toSet
     val oldLocation = result.getCurrentLocation

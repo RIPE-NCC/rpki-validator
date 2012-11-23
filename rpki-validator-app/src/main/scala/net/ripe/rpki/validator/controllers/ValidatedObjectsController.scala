@@ -38,7 +38,7 @@ import net.ripe.rpki.validator.config.Main
 import models._
 import grizzled.slf4j.Logging
 import views._
-import net.ripe.commons.certification.validation.ValidationStatus
+import net.ripe.rpki.commons.validation.ValidationStatus
 
 trait ValidatedObjectsController extends ApplicationController with Logging {
   protected def validatedObjects: ValidatedObjects

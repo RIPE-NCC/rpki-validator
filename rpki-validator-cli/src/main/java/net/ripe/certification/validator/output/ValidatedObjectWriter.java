@@ -29,18 +29,17 @@
  */
 package net.ripe.certification.validator.output;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-
 import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
 import net.ripe.certification.validator.util.UriToFileMapper;
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.validation.ValidationResult;
-
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.validation.ValidationResult;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
 
 /**
  * Writes validated objects to the location as specified by the {@link UriToFileMapper}.

@@ -33,11 +33,11 @@ import grizzled.slf4j.Logging
 import java.net.URI
 import javax.servlet.http.HttpServletResponse.SC_OK
 import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcher
-import net.ripe.commons.certification.cms.manifest.ManifestCms
-import net.ripe.commons.certification.crl.X509Crl
-import net.ripe.commons.certification.util.{CertificateRepositoryObjectParserException, Specifications, CertificateRepositoryObjectFactory, Specification}
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.commons.certification.validation.{ValidationString, ValidationResult}
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.crl.X509Crl
+import net.ripe.rpki.commons.util.{CertificateRepositoryObjectParserException, Specifications, CertificateRepositoryObjectFactory, Specification}
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.commons.validation.{ValidationString, ValidationResult}
 import org.apache.http.HttpResponse
 import org.apache.http.client.{ResponseHandler, HttpClient}
 import org.apache.http.client.methods.HttpGet

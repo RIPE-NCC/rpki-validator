@@ -34,14 +34,14 @@ import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.mock.MockitoSugar
 import org.apache.http.client.{ResponseHandler, HttpClient}
 import java.net.URI
-import net.ripe.commons.certification.validation._
+import net.ripe.rpki.commons.validation._
 import org.mockito.Mockito._
 import org.apache.http.client.methods.HttpGet
 import scala.Some
 import org.mockito.Matchers.any
-import net.ripe.commons.certification.crl.X509CrlTest
-import net.ripe.commons.certification.util.Specifications
-import net.ripe.commons.certification.cms.manifest.ManifestCmsTest
+import net.ripe.rpki.commons.crypto.crl.X509CrlTest
+import net.ripe.rpki.commons.util.Specifications
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter with MockitoSugar {

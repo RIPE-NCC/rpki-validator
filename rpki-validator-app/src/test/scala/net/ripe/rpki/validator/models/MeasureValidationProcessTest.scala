@@ -30,7 +30,7 @@
 package net.ripe.rpki.validator.models
 
 import org.scalatest.matchers.ShouldMatchers
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import scalaz.Failure
 import java.net.URI
 import net.ripe.certification.validator.util.TrustAnchorLocator

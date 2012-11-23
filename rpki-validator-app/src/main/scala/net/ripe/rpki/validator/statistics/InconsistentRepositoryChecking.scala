@@ -30,18 +30,18 @@
 package net.ripe.rpki.validator
 package statistics
 
-import net.ripe.commons.certification.validation.ValidationResult
+import net.ripe.rpki.commons.validation.ValidationResult
 import java.net.URI
 import models.ValidatedObject
 import net.ripe.rpki.validator.models.ValidObject
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.validator.models.ValidObject
-import net.ripe.commons.certification.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import scala.collection.JavaConverters._
 import net.ripe.rpki.validator.models.InvalidObject
-import net.ripe.commons.certification.validation.ValidationCheck
-import net.ripe.commons.certification.validation.ValidationStatus
-import net.ripe.commons.certification.validation.ValidationString
+import net.ripe.rpki.commons.validation.ValidationCheck
+import net.ripe.rpki.commons.validation.ValidationStatus
+import net.ripe.rpki.commons.validation.ValidationString
 
 object InconsistentRepositoryChecker {
 

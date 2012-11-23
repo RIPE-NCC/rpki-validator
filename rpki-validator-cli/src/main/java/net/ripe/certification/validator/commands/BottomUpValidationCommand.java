@@ -29,12 +29,12 @@
  */
 package net.ripe.certification.validator.commands;
 
-import static net.ripe.certification.validator.util.CertificateRepositoryObjectLocalFileHelper.readCertificateRepositoryObject;
+import net.ripe.certification.validator.cli.CommandLineOptions;
+import net.ripe.rpki.commons.validation.ValidationResult;
 
 import java.io.File;
 
-import net.ripe.certification.validator.cli.CommandLineOptions;
-import net.ripe.commons.certification.validation.ValidationResult;
+import static net.ripe.certification.validator.util.CertificateRepositoryObjectLocalFileHelper.readCertificateRepositoryObject;
 
 public class BottomUpValidationCommand extends ValidationCommand {
 

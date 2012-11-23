@@ -29,12 +29,12 @@
  */
 package net.ripe.certification.validator.commands;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import net.ripe.certification.validator.cli.CommandLineOptions;
 import net.ripe.certification.validator.util.TrustAnchorExtractor;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public abstract class ValidationCommand {
 

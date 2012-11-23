@@ -35,9 +35,9 @@ import scala.collection.JavaConverters._
 import java.net.URI
 import grizzled.slf4j.Logger
 import net.ripe.certification.validator.util._
-import net.ripe.commons.certification.CertificateRepositoryObject
-import net.ripe.commons.certification.cms.roa.RoaCms
-import net.ripe.commons.certification.validation._
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
+import net.ripe.rpki.commons.validation._
 
 sealed trait ValidatedObject {
   val uri: URI

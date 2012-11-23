@@ -29,16 +29,16 @@
  */
 package net.ripe.certification.validator.fetchers;
 
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
+import net.ripe.rpki.commons.crypto.crl.X509Crl;
+import net.ripe.rpki.commons.util.Specification;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
-
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.cms.manifest.ManifestCms;
-import net.ripe.commons.certification.crl.X509Crl;
-import net.ripe.commons.certification.util.Specification;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 
 /**
  * Caches the results from fetching objects using another {@link CertificateRepositoryObjectFetcher}.

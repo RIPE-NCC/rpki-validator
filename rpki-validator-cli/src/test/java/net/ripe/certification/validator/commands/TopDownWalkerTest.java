@@ -29,37 +29,39 @@
  */
 package net.ripe.certification.validator.commands;
 
-import static net.ripe.commons.certification.x509cert.X509CertificateBuilderHelper.*;
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-
-import java.math.BigInteger;
-import java.net.URI;
-import java.security.KeyPair;
-import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.Queue;
-import javax.security.auth.x500.X500Principal;
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
-import net.ripe.commons.certification.ValidityPeriod;
-import net.ripe.commons.certification.cms.manifest.ManifestCms;
-import net.ripe.commons.certification.cms.manifest.ManifestCmsBuilder;
-import net.ripe.commons.certification.crl.X509Crl;
-import net.ripe.commons.certification.crl.X509CrlBuilder;
-import net.ripe.commons.certification.util.PregeneratedKeyPairFactory;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.commons.certification.x509cert.X509CertificateInformationAccessDescriptor;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificateBuilder;
 import net.ripe.ipresource.IpResourceSet;
 import net.ripe.ipresource.IpResourceType;
+import net.ripe.rpki.commons.crypto.ValidityPeriod;
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsBuilder;
+import net.ripe.rpki.commons.crypto.crl.X509Crl;
+import net.ripe.rpki.commons.crypto.crl.X509CrlBuilder;
+import net.ripe.rpki.commons.crypto.x509cert.X509CertificateInformationAccessDescriptor;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateBuilder;
+import net.ripe.rpki.commons.util.PregeneratedKeyPairFactory;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Before;
 import org.junit.Test;
+
+import javax.security.auth.x500.X500Principal;
+import java.math.BigInteger;
+import java.net.URI;
+import java.security.KeyPair;
+import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.Queue;
+
+import static net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper.DEFAULT_SIGNATURE_PROVIDER;
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 
 public class TopDownWalkerTest {

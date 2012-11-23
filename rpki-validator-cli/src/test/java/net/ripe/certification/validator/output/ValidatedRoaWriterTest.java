@@ -29,22 +29,21 @@
  */
 package net.ripe.certification.validator.output;
 
-import static org.junit.Assert.*;
-
-import java.net.URI;
-import java.util.List;
-
 import net.ripe.certification.validator.output.ValidatedRoaWriter.RoaData;
-import net.ripe.commons.certification.ValidityPeriod;
-import net.ripe.commons.certification.cms.roa.RoaCms;
-import net.ripe.commons.certification.cms.roa.RoaCmsObjectMother;
-import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.ipresource.Asn;
-
+import net.ripe.rpki.commons.crypto.ValidityPeriod;
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms;
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsObjectMother;
+import net.ripe.rpki.commons.validation.ValidationResult;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.net.URI;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 public class ValidatedRoaWriterTest {
 

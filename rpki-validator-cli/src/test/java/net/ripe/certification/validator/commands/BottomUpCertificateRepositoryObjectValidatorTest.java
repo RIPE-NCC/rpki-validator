@@ -29,8 +29,8 @@
  */
 package net.ripe.certification.validator.commands;
 
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import org.junit.Before;
 import org.junit.Test;
 

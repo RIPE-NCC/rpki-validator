@@ -33,11 +33,11 @@
 package net.ripe.certification.validator.output;
 
 import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.validation.ValidationCheck;
-import net.ripe.commons.certification.validation.ValidationLocation;
-import net.ripe.commons.certification.validation.ValidationMessage;
-import net.ripe.commons.certification.validation.ValidationResult;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.validation.ValidationCheck;
+import net.ripe.rpki.commons.validation.ValidationLocation;
+import net.ripe.rpki.commons.validation.ValidationMessage;
+import net.ripe.rpki.commons.validation.ValidationResult;
 import org.apache.log4j.Logger;
 
 import java.net.URI;

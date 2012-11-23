@@ -40,17 +40,17 @@ import net.ripe.rpki.validator.config._
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import java.io.File
 import java.net.URI
-import net.ripe.commons.certification.cms.roa._
+import net.ripe.rpki.commons.crypto.cms.roa._
 import net.ripe.rpki.validator.models._
 import net.ripe.ipresource.Ipv4Address
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.Ipv6Address
 import scala.util.Random
-import net.ripe.commons.certification.ValidityPeriod
+import net.ripe.rpki.commons.crypto.ValidityPeriod
 import org.joda.time.DateTime
 import scala.collection.JavaConverters._
-import net.ripe.commons.certification.validation.ValidationResult
-import net.ripe.commons.certification.validation.ValidationCheck
+import net.ripe.rpki.commons.validation.ValidationResult
+import net.ripe.rpki.commons.validation.ValidationCheck
 
 @RunWith(classOf[JUnitRunner])
 class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {

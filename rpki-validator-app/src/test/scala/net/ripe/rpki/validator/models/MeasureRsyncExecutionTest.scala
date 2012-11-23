@@ -32,8 +32,8 @@ package net.ripe.rpki.validator.models
 import org.scalatest.matchers.ShouldMatchers
 import java.net.URI
 import org.mockito.Mockito._
-import net.ripe.commons.certification.CertificateRepositoryObject
-import net.ripe.commons.certification.validation.{ValidationLocation, ValidationResult}
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationResult}
 import net.ripe.certification.validator.fetchers.RsyncRpkiRepositoryObjectFetcher
 import scala.Predef._
 import org.joda.time.{DateTimeUtils, DateTime}

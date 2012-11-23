@@ -29,13 +29,13 @@
  */
 package net.ripe.certification.validator.commands;
 
-import static net.ripe.certification.validator.util.CertificateRepositoryObjectLocalFileHelper.readCertificateRepositoryObject;
+import net.ripe.certification.validator.cli.CommandLineOptions;
+import net.ripe.rpki.commons.util.CertificateRepositoryObjectPrinter;
 
 import java.io.File;
 import java.io.PrintWriter;
 
-import net.ripe.certification.validator.cli.CommandLineOptions;
-import net.ripe.commons.certification.util.CertificateRepositoryObjectPrinter;
+import static net.ripe.certification.validator.util.CertificateRepositoryObjectLocalFileHelper.readCertificateRepositoryObject;
 
 public class PrintCertificateRepositoryObjectCommand {
 

@@ -36,7 +36,7 @@ import scala.xml._
 import models._
 import lib.Validation._
 import bgp.preview.BgpValidatedAnnouncement
-import net.ripe.commons.certification.validation.roa.RouteValidityState
+import net.ripe.rpki.commons.validation.roa.RouteValidityState
 
 class WhitelistView(whitelist: Whitelist, validatedAnnouncements: Seq[BgpValidatedAnnouncement], params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   private val fieldNameToText = Map("asn" -> "Origin", "prefix" -> "Prefix", "maxPrefixLength" -> "Maximum prefix length")

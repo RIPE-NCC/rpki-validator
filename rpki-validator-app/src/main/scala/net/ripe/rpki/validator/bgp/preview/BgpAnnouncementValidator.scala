@@ -33,7 +33,7 @@ package bgp.preview
 import scala.collection.JavaConverters._
 import scalaz._, Scalaz._
 import scalaz.concurrent.Promise
-import net.ripe.commons.certification.validation.roa.RouteValidityState
+import net.ripe.rpki.commons.validation.roa.RouteValidityState
 import lib.Process._
 import lib.NumberResources._
 import models.RtrPrefix

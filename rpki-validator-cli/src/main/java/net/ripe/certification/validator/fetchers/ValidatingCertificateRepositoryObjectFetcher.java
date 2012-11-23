@@ -29,23 +29,23 @@
  */
 package net.ripe.certification.validator.fetchers;
 
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.cms.manifest.ManifestCms;
-import net.ripe.commons.certification.crl.CrlLocator;
-import net.ripe.commons.certification.crl.X509Crl;
-import net.ripe.commons.certification.util.Specification;
-import net.ripe.commons.certification.validation.ValidationLocation;
-import net.ripe.commons.certification.validation.ValidationOptions;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.ValidationString;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
+import net.ripe.rpki.commons.crypto.crl.CrlLocator;
+import net.ripe.rpki.commons.crypto.crl.X509Crl;
+import net.ripe.rpki.commons.util.Specification;
+import net.ripe.rpki.commons.validation.ValidationLocation;
+import net.ripe.rpki.commons.validation.ValidationOptions;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.ValidationString;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import org.apache.commons.lang.Validate;
 import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.net.URI;
 
-import static net.ripe.commons.certification.validation.ValidationString.VALIDATOR_INTERNAL_ERROR;
+import static net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_INTERNAL_ERROR;
 
 
 public class ValidatingCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {

@@ -30,12 +30,12 @@
 package net.ripe.certification.validator.commands;
 
 import net.ripe.certification.validator.fetchers.CertificateRepositoryObjectFetcher;
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.cms.manifest.ManifestCms;
-import net.ripe.commons.certification.validation.ValidationLocation;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
+import net.ripe.rpki.commons.validation.ValidationLocation;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import org.apache.commons.lang.Validate;
 
 import java.net.URI;

@@ -29,22 +29,23 @@
  */
 package net.ripe.certification.validator.output;
 
-import static org.junit.Assert.*;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
 import net.ripe.certification.validator.util.UriToFileMapper;
 import net.ripe.certification.validator.util.UriToFileMapperTest;
-import net.ripe.commons.certification.validation.ValidationLocation;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificateTest;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest;
+import net.ripe.rpki.commons.validation.ValidationLocation;
+import net.ripe.rpki.commons.validation.ValidationResult;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+
+import static org.junit.Assert.*;
 
 
 public class ValidatedObjectWriterTest {

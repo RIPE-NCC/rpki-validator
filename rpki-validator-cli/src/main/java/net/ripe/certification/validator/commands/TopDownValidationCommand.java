@@ -29,12 +29,12 @@
  */
 package net.ripe.certification.validator.commands;
 
+import net.ripe.certification.validator.cli.CommandLineOptions;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+
 import java.io.File;
 import java.net.URI;
 import java.util.List;
-
-import net.ripe.certification.validator.cli.CommandLineOptions;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 
 public class TopDownValidationCommand extends ValidationCommand {
 

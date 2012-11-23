@@ -29,26 +29,25 @@
  */
 package net.ripe.certification.validator.summary;
 
-import static org.junit.Assert.assertEquals;
+import net.ripe.ipresource.Asn;
+import net.ripe.ipresource.IpRange;
+import net.ripe.ipresource.IpResourceSet;
+import net.ripe.rpki.commons.crypto.ValidityPeriod;
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms;
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsObjectMother;
+import net.ripe.rpki.commons.crypto.cms.roa.RoaPrefix;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import org.joda.time.DateTime;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.ripe.commons.certification.ValidityPeriod;
-import net.ripe.commons.certification.cms.roa.RoaCms;
-import net.ripe.commons.certification.cms.roa.RoaCmsObjectMother;
-import net.ripe.commons.certification.cms.roa.RoaPrefix;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificateTest;
-import net.ripe.ipresource.Asn;
-import net.ripe.ipresource.IpRange;
-import net.ripe.ipresource.IpResourceSet;
-
-import org.joda.time.DateTime;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 
 public class ValidationSummaryCollectorTest {

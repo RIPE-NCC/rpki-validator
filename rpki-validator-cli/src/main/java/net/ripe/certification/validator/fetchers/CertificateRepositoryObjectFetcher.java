@@ -31,12 +31,12 @@ package net.ripe.certification.validator.fetchers;
 
 import java.net.URI;
 
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.cms.manifest.ManifestCms;
-import net.ripe.commons.certification.crl.CrlLocator;
-import net.ripe.commons.certification.util.Specification;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
+import net.ripe.rpki.commons.crypto.crl.CrlLocator;
+import net.ripe.rpki.commons.util.Specification;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 
 
 public interface CertificateRepositoryObjectFetcher extends CrlLocator {

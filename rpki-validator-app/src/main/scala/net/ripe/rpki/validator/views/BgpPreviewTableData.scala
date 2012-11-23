@@ -34,7 +34,7 @@ import lib.NumberResources._
 import bgp.preview.BgpValidatedAnnouncement
 import net.ripe.ipresource.IpRange
 import net.ripe.ipresource.Asn
-import net.ripe.commons.certification.validation.roa.RouteValidityState
+import net.ripe.rpki.commons.validation.roa.RouteValidityState
 import scala.xml.NodeSeq
 import scala.xml.Xhtml
 

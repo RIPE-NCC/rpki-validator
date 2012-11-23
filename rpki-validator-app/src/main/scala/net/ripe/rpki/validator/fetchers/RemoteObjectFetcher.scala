@@ -32,8 +32,8 @@ package net.ripe.rpki.validator.fetchers
 import grizzled.slf4j.Logging
 import java.net.URI
 import net.ripe.certification.validator.fetchers.{ RpkiRepositoryObjectFetcher, RsyncRpkiRepositoryObjectFetcher }
-import net.ripe.commons.certification.validation.ValidationResult
-import net.ripe.commons.certification.util.Specification
+import net.ripe.rpki.commons.validation.ValidationResult
+import net.ripe.rpki.commons.util.Specification
 
 class RemoteObjectFetcher(rsyncFetcher: RsyncRpkiRepositoryObjectFetcher, httpFetcherOption: Option[HttpObjectFetcher]) extends RpkiRepositoryObjectFetcher with Logging {
 

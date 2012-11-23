@@ -29,21 +29,22 @@
  */
 package net.ripe.certification.validator.fetchers;
 
-import static net.ripe.commons.certification.validation.ValidationString.*;
+import net.ripe.certification.validator.util.HierarchicalUriCache;
+import net.ripe.certification.validator.util.UriToFileMapper;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.rsync.Rsync;
+import net.ripe.rpki.commons.util.CertificateRepositoryObjectFactory;
+import net.ripe.rpki.commons.util.CertificateRepositoryObjectParserException;
+import net.ripe.rpki.commons.util.Specification;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import org.apache.commons.io.FileUtils;
+import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import net.ripe.certification.validator.util.HierarchicalUriCache;
-import net.ripe.certification.validator.util.UriToFileMapper;
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.rsync.Rsync;
-import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory;
-import net.ripe.commons.certification.util.CertificateRepositoryObjectParserException;
-import net.ripe.commons.certification.util.Specification;
-import net.ripe.commons.certification.validation.ValidationResult;
-import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
+
+import static net.ripe.rpki.commons.validation.ValidationString.*;
 
 public class RsyncRpkiRepositoryObjectFetcher implements RpkiRepositoryObjectFetcher {
 

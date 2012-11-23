@@ -29,20 +29,19 @@
  */
 package net.ripe.certification.validator.commands;
 
-import static org.junit.Assert.*;
+import net.ripe.ipresource.IpResourceSet;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest;
+import net.ripe.rpki.commons.validation.CertificateRepositoryObjectValidationContextTest;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.net.URI;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import net.ripe.commons.certification.validation.CertificateRepositoryObjectValidationContextTest;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificateTest;
-import net.ripe.ipresource.IpResourceSet;
-
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 
 public class TopDownWalkerWorkQueueTest {

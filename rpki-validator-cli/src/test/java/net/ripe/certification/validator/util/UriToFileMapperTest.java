@@ -29,15 +29,15 @@
  */
 package net.ripe.certification.validator.util;
 
-import net.ripe.commons.certification.validation.ValidationLocation;
-import net.ripe.commons.certification.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.ValidationLocation;
+import net.ripe.rpki.commons.validation.ValidationResult;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.net.URI;
 
-import static net.ripe.commons.certification.validation.ValidationString.*;
+import static net.ripe.rpki.commons.validation.ValidationString.*;
 import static org.junit.Assert.*;
 
 

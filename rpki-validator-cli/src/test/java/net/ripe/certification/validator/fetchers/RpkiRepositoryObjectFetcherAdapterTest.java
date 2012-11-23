@@ -29,23 +29,24 @@
  */
 package net.ripe.certification.validator.fetchers;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-
-import java.net.URI;
-import net.ripe.commons.certification.cms.manifest.ManifestCms;
-import net.ripe.commons.certification.cms.manifest.ManifestCmsTest;
-import net.ripe.commons.certification.crl.X509Crl;
-import net.ripe.commons.certification.crl.X509CrlTest;
-import net.ripe.commons.certification.util.Specification;
-import net.ripe.commons.certification.util.Specifications;
-import net.ripe.commons.certification.validation.ValidationLocation;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.ValidationString;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificateTest;
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest;
+import net.ripe.rpki.commons.crypto.crl.X509Crl;
+import net.ripe.rpki.commons.crypto.crl.X509CrlTest;
+import net.ripe.rpki.commons.util.Specifications;
+import net.ripe.rpki.commons.validation.ValidationLocation;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.ValidationString;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest;
+import net.ripe.rpki.commons.util.Specification;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.net.URI;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 
 public class RpkiRepositoryObjectFetcherAdapterTest {

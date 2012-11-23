@@ -35,10 +35,10 @@ import java.util.List;
 
 import net.ripe.certification.validator.cli.CommandLineOptions;
 import net.ripe.certification.validator.runtimeproblems.ValidatorIOException;
-import net.ripe.commons.certification.rsync.Rsync;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.commons.certification.x509cert.X509CertificateUtil;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.rsync.Rsync;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.commons.crypto.x509cert.X509CertificateUtil;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 
 
 public class TrustAnchorExtractor {

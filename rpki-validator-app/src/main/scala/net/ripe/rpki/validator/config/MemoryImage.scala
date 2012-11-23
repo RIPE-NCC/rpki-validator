@@ -32,13 +32,13 @@ package config
 
 import scala.collection.JavaConverters._
 import net.ripe.certification.validator.util.TrustAnchorLocator
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import org.joda.time.DateTime
 import models._
 import scalaz.Validation
 import lib.UserPreferences
-import net.ripe.commons.certification.cms.manifest.ManifestCms
-import net.ripe.commons.certification.crl.X509Crl
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.crl.X509Crl
 import java.net.URI
 
 case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, version: Int = 0) {

@@ -33,10 +33,10 @@ import net.ripe.certification.validator.fetchers.*;
 import net.ripe.certification.validator.output.ObjectFetcherResultLogger;
 import net.ripe.certification.validator.runtimeproblems.ValidatorIOException;
 import net.ripe.certification.validator.util.UriToFileMapper;
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.rsync.Rsync;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.commons.rsync.Rsync;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

@@ -29,18 +29,17 @@
  */
 package net.ripe.certification.validator.fetchers;
 
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
+import net.ripe.rpki.commons.crypto.crl.X509Crl;
+import net.ripe.rpki.commons.util.Specification;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import org.apache.commons.lang.Validate;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.cms.manifest.ManifestCms;
-import net.ripe.commons.certification.crl.X509Crl;
-import net.ripe.commons.certification.util.Specification;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-
-import org.apache.commons.lang.Validate;
 
 /**
  * Object fetcher that notifies a callback about failed and successful

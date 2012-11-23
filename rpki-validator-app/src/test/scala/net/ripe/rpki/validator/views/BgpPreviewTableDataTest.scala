@@ -34,7 +34,7 @@ import net.ripe.rpki.validator.bgp.preview.BgpAnnouncement
 import net.ripe.rpki.validator.bgp.preview.BgpValidatedAnnouncement
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
-import net.ripe.commons.certification.validation.roa.RouteValidityState
+import net.ripe.rpki.commons.validation.roa.RouteValidityState
 import scala.collection.mutable.HashMap
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers

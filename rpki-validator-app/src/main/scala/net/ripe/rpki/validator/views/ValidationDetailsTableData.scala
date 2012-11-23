@@ -33,7 +33,7 @@ package views
 import java.net.URI
 import scala.collection.JavaConverters._
 import grizzled.slf4j.Logging
-import net.ripe.commons.certification.validation.{ValidationMessage, ValidationCheck}
+import net.ripe.rpki.commons.validation.{ValidationMessage, ValidationCheck}
 
 abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] with Logging {
   

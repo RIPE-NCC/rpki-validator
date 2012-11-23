@@ -29,23 +29,19 @@
  */
 package net.ripe.certification.validator.summary;
 
+import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
+import net.ripe.ipresource.*;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms;
+import net.ripe.rpki.commons.crypto.cms.roa.RoaPrefix;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.validation.ValidationResult;
+
 import java.math.BigInteger;
 import java.net.URI;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-
-import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.cms.roa.RoaCms;
-import net.ripe.commons.certification.cms.roa.RoaPrefix;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.x509cert.X509ResourceCertificate;
-import net.ripe.ipresource.Asn;
-import net.ripe.ipresource.IpResource;
-import net.ripe.ipresource.IpResourceSet;
-import net.ripe.ipresource.IpResourceType;
-import net.ripe.ipresource.UniqueIpResource;
 
 
 public class ValidationSummaryCollector implements Listener {

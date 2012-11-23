@@ -29,25 +29,26 @@
  */
 package net.ripe.certification.validator.fetchers;
 
-import static net.ripe.commons.certification.validation.ValidationString.*;
-import static org.junit.Assert.*;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
 import net.ripe.certification.validator.commands.TopDownWalkerTest;
 import net.ripe.certification.validator.util.UriToFileMapper;
-import net.ripe.commons.certification.CertificateRepositoryObject;
-import net.ripe.commons.certification.rsync.Rsync;
-import net.ripe.commons.certification.util.Specifications;
-import net.ripe.commons.certification.validation.ValidationCheck;
-import net.ripe.commons.certification.validation.ValidationLocation;
-import net.ripe.commons.certification.validation.ValidationResult;
-import net.ripe.commons.certification.validation.ValidationStatus;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.rsync.Rsync;
+import net.ripe.rpki.commons.util.Specifications;
+import net.ripe.rpki.commons.validation.ValidationCheck;
+import net.ripe.rpki.commons.validation.ValidationLocation;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.ValidationStatus;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+
+import static net.ripe.rpki.commons.validation.ValidationString.*;
+import static org.junit.Assert.*;
 
 public class RsyncRpkiRepositoryObjectFetcherTest {
 

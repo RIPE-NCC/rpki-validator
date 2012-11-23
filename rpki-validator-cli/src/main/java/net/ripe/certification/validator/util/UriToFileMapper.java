@@ -29,14 +29,13 @@
  */
 package net.ripe.certification.validator.util;
 
-import static net.ripe.commons.certification.validation.ValidationString.*;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import org.apache.commons.lang.Validate;
 
 import java.io.File;
 import java.net.URI;
 
-import net.ripe.commons.certification.validation.ValidationResult;
-
-import org.apache.commons.lang.Validate;
+import static net.ripe.rpki.commons.validation.ValidationString.*;
 
 public class UriToFileMapper {
 
