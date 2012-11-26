@@ -29,7 +29,7 @@
  */
 package net.ripe.certification.validator.output;
 
-import net.ripe.rpki.csv.CsvFormatter;
+import net.ripe.rpki.commons.util.CsvFormatter;
 import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
 import net.ripe.ipresource.Asn;
 import net.ripe.ipresource.IpRange;

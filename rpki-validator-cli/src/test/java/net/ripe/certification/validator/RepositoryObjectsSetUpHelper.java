@@ -39,8 +39,8 @@ import net.ripe.rpki.commons.crypto.crl.X509CrlBuilder;
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateInformationAccessDescriptor;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateBuilder;
-import net.ripe.rpki.commons.util.KeyPairFactoryTest;
-import net.ripe.rpki.commons.util.PregeneratedKeyPairFactory;
+import net.ripe.rpki.commons.crypto.util.KeyPairFactoryTest;
+import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.joda.time.DateTime;
 

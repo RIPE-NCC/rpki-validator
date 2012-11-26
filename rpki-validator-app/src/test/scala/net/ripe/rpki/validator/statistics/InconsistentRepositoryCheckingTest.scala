@@ -43,7 +43,7 @@ import java.math.BigInteger
 import net.ripe.rpki.commons.crypto.ValidityPeriod
 import org.joda.time.DateTime
 import org.bouncycastle.asn1.x509.KeyUsage
-import net.ripe.rpki.commons.util.KeyPairFactoryTest
+import net.ripe.rpki.commons.crypto.util.KeyPairFactoryTest
 import net.ripe.ipresource.IpResourceSet
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateInformationAccessDescriptor
 import net.ripe.rpki.commons.crypto.x509cert.RpkiSignedObjectEeCertificateBuilder
@@ -56,6 +56,7 @@ import net.ripe.rpki.commons.validation.ValidationStatus
 import net.ripe.rpki.commons.validation.ValidationString
 import java.util.EnumSet
 import net.ripe.ipresource.IpResourceType
+import net.ripe.rpki.commons.crypto.util.KeyPairFactoryTest
 
 object InconsistentRepositoryCheckingTest {
 

@@ -32,7 +32,7 @@ package net.ripe.certification.validator.util;
 import net.ripe.certification.validator.runtimeproblems.ValidatorIOException;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
-import net.ripe.rpki.commons.util.CertificateRepositoryObjectFactory;
+import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import org.apache.commons.io.FileUtils;
 

@@ -37,7 +37,7 @@ import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms.FileContentSpecification
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
-import net.ripe.rpki.commons.util.CertificateRepositoryObjectFactory
+import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
 import net.ripe.rpki.commons.util.Specification
 import net.ripe.rpki.commons.util.Specifications
 import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_FILE_CONTENT

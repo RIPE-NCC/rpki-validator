@@ -36,7 +36,7 @@ import org.apache.commons.codec.binary.Base64
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import akka.util.ByteString
 import org.joda.time.DateTime
-import net.ripe.rpki.commons.util.CertificateRepositoryObjectFactory
+import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl

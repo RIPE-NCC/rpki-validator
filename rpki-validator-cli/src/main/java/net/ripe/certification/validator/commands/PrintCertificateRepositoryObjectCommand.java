@@ -30,7 +30,7 @@
 package net.ripe.certification.validator.commands;
 
 import net.ripe.certification.validator.cli.CommandLineOptions;
-import net.ripe.rpki.commons.util.CertificateRepositoryObjectPrinter;
+import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectPrinter;
 
 import java.io.File;
 import java.io.PrintWriter;
