@@ -40,6 +40,7 @@ import scala.concurrent.stm._
 import net.liftweb.json._
 import grizzled.slf4j.Logging
 import org.apache.http.util.EntityUtils
+import org.apache.http.HttpResponse
 
 // See also ba-feedback-server for data and json format that it expects.
 case class Metric(name: String, value: String, measuredAt: Long)
@@ -96,32 +97,37 @@ class FeedbackMetrics(httpClient: HttpClient, feedbackUri: String) extends Loggi
     require(Txn.findCurrent.isEmpty, "STM transaction not supported")
 
     val metrics = queuedMetrics.single.swap(Vector.empty)
-    try {
-      if (metrics.nonEmpty) {
-        info("sending " + metrics.size + " telemetry metrics to " + feedbackUri)
-
-        val metricsJsonList = Extraction.decompose(metrics.flatten)
-        val body = JObject(List(JField("metrics", metricsJsonList)))
-        val content = new StringEntity(compact(render(body)))
-
-        val post = new HttpPost(feedbackUri)
-        post.addHeader("content-type", "application/json")
-        post.setEntity(content)
-
-        val response = httpClient.execute(post)
-        EntityUtils.consume(response.getEntity)
+    if (metrics.nonEmpty) {
+      try {
+        val response = postMetrics(metrics)
 
         response.getStatusLine.getStatusCode match {
-          case code if code >= 200 && code < 300 => // all is well
+          case code if code >= 200 && code < 300 =>
+            logger.info("sent " + metrics.size + " telemetry metrics to " + feedbackUri)
           case _ =>
-            logger.warn("failed to submit usage metrics to %s: %s".format(feedbackUri, response.getStatusLine))
+            logger.debug("failed to submit usage metrics to %s: %s".format(feedbackUri, response.getStatusLine))
             queuedMetrics.single.transform { queued => metrics ++ queued }
         }
+      } catch {
+        case e: Exception =>
+          logger.debug("failed to submit usage metrics to %s: %s".format(feedbackUri, e), e)
+          queuedMetrics.single.transform { queued => metrics ++ queued }
       }
-    } catch {
-      case e: Exception =>
-        logger.warn("failed to submit usage metrics to %s: %s".format(feedbackUri, e), e)
-        queuedMetrics.single.transform { queued => metrics ++ queued }
     }
+  }
+
+  private def postMetrics(metrics: Seq[Metrics]): HttpResponse = {
+    val metricsJsonList = Extraction.decompose(metrics.flatten)
+    val body = JObject(List(JField("metrics", metricsJsonList)))
+    val content = new StringEntity(compact(render(body)))
+
+    val post = new HttpPost(feedbackUri)
+    post.addHeader("content-type", "application/json")
+    post.setEntity(content)
+
+    val response = httpClient.execute(post)
+    EntityUtils.consume(response.getEntity)
+
+    response
   }
 }
