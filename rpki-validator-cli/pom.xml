@@ -43,7 +43,7 @@
                     <archive>
                         <manifest>
                             <mainClass>
-                                net.ripe.certification.validator.Main
+                                net.ripe.certification.validator.cli.Main
                             </mainClass>
                         </manifest>
                     </archive>

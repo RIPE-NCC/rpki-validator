@@ -27,9 +27,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.certification.validator;
+package net.ripe.certification.validator.cli;
 
-import net.ripe.certification.validator.cli.CommandLineOptions;
 import net.ripe.certification.validator.commands.BottomUpValidationCommand;
 import net.ripe.certification.validator.commands.PrintCertificateRepositoryObjectCommand;
 import net.ripe.certification.validator.commands.PrintVersionCommand;
