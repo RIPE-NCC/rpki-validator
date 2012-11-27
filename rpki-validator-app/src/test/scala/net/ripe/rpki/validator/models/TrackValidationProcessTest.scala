@@ -35,7 +35,7 @@ import scalaz.Failure
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import java.net.URI
 import scala.concurrent.stm._
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 import net.ripe.rpki.validator.config.MemoryImage
 import org.mockito.Mockito._
 import org.joda.time.DateTime

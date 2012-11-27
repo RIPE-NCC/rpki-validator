@@ -32,7 +32,6 @@ package net.ripe.rpki.validator.fetchers
 import grizzled.slf4j.Logging
 import java.net.URI
 import javax.servlet.http.HttpServletResponse.SC_OK
-import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcher
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.util.{CertificateRepositoryObjectParserException, CertificateRepositoryObjectFactory}

@@ -35,7 +35,7 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatra.ScalatraFilter
 import support.ControllerTestCase
 import models._
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 
 @RunWith(classOf[JUnitRunner])
 class TrustAnchorControllersTest extends ControllerTestCase {

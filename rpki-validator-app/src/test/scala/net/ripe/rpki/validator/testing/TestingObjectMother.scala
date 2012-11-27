@@ -33,7 +33,7 @@ package testing
 import scala.collection.JavaConverters._
 import java.io.File
 import java.net.URI
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 import net.ripe.rpki.commons.crypto.ValidityPeriod
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsObjectMother

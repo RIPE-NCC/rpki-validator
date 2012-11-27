@@ -33,7 +33,7 @@ package controllers
 import scalaz._, Scalaz._
 import models._
 import lib.Validation._
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 
 trait TrustAnchorsController extends ApplicationController {
   protected def trustAnchors: TrustAnchors

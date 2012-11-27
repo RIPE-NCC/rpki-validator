@@ -35,7 +35,7 @@ import Scalaz._
 import net.ripe.ipresource.{ IpRange, Asn }
 import lib.Validation._
 import lib.NumberResources._
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 
 case class RtrPrefix(val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int], trustAnchorLocator: Option[TrustAnchorLocator] = None) {
   val interval = NumberResourceInterval(prefix.getStart(), prefix.getEnd())

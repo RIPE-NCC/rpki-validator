@@ -38,7 +38,7 @@ import lib.DateAndTime._
 import lib.Validation._
 import models._
 import net.ripe.rpki.commons.validation.ValidationStatus
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 
 class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[TrustAnchorLocator, Map[ValidationStatus, Int]], now: DateTime = new DateTime, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   def tab = Tabs.TrustAnchorsTab

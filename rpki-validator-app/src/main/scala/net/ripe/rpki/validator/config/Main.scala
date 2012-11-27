@@ -47,12 +47,11 @@ import akka.dispatch.Future
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.validation.ValidationOptions
-import net.ripe.certification.validator.util.{ TrustAnchorExtractor }
 import net.ripe.rpki.validator.statistics.FeedbackMetrics
 import org.apache.http.impl.client.DefaultHttpClient
 import org.joda.time.DateTimeUtils
 import net.ripe.rpki.validator.statistics.Metric
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.apache.http.params.HttpConnectionParams
 import net.ripe.rpki.validator.statistics.NetworkConnectivityMetrics
 import java.util.EnumSet

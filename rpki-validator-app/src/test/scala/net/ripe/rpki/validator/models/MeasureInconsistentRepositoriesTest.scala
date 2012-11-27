@@ -55,7 +55,7 @@ class MeasureInconsistentRepositoriesTest extends FunSuite with ShouldMatchers {
 
   class TestMeasureInconsistentRepositories extends MyValidationProcess with MeasureInconsistentRepositories {
 
-    import net.ripe.certification.validator.util.TrustAnchorLocator
+    import net.ripe.rpki.validator.util.TrustAnchorLocator
     import java.util.ArrayList
 
     override val trustAnchorLocator = new TrustAnchorLocator(null, "test ca", URI.create("rsync://host/ta.cer"), "hash", new ArrayList[URI]()) //File file, String caName, URI location, String publicKeyInfo, List<URI> prefetchUris

@@ -31,7 +31,6 @@ package net.ripe.rpki.validator.fetchers
 
 import grizzled.slf4j.Logging
 import java.net.URI
-import net.ripe.certification.validator.fetchers.{ RpkiRepositoryObjectFetcher, RsyncRpkiRepositoryObjectFetcher }
 import net.ripe.rpki.commons.validation.ValidationResult
 import net.ripe.rpki.commons.util.Specification
 

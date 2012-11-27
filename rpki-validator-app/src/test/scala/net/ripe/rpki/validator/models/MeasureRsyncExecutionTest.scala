@@ -34,7 +34,7 @@ import java.net.URI
 import org.mockito.Mockito._
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationResult}
-import net.ripe.certification.validator.fetchers.RsyncRpkiRepositoryObjectFetcher
+import net.ripe.rpki.validator.fetchers.RsyncRpkiRepositoryObjectFetcher
 import scala.Predef._
 import org.joda.time.{DateTimeUtils, DateTime}
 import org.scalatest.{BeforeAndAfter, FunSuite}

@@ -41,7 +41,7 @@ import org.scalatra.test.scalatest.ScalatraFeatureSpec
 import org.joda.time.DateTime
 import models._
 import lib.UserPreferences
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 
 @RunWith(classOf[JUnitRunner])
 abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatchers with MockitoSugar {

@@ -33,9 +33,8 @@ import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 import net.ripe.rpki.validator.store.DataSources
 import net.ripe.rpki.validator.store.RepositoryObjectStore
-import net.ripe.certification.validator.fetchers.RsyncRpkiRepositoryObjectFetcher
 import net.ripe.rpki.commons.rsync.Rsync
-import net.ripe.certification.validator.util.UriToFileMapper
+import net.ripe.rpki.validator.util.UriToFileMapper
 import java.io.File
 import java.net.URI
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
@@ -58,7 +57,6 @@ import net.ripe.rpki.commons.validation.ValidationString
 import org.apache.http.impl.client.DefaultHttpClient
 import net.ripe.rpki.commons.validation.ValidationStatus
 import org.scalatest.mock.MockitoSugar
-import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcher
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.mockito.stubbing.Answer

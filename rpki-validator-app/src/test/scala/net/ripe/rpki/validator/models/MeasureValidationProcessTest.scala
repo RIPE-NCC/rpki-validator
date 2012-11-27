@@ -33,7 +33,7 @@ import org.scalatest.matchers.ShouldMatchers
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import scalaz.Failure
 import java.net.URI
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.joda.time.{DateTimeUtils, DateTime}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import java.io.File

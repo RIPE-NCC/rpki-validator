@@ -43,11 +43,9 @@ import com.yammer.metrics.core.MetricsRegistry
 import com.yammer.metrics.core.Timer
 import grizzled.slf4j.Logger
 import grizzled.slf4j.Logging
-import net.ripe.certification.validator.commands.TopDownWalker
-import net.ripe.certification.validator.fetchers._
-import net.ripe.certification.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher._
-import net.ripe.certification.validator.util.TrustAnchorLocator
-import net.ripe.certification.validator.util.UriToFileMapper
+import net.ripe.rpki.validator.commands.TopDownWalker
+import net.ripe.rpki.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.UriToFileMapper
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
@@ -62,9 +60,8 @@ import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryOb
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateUtil
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.validator.config.MemoryImage
-import net.ripe.rpki.validator.fetchers.ConsistentObjectFetcher
-import net.ripe.rpki.validator.fetchers.HttpObjectFetcher
-import net.ripe.rpki.validator.fetchers.RemoteObjectFetcher
+import net.ripe.rpki.validator.fetchers._
+import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher._
 import net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
 import net.ripe.rpki.validator.statistics.Metric

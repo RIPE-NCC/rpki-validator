@@ -31,7 +31,7 @@ package net.ripe.rpki.validator
 package config
 
 import scala.collection.JavaConverters._
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import org.joda.time.DateTime
 import models._

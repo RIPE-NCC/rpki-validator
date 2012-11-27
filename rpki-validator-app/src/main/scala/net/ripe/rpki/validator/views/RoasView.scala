@@ -32,7 +32,7 @@ package views
 
 import scala.xml._
 import models.ValidatedObjects
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 
 class RoasView(validatedObjects: ValidatedObjects) extends View {
   def tab = Tabs.RoasTab

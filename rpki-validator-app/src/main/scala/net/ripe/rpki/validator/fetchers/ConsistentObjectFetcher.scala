@@ -32,7 +32,6 @@ package fetchers
 
 import java.net.URI
 import models.StoredRepositoryObject
-import net.ripe.certification.validator.fetchers.RpkiRepositoryObjectFetcher
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms.FileContentSpecification
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms

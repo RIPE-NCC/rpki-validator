@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
-import net.ripe.certification.validator.fetchers.RsyncRpkiRepositoryObjectFetcher
 import net.ripe.rpki.commons.validation.ValidationResult
 import org.mockito.Mockito.verify
 import org.scalatest.{BeforeAndAfter, FunSuite}
