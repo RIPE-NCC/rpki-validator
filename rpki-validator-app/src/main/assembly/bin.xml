@@ -73,5 +73,12 @@
                 <include>*.txt</include>
             </includes>
         </fileSet>
+        <fileSet>
+            <directory>../${project.basedir}</directory>
+            <outputDirectory></outputDirectory>
+            <includes>
+                <include>*.txt</include>
+            </includes>
+        </fileSet>
     </fileSets>
 </assembly>

@@ -42,12 +42,17 @@
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
-            <directory>${project.basedir}/src/main/release</directory>
+            <directory>${project.basedir}</directory>
             <outputDirectory></outputDirectory>
             <includes>
-                <include>LICENSE*</include>
-                <include>NOTICE*</include>
-                <include>README*</include>
+                <include>*.txt</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>../${project.basedir}</directory>
+            <outputDirectory></outputDirectory>
+            <includes>
+                <include>*.txt</include>
             </includes>
         </fileSet>
         <fileSet>
