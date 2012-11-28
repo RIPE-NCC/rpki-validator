@@ -36,12 +36,6 @@
     </formats>
     <fileSets>
         <fileSet>
-            <!-- Files in the bin directory should be executable. -->
-            <directory>${project.build.directory}/appassembler/bin</directory>
-            <outputDirectory>bin</outputDirectory>
-            <fileMode>0755</fileMode>
-        </fileSet>
-        <fileSet>
             <directory>${project.build.directory}/appassembler</directory>
             <outputDirectory></outputDirectory>
             <excludes>
@@ -79,6 +73,12 @@
             <includes>
                 <include>*.txt</include>
             </includes>
+        </fileSet>
+        <fileSet>
+            <!-- This fileset has to be the last one so that other files and directories do not become executable. -->
+            <directory>${project.build.directory}/appassembler/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <fileMode>0755</fileMode>
         </fileSet>
     </fileSets>
 </assembly>

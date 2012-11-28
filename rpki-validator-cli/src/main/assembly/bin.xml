@@ -36,12 +36,6 @@
     </formats>
     <fileSets>
         <fileSet>
-            <!-- Files in the bin directory should be executable. -->
-            <directory>${project.basedir}/src/main/release/bin</directory>
-            <outputDirectory>bin</outputDirectory>
-            <fileMode>0755</fileMode>
-        </fileSet>
-        <fileSet>
             <directory>${project.basedir}</directory>
             <outputDirectory></outputDirectory>
             <includes>
@@ -65,6 +59,12 @@
             <includes>
                 <include>*with-dependencies.jar</include>
             </includes>
+        </fileSet>
+        <fileSet>
+            <!-- This fileset has to be the last one so that other files and directories do not become executable. -->
+            <directory>${project.basedir}/src/main/release/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <fileMode>0755</fileMode>
         </fileSet>
     </fileSets>
 </assembly>
