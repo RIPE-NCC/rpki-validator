@@ -49,14 +49,14 @@
             </includes>
         </fileSet>
         <fileSet>
-            <directory>../${project.basedir}</directory>
+            <directory>${project.basedir}/..</directory>
             <outputDirectory></outputDirectory>
             <includes>
                 <include>*.txt</include>
             </includes>
         </fileSet>
         <fileSet>
-            <directory>${project.basedir}/src/main/release/tal</directory>
+            <directory>${project.basedir}/../rpki-validator-app/conf/tal</directory>
             <outputDirectory>tal</outputDirectory>
         </fileSet>
         <fileSet>

@@ -29,17 +29,16 @@
  */
 package net.ripe.rpki.validator.util;
 
-import static org.junit.Assert.*;
-
-import net.ripe.rpki.validator.util.TrustAnchorLocator;
+import org.apache.commons.io.FileUtils;
+import org.junit.Test;
 
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import org.apache.commons.io.FileUtils;
-import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 
 public class TrustAnchorLocatorTest {
@@ -51,7 +50,7 @@ public class TrustAnchorLocatorTest {
 
     @Test
     public void should_load_release_trust_anchor_locator_files() {
-        Collection<File> tals = FileUtils.listFiles(new File("src/main/release/tal"), new String[] {"tal"}, false);
+        Collection<File> tals = FileUtils.listFiles(new File("../rpki-validator-app/conf/tal"), new String[] {"tal"}, false);
         for (File file : tals) {
             TrustAnchorLocator.fromFile(file);
         }

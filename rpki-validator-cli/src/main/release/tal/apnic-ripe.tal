@@ -1,4 +1,0 @@
-ca.name = APNIC from RIPE RPKI Root
-certificate.location = rsync://rpki.apnic.net/repository/apnic-rpki-root-ripe-origin.cer
-public.key.info = MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwsQlXmEklLYApoDo7GEaNNTEGFPU5wJpi04iXuga2xn+g/TMLOlyJbjuPYRtRm/7VbRnN3m9Ta+WETy03+FmEbXzB4xxhJKVik/ARHBnrBWhLyURy8Q5/XplE9cJein37IE1mIsbKM7o/90S225w7GuvW7T4kjPWYmBFOywHWsfQO1EdsgiJrkz+Ab67ZkdSIiKHkf2UE6/MrbDEj+QK9+s/vKH8BtDhaLmTWY+bVvfJ3+AWDH6roo1ozbl5yamQFbLOl3ns30f3yOJcNSNu/qgMQRRyp2sXXQovhTy8yqm3LFspaCWnTmQtBieWZwibuOa4Z27A1FzTMst2T4wY/wIDAQAB
-prefetch.uris = rsync://rpki.apnic.net/member_repository/

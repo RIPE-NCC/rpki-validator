@@ -1,4 +1,0 @@
-ca.name = APNIC from AFRINIC RPKI Root
-certificate.location = rsync://rpki.apnic.net/repository/apnic-rpki-root-afrinic-origin.cer
-public.key.info = MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuMLL96YV9pf0rZ4Ow/bkcgpoPfsRzkcgmisyCuMUdotHwrp8pepujhohatScRK09ILRrZYCdpX4121MJhqXCP3u3hy9fF0CeARKX/Q82nJccD4dtUp23UcFys8hwJgNYZI910ajkAxwNT//H/TFwoUYbzZGBR7o2awMc7GdQl/j6dgOkV6AfYy5DyDEgOUNHnUxED2rreefL/E2Fr2STEsar6bTR4Tg4+nVF1PjAkgN0tKZYe4wZ6VmtqV/VTngSLysim6av7ki+JR3cVgVUOqXeh1vPjH2tNu6u9bX37ZrdVb6NBRer9I99IDbKvyhELb6nzo8+Q74zga9HI+PfQwIDAQAB
-prefetch.uris = rsync://rpki.apnic.net/member_repository/
