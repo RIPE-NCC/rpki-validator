@@ -103,17 +103,17 @@ the --output-dir parameter.
 
 
 Top-down validation using the resource trust anchor:
-$ certification-validator -t ripe-ncc-root.tal --output-dir validator
+$ certification-validator -t ripe-ncc.tal --output-dir validator
 
 Exporting all validated ROA prefixes to a file:
 
-$ certification-validator -t ripe-ncc-root.tal \
+$ certification-validator -t ripe-ncc.tal \
         --output-dir validator --roa-export roa-prefixes.csv
 
 
 Bottom-up validation of a local ROA, checking against a given trust anchor:
 
-$ certification-validator -t ripe-ncc-root.tal -f file.roa --output-dir validator
+$ certification-validator -t ripe-ncc.tal -f file.roa --output-dir validator
 
 
 Printing the contents of a local object, such as a CRL (no validation):
@@ -121,7 +121,7 @@ $ certification-validator --print -f file.crl
 
 
 Display all validation checks performed (use -v for verbose messages):
-$ certification-validator -t ripe-ncc-root.tal -f file.roa --output-dir validator -v
+$ certification-validator -t ripe-ncc.tal -f file.roa --output-dir validator -v
 
 
 
