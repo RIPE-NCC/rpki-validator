@@ -1,4 +1,4 @@
 ca.name = LACNIC RPKI Root
-certificate.location = rsync://repository.lacnic.net/rpki/lacnic/RTA_LACNIC_RPKI.cer
-public.key.info = MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1AuR49ZoKS59Vnpq8M0XdjeV3ROqtElwx6sNmUXvWBFPQlZLs2tR5/0MwprIWRi91WnMBVWjsECcLBe7Pu+uV/tTvPMJRXm/c+l8nR+FhAj7pn4M5A2pHFBndCPc1UrFD+BLACx9DSNiUjzKr1t7wjHTW+F0NMnZ9g9hKdxDNCFi66BGx2f3TTW3uGns/IPfkxrRCeYtJcBpQ5mKoc8gQOndiEG/33uXDS9EOe1dycmnaw9EQqxqHp+Bj0TIVoFyfDNuT+soJ3uwtQr2g5YsAIxJtmBAZrLj+acmLeQrYC0xQuK118dSAS9r6GSm476m2aGEYtb083fLodeYSEjM/wIDAQAB
-prefetch.uris = rsync://repository.lacnic.net/rpki/hosted/
+certificate.location = rsync://repository.lacnic.net/rpki/lacnic/rta-lacnic-rpki.cer
+public.key.info = MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqZEzhYK0+PtDOPfub/KRc3MeWx3neXx4/wbnJWGbNAtbYqXg3uU5J4HFzPgk/VIppgSKAhlO0H60DRP48by9gr5/yDHu2KXhOmnMg46sYsUIpfgtBS9+VtrqWziJfb+pkGtuOWeTnj6zBmBNZKK+5AlMCW1WPhrylIcB+XSZx8tk9GS/3SMQ+YfMVwwAyYjsex14Uzto4GjONALE5oh1M3+glRQduD6vzSwOD+WahMbc9vCOTED+2McLHRKgNaQf0YJ9a1jG9oJIvDkKXEqdfqDRktwyoD74cV57bW3tBAexB7GglITbInyQAsmdngtfg2LUMrcROHHP86QPZINjDQIDAQAB
+prefetch.uris = rsync://repository.lacnic.net/rpki/
