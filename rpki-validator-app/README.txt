@@ -135,6 +135,15 @@ If you find any other problems, please contact us at <certification@ripe.net>.
 Version History
 ---------------
 
+2.7 - 28 November 2012
+= Made validator and projects this depends on available on GitHub and Maven Central
+= Updated pre-configured Trust Anchor Files for APNIC and LACNIC
+= Made Trust Anchor handling more robust
+= Disabled warnings about failure to send performance metrics
+
+
+2.6 - Internal release
+
 2.5 - 4 September 2012
 = Fixed a thread leak bug
 = Cleaned up experimental and pilot TAL files. Release now only includes TALs of these four RIRs: 
