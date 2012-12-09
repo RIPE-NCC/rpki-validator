@@ -78,9 +78,10 @@ class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSup
     }
 
     val timeToValidate = time {
-      val walker = new TopDownWalker(fetcher)
+//      val walker = new TopDownWalker(fetcher)
+      val walker = new ConcurrentTopDownWalker(fetcher)
       walker.addTrustAnchor(taContext)
-      walker.execute()
+      walker.execute
     }
 
     val totalObjects = validatedObjectBuilder.result.values.size
@@ -132,6 +133,66 @@ class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSup
         new RemoteObjectFetcher(rsyncFetcher, Some(httpFetcher))
       case false =>
         new RemoteObjectFetcher(rsyncFetcher, None)
+    }
+  }
+}
+
+class ConcurrentTopDownWalker(certificateRepositoryObjectFetcher: CertificateRepositoryObjectFetcher) {
+
+  val validationResult = new ValidationResult
+  val queue = new mutable.Queue[CertificateRepositoryObjectValidationContext]
+
+  def addTrustAnchor(trustAnchor: CertificateRepositoryObjectValidationContext) {
+    queue += trustAnchor
+  }
+
+  def execute {
+    while (!queue.isEmpty) {
+      val context = queue.dequeue()
+      prefetch(context)
+      processManifest(context)
+    }
+  }
+
+  def prefetch(context: CertificateRepositoryObjectValidationContext) {
+    val repositoryURI = context.getRepositoryURI()
+    validationResult.setLocation(new ValidationLocation(repositoryURI));
+    certificateRepositoryObjectFetcher.prefetch(repositoryURI, validationResult);
+  }
+
+  def processManifest(context: CertificateRepositoryObjectValidationContext) {
+    val manifestURI = context.getManifestURI()
+    val manifestCms = fetchManifest(manifestURI, context)
+    if (manifestCms != null) {
+      processManifestFiles(context, manifestCms)
+    }
+  }
+
+  def fetchManifest(manifestURI: URI, context: CertificateRepositoryObjectValidationContext) = {
+    validationResult.setLocation(new ValidationLocation(manifestURI))
+    certificateRepositoryObjectFetcher.getManifest(manifestURI, context, validationResult)
+  }
+
+  def processManifestFiles(context: CertificateRepositoryObjectValidationContext, manifestCms: ManifestCms ) {
+    val repositoryURI = context.getRepositoryURI()
+    manifestCms.getFileNames.asScala.foreach(filename => processManifestEntry(manifestCms, context, repositoryURI, filename))
+  }
+
+  def processManifestEntry(manifestCms: ManifestCms, context: CertificateRepositoryObjectValidationContext, repositoryURI: URI, filename: String) {
+    val uri = repositoryURI.resolve(filename)
+    validationResult.setLocation(new ValidationLocation(uri))
+    val cro = certificateRepositoryObjectFetcher.getObject(uri, context, manifestCms.getFileContentSpecification(filename), validationResult)
+    addToWorkQueueIfObjectIssuer(context, uri, cro)
+  }
+
+  def addToWorkQueueIfObjectIssuer(context: CertificateRepositoryObjectValidationContext, objectURI: URI, cro: CertificateRepositoryObject) {
+    cro match {
+      case childCertificate: X509ResourceCertificate =>
+        if (childCertificate.isObjectIssuer()) {
+          if (queue.contains())
+          queue += context.createChildContext(objectURI, childCertificate)
+        }
+      case _ =>
     }
   }
 }
