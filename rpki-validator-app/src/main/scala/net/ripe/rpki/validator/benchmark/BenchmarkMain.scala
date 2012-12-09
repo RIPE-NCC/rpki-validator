@@ -31,12 +31,13 @@ package net.ripe.rpki.validator
 package benchmark
 
 import grizzled.slf4j.Logging
+import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import net.ripe.rpki.validator.store.DataSources._
 import net.ripe.rpki.validator.store.RepositoryObjectStore
-import java.util.concurrent.{ TimeUnit, Executors }
 import net.ripe.certification.validator.util.TrustAnchorLocator
 import org.apache.commons.io.FileUtils
-import java.io.File
+import scala.annotation.tailrec
 
 object BenchmarkMain {
 
@@ -50,26 +51,35 @@ object BenchmarkMain {
 }
 
 class BenchmarkMain(options: BenchmarkOptions) extends Logging {
-
   val trustAnchorLocator = TrustAnchorLocator.fromFile(options.talFile)
-  val threadPool = Executors.newFixedThreadPool(options.threadCount)
 
-  for (executionId <- 1 to options.validationRunCount) {
-    threadPool.submit(new Runnable {
-      def run() {
-        info("Starting validation process for run #" + executionId)
+  val runCounter = new AtomicInteger(0)
+
+  val threads = for (threadId <- 1 to options.threadCount) yield {
+    val thread = new Thread {
+      val cacheDirectory = "tmp/cache_" + threadId + "/"
+      val rootCertificateOutputDir = "tmp/benchmark-tals_" + threadId
+
+      @tailrec override def run {
+        val executionId = runCounter.incrementAndGet
+        if (executionId <= options.validationRunCount) {
+          runExecution(executionId)
+          run
+        }
+      }
+
+      private def runExecution(executionId: Int) {
+        info("Starting validation process for run #" + executionId + " (thread " + threadId + ")")
         val dataSource = inMemoryDataSourceForId(String.valueOf(executionId))
-        val cacheDirectory = "tmp/cache_" + executionId + "/"
-        val rootCertificateOutputDir = "tmp/benchmark-tals_" + executionId
         try {
           val repositoryObjectStore = new RepositoryObjectStore(dataSource)
 
           val process = new BenchmarkValidationProcess(
-              trustAnchorLocator = trustAnchorLocator,
-              httpSupport = options.httpSupport,
-              repositoryObjectStore = repositoryObjectStore,
-              cacheDirectory = cacheDirectory,
-              rootCertificateOutputDir = rootCertificateOutputDir)
+            trustAnchorLocator = trustAnchorLocator,
+            httpSupport = options.httpSupport,
+            repositoryObjectStore = repositoryObjectStore,
+            cacheDirectory = cacheDirectory,
+            rootCertificateOutputDir = rootCertificateOutputDir)
           val benchmarks = process.run
 
           info("Found benchmarks: " + benchmarks.toCsvLine(trustAnchorLocator.getCaName))
@@ -83,10 +93,13 @@ class BenchmarkMain(options: BenchmarkOptions) extends Logging {
           FileUtils.deleteDirectory(new File(rootCertificateOutputDir))
         }
       }
-    })
+    }
+    thread.setName("validator-" + threadId)
+    thread.start
+    thread
   }
 
-  threadPool.shutdown();
-  threadPool.awaitTermination(60, TimeUnit.MINUTES)
+  threads.foreach(_.join)
+
   info("Finished all threads");
 }
