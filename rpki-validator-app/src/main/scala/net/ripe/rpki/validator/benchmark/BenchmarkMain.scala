@@ -74,7 +74,7 @@ class BenchmarkMain(options: BenchmarkOptions) extends Logging {
 
       private def runExecution(executionId: Int) {
         info("starting validation process for run #" + executionId)
-        val dataSource = inMemoryDataSourceForId(String.valueOf(executionId))
+        val dataSource = DurableDataSource // inMemoryDataSourceForId(String.valueOf(executionId))
         try {
           val repositoryObjectStore = new RepositoryObjectStore(dataSource)
 
@@ -84,15 +84,15 @@ class BenchmarkMain(options: BenchmarkOptions) extends Logging {
             repositoryObjectStore = repositoryObjectStore,
             cacheDirectory = cacheDirectory,
             rootCertificateOutputDir = rootCertificateOutputDir)
-          val benchmarks = process.run
+          process.run
 
-          info("found benchmarks: " + benchmarks.toCsvLine(trustAnchorLocator.getCaName))
-          info("writing these benchmarks to statsfile")
-
-          BenchmarkStatistics.save(trustAnchorLocator.getCaName, benchmarks, options.toString)
-
+//          info("found benchmarks: " + benchmarks.toCsvLine(trustAnchorLocator.getCaName))
+//          info("writing these benchmarks to statsfile")
+//
+//          BenchmarkStatistics.save(trustAnchorLocator.getCaName, benchmarks, options.toString)
+//
         } finally {
-          dataSource.close
+//          dataSource.close
           if (options.deleteRsyncCache) {
             info("deleting rsync cache before next iteration")
             FileUtils.deleteDirectory(new File(cacheDirectory))

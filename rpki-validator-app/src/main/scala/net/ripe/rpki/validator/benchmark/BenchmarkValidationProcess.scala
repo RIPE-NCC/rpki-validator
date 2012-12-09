@@ -33,11 +33,9 @@ package benchmark
 import store.RepositoryObjectStore
 import fetchers._
 import store.DataSources.DurableDataSource
-import net.ripe.certification.validator.util.TrustAnchorLocator
+import net.ripe.certification.validator.util.{HierarchicalUriCache, TrustAnchorLocator, UriToFileMapper, TrustAnchorExtractor}
 import net.ripe.certification.validator.fetchers._
 import net.ripe.certification.validator.fetchers.RsyncCertificateRepositoryObjectFetcher
-import net.ripe.certification.validator.util.UriToFileMapper
-import net.ripe.certification.validator.util.TrustAnchorExtractor
 import net.ripe.certification.validator.commands.TopDownWalker
 import net.ripe.commons.certification.rsync.Rsync
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext
@@ -46,17 +44,40 @@ import net.ripe.commons.certification.validation.ValidationLocation
 import scala.collection.JavaConverters._
 import grizzled.slf4j.Logging
 import java.io.File
-import org.apache.http.impl.client.DefaultHttpClient
+import org.apache.http.impl.client.{DefaultRedirectStrategy, DefaultHttpClient}
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
 import org.joda.time.DateTimeUtils
 import java.net.URI
-import net.ripe.rpki.validator.models.ValidatedObject
+import models.{StoredRepositoryObject, ValidatedObject}
 import collection.mutable
 import net.ripe.commons.certification.cms.manifest.ManifestCms
 import net.ripe.commons.certification.CertificateRepositoryObject
 import net.ripe.commons.certification.x509cert.X509ResourceCertificate
+import annotation.tailrec
+import akka.dispatch.{Await, ExecutionContext, Future}
+import java.util.concurrent.{TimeUnit, Executors}
+import akka.util.Duration
+import net.ripe.commons.certification.util.CertificateRepositoryObjectFactory
+import org.apache.http.client.methods.{HttpHead, HttpGet}
+import org.apache.http.{HttpRequest, HttpResponse, HttpEntity}
+import org.apache.http.util.EntityUtils
+import org.apache.http.client.RedirectStrategy
+import org.apache.http.protocol.HttpContext
+import org.apache.http.impl.conn.PoolingClientConnectionManager
 
 class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSupport: Boolean, repositoryObjectStore: RepositoryObjectStore, cacheDirectory: String, rootCertificateOutputDir: String) extends Logging {
+
+  val parallelism = 100
+  val maxConnPerRoute = parallelism
+  val totalConn = 256
+
+  val connectionManager = new PoolingClientConnectionManager
+  connectionManager.setDefaultMaxPerRoute(maxConnPerRoute)
+  connectionManager.setMaxTotal(totalConn)
+  val httpClient: DefaultHttpClient = new DefaultHttpClient(connectionManager)
+  httpClient.setRedirectStrategy(new DefaultRedirectStrategy {
+    override def isRedirected(request: HttpRequest, response: HttpResponse, context: HttpContext) = false
+  })
 
   def run() = {
     val taContext = new TrustAnchorExtractor().extractTA(trustAnchorLocator, rootCertificateOutputDir)
@@ -65,28 +86,69 @@ class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSup
     val validatedObjectCollector = new ValidatedObjectCollector(trustAnchorLocator, validatedObjectBuilder)
 
 //    val fetcher = createFetcher(listeners = Seq(validatedObjectCollector): _*)
-    val fetcher = createSimplifiedFetcher()
+    val uriCache = new HierarchicalUriCache
+    def fetcher = createSimplifiedFetcher(uriCache)
 
     val timeToPrefetch = time {
-      trustAnchorLocator.getPrefetchUris().asScala.foreach { prefetchUri =>
-        logger.info("Prefetching '" + prefetchUri + "'")
-        val validationResult = new ValidationResult();
-        validationResult.setLocation(new ValidationLocation(prefetchUri));
-        fetcher.prefetch(prefetchUri, validationResult);
-        logger.info("Done prefetching for '" + prefetchUri + "'")
+//      trustAnchorLocator.getPrefetchUris().asScala.foreach { prefetchUri =>
+//        logger.info("Prefetching '" + prefetchUri + "'")
+//        val validationResult = new ValidationResult();
+//        validationResult.setLocation(new ValidationLocation(prefetchUri));
+//        fetcher.prefetch(prefetchUri, validationResult);
+//        logger.info("Done prefetching for '" + prefetchUri + "'")
+//      }
+    }
+
+//    val timeToValidate = time {
+////      val walker = new TopDownWalker(fetcher)
+//      val walker = new ConcurrentTopDownWalker(taContext, fetcher, repositoryObjectStore)
+//      walker.execute
+//    }
+    val uris = repositoryObjectStore.getAllManifestUris.filter(_.toString.startsWith("rsync://certtest-1.local/repository/")).map {
+      _.toString.replace("rsync://certtest-1.local/repository/", "http://certtest-1.local/certification/repository/")
+    }
+    val urisWithDateModified = uris.par.map { uri =>
+      val httpHead = new HttpHead(uri)
+      val response = httpClient.execute(httpHead)
+      (uri -> response.getLastHeader("Last-Modified").getValue)
+    }.seq
+
+    def timeToValidate(latency: Long)(implicit executionContext: ExecutionContext) = time {
+      val manifests = Future.traverse(urisWithDateModified) { case (uri, dateModified) =>
+        Future {
+          val httpHead = new HttpHead(uri)
+          val response = httpClient.execute(httpHead)
+//          val request = new HttpGet(uri)
+//          request.addHeader("If-Modified-Since", dateModified)
+//          val response: HttpResponse = httpClient.execute(request)
+          EntityUtils.consume(response.getEntity)
+
+          if (response.getStatusLine.getStatusCode != 200) {
+            println("Weird! Got status code " + response.getStatusLine.getStatusCode + " for URI " + uri)
+          }
+
+          Thread.sleep(latency)
+//          val context = new CertificateRepositoryObjectValidationContext(uri, null, null)
+//          val validationResult = new ValidationResult
+//          validationResult.setLocation(new ValidationLocation(uri))
+//          fetcher.getManifest(uri, context, validationResult)
+        }
       }
+
+      Await.result(manifests, Duration(1, TimeUnit.HOURS))
     }
 
-    val timeToValidate = time {
-//      val walker = new TopDownWalker(fetcher)
-      val walker = new ConcurrentTopDownWalker(fetcher)
-      walker.addTrustAnchor(taContext)
-      walker.execute
+    for (latency <- Seq(0, 5, 10, 25, 50, 100); concurrency <- 4 to 100 by 4) {
+      implicit val executionContext = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(concurrency))
+      println("%d,%d,%.3f" format (latency, concurrency, timeToValidate(latency) / 1000.0))
+      executionContext.shutdown()
     }
 
-    val totalObjects = validatedObjectBuilder.result.values.size
+    connectionManager.shutdown()
 
-    BenchmarkData(timeToPrefetch = timeToPrefetch, timeToValidate = timeToValidate, totalObjects = totalObjects)
+//    val totalObjects = validatedObjectBuilder.result.values.size
+//
+//    BenchmarkData(timeToPrefetch = timeToPrefetch, timeToValidate = timeToValidate, totalObjects = totalObjects)
 
   }
 
@@ -121,11 +183,10 @@ class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSup
     cachingFetcher
   }
 
-  private def createSimplifiedFetcher(): CertificateRepositoryObjectFetcher = {
+  private def createSimplifiedFetcher(uriCache: HierarchicalUriCache): CertificateRepositoryObjectFetcher = {
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
-    val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File(cacheDirectory + trustAnchorLocator.getFile().getName())))
-    val httpClient: DefaultHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
+    val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File(cacheDirectory + trustAnchorLocator.getFile().getName())), uriCache)
 
     httpSupport match {
       case true =>
@@ -137,62 +198,75 @@ class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSup
   }
 }
 
-class ConcurrentTopDownWalker(certificateRepositoryObjectFetcher: CertificateRepositoryObjectFetcher) {
+class ConcurrentTopDownWalker(trustAnchor: CertificateRepositoryObjectValidationContext,
+                              certificateRepositoryObjectFetcher: => CertificateRepositoryObjectFetcher,
+                               store: RepositoryObjectStore)(implicit executionContext: ExecutionContext) {
 
-  val validationResult = new ValidationResult
-  val queue = new mutable.Queue[CertificateRepositoryObjectValidationContext]
-
-  def addTrustAnchor(trustAnchor: CertificateRepositoryObjectValidationContext) {
-    queue += trustAnchor
+  def newValidationResult(location: URI) = {
+    val result = new ValidationResult
+    result.setLocation(new ValidationLocation(location))
+    result
   }
 
   def execute {
-    while (!queue.isEmpty) {
-      val context = queue.dequeue()
-      prefetch(context)
-      processManifest(context)
+    def loop(alreadyFetched: Set[URI], context: CertificateRepositoryObjectValidationContext): Future[Int] = {
+      for {
+        childCerts <- { prefetch(context); processManifest(alreadyFetched, context) }
+        childObjects <- Future.traverse(childCerts) { child =>
+          loop(alreadyFetched + context.getLocation, child)
+        }
+      } yield {
+        childCerts.size + childObjects.sum
+      }
     }
+    val total = Await.result(loop(Set(trustAnchor.getLocation), trustAnchor), Duration.apply(1, TimeUnit.HOURS))
+    println("Found " + total + " objects")
   }
 
   def prefetch(context: CertificateRepositoryObjectValidationContext) {
     val repositoryURI = context.getRepositoryURI()
-    validationResult.setLocation(new ValidationLocation(repositoryURI));
-    certificateRepositoryObjectFetcher.prefetch(repositoryURI, validationResult);
+    certificateRepositoryObjectFetcher.prefetch(repositoryURI, newValidationResult(repositoryURI))
   }
 
-  def processManifest(context: CertificateRepositoryObjectValidationContext) {
+  def processManifest(alreadyFetched: Set[URI], context: CertificateRepositoryObjectValidationContext): Future[Seq[CertificateRepositoryObjectValidationContext]] = {
     val manifestURI = context.getManifestURI()
-    val manifestCms = fetchManifest(manifestURI, context)
-    if (manifestCms != null) {
-      processManifestFiles(context, manifestCms)
+    fetchManifest(manifestURI, context).flatMap { manifestCms =>
+    if (manifestCms == null) Future(Vector.empty) else {
+      store.put(StoredRepositoryObject(manifestURI, manifestCms))
+      val futures = manifestCms.getFileNames.asScala.toIndexedSeq[String].filter { filename =>
+        val uri = manifestURI.resolve(filename)
+        filename.endsWith("cer") && !(alreadyFetched contains uri)
+      }.map { filename =>
+         processManifestEntry(manifestCms, context, filename)
+      }
+      val sequenced = Future.sequence(futures)
+      sequenced.map(_.flatten)
+    }
     }
   }
 
   def fetchManifest(manifestURI: URI, context: CertificateRepositoryObjectValidationContext) = {
-    validationResult.setLocation(new ValidationLocation(manifestURI))
-    certificateRepositoryObjectFetcher.getManifest(manifestURI, context, validationResult)
+    Future(certificateRepositoryObjectFetcher.getManifest(manifestURI, context, newValidationResult(manifestURI)))
   }
 
-  def processManifestFiles(context: CertificateRepositoryObjectValidationContext, manifestCms: ManifestCms ) {
-    val repositoryURI = context.getRepositoryURI()
-    manifestCms.getFileNames.asScala.foreach(filename => processManifestEntry(manifestCms, context, repositoryURI, filename))
-  }
-
-  def processManifestEntry(manifestCms: ManifestCms, context: CertificateRepositoryObjectValidationContext, repositoryURI: URI, filename: String) {
-    val uri = repositoryURI.resolve(filename)
-    validationResult.setLocation(new ValidationLocation(uri))
-    val cro = certificateRepositoryObjectFetcher.getObject(uri, context, manifestCms.getFileContentSpecification(filename), validationResult)
-    addToWorkQueueIfObjectIssuer(context, uri, cro)
-  }
-
-  def addToWorkQueueIfObjectIssuer(context: CertificateRepositoryObjectValidationContext, objectURI: URI, cro: CertificateRepositoryObject) {
-    cro match {
+  def processManifestEntry(manifestCms: ManifestCms, context: CertificateRepositoryObjectValidationContext, filename: String): Future[Option[CertificateRepositoryObjectValidationContext]] = Future {
+    val uri = context.getRepositoryURI().resolve(filename)
+    val hash = manifestCms.getHash(filename)
+    val storedObject = store.getByHash(hash)
+    val cmsObject = storedObject match {
+      case Some(obj) =>
+        CertificateRepositoryObjectFactory.createCertificateRepositoryObject(obj.binaryObject.toArray)
+      case None =>
+        val obj = certificateRepositoryObjectFetcher.getObject(uri, context, manifestCms.getFileContentSpecification(filename), newValidationResult(uri))
+        store.put(StoredRepositoryObject(uri, obj))
+        obj
+    }
+    cmsObject match {
       case childCertificate: X509ResourceCertificate =>
         if (childCertificate.isObjectIssuer()) {
-          if (queue.contains())
-          queue += context.createChildContext(objectURI, childCertificate)
-        }
-      case _ =>
+          Some(context.createChildContext(uri, childCertificate))
+        } else None
+      case _ => None
     }
   }
 }

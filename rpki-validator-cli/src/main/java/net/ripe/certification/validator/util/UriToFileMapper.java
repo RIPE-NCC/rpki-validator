@@ -29,20 +29,19 @@
  */
 package net.ripe.certification.validator.util;
 
-import static net.ripe.commons.certification.validation.ValidationString.*;
+import net.ripe.commons.certification.validation.ValidationResult;
+import org.apache.commons.lang.Validate;
 
 import java.io.File;
 import java.net.URI;
 
-import net.ripe.commons.certification.validation.ValidationResult;
-
-import org.apache.commons.lang.Validate;
+import static net.ripe.commons.certification.validation.ValidationString.*;
 
 public class UriToFileMapper {
 
     private static final String RSYNC_SCHEME = "rsync";
 
-    private File targetDirectory;
+    private final File targetDirectory;
 
     public UriToFileMapper(File targetDirectory) {
         Validate.notNull(targetDirectory);

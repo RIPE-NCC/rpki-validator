@@ -91,6 +91,11 @@ class RepositoryObjectStore(datasource: DataSource) extends DbMigrations {
     template.update("truncate table retrieved_objects")
   }
 
+  def getAllManifestUris: IndexedSeq[URI] = {
+    import collection.JavaConverters._
+    template.queryForList("select uri from retrieved_objects where uri like '%.mft'", classOf[String]).asScala.map(URI.create)(collection.breakOut)
+  }
+
   def getLatestByUrl(url: URI) = {
     val selectString = "select * from retrieved_objects where uri = ? order by time_seen desc limit 1"
     val selectArgs = Array[Object](url.toString)

@@ -39,6 +39,7 @@ import net.ripe.commons.certification.util.Specification
 class RemoteObjectFetcher(rsyncFetcher: RsyncCertificateRepositoryObjectFetcher, httpFetcherOption: Option[HttpObjectFetcher]) extends CertificateRepositoryObjectFetcher with Logging {
 
   val uriMap: Map[URI, URI] = Map(
+    URI.create("rsync://certtest-1.local/repository/") -> URI.create("http://certtest-1.local/certification/repository/"),
     URI.create("rsync://rpki.ripe.net/") -> URI.create("http://certification.ripe.net/certification/repository/"),
     URI.create("rsync://localhost:10873/online/") -> URI.create("http://localhost:8080/certification/repository/online/"))
 

@@ -29,12 +29,6 @@
  */
 package net.ripe.certification.validator.fetchers;
 
-import static net.ripe.commons.certification.validation.ValidationString.*;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-
 import net.ripe.certification.validator.util.HierarchicalUriCache;
 import net.ripe.certification.validator.util.UriToFileMapper;
 import net.ripe.commons.certification.CertificateRepositoryObject;
@@ -47,9 +41,14 @@ import net.ripe.commons.certification.util.Specification;
 import net.ripe.commons.certification.util.Specifications;
 import net.ripe.commons.certification.validation.ValidationResult;
 import net.ripe.commons.certification.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+
+import static net.ripe.commons.certification.validation.ValidationString.*;
 
 public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {
 
@@ -67,9 +66,13 @@ public class RsyncCertificateRepositoryObjectFetcher implements CertificateRepos
     private final UriToFileMapper uriToFileMapper;
 
     public RsyncCertificateRepositoryObjectFetcher(Rsync rsync, UriToFileMapper uriToFileMapper) {
+        this(rsync, uriToFileMapper, new HierarchicalUriCache());
+    }
+
+    public RsyncCertificateRepositoryObjectFetcher(Rsync rsync, UriToFileMapper uriToFileMapper, HierarchicalUriCache uriCache) {
         this.rsync = rsync;
         this.uriToFileMapper = uriToFileMapper;
-        this.uriCache = new HierarchicalUriCache();
+        this.uriCache = uriCache;
     }
 
     @Override

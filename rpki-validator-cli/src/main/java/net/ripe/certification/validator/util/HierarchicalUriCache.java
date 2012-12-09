@@ -29,22 +29,22 @@
  */
 package net.ripe.certification.validator.util;
 
+import org.apache.commons.lang.StringUtils;
+
 import java.net.URI;
 import java.util.HashSet;
 import java.util.Set;
-
-import org.apache.commons.lang.StringUtils;
 
 public class HierarchicalUriCache {
 
     private final Set<URI> cache = new HashSet<URI>();
 
 
-    public void add(URI uri) {
+    public synchronized void add(URI uri) {
         cache.add(uri);
     }
 
-    public boolean contains(URI uriToCheck) {
+    public synchronized boolean contains(URI uriToCheck) {
         URI uri = uriToCheck;
         while (StringUtils.isNotEmpty(uri.getRawPath())) {
             if (cache.contains(uri)) {

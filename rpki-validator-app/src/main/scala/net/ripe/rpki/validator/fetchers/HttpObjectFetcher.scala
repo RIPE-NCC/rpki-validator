@@ -114,6 +114,8 @@ class HttpObjectFetcher(httpClient: HttpClient) extends CertificateRepositoryObj
       case e: Exception =>
         result.error(ValidationString.VALIDATOR_HTTP_DOWNLOAD, uri.toString)
         None
+    } finally {
+      //Thread.sleep(util.Random.nextInt(100) + 50)
     }
   }
 
