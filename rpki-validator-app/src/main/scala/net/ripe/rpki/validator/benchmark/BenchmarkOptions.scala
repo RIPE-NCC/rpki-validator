@@ -36,11 +36,13 @@ import org.apache.commons.io.FileUtils
 import java.io.File
 import scala.collection.JavaConverters._
 import java.util
+import akka.util.duration._
+import akka.util.FiniteDuration
 
 object BenchmarkOptions {
 
   val DEFAULT_VALIDATION_RUN_COUNT = 10
-  var DEFAULT_VALIDATION_THREAD_COUNT = 1
+  val DEFAULT_VALIDATION_THREAD_COUNT = 1
 
   def parse(args: Array[String]): Either[String, BenchmarkOptions] = try {
     Right(new BenchmarkOptions(args))
@@ -53,15 +55,17 @@ class BenchmarkOptions(args: Array[String]) {
 
   private val parser = new ArgotParser(programName = "rpki-benchmarkr")
 
-  private val validationRunCountOption = parser.option[Int](List("v", "validation-count"), "Validation run count", "Number of validation runs. Default: " + BenchmarkOptions.DEFAULT_VALIDATION_RUN_COUNT)
-  private val threadCountOption = parser.option[Int](List("t", "thread-count"), "Validation thread count", "Number of threads used in validation runs. Default: " + BenchmarkOptions.DEFAULT_VALIDATION_THREAD_COUNT)
-  private val httpSupportOption = parser.flag[Boolean](List("http-support"), "Use http instead of rsync for retrieving objects from rpki repositories. (Experimental)")
-  private val talFileNameOption = parser.option[File](List("f", "tal-file"), "Trust anchor locator file", "Specify the trust anchor locator file used for validation.") {
+  private val validationRunCountOption = parser.option[Int](List("v", "validation-count"), "COUNT", "Number of validation runs. Default: " + BenchmarkOptions.DEFAULT_VALIDATION_RUN_COUNT)
+  private val threadCountOption = parser.option[Int](List("t", "thread-count"), "COUNT", "Number of threads used in validation runs. Default: " + BenchmarkOptions.DEFAULT_VALIDATION_THREAD_COUNT)
+  private val httpSupportOption = parser.flag[Boolean](List("http-support"), "Use HTTP instead of rsync for retrieving objects from rpki repositories. (Experimental)")
+  private val talFileNameOption = parser.option[File](List("f", "tal-file"), "FILE", "Specify the trust anchor locator file used for validation.") {
     (s, opt) =>
       val file = new File(s)
       if (!file.exists) parser.usage("Tal file \"" + file + "\" does not exist.")
       file
   }
+  private val deleteRsyncCacheOption = parser.flag[Boolean](List("delete-rsync-cache"), "Enable deletion of rsync cache after each validation run.")
+  private val rampUpPeriodOption = parser.option[Double](List("ramp-up-period"), "SECONDS", "Number of seconds to ramp-up the concurrent threads. Default: 0.0")
 
   parser.parse(args)
 
@@ -69,4 +73,17 @@ class BenchmarkOptions(args: Array[String]) {
   val validationRunCount: Int = validationRunCountOption.value.getOrElse(BenchmarkOptions.DEFAULT_VALIDATION_RUN_COUNT)
   val threadCount: Int = threadCountOption.value.getOrElse(BenchmarkOptions.DEFAULT_VALIDATION_THREAD_COUNT)
   val talFile: File = talFileNameOption.value.getOrElse(parser.usage(talFileNameOption.description))
+  val deleteRsyncCache: Boolean = deleteRsyncCacheOption.value.getOrElse(false)
+  val rampUpPeriod: FiniteDuration = rampUpPeriodOption.value.getOrElse(0.0).seconds
+
+  private def show(option: SingleValueOption[_], value: Any): String = "--" + option.names.maxBy(_.length) + " " + value
+  private def show(option: FlagOption[Boolean]): String = if (option.value.getOrElse(false)) "--" + option.names.maxBy(_.length) else ""
+
+  override def toString = Seq(
+      show(talFileNameOption, talFile),
+      show(httpSupportOption),
+      show(validationRunCountOption, validationRunCount),
+      show(threadCountOption, threadCount),
+      show(deleteRsyncCacheOption),
+      show(rampUpPeriodOption, rampUpPeriod.toMillis / 1000.0)).mkString(" ")
 }

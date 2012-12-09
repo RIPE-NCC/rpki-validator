@@ -52,24 +52,28 @@ object BenchmarkMain {
 
 class BenchmarkMain(options: BenchmarkOptions) extends Logging {
   val trustAnchorLocator = TrustAnchorLocator.fromFile(options.talFile)
-
   val runCounter = new AtomicInteger(0)
 
   val threads = for (threadId <- 1 to options.threadCount) yield {
     val thread = new Thread {
       val cacheDirectory = "tmp/cache_" + threadId + "/"
       val rootCertificateOutputDir = "tmp/benchmark-tals_" + threadId
+      val name = "#" + threadId
+
+      setName(name)
 
       @tailrec override def run {
         val executionId = runCounter.incrementAndGet
         if (executionId <= options.validationRunCount) {
           runExecution(executionId)
           run
+        } else {
+          info("finished")
         }
       }
 
       private def runExecution(executionId: Int) {
-        info("Starting validation process for run #" + executionId + " (thread " + threadId + ")")
+        info("starting validation process for run #" + executionId)
         val dataSource = inMemoryDataSourceForId(String.valueOf(executionId))
         try {
           val repositoryObjectStore = new RepositoryObjectStore(dataSource)
@@ -82,20 +86,27 @@ class BenchmarkMain(options: BenchmarkOptions) extends Logging {
             rootCertificateOutputDir = rootCertificateOutputDir)
           val benchmarks = process.run
 
-          info("Found benchmarks: " + benchmarks.toCsvLine(trustAnchorLocator.getCaName))
-          info("Writing these benchmarks to statsfile")
+          info("found benchmarks: " + benchmarks.toCsvLine(trustAnchorLocator.getCaName))
+          info("writing these benchmarks to statsfile")
 
-          BenchmarkStatistics.save(trustAnchorLocator.getCaName, benchmarks)
+          BenchmarkStatistics.save(trustAnchorLocator.getCaName, benchmarks, options.toString)
 
         } finally {
           dataSource.close
-          FileUtils.deleteDirectory(new File(cacheDirectory))
-          FileUtils.deleteDirectory(new File(rootCertificateOutputDir))
+          if (options.deleteRsyncCache) {
+            info("deleting rsync cache before next iteration")
+            FileUtils.deleteDirectory(new File(cacheDirectory))
+            FileUtils.deleteDirectory(new File(rootCertificateOutputDir))
+          } else {
+            info("reusing rsync cache for next run")
+          }
         }
       }
     }
-    thread.setName("validator-" + threadId)
     thread.start
+    if (options.threadCount > 1) {
+      Thread.sleep((options.rampUpPeriod / (options.threadCount - 1)).toMillis)
+    }
     thread
   }
 

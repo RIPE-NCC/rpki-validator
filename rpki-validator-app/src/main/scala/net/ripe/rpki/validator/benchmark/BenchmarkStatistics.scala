@@ -52,12 +52,12 @@ case class BenchmarkData(timeToPrefetch: Long, timeToValidate: Long, totalObject
  */
 object BenchmarkStatistics {
 
-  def save(taName: String, benchmarkData: BenchmarkData) = {
+  def save(taName: String, benchmarkData: BenchmarkData, options: String) = {
     val statsFile = new File("stats/stats.out").getCanonicalFile
     statsFile.getParentFile.mkdirs()
     val fileWriter: FileWriter = new FileWriter(statsFile, true)
     try {
-      IOUtils.write(benchmarkData.toCsvLine(taName) + "\n", fileWriter)
+      IOUtils.write(benchmarkData.toCsvLine(taName) + "," + options + "\n", fileWriter)
     } finally {
       IOUtils.closeQuietly(fileWriter);
     }

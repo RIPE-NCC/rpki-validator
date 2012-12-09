@@ -130,7 +130,7 @@
         <dependency>
             <groupId>org.clapper</groupId>
             <artifactId>argot_${scala.version}</artifactId>
-            <version>0.3.5</version>
+            <version>0.4</version>
         </dependency>
 
         <dependency>
