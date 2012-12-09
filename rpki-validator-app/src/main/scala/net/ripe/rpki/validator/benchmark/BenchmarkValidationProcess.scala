@@ -51,6 +51,10 @@ import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager
 import org.joda.time.DateTimeUtils
 import java.net.URI
 import net.ripe.rpki.validator.models.ValidatedObject
+import collection.mutable
+import net.ripe.commons.certification.cms.manifest.ManifestCms
+import net.ripe.commons.certification.CertificateRepositoryObject
+import net.ripe.commons.certification.x509cert.X509ResourceCertificate
 
 class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSupport: Boolean, repositoryObjectStore: RepositoryObjectStore, cacheDirectory: String, rootCertificateOutputDir: String) extends Logging {
 
@@ -60,7 +64,8 @@ class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSup
     val validatedObjectBuilder = Map.newBuilder[URI, ValidatedObject]
     val validatedObjectCollector = new ValidatedObjectCollector(trustAnchorLocator, validatedObjectBuilder)
 
-    val fetcher = createFetcher(listeners = Seq(validatedObjectCollector): _*)
+//    val fetcher = createFetcher(listeners = Seq(validatedObjectCollector): _*)
+    val fetcher = createSimplifiedFetcher()
 
     val timeToPrefetch = time {
       trustAnchorLocator.getPrefetchUris().asScala.foreach { prefetchUri =>
@@ -115,4 +120,18 @@ class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSup
     cachingFetcher
   }
 
+  private def createSimplifiedFetcher(): CertificateRepositoryObjectFetcher = {
+    val rsync = new Rsync()
+    rsync.setTimeoutInSeconds(300)
+    val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File(cacheDirectory + trustAnchorLocator.getFile().getName())))
+    val httpClient: DefaultHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
+
+    httpSupport match {
+      case true =>
+        val httpFetcher = new HttpObjectFetcher(httpClient)
+        new RemoteObjectFetcher(rsyncFetcher, Some(httpFetcher))
+      case false =>
+        new RemoteObjectFetcher(rsyncFetcher, None)
+    }
+  }
 }
