@@ -52,10 +52,10 @@ import org.joda.time.DateTimeUtils
 import java.net.URI
 import net.ripe.rpki.validator.models.ValidatedObject
 
-class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSupport: Boolean, repositoryObjectStore: RepositoryObjectStore) extends Logging {
+class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSupport: Boolean, repositoryObjectStore: RepositoryObjectStore, cacheDirectory: String, rootCertificateOutputDir: String) extends Logging {
 
   def run() = {
-    val taContext = new TrustAnchorExtractor().extractTA(trustAnchorLocator, "tmp/tals")
+    val taContext = new TrustAnchorExtractor().extractTA(trustAnchorLocator, rootCertificateOutputDir)
 
     val validatedObjectBuilder = Map.newBuilder[URI, ValidatedObject]
     val validatedObjectCollector = new ValidatedObjectCollector(trustAnchorLocator, validatedObjectBuilder)
@@ -94,7 +94,7 @@ class BenchmarkValidationProcess(trustAnchorLocator: TrustAnchorLocator, httpSup
   private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.Listener*): CertificateRepositoryObjectFetcher = {
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
-    val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
+    val rsyncFetcher = new RsyncCertificateRepositoryObjectFetcher(rsync, new UriToFileMapper(new File(cacheDirectory + trustAnchorLocator.getFile().getName())))
     val httpClient: DefaultHttpClient = new DefaultHttpClient(new ThreadSafeClientConnManager)
 
     val remoteFetcher = httpSupport match {

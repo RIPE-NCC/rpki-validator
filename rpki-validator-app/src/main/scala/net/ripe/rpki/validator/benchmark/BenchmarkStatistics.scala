@@ -29,11 +29,9 @@
  */
 package net.ripe.rpki.validator.benchmark
 
-import net.ripe.rpki.validator.statistics.Metric
 import java.io.File
-import org.apache.commons.io.FileUtils
-import org.apache.commons.io.output.FileWriterWithEncoding
 import java.io.FileWriter
+import org.apache.commons.io.IOUtils
 
 object BenchmarkData {
   def csvHeader(): String = List("TA Name", "time to prefetch (ms)", "time to validate (ms)", "# objects validated").mkString(",")
@@ -55,12 +53,12 @@ case class BenchmarkData(timeToPrefetch: Long, timeToValidate: Long, totalObject
 object BenchmarkStatistics {
 
   def save(taName: String, benchmarkData: BenchmarkData) = {
-    val statsFileName = new File("stats/stats.out").getCanonicalFile.getAbsolutePath
-    val fileWriter = new FileWriter(statsFileName, true)
+    val statsFile = new File("stats/stats.out").getCanonicalFile
+    val fileWriter: FileWriter = new FileWriter(statsFile, true)
     try {
-      fileWriter.write(benchmarkData.toCsvLine(taName) + "\n")
+      IOUtils.write(benchmarkData.toCsvLine(taName) + "\n", fileWriter)
     } finally {
-      fileWriter.close
+      IOUtils.closeQuietly(fileWriter);
     }
   }
 

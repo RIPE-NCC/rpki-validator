@@ -145,4 +145,12 @@ object DataSources {
     result.setDefaultAutoCommit(true)
     result
   }
+
+  def inMemoryDataSourceForId(id: String) = {
+    val result = new BasicDataSource
+    result.setUrl("jdbc:h2:mem:rpki-objects_" + id)
+    result.setDriverClassName("org.h2.Driver")
+    result.setDefaultAutoCommit(true)
+    result
+  }
 }

@@ -32,8 +32,15 @@ package benchmark
 
 import org.clapper.argot._
 import org.clapper.argot.ArgotConverters._
+import org.apache.commons.io.FileUtils
+import java.io.File
+import scala.collection.JavaConverters._
+import java.util
 
 object BenchmarkOptions {
+
+  val DEFAULT_VALIDATION_RUN_COUNT = 10
+  var DEFAULT_VALIDATION_THREAD_COUNT = 1
 
   def parse(args: Array[String]): Either[String, BenchmarkOptions] = try {
     Right(new BenchmarkOptions(args))
@@ -46,6 +53,20 @@ class BenchmarkOptions(args: Array[String]) {
 
   private val parser = new ArgotParser(programName = "rpki-benchmarkr")
 
+  private val validationRunCountOption = parser.option[Int](List("v", "validation-count"), "Validation run count", "Number of validation runs. Default: " + BenchmarkOptions.DEFAULT_VALIDATION_RUN_COUNT)
+  private val threadCountOption = parser.option[Int](List("t", "thread-count"), "Validation thread count", "Number of threads used in validation runs. Default: " + BenchmarkOptions.DEFAULT_VALIDATION_THREAD_COUNT)
+  private val httpSupportOption = parser.flag[Boolean](List("http-support"), "Use http instead of rsync for retrieving objects from rpki repositories. (Experimental)")
+  private val talFileNameOption = parser.option[File](List("f", "tal-file"), "Trust anchor locator file", "Specify the trust anchor locator file used for validation.") {
+    (s, opt) =>
+      val file = new File(s)
+      if (!file.exists) parser.usage("Tal file \"" + file + "\" does not exist.")
+      file
+  }
 
   parser.parse(args)
+
+  val httpSupport: Boolean = httpSupportOption.value.getOrElse(false)
+  val validationRunCount: Int = validationRunCountOption.value.getOrElse(BenchmarkOptions.DEFAULT_VALIDATION_RUN_COUNT)
+  val threadCount: Int = threadCountOption.value.getOrElse(BenchmarkOptions.DEFAULT_VALIDATION_THREAD_COUNT)
+  val talFile: File = talFileNameOption.value.getOrElse(parser.usage(talFileNameOption.description))
 }
