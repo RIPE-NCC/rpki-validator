@@ -33,8 +33,10 @@ package benchmark
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.store.DataSources._
 import net.ripe.rpki.validator.store.RepositoryObjectStore
-import java.util.concurrent.{TimeUnit, Executors}
+import java.util.concurrent.{ TimeUnit, Executors }
 import net.ripe.certification.validator.util.TrustAnchorLocator
+import org.apache.commons.io.FileUtils
+import java.io.File
 
 object BenchmarkMain {
 
@@ -52,19 +54,34 @@ class BenchmarkMain(options: BenchmarkOptions) extends Logging {
   val trustAnchorLocator = TrustAnchorLocator.fromFile(options.talFile)
   val threadPool = Executors.newFixedThreadPool(options.threadCount)
 
-  for(executionId <- 1 to options.validationRunCount) {
+  for (executionId <- 1 to options.validationRunCount) {
     threadPool.submit(new Runnable {
       def run() {
         info("Starting validation process for run #" + executionId)
-        val repositoryObjectStore = new RepositoryObjectStore(inMemoryDataSourceForId(String.valueOf(executionId)))
+        val dataSource = inMemoryDataSourceForId(String.valueOf(executionId))
+        val cacheDirectory = "tmp/cache_" + executionId + "/"
+        val rootCertificateOutputDir = "tmp/benchmark-tals_" + executionId
+        try {
+          val repositoryObjectStore = new RepositoryObjectStore(dataSource)
 
-        val process = new BenchmarkValidationProcess(trustAnchorLocator = trustAnchorLocator, httpSupport = options.httpSupport, repositoryObjectStore = repositoryObjectStore, cacheDirectory = "tmp/cache_" + executionId + "/", rootCertificateOutputDir = "tmp/benchmark-tals_" + executionId)
-        val benchmarks = process.run
+          val process = new BenchmarkValidationProcess(
+              trustAnchorLocator = trustAnchorLocator,
+              httpSupport = options.httpSupport,
+              repositoryObjectStore = repositoryObjectStore,
+              cacheDirectory = cacheDirectory,
+              rootCertificateOutputDir = rootCertificateOutputDir)
+          val benchmarks = process.run
 
-        info("Found benchmarks: " + benchmarks.toCsvLine(trustAnchorLocator.getCaName))
-        info("Writing these benchmarks to statsfile")
+          info("Found benchmarks: " + benchmarks.toCsvLine(trustAnchorLocator.getCaName))
+          info("Writing these benchmarks to statsfile")
 
-        BenchmarkStatistics.save(trustAnchorLocator.getCaName, benchmarks)
+          BenchmarkStatistics.save(trustAnchorLocator.getCaName, benchmarks)
+
+        } finally {
+          dataSource.close
+          FileUtils.deleteDirectory(new File(cacheDirectory))
+          FileUtils.deleteDirectory(new File(rootCertificateOutputDir))
+        }
       }
     })
   }

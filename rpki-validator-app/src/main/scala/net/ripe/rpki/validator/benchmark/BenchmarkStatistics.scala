@@ -54,6 +54,7 @@ object BenchmarkStatistics {
 
   def save(taName: String, benchmarkData: BenchmarkData) = {
     val statsFile = new File("stats/stats.out").getCanonicalFile
+    statsFile.getParentFile.mkdirs()
     val fileWriter: FileWriter = new FileWriter(statsFile, true)
     try {
       IOUtils.write(benchmarkData.toCsvLine(taName) + "\n", fileWriter)
