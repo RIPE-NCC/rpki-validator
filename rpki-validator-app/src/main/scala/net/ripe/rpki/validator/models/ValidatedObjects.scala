@@ -51,16 +51,10 @@ sealed trait ValidatedObject {
     else ValidationStatus.PASSED
   }
 }
-
 case class InvalidObject(uri: URI, checks: Set[ValidationCheck]) extends ValidatedObject {
   override val isValid = false
 }
-
 case class ValidObject(uri: URI, checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) extends ValidatedObject {
-  override val isValid = true
-}
-
-case class ValidRoa(uri: URI, checks: Set[ValidationCheck], roa: RoaCms) extends ValidatedObject {
   override val isValid = true
 }
 
@@ -72,7 +66,7 @@ class ValidatedObjects(val all: Map[TrustAnchorLocator, Seq[ValidatedObject]]) {
   def getValidatedRtrPrefixes = {
     for {
       (locator, validatedObjects) <- all
-      ValidRoa(_, _, roa) <- validatedObjects
+      ValidObject(_, _, roa: RoaCms) <- validatedObjects
       roaPrefix <- roa.getPrefixes().asScala
     } yield {
       RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(locator))

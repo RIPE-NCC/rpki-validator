@@ -121,7 +121,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     val roa: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes.asJava, validityPeriod, RoaCmsObjectMother.TEST_ASN)
     val roaUri: URI = URI.create("rsync://example.com/roa.roa")
 
-    val validatedRoa: ValidRoa = new ValidRoa(roaUri, Set.empty[ValidationCheck], roa)
+    val validatedRoa = new ValidObject(roaUri, Set.empty[ValidationCheck], roa)
 
     val roas = Seq(validatedRoa)
 

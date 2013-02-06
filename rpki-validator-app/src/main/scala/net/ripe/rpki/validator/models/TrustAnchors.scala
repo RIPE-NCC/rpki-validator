@@ -201,7 +201,7 @@ trait ValidationProcess {
   def shutdown(): Unit = {}
 }
 
-abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, httpSupport: Boolean) extends ValidationProcess {
+class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, httpSupport: Boolean) extends ValidationProcess {
   private val options = new ValidationOptions()
   options.setMaxStaleDays(maxStaleDays)
 
@@ -278,12 +278,7 @@ abstract class TrustAnchorValidationProcess(override val trustAnchorLocator: Tru
     }
 
     override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
-      obj match {
-        case roa: RoaCms =>
-          objects += uri -> new ValidRoa(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, roa)
-        case _ =>
-          objects += uri -> new ValidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, obj)
-      }
+      objects += uri -> new ValidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, obj)
     }
   }
 }
