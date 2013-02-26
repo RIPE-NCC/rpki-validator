@@ -43,9 +43,6 @@ import com.googlecode.flyway.core.Flyway
 import akka.util.ByteString
 import javax.sql.DataSource
 import models.StoredRepositoryObject
-import org.joda.time.format.DateTimeParser
-import org.springframework.format.datetime.joda.DateTimeParser
-import org.joda.time.format.DateTimeFormatter
 import org.joda.time.DateTimeZone
 
 /**
@@ -56,18 +53,19 @@ class RepositoryObjectStore(datasource: DataSource) {
   val template: JdbcTemplate = new JdbcTemplate(datasource)
 
   def put(retrievedObject: StoredRepositoryObject): Unit = {
+    val updateOrder: java.lang.Long = template.queryForLong("SELECT NEXTVAL('update_order_seq')")
     try {
-      template.update("insert into retrieved_objects (hash, uri, encoded_object, expires, time_seen) values (?, ?, ?, ?, ?)",
+      template.update("insert into retrieved_objects (hash, uri, encoded_object, expires, update_order) values (?, ?, ?, ?, ?)",
         Base64.encodeBase64String(retrievedObject.hash.toArray),
         retrievedObject.uri.toString,
         Base64.encodeBase64String(retrievedObject.binaryObject.toArray),
         new java.sql.Timestamp(retrievedObject.expires.getMillis),
-        new java.sql.Timestamp(new DateTime().getMillis))
+        updateOrder)
     } catch {
       case e: DuplicateKeyException =>
         // Object already exists, update the last seen time only.
-        template.update("update retrieved_objects set time_seen = ? where hash = ?",
-          new java.sql.Timestamp(new DateTime().getMillis),
+        template.update("update retrieved_objects set update_order = ? where hash = ?",
+          updateOrder,
           Base64.encodeBase64String(retrievedObject.hash.toArray))
     }
   }
@@ -86,7 +84,7 @@ class RepositoryObjectStore(datasource: DataSource) {
   }
 
   def getLatestByUrl(url: URI) = {
-    val selectString = "select * from retrieved_objects where uri = ? order by time_seen desc limit 1"
+    val selectString = "select * from retrieved_objects where uri = ? order by update_order desc limit 1"
     val selectArgs = Array[Object](url.toString)
     getOptionalResult(selectString, selectArgs)
   }
