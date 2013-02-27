@@ -68,6 +68,7 @@ import net.ripe.rpki.validator.statistics.Metric
 import net.ripe.rpki.validator.store.DataSources
 import net.ripe.rpki.validator.store.RepositoryObjectStore
 import scalaz._
+import org.apache.commons.io.FileUtils
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -202,7 +203,10 @@ trait ValidationProcess {
 }
 
 class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, httpSupport: Boolean) extends ValidationProcess {
+
   private val options = new ValidationOptions()
+  private val RsyncDiskCacheBasePath = "tmp/cache/"
+
   options.setMaxStaleDays(maxStaleDays)
 
   override def extractTrustAnchorLocator() = {
@@ -249,6 +253,10 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     builder.result()
   }
 
+  def wipeRsyncDiskCache() = {
+    FileUtils.cleanDirectory(new File(RsyncDiskCacheBasePath))
+  }
+
   private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.Listener*): CertificateRepositoryObjectFetcher = {
     val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(new RpkiRepositoryObjectFetcherAdapter(consistentObjectFetcher), options);
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
@@ -263,7 +271,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   private[this] lazy val consistentObjectFetcher = {
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
-    val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File("tmp/cache/" + trustAnchorLocator.getFile().getName())))
+    val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File(RsyncDiskCacheBasePath  + trustAnchorLocator.getFile().getName())))
     val httpClient: DefaultHttpClient = new DefaultHttpClient(new PoolingClientConnectionManager)
 
     val httpFetcher = if (httpSupport) Some(new HttpObjectFetcher(httpClient)) else None
