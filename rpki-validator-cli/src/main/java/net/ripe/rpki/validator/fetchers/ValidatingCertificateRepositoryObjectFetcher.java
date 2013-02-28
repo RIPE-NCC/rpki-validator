@@ -29,6 +29,10 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
+import static net.ripe.rpki.commons.validation.ValidationString.*;
+
+import java.io.File;
+import java.net.URI;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
 import net.ripe.rpki.commons.crypto.crl.CrlLocator;
@@ -41,11 +45,6 @@ import net.ripe.rpki.commons.validation.ValidationString;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import org.apache.commons.lang.Validate;
 import org.apache.log4j.Logger;
-
-import java.io.File;
-import java.net.URI;
-
-import static net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_INTERNAL_ERROR;
 
 
 public class ValidatingCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {
@@ -201,7 +200,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
     }
 
 
-    private ManifestCms getManifestValidatedForCrl(URI crlUri, CertificateRepositoryObjectValidationContext context, ValidationResult result, X509Crl crl) {
+    private ManifestCms getManifestValidatedForCrl(final URI crlUri, CertificateRepositoryObjectValidationContext context, ValidationResult result, final X509Crl crl) {
         ValidationLocation savedCurrentLocation = result.getCurrentLocation();
         result.setLocation(new ValidationLocation(context.getManifestURI()));
         try {
@@ -210,17 +209,12 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
                 return null;
             }
 
-            final X509Crl crlForCrlLocator = crl;
-            final URI expectedURIforCrlLocator = crlUri;
-
             manifest.validate(context.getManifestURI().toString(), context, new CrlLocator() {
-
                 @Override
                 public X509Crl getCrl(URI uri, CertificateRepositoryObjectValidationContext context, ValidationResult result) {
-                    Validate.isTrue(uri.equals(expectedURIforCrlLocator));
-                    return crlForCrlLocator;
+                    Validate.isTrue(uri.equals(crlUri));
+                    return crl;
                 }
-
             }, options, result);
             if (result.hasFailureForCurrentLocation()) {
                 return null;
