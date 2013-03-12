@@ -254,7 +254,10 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   }
 
   def wipeRsyncDiskCache() = {
-    FileUtils.cleanDirectory(new File(RsyncDiskCacheBasePath))
+    val diskCache = new File(RsyncDiskCacheBasePath)
+    if (diskCache.isDirectory()) {
+      FileUtils.cleanDirectory(diskCache)
+    }
   }
 
   private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.Listener*): CertificateRepositoryObjectFetcher = {
