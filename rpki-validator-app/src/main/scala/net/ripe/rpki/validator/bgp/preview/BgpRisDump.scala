@@ -55,7 +55,7 @@ object BgpRisDump extends Logging {
     val identityMap = new ObjectIdentityMap
     val reader = new BufferedReader(new InputStreamReader(is))
     try {
-      Right(Iterator continually reader.readLine() takeWhile (_ != null) flatMap parseLine map (makeResourcesUnique(identityMap, _)) toIndexedSeq)
+      Right(Iterator.continually(reader.readLine()).takeWhile(_ != null).flatMap(parseLine).map(makeResourcesUnique(identityMap, _)).toIndexedSeq)
     } catch {
       case e: Exception =>
         Left(e)
