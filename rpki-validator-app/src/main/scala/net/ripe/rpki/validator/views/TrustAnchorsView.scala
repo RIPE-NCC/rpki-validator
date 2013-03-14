@@ -31,10 +31,9 @@ package net.ripe.rpki.validator
 package views
 
 import org.joda.time._
-import scala.collection.SortedMap
-import scala.math.Ordering.Implicits._
 import scala.xml.Text
 import scala.xml.NodeSeq
+import scala.collection.SortedMap
 import lib.DateAndTime._
 import lib.Validation._
 import models._

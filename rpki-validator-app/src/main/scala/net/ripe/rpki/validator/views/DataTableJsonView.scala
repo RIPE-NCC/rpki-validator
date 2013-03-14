@@ -33,7 +33,8 @@ package views
 import net.liftweb.json._
 import net.ripe.ipresource.IpRange
 import net.ripe.ipresource.Asn
-import lib.Validation._
+
+import scala.NotDefinedError
 
 trait DataTableJsonView[R <: Any] {
 
@@ -50,7 +51,17 @@ trait DataTableJsonView[R <: Any] {
   private val sortCol = getParam("iSortCol_0").toInt
   private val sortOrder = getParam("sSortDir_0")
 
-  private def searchCriterium = parseIpRange(sSearch).toOption orElse parseAsn(sSearch).toOption getOrElse sSearch
+  def searchCriterium = {
+    try {
+      IpRange.parse(sSearch)
+    } catch {
+      case _ => try {
+        Asn.parse(sSearch)
+      } catch {
+        case _ => sSearch
+      }
+    }
+  }
 
   def renderJson: String = {
     val allRecords = getAllRecords

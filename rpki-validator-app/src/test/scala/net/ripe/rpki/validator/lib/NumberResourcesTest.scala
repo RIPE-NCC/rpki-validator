@@ -42,7 +42,6 @@ import net.ripe.ipresource.IpRange
 import net.ripe.rpki.validator.models.RtrPrefix
 
 object NumberResourcesTest {
-  import scala.language.implicitConversions
   implicit def LongToAsn(asn: Long): Asn = new Asn(asn)
   implicit def StringToPrefix(s: String): IpRange = IpRange.parse(s)
   implicit def IpRangeToInterval(range: IpRange) = NumberResourceInterval(range.getStart(), range.getEnd())

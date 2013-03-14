@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.concurrent.stm.Ref
 import scala.concurrent.stm.atomic
-import scala.math.Ordering.Implicits._
 import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.impl.conn.PoolingClientConnectionManager
 import org.joda.time.DateTime

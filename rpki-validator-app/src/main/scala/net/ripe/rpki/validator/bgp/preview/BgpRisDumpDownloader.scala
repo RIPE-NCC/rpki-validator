@@ -29,10 +29,8 @@
  */
 package net.ripe.rpki.validator.bgp.preview
 
-import grizzled.slf4j.Logging
 import java.util.zip.GZIPInputStream
-import javax.servlet.http.HttpServletResponse.SC_NOT_MODIFIED
-import javax.servlet.http.HttpServletResponse.SC_OK
+
 import org.apache.http.HttpResponse
 import org.apache.http.client.HttpClient
 import org.apache.http.client.ResponseHandler
@@ -40,9 +38,12 @@ import org.apache.http.client.methods.HttpGet
 import org.apache.http.impl.cookie.DateUtils
 import org.apache.http.util.EntityUtils
 import org.joda.time.DateTime
-import scala.concurrent.blocking
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+
+import akka.dispatch.ExecutionContext
+import akka.dispatch.Future
+import grizzled.slf4j.Logging
+import javax.servlet.http.HttpServletResponse.SC_NOT_MODIFIED
+import javax.servlet.http.HttpServletResponse.SC_OK
 
 class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
   val DEFAULT_URLS = Seq(
@@ -60,7 +61,7 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
       }
       val responseHandler = makeResponseHandler(dump)
 
-      blocking { httpClient.execute(get, responseHandler) }
+      httpClient.execute(get, responseHandler)
     } catch {
       case e: Exception =>
         error("error retrieving BGP entries from " + dump.url, e)
@@ -75,7 +76,7 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
     }
   }
 
-  protected[preview] def makeResponseHandler(dump: BgpRisDump): ResponseHandler[BgpRisDump] = {
+  protected[preview] def makeResponseHandler(dump: net.ripe.rpki.validator.bgp.preview.BgpRisDump): java.lang.Object with org.apache.http.client.ResponseHandler[net.ripe.rpki.validator.bgp.preview.BgpRisDump] = {
     val responseHandler = new ResponseHandler[BgpRisDump]() {
       override def handleResponse(response: HttpResponse): BgpRisDump = {
         response.getStatusLine().getStatusCode() match {

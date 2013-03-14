@@ -29,13 +29,13 @@
  */
 package net.ripe.rpki.validator.lib
 
-import scala.concurrent._
+import scala.concurrent.ops._
 import grizzled.slf4j.Logger
 import grizzled.slf4j.Logging
 
 object Process extends Logging {
 
-  def spawnForever(name: String)(body: => Unit)(implicit ec: ExecutionContext): Unit = future {
+  def spawnForever(name: String)(body: => Unit): Unit = spawn {
     try {
       Thread.currentThread().setName(name)
       logger.info("Process '" + name + "' started.")

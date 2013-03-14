@@ -61,12 +61,11 @@ object BgpAnnouncementValidator {
   val VISIBILITY_THRESHOLD = 5
 }
 class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) extends Logging {
-  import actorSystem.dispatcher
-  import scala.concurrent.duration._
+  import akka.util.duration._
 
   private val _validatedAnnouncements = akka.agent.Agent(IndexedSeq.empty[BgpValidatedAnnouncement])
 
-  def validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement] = _validatedAnnouncements.await(30.seconds)
+  def validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement] = _validatedAnnouncements.await(30 seconds)
 
   def startUpdate(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]): Unit = _validatedAnnouncements.sendOff {
     _ => validate(announcements, prefixes)

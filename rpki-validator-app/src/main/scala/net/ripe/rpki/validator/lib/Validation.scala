@@ -39,8 +39,7 @@ object Validation {
   /**
    * Automatically convert a NonEmptyList to a normal List.
    */
-  import scala.language.implicitConversions
-  implicit def NonEmptyListToSeq[A](nel: NonEmptyList[A]): List[A] = nel.list
+  implicit def NonEmptyListToSeq[A](nel: NonEmptyList[A]): List[A] = nel.head :: nel.tail
 
   sealed trait MessageKind {
     /**
@@ -65,7 +64,7 @@ object Validation {
    * Makes a validator handle optional input values by generating an error message.
    */
   def required[A, E, B](validator: A => Validation[E, B], error: E = "required"): Option[A] => Validation[E, B] = {
-    case None        => error.fail
+    case None => error.fail
     case Some(value) => validator(value)
   }
 
@@ -73,7 +72,7 @@ object Validation {
    * Makes a validator handle optional values by passing through [[scala.None]] when no value is provided.
    */
   def optional[A, E, B](validator: A => Validation[E, B]): Option[A] => Validation[E, Option[B]] = {
-    case None        => none.success
+    case None => none.success
     case Some(value) => validator(value).map(some)
   }
 
@@ -86,7 +85,7 @@ object Validation {
    * }}
    */
   def default[A, E, B](validator: A => Validation[E, B], default: B): Option[A] => Validation[E, B] = {
-    case None        => default.success
+    case None => default.success
     case Some(value) => validator(value)
   }
 
@@ -97,20 +96,18 @@ object Validation {
   def parseAsn(s: String): Validation[String, Asn] = try {
     Asn.parse(s).success
   } catch {
-    case _: Exception => (quote(s) + " is not a valid ASN").fail
+    case _ => (quote(s) + " is not a valid ASN").fail
   }
 
-  def parseIpRange(s: String): Validation[String, IpRange] = try {
-    IpRange.parse(s).success
+  def parseIpPrefix(s: String): Validation[String, IpRange] = try {
+    val resource = IpRange.parse(s)
+    if (resource.isLegalPrefix)
+      resource.success
+    else
+      (quote(s) + " is not a valid IPv4 or IPv6 prefix").fail
   } catch {
-    case _: Exception => (quote(s) + " is not a valid IPv4 or IPv6 range or prefix").fail
+    case _ => (quote(s) + " is not a valid IPv4 or IPv6 prefix").fail
   }
-
-  def parseIpPrefix(s: String): Validation[String, IpRange] =
-    parseIpRange(s).flatMap { rangeOrPrefix =>
-      if (rangeOrPrefix.isLegalPrefix) rangeOrPrefix.success
-      else (quote(s) + " is not a valid IPv4 or IPv6 prefix").fail
-    }
 
   def parseNonNegativeInt(s: String): Validation[String, Int] = parseInt(s).flatMap { x =>
     if (x >= 0)
@@ -128,10 +125,10 @@ object Validation {
   def parseCheckBoxValue(s: Option[String]): Validation[String, Boolean] = {
     s match {
       case Some(_) => true.success
-      case None    => false.success
+      case None => false.success
     }
   }
-
+  
   def containedIn(range: Range): Int => Validation[String, Int] = value => {
     if (range.contains(value)) value.success else "must be between %d and %d, was %d".format(range.start, range.end, value).fail
   }
