@@ -61,7 +61,7 @@ class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump]) extends View with ViewHelpers
       <ul>
         <li>The <a href="http://www.ris.ripe.net/dumps/">RIPE NCC Route Collector information</a> that <span id="bgp-dump-last-updated">{lastUpdated}</span>.</li>
         <li>BGP announcements that are seen by { BgpAnnouncementValidator.VISIBILITY_THRESHOLD } or more peers.</li>
-        <li>Validation rules defined in the <a href="http://tools.ietf.org/html/draft-ietf-sidr-roa-validation-10#section-2">IETF standard</a>.</li>
+        <li>Validation rules defined in the <a href="http://tools.ietf.org/html/rfc6483#section-2">IETF standard</a>.</li>
         <li>The validated ROAs found by this validator after applying your filters and additional whitelist entries.</li>
       </ul>
       <br/>
