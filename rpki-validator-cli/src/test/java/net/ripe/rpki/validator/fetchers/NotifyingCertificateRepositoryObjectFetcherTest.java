@@ -63,7 +63,7 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
 
     @Before
     public void setUp() {
-        result = new ValidationResult();
+        result = ValidationResult.withLocation("unknown.cer");
         result.setLocation(new ValidationLocation(TEST_URI));
 
         context = CertificateRepositoryObjectValidationContextTest.create();

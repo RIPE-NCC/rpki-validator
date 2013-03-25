@@ -100,7 +100,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
 
-    val validationResult = new ValidationResult
+    val validationResult = ValidationResult.withLocation(mftUri)
 
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult)
 
@@ -118,7 +118,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     val rsyncFetcher = new TestRemoteObjectFetcher(entries)
 
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
-    val validationResult = new ValidationResult
+    val validationResult = ValidationResult.withLocation(mftUri)
 
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult)
 
@@ -146,7 +146,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     val rsyncFetcher = new TestRemoteObjectFetcher(entries)
 
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
-    val validationResult = new ValidationResult
+    val validationResult = ValidationResult.withLocation(mftUri)
 
     subject.fetch(mftWrongHashUri, Specifications.alwaysTrue(), validationResult)
 
@@ -170,7 +170,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
     val rsyncFetcher = new TestRemoteObjectFetcher(Map.empty)
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
-    val validationResult = new ValidationResult
+    val validationResult = ValidationResult.withLocation(mftUri)
 
     store.put(StoredRepositoryObject(uri = mftUri, repositoryObject = mft))
     store.put(StoredRepositoryObject(uri = roaUri, repositoryObject = roa))
@@ -178,7 +178,11 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
     // Should get it from store
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(mft)
+
+    validationResult.setLocation(new ValidationLocation(roaUri))
     subject.fetch(roaUri, Specifications.alwaysTrue(), validationResult) should equal(roa)
+
+    validationResult.setLocation(new ValidationLocation(crlUri))
     subject.fetch(crlUri, Specifications.alwaysTrue(), validationResult) should equal(crl)
 
     // But should see warnings about fetching
@@ -194,10 +198,12 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
   test("Should get object by hash if we can") {
     val rsyncFetcher = new TestRemoteObjectFetcher(Map.empty)
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
-    val validationResult = new ValidationResult
+
 
     store.put(StoredRepositoryObject(uri = mftUri, repositoryObject = mft))
     val nonExistentUri = URI.create("rsync://some.host/doesnotexist.roa")
+    val validationResult = ValidationResult.withLocation(nonExistentUri)
+
     store.put(StoredRepositoryObject(uri = nonExistentUri, repositoryObject = roa))
     store.put(StoredRepositoryObject(uri = crlUri, repositoryObject = crl))
 
@@ -207,7 +213,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
   test("Should give an error in case we can not get the object from the store") {
     val rsyncFetcher = new TestRemoteObjectFetcher(Map.empty)
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
-    val validationResult = new ValidationResult
+    val validationResult = ValidationResult.withLocation(mftUri)
 
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(null)
     validationResult.getWarnings should have size 1
@@ -218,8 +224,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
   test("Should add a warning when object cannot be retrieved from remote repository due to an rsync failure") {
     val rsyncFetcher = mock[RpkiRepositoryObjectFetcher]
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
-    val validationResult = new ValidationResult
-    validationResult.setLocation(new ValidationLocation(mftUri))
+    val validationResult = ValidationResult.withLocation(mftUri)
 
     when(rsyncFetcher.fetch(isA(classOf[URI]), isA(classOf[Specification[Array[Byte]]]), isA(classOf[ValidationResult]))).thenAnswer(new Answer[CertificateRepositoryObject] {
       def answer(invocation: InvocationOnMock) = {

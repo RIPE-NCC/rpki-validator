@@ -29,14 +29,13 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import net.ripe.rpki.validator.fetchers.CertificateRepositoryObjectFetcher;
-
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.validation.ValidationLocation;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.validator.fetchers.CertificateRepositoryObjectFetcher;
 import org.apache.commons.lang.Validate;
 
 import java.net.URI;
@@ -50,7 +49,7 @@ public class TopDownWalker {
     private final ValidationResult validationResult;
 
     public TopDownWalker(CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher) {
-        this(new LinkedList<CertificateRepositoryObjectValidationContext>(), certificateRepositoryObjectFetcher, new ValidationResult());
+        this(new LinkedList<CertificateRepositoryObjectValidationContext>(), certificateRepositoryObjectFetcher, ValidationResult.withLocation("n/a"));
     }
 
     public TopDownWalker(CertificateRepositoryObjectFetcher certificateRepositoryObjectFetcher, ValidationResult validationResult) {

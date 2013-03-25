@@ -49,8 +49,8 @@ object StoredRepositoryObject {
     val binaryObject = ByteString(repositoryObject.getEncoded)
     val hash = ByteString(ManifestCms.hashContents(repositoryObject.getEncoded))
 
-    val expires = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.getEncoded, new ValidationResult) match {
-      case cert: X509ResourceCertificate => cert.getValidityPeriod().getNotValidAfter
+    val expires = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.getEncoded, ValidationResult.withLocation(uri)) match {
+      case cert: X509ResourceCertificate => cert.getValidityPeriod.getNotValidAfter
       case mft: ManifestCms => mft.getNotValidAfter
       case roa: RoaCms => roa.getValidityPeriod.getNotValidAfter
       case crl: X509Crl => crl.getNextUpdateTime

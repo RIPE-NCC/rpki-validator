@@ -82,7 +82,7 @@ public class SingleObjectWalkerTest {
         certificateChain = new ArrayList<URI>();
         subject.setParentCertificateChain(certificateChain);
 
-        result = new ValidationResult();
+        result = ValidationResult.withLocation("n/a");
         subject.setValidationResult(result);
 
         context = null;

@@ -84,10 +84,10 @@ public class ValidatedRoaWriterTest {
         RoaCms roaCms1 = RoaCmsObjectMother.getRoaCms(validityPeriod, Asn.parse("AS3333"));
         RoaCms roaCms2 = RoaCmsObjectMother.getRoaCms(validityPeriod, Asn.parse("AS65000"));
 
-        ValidationResult result = new ValidationResult();
+		ValidationResult unused = null;
 
-        subject.afterFetchSuccess(URI.create("rsync://host/rao1.roa"), roaCms1, result);
-        subject.afterFetchSuccess(URI.create("rsync://host/rao2.roa"), roaCms2, result);
+        subject.afterFetchSuccess(URI.create("rsync://host/rao1.roa"), roaCms1, unused);
+        subject.afterFetchSuccess(URI.create("rsync://host/rao2.roa"), roaCms2, unused);
 
         List<RoaData> allRoaData = subject.getAllRoaData();
         assertEquals(6, allRoaData.size());

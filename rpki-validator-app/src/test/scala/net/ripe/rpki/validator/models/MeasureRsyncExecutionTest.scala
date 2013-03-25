@@ -33,7 +33,7 @@ import org.scalatest.matchers.ShouldMatchers
 import java.net.URI
 import org.mockito.Mockito._
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
-import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationResult}
+import net.ripe.rpki.commons.validation.ValidationResult
 import net.ripe.rpki.validator.fetchers.RsyncRpkiRepositoryObjectFetcher
 import scala.Predef._
 import org.joda.time.{DateTimeUtils, DateTime}
@@ -106,8 +106,7 @@ class MeasureRsyncExecutionTest extends FunSuite with ShouldMatchers with Before
   }
 
   def validationResultWithMetricName(name: String) = {
-    val validationResult = new ValidationResult()
-    validationResult.setLocation(new ValidationLocation(certificateUri))
+    val validationResult = ValidationResult.withLocation(certificateUri)
     validationResult.addMetric(name, "123")
     validationResult
   }

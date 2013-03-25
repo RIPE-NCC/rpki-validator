@@ -29,9 +29,6 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import net.ripe.rpki.validator.commands.BottomUpCertificateRepositoryObjectValidator;
-import net.ripe.rpki.validator.commands.SingleObjectWalker;
-
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import org.junit.Before;
@@ -59,10 +56,8 @@ public class BottomUpCertificateRepositoryObjectValidatorTest {
             @Override
             public ValidationResult execute(List<CertificateRepositoryObjectValidationContext> trustAnchors) {
                 // Do nothing for this test
-                return new ValidationResult();
+                return ValidationResult.withLocation("n/a");
             }
-
-
 
         };
         validator.setSingleObjectWalker(singleObjectWalker);

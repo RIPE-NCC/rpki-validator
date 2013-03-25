@@ -29,20 +29,17 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
-import net.ripe.rpki.validator.fetchers.RpkiRepositoryObjectFetcher;
-import net.ripe.rpki.validator.fetchers.RpkiRepositoryObjectFetcherAdapter;
-
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest;
 import net.ripe.rpki.commons.crypto.crl.X509Crl;
 import net.ripe.rpki.commons.crypto.crl.X509CrlTest;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest;
+import net.ripe.rpki.commons.util.Specification;
 import net.ripe.rpki.commons.util.Specifications;
 import net.ripe.rpki.commons.validation.ValidationLocation;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.commons.validation.ValidationString;
-import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
-import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest;
-import net.ripe.rpki.commons.util.Specification;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -74,8 +71,7 @@ public class RpkiRepositoryObjectFetcherAdapterTest {
         manifest = ManifestCmsTest.getRootManifestCms();
         crl = X509CrlTest.createCrl();
 
-        validationResult = new ValidationResult();
-        validationResult.setLocation(LOCATION);
+        validationResult = ValidationResult.withLocation(TEST_URI);
 
         fetcher = mock(RpkiRepositoryObjectFetcher.class);
 

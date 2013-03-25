@@ -48,7 +48,6 @@ import net.ripe.rpki.validator.util.TrustAnchorLocator
 import net.ripe.rpki.validator.util.UriToFileMapper
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
-import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.rsync.Rsync
 import net.ripe.rpki.commons.util.Specifications
@@ -61,7 +60,6 @@ import net.ripe.rpki.commons.crypto.x509cert.X509CertificateUtil
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.validator.config.MemoryImage
 import net.ripe.rpki.validator.fetchers._
-import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher._
 import net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
 import net.ripe.rpki.validator.statistics.Metric
@@ -211,22 +209,20 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
 
   override def extractTrustAnchorLocator() = {
     val uri = trustAnchorLocator.getCertificateLocation()
-    val validationLocation = new ValidationLocation(uri)
 
-    val validationResult = new ValidationResult
-    validationResult.setLocation(validationLocation)
+    val validationResult = ValidationResult.withLocation(uri)
 
     val cro = consistentObjectFetcher.fetch(uri, Specifications.alwaysTrue(), validationResult)
     cro match {
       case certificate: X509ResourceCertificate =>
         validationResult.rejectIfFalse(trustAnchorLocator.getPublicKeyInfo() == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.getCertificate()), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
         if (validationResult.hasFailureForCurrentLocation()) {
-          InvalidObject(uri, validationResult.getAllValidationChecksForLocation(validationLocation).asScala.toSet)
+          InvalidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
         } else {
-          ValidObject(uri, validationResult.getAllValidationChecksForLocation(validationLocation).asScala.toSet, certificate)
+          ValidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, certificate)
         }
       case _ =>
-        InvalidObject(uri, validationResult.getAllValidationChecksForLocation(validationLocation).asScala.toSet)
+        InvalidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
     }
   }
 
@@ -238,11 +234,12 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val cache = new RepositoryObjectStore(DataSources.DurableDataSource)
     cache.purgeExpired(maxStaleDays)
 
-    trustAnchorLocator.getPrefetchUris().asScala.foreach { prefetchUri =>
+    trustAnchorLocator.getPrefetchUris.asScala.foreach { prefetchUri =>
+
       logger.info("Prefetching '" + prefetchUri + "'")
-      val validationResult = new ValidationResult();
-      validationResult.setLocation(new ValidationLocation(prefetchUri));
-      fetcher.prefetch(prefetchUri, validationResult);
+      val validationResult = ValidationResult.withLocation(prefetchUri)
+
+      fetcher.prefetch(prefetchUri, validationResult)
       logger.info("Done prefetching for '" + prefetchUri + "'")
     }
 

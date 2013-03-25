@@ -66,8 +66,7 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         subject = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
         subject.setOuterMostDecorator(decorator);
 
-        result = new ValidationResult();
-
+        result = ValidationResult.withLocation(ROOT_CERTIFICATE_LOCATION);
         rootCertificate = getRootResourceCertificate();
         rootContext = new CertificateRepositoryObjectValidationContext(ROOT_CERTIFICATE_LOCATION, rootCertificate);
 

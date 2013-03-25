@@ -29,22 +29,23 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.*;
-
-import java.net.URI;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
 import net.ripe.rpki.commons.crypto.crl.X509Crl;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.util.Specification;
 import net.ripe.rpki.commons.util.Specifications;
 import net.ripe.rpki.commons.validation.CertificateRepositoryObjectValidationContextTest;
-import net.ripe.rpki.commons.validation.ValidationLocation;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.rpki.validator.RepositoryObjectsSetUpHelper;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.net.URI;
+
+import static org.easymock.EasyMock.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 
 public class CachingCertificateRepositoryObjectFetcherTest {
@@ -61,8 +62,7 @@ public class CachingCertificateRepositoryObjectFetcherTest {
         uri = URI.create("rsync://host/path/");
         context = CertificateRepositoryObjectValidationContextTest.create();
         fileContentSpecification = Specifications.alwaysTrue();
-        result = new ValidationResult();
-        result.setLocation(new ValidationLocation(uri));
+        result = ValidationResult.withLocation(uri);
         fetcher = createMock(CertificateRepositoryObjectFetcher.class);
         subject = new CachingCertificateRepositoryObjectFetcher(fetcher);
     }

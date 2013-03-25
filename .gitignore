@@ -11,7 +11,7 @@ target/
 *.settings/
 *.classpath
 *.project
-
+log/
 rpki-validator-app/log
 rpki-validator-app/tmp
 rpki-validator-app/.scala_dependencies

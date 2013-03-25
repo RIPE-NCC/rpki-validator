@@ -78,8 +78,7 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, 
 
   private[this] def fetchAndStoreObject(uri: URI, specification: Specification[Array[Byte]], result: ValidationResult) {
     val cro = Option {
-      val fetchResults = new ValidationResult
-      fetchResults.setLocation(new ValidationLocation(uri))
+      val fetchResults = ValidationResult.withLocation(uri)
       val cro = remoteObjectFetcher.fetch(uri, specification, fetchResults)
       warnAboutFetchFailures(uri, result, fetchResults)
       cro
@@ -104,8 +103,7 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, 
   }
 
   private[this] def fetchAndStoreConsistentObjectSet(manifestUri: URI, mft: ManifestCms): ValidationResult = {
-    val fetchResults = new ValidationResult
-    fetchResults.setLocation(new ValidationLocation(manifestUri))
+    val fetchResults = ValidationResult.withLocation(manifestUri)
 
     val mftStoredRepositoryObject = StoredRepositoryObject(uri = manifestUri, repositoryObject = mft)
 

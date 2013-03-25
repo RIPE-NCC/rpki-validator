@@ -106,7 +106,7 @@ public class TopDownWalkerTest {
         ta = getRootResourceCertificate();
         taContext = new CertificateRepositoryObjectValidationContext(URI.create("rsync://host/ta"), ta);
         workQueue = new LinkedList<CertificateRepositoryObjectValidationContext>();
-        validitionResult = new ValidationResult();
+        validitionResult = ValidationResult.withLocation("ta.cer");
         subject = new TopDownWalker(workQueue, certificateRepositoryObjectFetcher, validitionResult);
     }
 

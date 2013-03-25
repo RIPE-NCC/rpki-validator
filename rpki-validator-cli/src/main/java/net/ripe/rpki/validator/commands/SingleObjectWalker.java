@@ -66,7 +66,7 @@ public class SingleObjectWalker {
     private NotifyingCertificateRepositoryObjectFetcher.Listener chainBuildLogger;
     private CertificateRepositoryObjectFetcher validationFetcher;
     private List<URI> parentCertificateChain = new ArrayList<URI>();
-    private ValidationResult result = new ValidationResult();
+    private ValidationResult result = ValidationResult.withLocation("n/a");
 
     public SingleObjectWalker(CertificateRepositoryObject startingPoint, URI startingPointUri, CertificateRepositoryObjectFetcher chainBuildFetcher, NotifyingCertificateRepositoryObjectFetcher.Listener chainBuildLogger, CertificateRepositoryObjectFetcher validationFetcher) {
         this.startingPoint = startingPoint;
@@ -146,7 +146,6 @@ public class SingleObjectWalker {
 
     /**
      * Verify the certificate found at the top against the specified TA(s)
-     * @param trustAnchors
      */
     void validateTrustAnchor(List<CertificateRepositoryObjectValidationContext> trustAnchors) {
         URI rootURI = parentCertificateChain.get(0);

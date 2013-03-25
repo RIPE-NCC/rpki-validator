@@ -57,7 +57,7 @@ public final class CertificateRepositoryObjectLocalFileHelper {
         } catch (IOException e) {
             throw new ValidatorIOException("Can't read file: " + file.getAbsolutePath(), e);
         }
-        return CertificateRepositoryObjectFactory.createCertificateRepositoryObject(contents, new ValidationResult());
+        return CertificateRepositoryObjectFactory.createCertificateRepositoryObject(contents, ValidationResult.withLocation(file.getName()));
     }
 
 }

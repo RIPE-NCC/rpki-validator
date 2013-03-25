@@ -81,14 +81,14 @@ public class ValidationSummaryCollectorTest {
         X509ResourceCertificate cert1 = X509ResourceCertificateTest.createSelfSignedCaResourceCertificate(IpResourceSet.parse("10.0.0.0/8,001:7fb:fd02::/48"));
         X509ResourceCertificate cert2 = X509ResourceCertificateTest.createSelfSignedCaResourceCertificate(IpResourceSet.parse("10.0.0.0/8"));
 
-        ValidationResult result = new ValidationResult();
+        ValidationResult unused = null;
 
-        subject.afterFetchSuccess(URI.create("rsync://host/rao1.roa"), roaCms1, result);
-        subject.afterFetchSuccess(URI.create("rsync://host/rao2.roa"), roaCms2, result);
-        subject.afterFetchSuccess(URI.create("rsync://host/rao3.roa"), roaCms3, result);
+        subject.afterFetchSuccess(URI.create("rsync://host/rao1.roa"), roaCms1, unused);
+        subject.afterFetchSuccess(URI.create("rsync://host/rao2.roa"), roaCms2, unused);
+        subject.afterFetchSuccess(URI.create("rsync://host/rao3.roa"), roaCms3, unused);
         
-        subject.afterFetchSuccess(URI.create("rsync://host/cert1.cer"), cert1, result);
-        subject.afterFetchSuccess(URI.create("rsync://host/cert2.cer"), cert2, result);
+        subject.afterFetchSuccess(URI.create("rsync://host/cert1.cer"), cert1, unused);
+        subject.afterFetchSuccess(URI.create("rsync://host/cert2.cer"), cert2, unused);
     }
 
     @Test

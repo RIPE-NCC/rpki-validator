@@ -29,8 +29,6 @@
  */
 package net.ripe.rpki.validator.util;
 
-import net.ripe.rpki.validator.util.UriToFileMapper;
-
 import net.ripe.rpki.commons.validation.ValidationLocation;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import org.junit.Before;
@@ -55,8 +53,7 @@ public class UriToFileMapperTest {
 
     @Before
     public void setUp() {
-        validationResult = new ValidationResult();
-        validationResult.setLocation(TEST_LOCATION);
+        validationResult = ValidationResult.withLocation(TEST_LOCATION);
         subject = new UriToFileMapper(TARGET_DIRECTORY);
     }
 

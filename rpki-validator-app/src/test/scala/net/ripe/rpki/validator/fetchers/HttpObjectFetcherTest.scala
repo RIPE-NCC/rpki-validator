@@ -64,14 +64,10 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
     resetHttpClient()
   }
 
-  def validationResultForLocation(uri: URI) = {
-    val validationResult = new ValidationResult
-    validationResult.setLocation(new ValidationLocation(uri))
-    validationResult
-  }
+
 
   test("should http client return downloaded content as byte array") {
-    val validationResult = validationResultForLocation(uri)
+    val validationResult = ValidationResult.withLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(Some(content))
 
     subject.downloadFile(uri, validationResult) should be (Some(content))
@@ -79,7 +75,7 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
   }
 
   test("should http client return None and set failure if downloading fails") {
-    val validationResult = validationResultForLocation(uri)
+    val validationResult = ValidationResult.withLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenThrow(new RuntimeException)
 
     subject.downloadFile(uri, validationResult) should be (None)
@@ -87,7 +83,7 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
   }
 
   test("should get object") {
-    val validationResult = validationResultForLocation(uri)
+    val validationResult = ValidationResult.withLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(Some(content))
 
     subject.fetch(uri, Specifications.alwaysTrue(), validationResult) should equal (crl)
@@ -95,7 +91,7 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
   }
 
   test("should get object set failure if specification does not match") {
-    val validationResult = validationResultForLocation(uri)
+    val validationResult = ValidationResult.withLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(Some(content))
 
     subject.fetch(uri, Specifications.alwaysFalse(), validationResult) should be (null)
@@ -103,7 +99,7 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
   }
 
   test("should get object  set failure if object is unkown") {
-    val validationResult = validationResultForLocation(uri)
+    val validationResult = ValidationResult.withLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(Some(Array[Byte](1)))
 
     subject.fetch(uri, Specifications.alwaysTrue(), validationResult) should be (null)
@@ -111,7 +107,7 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
   }
 
   test("should get object return null and set error if download failed") {
-    val validationResult = validationResultForLocation(uri)
+    val validationResult = ValidationResult.withLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(None)
 
     subject.fetch(uri, Specifications.alwaysTrue(), validationResult) should be (null)

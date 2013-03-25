@@ -57,10 +57,10 @@ public class RsyncRpkiRepositoryObjectFetcherTest {
 
     private static final File TEST_REPOSITORY_DIRECTORY = new File(TEST_TARGET_DIRECTORY, "localhost:9999/repo/ca%20repo/");
 
-    private static final URI VALIDATION_URI = TEST_REPOSITORY_URI.resolve("object.cer");
+    private static final URI VALIDATION_URI = TEST_REPOSITORY_URI.resolve("object.mft");
 
-    private static final URI TEST_OBJECT_CERT_URI = TEST_REPOSITORY_URI.resolve("object.cer");
-    private static final File TEST_OBJECT_CERT_FILE = new File(TEST_TARGET_DIRECTORY, "localhost:9999/repo/ca%20repo/object.cer");
+    private static final URI TEST_OBJECT_CERT_URI = TEST_REPOSITORY_URI.resolve("object.mft");
+    private static final File TEST_OBJECT_CERT_FILE = new File(TEST_TARGET_DIRECTORY, "localhost:9999/repo/ca%20repo/object.mft");
 
     private boolean rsyncExecuted = false;
     private int rsyncExitCode = 0;
@@ -87,8 +87,7 @@ public class RsyncRpkiRepositoryObjectFetcherTest {
             }
         };
         object = TopDownWalkerTest.getRootManifestCms();
-        validationResult = new ValidationResult();
-        validationResult.setLocation(new ValidationLocation(VALIDATION_URI));
+        validationResult = ValidationResult.withLocation(VALIDATION_URI);
         subject = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(TEST_TARGET_DIRECTORY));
     }
 
