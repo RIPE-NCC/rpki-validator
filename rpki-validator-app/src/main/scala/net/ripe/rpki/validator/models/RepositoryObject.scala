@@ -30,12 +30,11 @@
 package net.ripe.rpki.validator
 package models
 
-import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import net.ripe.rpki.commons.crypto.{UnknownCertificateRepositoryObject, CertificateRepositoryObject}
 import java.net.URI
-import org.apache.commons.codec.binary.Base64
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import akka.util.ByteString
-import org.joda.time.DateTime
+import org.joda.time.{DateTimeZone, DateTime}
 import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
@@ -54,6 +53,10 @@ object StoredRepositoryObject {
       case mft: ManifestCms => mft.getNotValidAfter
       case roa: RoaCms => roa.getValidityPeriod.getNotValidAfter
       case crl: X509Crl => crl.getNextUpdateTime
+      case unknown: UnknownCertificateRepositoryObject => {
+        // Make sure the unknown object stays in the cache long enough for the validation to finish
+        new DateTime(DateTimeZone.UTC).plusDays(1)
+      }
     }
 
     StoredRepositoryObject(hash = hash, uri = uri, binaryObject = binaryObject, expires = expires)
