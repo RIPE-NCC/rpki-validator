@@ -67,7 +67,7 @@ class ValidatedObjects(val all: Map[TrustAnchorLocator, Seq[ValidatedObject]]) {
     for {
       (locator, validatedObjects) <- all
       ValidObject(_, _, roa: RoaCms) <- validatedObjects
-      roaPrefix <- roa.getPrefixes().asScala
+      roaPrefix <- roa.getPrefixes.asScala
     } yield {
       RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(locator))
     }

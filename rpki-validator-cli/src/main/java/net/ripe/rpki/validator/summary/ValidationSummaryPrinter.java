@@ -42,16 +42,16 @@ public final class ValidationSummaryPrinter {
         messageBuilder.append("# Statistics Summary (see README for detail):\n");
         messageBuilder.append("# date\t\tcerts\troas\troa-asn\troa-v4\troa-v4u\troa-v6\troa-v6u\tcert-X\troa-X\n");
         
-        messageBuilder.append(new DateTime().toString("YYYY-MM-dd") + "\t");
-        messageBuilder.append(collector.getNumberOfCertificates() + "\t");
-        messageBuilder.append(collector.getNumberOfRoas() + "\t");
-        messageBuilder.append(collector.getNumberOfDistinctAsns() + "\t");
-        messageBuilder.append(collector.getNumberOfDistinctRoaIPv4Prefixes() + "\t");
-        messageBuilder.append(collector.getRoaIPv4Coverage() + "\t");
-        messageBuilder.append(collector.getNumberOfDistinctRoaIPv6Prefixes() + "\t");
-        messageBuilder.append(collector.getRoaIPv6Coverage() + "\t");
-        messageBuilder.append(collector.getNumberOfRejectedCerts() + "\t");
-        messageBuilder.append(collector.getNumberOfRejectedRoas() + "\n");
+        messageBuilder.append(new DateTime().toString("YYYY-MM-dd")).append("\t");
+        messageBuilder.append(collector.getNumberOfCertificates()).append("\t");
+        messageBuilder.append(collector.getNumberOfRoas()).append("\t");
+        messageBuilder.append(collector.getNumberOfDistinctAsns()).append("\t");
+        messageBuilder.append(collector.getNumberOfDistinctRoaIPv4Prefixes()).append("\t");
+        messageBuilder.append(collector.getRoaIPv4Coverage()).append("\t");
+        messageBuilder.append(collector.getNumberOfDistinctRoaIPv6Prefixes()).append("\t");
+        messageBuilder.append(collector.getRoaIPv6Coverage()).append("\t");
+        messageBuilder.append(collector.getNumberOfRejectedCerts()).append("\t");
+        messageBuilder.append(collector.getNumberOfRejectedRoas()).append("\n");
         
         return messageBuilder.toString();
     }

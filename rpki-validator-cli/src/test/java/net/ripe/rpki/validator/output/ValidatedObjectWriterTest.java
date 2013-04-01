@@ -36,7 +36,6 @@ import java.io.IOException;
 import java.net.URI;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest;
-import net.ripe.rpki.commons.validation.ValidationLocation;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.validator.util.UriToFileMapper;
 import net.ripe.rpki.validator.util.UriToFileMapperTest;

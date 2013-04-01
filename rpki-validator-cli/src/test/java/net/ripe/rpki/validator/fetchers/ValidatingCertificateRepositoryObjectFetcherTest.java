@@ -30,9 +30,8 @@
 package net.ripe.rpki.validator.fetchers;
 
 import static net.ripe.rpki.validator.RepositoryObjectsSetUpHelper.*;
-import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
-
+import static org.mockito.Mockito.*;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
 import net.ripe.rpki.commons.crypto.crl.X509Crl;
@@ -43,9 +42,10 @@ import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.commons.validation.ValidationString;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.rpki.validator.RepositoryObjectsSetUpHelper;
-import org.easymock.IAnswer;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 
 public class ValidatingCertificateRepositoryObjectFetcherTest {
@@ -60,8 +60,8 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
 
     @Before
     public void setUp() {
-        rsyncFetcher = createMock(CertificateRepositoryObjectFetcher.class);
-        decorator = createMock(CertificateRepositoryObjectFetcher.class);
+        rsyncFetcher = mock(CertificateRepositoryObjectFetcher.class);
+        decorator = mock(CertificateRepositoryObjectFetcher.class);
 
         subject = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
         subject.setOuterMostDecorator(decorator);
@@ -76,34 +76,29 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
 
     @Test
     public void shouldPassOnPrefetch() {
-        rsyncFetcher.prefetch(ROOT_CERTIFICATE_LOCATION, result); expectLastCall().times(2);
-        replay(rsyncFetcher);
-
         subject.prefetch(ROOT_CERTIFICATE_LOCATION, result);
         subject.prefetch(ROOT_CERTIFICATE_LOCATION, result);
 
-        verify(rsyncFetcher);
+        verify(rsyncFetcher, times(2)).prefetch(ROOT_CERTIFICATE_LOCATION, result);
     }
 
     @Test
     public void shouldGetCrlHappyFlow() {
         X509Crl crlFromRepository = getRootCrl();
-        expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
+        when(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).thenReturn(crlFromRepository);
 
         final ManifestCms manifestFromRsync = getRootManifestCmsWithEntry("bar%20space.crl", crlFromRepository.getEncoded());
-        expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andAnswer(new IAnswer<ManifestCms>() {
+        when(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).thenAnswer(new Answer<ManifestCms>() {
             @Override
-            public ManifestCms answer() throws Throwable {
+            public ManifestCms answer(InvocationOnMock invocationOnMock) throws Throwable {
                 assertEquals("manifest location not pushed before trying to retrieve manifest", new ValidationLocation(rootContext.getManifestURI()), result.getCurrentLocation());
                 return manifestFromRsync;
             }
         });
-        replayMocks();
 
         result.setLocation(new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION));
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
-        verifyMocks();
         assertEquals(crlFromRepository, crlActual);
         assertEquals("crl location not restored", new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION), result.getCurrentLocation());
     }
@@ -112,16 +107,14 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldRejectCrlWhenHashInvalid() {
         X509Crl crlFromRepository = getRootCrl();
-        expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
+        when(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).thenReturn(crlFromRepository);
 
         ManifestCms manifestFromRsync = getRootManifestCmsWithEntry("bar%20space.crl", CONTENT_FOO);
-        expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
-        replayMocks();
+        when(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).thenReturn(manifestFromRsync);
 
         result.setLocation(new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION));
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
-        verifyMocks();
         assertNull(crlActual);
         ValidationLocation expectedRootCrlErrorLocation = new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION);
         assertTrue(result.hasFailureForLocation(expectedRootCrlErrorLocation));
@@ -131,16 +124,14 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldRejectCrlWithoutManifestEntry() {
         X509Crl crlFromRepository = getRootCrl();
-        expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
+        when(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).thenReturn(crlFromRepository);
 
         ManifestCms manifestFromRsync = getRootManifestCms();
-        expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
-        replayMocks();
+        when(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).thenReturn(manifestFromRsync);
 
         result.setLocation(new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION));
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
-        verifyMocks();
         assertNull(crlActual);
         ValidationLocation expectedRootCrlErrorLocation = new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION);
         assertTrue(result.hasFailureForLocation(expectedRootCrlErrorLocation));
@@ -150,16 +141,14 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldRejectCrlWhenManifestInvalid() {
         X509Crl crlFromRepository = getRootCrl();
-        expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
+        when(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).thenReturn(crlFromRepository);
 
         ManifestCms manifestFromRsync = getFutureDatedManifestCms();
-        expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
-        replayMocks();
+        when(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).thenReturn(manifestFromRsync);
 
         result.setLocation(new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION));
         X509Crl crlActual = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
 
-        verifyMocks();
         assertNull(crlActual);
         assertEquals(new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION), result.getCurrentLocation());
         assertTrue(result.hasFailureForCurrentLocation());
@@ -170,15 +159,12 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         result.setLocation(new ValidationLocation(ROOT_CERTIFICATE_LOCATION));
 
         X509Crl crlFromRepository = getRootCrlWithInvalidSignature();
-        expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
+        when(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).thenReturn(crlFromRepository);
 
         ManifestCms manifestFromRsync = getRootManifestCmsWithEntry("bar space.crl", crlFromRepository.getEncoded());
-        expect(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).andReturn(manifestFromRsync);
+        when(rsyncFetcher.getManifest(rootContext.getManifestURI(), rootContext, result)).thenReturn(manifestFromRsync);
 
-
-        replayMocks();
         X509Crl crlValidated = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
-        verifyMocks();
 
         assertNull(crlValidated);
         ValidationLocation rootManifestCrlValidationLocation = new ValidationLocation(ROOT_MANIFEST_CRL_LOCATION);
@@ -191,27 +177,22 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         result.setLocation(new ValidationLocation(ROOT_CERTIFICATE_LOCATION));
 
         X509Crl crlFromRepository = null;
-        expect(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
+        when(rsyncFetcher.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).thenReturn(crlFromRepository);
 
-        replayMocks();
         X509Crl crlValidated = subject.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result);
-        verifyMocks();
 
         assertNull(crlValidated);
     }
 
     @Test
     public void shouldGetManifestHappyFlow() {
-
         ManifestCms cmsExpected = getRootManifestCms();
         X509Crl crlFromRepository = getRootCrl();
 
-        expect(rsyncFetcher.getManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, rootContext, result)).andReturn(cmsExpected);
-        expect(decorator.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
+        when(rsyncFetcher.getManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, rootContext, result)).thenReturn(cmsExpected);
+        when(decorator.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).thenReturn(crlFromRepository);
 
-        replayMocks();
         ManifestCms cmsActual = subject.getManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, rootContext, result);
-        verifyMocks();
 
         assertEquals(cmsExpected, cmsActual);
     }
@@ -221,12 +202,10 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         ManifestCms cmsReturnedByRsyncFetcher = getFutureDatedManifestCms();
         X509Crl crlFromRepository = getRootCrl();
 
-        expect(rsyncFetcher.getManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, rootContext, result)).andReturn(cmsReturnedByRsyncFetcher);
-        expect(decorator.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(crlFromRepository);
+        when(rsyncFetcher.getManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, rootContext, result)).thenReturn(cmsReturnedByRsyncFetcher);
+        when(decorator.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).thenReturn(crlFromRepository);
 
-        replayMocks();
         ManifestCms cmsReturnedByValidatingFetcher = subject.getManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, rootContext, result);
-        verifyMocks();
 
         assertNull(cmsReturnedByValidatingFetcher);
     }
@@ -235,11 +214,9 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
     public void shouldReturnNullForManifestWhenManifestFromRsyncIsNull() {
         ManifestCms cmsFromRsync = null;
 
-        expect(rsyncFetcher.getManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, rootContext, result)).andReturn(cmsFromRsync);
+        when(rsyncFetcher.getManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, rootContext, result)).thenReturn(cmsFromRsync);
 
-        replayMocks();
         ManifestCms cmsFromValidatingFetcher = subject.getManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, rootContext, result);
-        verifyMocks();
 
         assertNull(cmsFromValidatingFetcher);
     }
@@ -248,12 +225,10 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldGetCertificateRepositoryObjectHappyFlow() {
         Specification<byte[]> fileContentSpecification = null;
-        expect(rsyncFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result)).andReturn(childCertificate);
-        expect(decorator.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).andReturn(getRootCrl());
+        when(rsyncFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result)).thenReturn(childCertificate);
+        when(decorator.getCrl(ROOT_MANIFEST_CRL_LOCATION, rootContext, result)).thenReturn(getRootCrl());
 
-        replayMocks();
         CertificateRepositoryObject certificateFromValidatingFetcher = subject.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result);
-        verifyMocks();
 
         assertTrue(certificateFromValidatingFetcher instanceof X509ResourceCertificate);
         assertSame(certificateFromValidatingFetcher, childCertificate);
@@ -262,11 +237,9 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldNotGetCrlWhenValidatingRootCertificate() {
         Specification<byte[]> fileContentSpecification = null;
-        expect(rsyncFetcher.getObject(ROOT_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result)).andReturn(rootCertificate);
+        when(rsyncFetcher.getObject(ROOT_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result)).thenReturn(rootCertificate);
 
-        replayMocks();
         CertificateRepositoryObject certificateFromValidatingFetcher = subject.getObject(ROOT_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result);
-        verifyMocks();
 
         assertTrue(certificateFromValidatingFetcher instanceof X509ResourceCertificate);
         assertSame(certificateFromValidatingFetcher, rootCertificate);
@@ -280,12 +253,10 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
 
         Specification<byte[]> fileContentSpecification = null;
         CertificateRepositoryObjectValidationContext context = new CertificateRepositoryObjectValidationContext(FIRST_CHILD_CERTIFICATE_LOCATION, childCertificate, ROOT_RESOURCE_SET);
-        expect(rsyncFetcher.getObject(SECOND_CHILD_CERTIFICATE_LOCATION, context, fileContentSpecification, result)).andReturn(grandchildCertificate);
-        expect(decorator.getCrl(FIRST_CHILD_MANIFEST_CRL_LOCATION, context, result)).andReturn(crl);
+        when(rsyncFetcher.getObject(SECOND_CHILD_CERTIFICATE_LOCATION, context, fileContentSpecification, result)).thenReturn(grandchildCertificate);
+        when(decorator.getCrl(FIRST_CHILD_MANIFEST_CRL_LOCATION, context, result)).thenReturn(crl);
 
-        replayMocks();
         CertificateRepositoryObject certificateFromValidatingFetcher = subject.getObject(SECOND_CHILD_CERTIFICATE_LOCATION, context, fileContentSpecification, result);
-        verifyMocks();
 
         assertTrue(certificateFromValidatingFetcher instanceof X509ResourceCertificate);
         assertSame(certificateFromValidatingFetcher, grandchildCertificate);
@@ -294,11 +265,9 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldRejectInvalidCertificateRepositoryObject() {
         Specification<byte[]> fileContentSpecification = null;
-        expect(rsyncFetcher.getObject(ROOT_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result)).andReturn(RepositoryObjectsSetUpHelper.getExpiredRootResourceCertificate());
+        when(rsyncFetcher.getObject(ROOT_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result)).thenReturn(RepositoryObjectsSetUpHelper.getExpiredRootResourceCertificate());
 
-        replayMocks();
         CertificateRepositoryObject certificateFromValidatingFetcher = subject.getObject(ROOT_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result);
-        verifyMocks();
 
         assertNull(certificateFromValidatingFetcher);
         ValidationLocation rootCertValidationLocation = new ValidationLocation(ROOT_CERTIFICATE_LOCATION);
@@ -309,23 +278,10 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldReturnNullForCROWhenCRONotReturnedFromRsync() {
         Specification<byte[]> fileContentSpecification = null;
-        expect(rsyncFetcher.getObject(ROOT_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result)).andReturn(null);
+        when(rsyncFetcher.getObject(ROOT_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result)).thenReturn(null);
 
-        replayMocks();
         CertificateRepositoryObject certificateFromValidatingFetcher = subject.getObject(ROOT_CERTIFICATE_LOCATION, rootContext, fileContentSpecification, result);
-        verifyMocks();
 
         assertNull(certificateFromValidatingFetcher);
-    }
-
-
-    private void verifyMocks() {
-        verify(rsyncFetcher);
-        verify(decorator);
-    }
-
-    private void replayMocks() {
-        replay(rsyncFetcher);
-        replay(decorator);
     }
 }

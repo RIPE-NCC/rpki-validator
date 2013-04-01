@@ -30,7 +30,7 @@
 package net.ripe.rpki.validator.commands;
 
 import static net.ripe.rpki.validator.RepositoryObjectsSetUpHelper.*;
-import static org.easymock.EasyMock.*;
+import static org.mockito.Mockito.*;
 import static org.junit.Assert.*;
 
 import java.net.URI;
@@ -74,9 +74,9 @@ public class SingleObjectWalkerTest {
         trustAnchors = new ArrayList<CertificateRepositoryObjectValidationContext>();
         trustAnchors.add(new CertificateRepositoryObjectValidationContext(ROOT_CERTIFICATE_LOCATION, root));
 
-        chainBuildFetcher = createMock(CertificateRepositoryObjectFetcher.class);
-        validatingFetcher = createMock(CertificateRepositoryObjectFetcher.class);
-        chainBuildLogger = createMock(NotifyingCertificateRepositoryObjectFetcher.Listener.class);
+        chainBuildFetcher = mock(CertificateRepositoryObjectFetcher.class);
+        validatingFetcher = mock(CertificateRepositoryObjectFetcher.class);
+        chainBuildLogger = mock(NotifyingCertificateRepositoryObjectFetcher.Listener.class);
 
         subject = new SingleObjectWalker(grandChild, SECOND_CHILD_CERTIFICATE_LOCATION, chainBuildFetcher, chainBuildLogger, validatingFetcher);
         certificateChain = new ArrayList<URI>();
@@ -86,18 +86,15 @@ public class SingleObjectWalkerTest {
         subject.setValidationResult(result);
 
         context = null;
-        fileContentSpecification = Specifications.<byte[]>alwaysTrue();
+        fileContentSpecification = Specifications.alwaysTrue();
     }
 
     @Test
     public void shouldBuildUpChain() {
+        when(chainBuildFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(child);
+        when(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(root);
 
-        expect(chainBuildFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(child);
-        expect(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(root);
-
-        replayMocks();
         subject.buildUpChain();
-        verifyMocks();
 
         assertEquals(2, certificateChain.size());
         assertEquals(ROOT_CERTIFICATE_LOCATION, certificateChain.get(0));
@@ -107,11 +104,9 @@ public class SingleObjectWalkerTest {
 
     @Test
     public void shouldStopBuildingChainWhenCertificateCantBeFound() {
-        expect(chainBuildFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(null);
+        when(chainBuildFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(null);
 
-        replayMocks();
         subject.buildUpChain();
-        verifyMocks();
 
         assertEquals(0, certificateChain.size());
         assertFalse(result.hasFailures()); // This is up to the rsync fetcher..
@@ -119,44 +114,37 @@ public class SingleObjectWalkerTest {
 
     @Test
     public void shouldStopBuildingChainAndComplainWhenAIAPointsToNonCertificate() {
-        expect(chainBuildFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(getRootManifestCms());
-        chainBuildLogger.afterFetchFailure(FIRST_CHILD_CERTIFICATE_LOCATION, result);
+        when(chainBuildFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(getRootManifestCms());
 
-        replayMocks();
         subject.buildUpChain();
-        verifyMocks();
 
         assertEquals(0, certificateChain.size());
         assertTrue(result.hasFailures());
         assertEquals(ValidationString.CERT_AIA_NOT_POINTING_TO_CERT, result.getFailures(new ValidationLocation(FIRST_CHILD_CERTIFICATE_LOCATION)).get(0).getKey());
+        verify(chainBuildLogger).afterFetchFailure(FIRST_CHILD_CERTIFICATE_LOCATION, result);
     }
 
     @Test
     public void shouldStopBuildingChainAndComplainWhenCircularReferenceFound() {
         X509ResourceCertificate invalidRootCertificate = getRootResourceCertificateWithAiaFieldPointingToItself();
-        expect(chainBuildFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(child);
-        expect(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(invalidRootCertificate);
-        chainBuildLogger.afterFetchFailure(ROOT_CERTIFICATE_LOCATION, result);
+        when(chainBuildFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(child);
+        when(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(invalidRootCertificate);
 
-
-        replayMocks();
         subject.buildUpChain();
-        verifyMocks();
 
         assertTrue(result.hasFailures());
         assertEquals(1, result.getFailures(new ValidationLocation(ROOT_CERTIFICATE_LOCATION)).size());
         assertEquals(ValidationString.CERT_CHAIN_CIRCULAR_REFERENCE, result.getFailures(new ValidationLocation(ROOT_CERTIFICATE_LOCATION)).get(0).getKey());
+        verify(chainBuildLogger).afterFetchFailure(ROOT_CERTIFICATE_LOCATION, result);
     }
 
     @Test
     public void shouldVerifyTrustAnchorHappyFlow() {
         certificateChain.add(ROOT_CERTIFICATE_LOCATION);
 
-        expect(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(root);
+        when(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(root);
 
-        replayMocks();
         subject.validateTrustAnchor(trustAnchors);
-        verifyMocks();
 
         assertFalse(result.hasFailures());
     }
@@ -165,16 +153,14 @@ public class SingleObjectWalkerTest {
     public void shouldRejectChainWithInvalidTrustAnchor() {
         certificateChain.add(ROOT_CERTIFICATE_LOCATION);
 
-        expect(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(root);
-        chainBuildLogger.afterFetchFailure(ROOT_CERTIFICATE_LOCATION, result);
+        when(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(root);
 
-        replayMocks();
         subject.validateTrustAnchor(new ArrayList<CertificateRepositoryObjectValidationContext>());
-        verifyMocks();
 
         assertTrue(result.hasFailures());
         assertEquals(1, result.getAllValidationChecksForLocation(new ValidationLocation(ROOT_CERTIFICATE_LOCATION)).size());
         assertEquals(ValidationString.ROOT_IS_TA, result.getFailures(new ValidationLocation(ROOT_CERTIFICATE_LOCATION)).get(0).getKey());
+        verify(chainBuildLogger).afterFetchFailure(ROOT_CERTIFICATE_LOCATION, result);
     }
 
 
@@ -183,15 +169,13 @@ public class SingleObjectWalkerTest {
         certificateChain.add(ROOT_CERTIFICATE_LOCATION);
         certificateChain.add(FIRST_CHILD_CERTIFICATE_LOCATION);
 
-        expect(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(root);
+        when(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(root);
 
-        expect(validatingFetcher.getObject(eq(ROOT_CERTIFICATE_LOCATION), isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).andReturn(root);
-        expect(validatingFetcher.getObject(eq(FIRST_CHILD_CERTIFICATE_LOCATION),isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).andReturn(child);
-        expect(validatingFetcher.getObject(eq(SECOND_CHILD_CERTIFICATE_LOCATION),isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).andReturn(child);
+        when(validatingFetcher.getObject(eq(ROOT_CERTIFICATE_LOCATION), isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).thenReturn(root);
+        when(validatingFetcher.getObject(eq(FIRST_CHILD_CERTIFICATE_LOCATION),isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).thenReturn(child);
+        when(validatingFetcher.getObject(eq(SECOND_CHILD_CERTIFICATE_LOCATION),isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).thenReturn(child);
 
-        replayMocks();
         subject.validateChain();
-        verifyMocks();
 
         assertFalse(result.hasFailures());
     }
@@ -202,52 +186,33 @@ public class SingleObjectWalkerTest {
         certificateChain.add(FIRST_CHILD_CERTIFICATE_LOCATION);
 
         CertificateRepositoryObject expiredCertificate = getExpiredRootResourceCertificate();
-        expect(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(expiredCertificate);
+        when(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(expiredCertificate);
 
-        expect(validatingFetcher.getObject(eq(ROOT_CERTIFICATE_LOCATION), isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).andReturn(null);
+        when(validatingFetcher.getObject(eq(ROOT_CERTIFICATE_LOCATION), isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).thenReturn(null);
 
-        replayMocks();
         subject.validateChain();
-        verifyMocks();
 
         assertFalse(result.hasFailures());
     }
 
     @Test
     public void shouldDoCompleteTestHappyFlow() {
-
         // build up
-        expect(chainBuildFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(child);
-        expect(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(root);
+        when(chainBuildFetcher.getObject(FIRST_CHILD_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(child);
+        when(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(root);
 
         // trust anchor
-        expect(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(root);
+        when(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(root);
 
         // validation
-        expect(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).andReturn(root);
-        expect(validatingFetcher.getObject(eq(ROOT_CERTIFICATE_LOCATION), isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).andReturn(root);
-        expect(validatingFetcher.getObject(eq(FIRST_CHILD_CERTIFICATE_LOCATION),isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).andReturn(child);
-        expect(validatingFetcher.getObject(eq(SECOND_CHILD_CERTIFICATE_LOCATION),isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).andReturn(child);
+        when(chainBuildFetcher.getObject(ROOT_CERTIFICATE_LOCATION, context , fileContentSpecification, result)).thenReturn(root);
+        when(validatingFetcher.getObject(eq(ROOT_CERTIFICATE_LOCATION), isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).thenReturn(root);
+        when(validatingFetcher.getObject(eq(FIRST_CHILD_CERTIFICATE_LOCATION),isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).thenReturn(child);
+        when(validatingFetcher.getObject(eq(SECOND_CHILD_CERTIFICATE_LOCATION),isA(CertificateRepositoryObjectValidationContext.class), eq(fileContentSpecification), eq(result))).thenReturn(child);
 
-
-        replayMocks();
         subject.execute(trustAnchors);
-        verifyMocks();
 
         assertFalse(result.hasFailures());
     }
 
-
-
-    private void replayMocks() {
-        replay(chainBuildFetcher);
-        replay(chainBuildLogger);
-        replay(validatingFetcher);
-    }
-
-    private void verifyMocks() {
-        verify(chainBuildFetcher);
-        verify(chainBuildLogger);
-        verify(validatingFetcher);
-    }
 }

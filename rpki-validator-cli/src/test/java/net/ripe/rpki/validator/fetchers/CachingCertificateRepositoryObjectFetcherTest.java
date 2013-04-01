@@ -29,6 +29,9 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+import java.net.URI;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
 import net.ripe.rpki.commons.crypto.crl.X509Crl;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
@@ -40,12 +43,6 @@ import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryOb
 import net.ripe.rpki.validator.RepositoryObjectsSetUpHelper;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.net.URI;
-
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 
 public class CachingCertificateRepositoryObjectFetcherTest {
@@ -63,120 +60,110 @@ public class CachingCertificateRepositoryObjectFetcherTest {
         context = CertificateRepositoryObjectValidationContextTest.create();
         fileContentSpecification = Specifications.alwaysTrue();
         result = ValidationResult.withLocation(uri);
-        fetcher = createMock(CertificateRepositoryObjectFetcher.class);
+        fetcher = mock(CertificateRepositoryObjectFetcher.class);
+
         subject = new CachingCertificateRepositoryObjectFetcher(fetcher);
     }
 
     @Test
     public void shouldPassOnPrefetch() {
-        fetcher.prefetch(uri, result); expectLastCall().times(2);
-        replay(fetcher);
-
-        subject.prefetch(uri, result);
         subject.prefetch(uri, result);
 
-        verify(fetcher);
+        verify(fetcher).prefetch(uri, result);
     }
 
     @Test
     public void shouldCacheSuccessFromGetObject() {
         X509ResourceCertificate object = RepositoryObjectsSetUpHelper.getChildResourceCertificate();
-        expect(fetcher.getObject(uri, context, fileContentSpecification, result)).andReturn(object).once();
-        replay(fetcher);
+
+        when(fetcher.getObject(uri, context, fileContentSpecification, result)).thenReturn(object);
 
         assertEquals(object, subject.getObject(uri, context, fileContentSpecification, result));
         assertEquals(object, subject.getObject(uri, context, fileContentSpecification, result));
 
-        verify(fetcher);
+        verify(fetcher, times(1)).getObject(uri, context, fileContentSpecification, result);
     }
 
     @Test
     public void shouldCacheFailureFromGetObject() {
-        expect(fetcher.getObject(uri, context, fileContentSpecification, result)).andReturn(null).once();
-        replay(fetcher);
+        when(fetcher.getObject(uri, context, fileContentSpecification, result)).thenReturn(null);
 
         assertEquals(null, subject.getObject(uri, context, fileContentSpecification, result));
         assertEquals(null, subject.getObject(uri, context, fileContentSpecification, result));
         assertEquals(null, subject.getCrl(uri, context, result));
         assertEquals(null, subject.getManifest(uri, context, result));
 
-        verify(fetcher);
+        verify(fetcher, times(1)).getObject(uri, context, fileContentSpecification, result);
     }
 
     @Test
     public void shouldCacheManifestFromGetObject() {
         ManifestCms object = RepositoryObjectsSetUpHelper.getRootManifestCms();
-        expect(fetcher.getObject(uri, context, fileContentSpecification, result)).andReturn(object).once();
-        replay(fetcher);
+        when(fetcher.getObject(uri, context, fileContentSpecification, result)).thenReturn(object);
 
         assertEquals(object, subject.getObject(uri, context, fileContentSpecification, result));
         assertEquals(object, subject.getManifest(uri, context, result));
         assertNull(subject.getCrl(uri, context, result));
 
-        verify(fetcher);
+        verify(fetcher, times(1)).getObject(uri, context, fileContentSpecification, result);
     }
 
     @Test
     public void shouldCacheFailureFromGetManifest() {
-        expect(fetcher.getManifest(uri, context, result)).andReturn(null).once();
-        replay(fetcher);
+        when(fetcher.getManifest(uri, context, result)).thenReturn(null);
 
         assertEquals(null, subject.getManifest(uri, context, result));
         assertEquals(null, subject.getManifest(uri, context, result));
         assertEquals(null, subject.getObject(uri, context, fileContentSpecification, result));
 
-        verify(fetcher);
+        verify(fetcher, times(1)).getManifest(uri, context, result);
     }
 
     @Test
     public void shouldCacheSuccessFromGetManifest() {
         ManifestCms object = RepositoryObjectsSetUpHelper.getRootManifestCms();
-        expect(fetcher.getManifest(uri, context, result)).andReturn(object).once();
-        replay(fetcher);
+        when(fetcher.getManifest(uri, context, result)).thenReturn(object);
 
         assertEquals(object, subject.getManifest(uri, context, result));
         assertEquals(object, subject.getManifest(uri, context, result));
         assertEquals(object, subject.getObject(uri, context, fileContentSpecification, result));
 
-        verify(fetcher);
+        verify(fetcher, times(1)).getManifest(uri, context, result);
     }
 
     @Test
     public void shouldCacheSuccessFromGetCrl() {
         X509Crl object = RepositoryObjectsSetUpHelper.getRootCrl();
-        expect(fetcher.getCrl(uri, context, result)).andReturn(object).once();
-        replay(fetcher);
+        when(fetcher.getCrl(uri, context, result)).thenReturn(object);
 
         assertEquals(object, subject.getCrl(uri, context, result));
         assertEquals(object, subject.getCrl(uri, context, result));
         assertEquals(object, subject.getObject(uri, context, fileContentSpecification, result));
 
-        verify(fetcher);
+        verify(fetcher, times(1)).getCrl(uri, context, result);
     }
 
     @Test
     public void shouldCacheFailureFromGetCrl() {
-        expect(fetcher.getCrl(uri, context, result)).andReturn(null).once();
-        replay(fetcher);
+        when(fetcher.getCrl(uri, context, result)).thenReturn(null);
 
         assertEquals(null, subject.getCrl(uri, context, result));
         assertEquals(null, subject.getCrl(uri, context, result));
         assertEquals(null, subject.getObject(uri, context, fileContentSpecification, result));
 
-        verify(fetcher);
+        verify(fetcher, times(1)).getCrl(uri, context, result);
     }
 
     @Test
     public void shouldCacheCrlFromGetObject() {
         X509Crl object = RepositoryObjectsSetUpHelper.getRootCrl();
-        expect(fetcher.getObject(uri, context, fileContentSpecification, result)).andReturn(object).once();
-        replay(fetcher);
+        when(fetcher.getObject(uri, context, fileContentSpecification, result)).thenReturn(object);
 
         assertEquals(object, subject.getObject(uri, context, fileContentSpecification, result));
         assertEquals(object, subject.getCrl(uri, context, result));
         assertNull(subject.getManifest(uri, context, result));
 
-        verify(fetcher);
+        verify(fetcher, times(1)).getObject(uri, context, fileContentSpecification, result);
     }
 
 }

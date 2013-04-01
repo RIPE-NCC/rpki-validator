@@ -29,9 +29,8 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
-import static org.easymock.EasyMock.*;
 import static org.junit.Assert.*;
-
+import static org.mockito.Mockito.*;
 import java.net.URI;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
@@ -58,7 +57,6 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
     private NotifyingCertificateRepositoryObjectFetcher.Listener firstCallback;
     private NotifyingCertificateRepositoryObjectFetcher.Listener secondCallback;
     private NotifyingCertificateRepositoryObjectFetcher subject;
-    private Object[] mocks;
 
 
     @Before
@@ -67,10 +65,9 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
         result.setLocation(new ValidationLocation(TEST_URI));
 
         context = CertificateRepositoryObjectValidationContextTest.create();
-        fetcher = createMock(CertificateRepositoryObjectFetcher.class);
-        firstCallback = createMock(NotifyingCertificateRepositoryObjectFetcher.Listener.class);
-        secondCallback = createMock(NotifyingCertificateRepositoryObjectFetcher.Listener.class);
-        mocks = new Object[] { fetcher, firstCallback, secondCallback };
+        fetcher = mock(CertificateRepositoryObjectFetcher.class);
+        firstCallback = mock(NotifyingCertificateRepositoryObjectFetcher.Listener.class);
+        secondCallback = mock(NotifyingCertificateRepositoryObjectFetcher.Listener.class);
 
         subject = new NotifyingCertificateRepositoryObjectFetcher(fetcher);
         subject.addCallback(firstCallback);
@@ -80,83 +77,83 @@ public class NotifyingCertificateRepositoryObjectFetcherTest {
     @Test
     public void shouldNotifyOnPrefetchSuccess() {
         result.rejectIfFalse(true, "dummy.check");
-        fetcher.prefetch(TEST_URI, result);
-        firstCallback.afterPrefetchSuccess(TEST_URI, result);
-        secondCallback.afterPrefetchSuccess(TEST_URI, result);
-        replay(mocks);
 
         subject.prefetch(TEST_URI, result);
-        verify(mocks);
+
+        verify(fetcher).prefetch(TEST_URI, result);
+        verify(firstCallback).afterPrefetchSuccess(TEST_URI, result);
+        verify(secondCallback).afterPrefetchSuccess(TEST_URI, result);
+        verify(firstCallback, never()).afterPrefetchFailure(TEST_URI, result);
+        verify(secondCallback, never()).afterPrefetchFailure(TEST_URI, result);
     }
 
     @Test
     public void shouldNotifyOnPrefetchFailure() {
         result.rejectIfFalse(false, "dummy.check");
-        fetcher.prefetch(TEST_URI, result);
-        firstCallback.afterPrefetchFailure(TEST_URI, result);
-        secondCallback.afterPrefetchFailure(TEST_URI, result);
-        replay(mocks);
 
         subject.prefetch(TEST_URI, result);
-        verify(mocks);
+
+        verify(fetcher).prefetch(TEST_URI, result);
+        verify(firstCallback, never()).afterPrefetchSuccess(TEST_URI, result);
+        verify(secondCallback, never()).afterPrefetchSuccess(TEST_URI, result);
+        verify(firstCallback).afterPrefetchFailure(TEST_URI, result);
+        verify(secondCallback).afterPrefetchFailure(TEST_URI, result);
     }
 
     @Test
     public void shouldNotifyOnGetObjectSuccess() {
-        CertificateRepositoryObject object = RepositoryObjectsSetUpHelper.getRootResourceCertificate();
         result.rejectIfFalse(true, "dummy.check");
-
-        expect(fetcher.getObject(TEST_URI, context, FILE_CONTENT_SPECIFICATION, result)).andReturn(object);
-        firstCallback.afterFetchSuccess(TEST_URI, object, result);
-        secondCallback.afterFetchSuccess(TEST_URI, object, result);
-        replay(mocks);
+        CertificateRepositoryObject object = RepositoryObjectsSetUpHelper.getRootResourceCertificate();
+        when(fetcher.getObject(TEST_URI, context, FILE_CONTENT_SPECIFICATION, result)).thenReturn(object);
 
         assertSame(object, subject.getObject(TEST_URI, context, FILE_CONTENT_SPECIFICATION, result));
 
-        verify(mocks);
+        verifyActionsAfterFetchingObjectWithoutValidationErrors(object);
     }
 
     @Test
     public void shouldNotifyOnGetObjectFailure() {
         result.rejectIfFalse(false, "dummy.check");
-
-        expect(fetcher.getObject(TEST_URI, context, FILE_CONTENT_SPECIFICATION, result)).andReturn(null);
-        firstCallback.afterFetchFailure(TEST_URI, result);
-        secondCallback.afterFetchFailure(TEST_URI, result);
-        replay(mocks);
+        when(fetcher.getObject(TEST_URI, context, FILE_CONTENT_SPECIFICATION, result)).thenReturn(null);
 
         assertNull(subject.getObject(TEST_URI, context, FILE_CONTENT_SPECIFICATION, result));
 
-        verify(mocks);
+        verifyActionsAfterFetchingObjectWithValidationErrors();
     }
 
     @Test
     public void shouldNotifyOnGetCrl() {
-        X509Crl object = RepositoryObjectsSetUpHelper.getRootCrl();
         result.rejectIfFalse(true, "dummy.check");
-
-        expect(fetcher.getCrl(TEST_URI, context, result)).andReturn(object);
-        firstCallback.afterFetchSuccess(TEST_URI, object, result);
-        secondCallback.afterFetchSuccess(TEST_URI, object, result);
-        replay(mocks);
+        X509Crl object = RepositoryObjectsSetUpHelper.getRootCrl();
+        when(fetcher.getCrl(TEST_URI, context, result)).thenReturn(object);
 
         assertSame(object, subject.getCrl(TEST_URI, context, result));
 
-        verify(mocks);
+        verifyActionsAfterFetchingObjectWithoutValidationErrors(object);
     }
 
     @Test
     public void shouldNotifyOnGetManifest() {
-        ManifestCms object = RepositoryObjectsSetUpHelper.getRootManifestCms();
         result.rejectIfFalse(true, "dummy.check");
-
-        expect(fetcher.getManifest(TEST_URI, context, result)).andReturn(object);
-        firstCallback.afterFetchSuccess(TEST_URI, object, result);
-        secondCallback.afterFetchSuccess(TEST_URI, object, result);
-        replay(mocks);
+        ManifestCms object = RepositoryObjectsSetUpHelper.getRootManifestCms();
+        when(fetcher.getManifest(TEST_URI, context, result)).thenReturn(object);
 
         assertSame(object, subject.getManifest(TEST_URI, context, result));
 
-        verify(mocks);
+        verifyActionsAfterFetchingObjectWithoutValidationErrors(object);
+    }
+
+    private void verifyActionsAfterFetchingObjectWithoutValidationErrors(CertificateRepositoryObject object) {
+        verify(firstCallback).afterFetchSuccess(TEST_URI, object, result);
+        verify(secondCallback).afterFetchSuccess(TEST_URI, object, result);
+        verify(firstCallback, never()).afterFetchFailure(any(URI.class), any(ValidationResult.class));
+        verify(secondCallback, never()).afterFetchFailure(any(URI.class), any(ValidationResult.class));
+    }
+
+    private void verifyActionsAfterFetchingObjectWithValidationErrors() {
+        verify(firstCallback, never()).afterFetchSuccess(any(URI.class), any(CertificateRepositoryObject.class), any((ValidationResult.class)));
+        verify(secondCallback, never()).afterFetchSuccess(any(URI.class), any(CertificateRepositoryObject.class), any((ValidationResult.class)));
+        verify(firstCallback).afterFetchFailure(TEST_URI, result);
+        verify(secondCallback).afterFetchFailure(TEST_URI, result);
     }
 }

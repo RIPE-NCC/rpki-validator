@@ -29,9 +29,16 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import net.ripe.rpki.validator.commands.TopDownWalker;
-import net.ripe.rpki.validator.fetchers.CertificateRepositoryObjectFetcher;
-
+import static net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+import javax.security.auth.x500.X500Principal;
+import java.math.BigInteger;
+import java.net.URI;
+import java.security.KeyPair;
+import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.Queue;
 import net.ripe.ipresource.IpResourceSet;
 import net.ripe.ipresource.IpResourceType;
 import net.ripe.rpki.commons.crypto.ValidityPeriod;
@@ -45,25 +52,13 @@ import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateBuilder;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.validator.fetchers.CertificateRepositoryObjectFetcher;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Before;
 import org.junit.Test;
-
-import javax.security.auth.x500.X500Principal;
-import java.math.BigInteger;
-import java.net.URI;
-import java.security.KeyPair;
-import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.Queue;
-
-import static net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper.DEFAULT_SIGNATURE_PROVIDER;
-import static org.easymock.EasyMock.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 
 public class TopDownWalkerTest {
@@ -95,13 +90,10 @@ public class TopDownWalkerTest {
     private CertificateRepositoryObjectValidationContext taContext;
     private ValidationResult validitionResult;
 
-    private Object[] mocks;
-
 
     @Before
     public void setUp() {
-        certificateRepositoryObjectFetcher = createMock(CertificateRepositoryObjectFetcher.class);
-        mocks = new Object[] { certificateRepositoryObjectFetcher };
+        certificateRepositoryObjectFetcher = mock(CertificateRepositoryObjectFetcher.class);
 
         ta = getRootResourceCertificate();
         taContext = new CertificateRepositoryObjectValidationContext(URI.create("rsync://host/ta"), ta);
@@ -110,15 +102,11 @@ public class TopDownWalkerTest {
         subject = new TopDownWalker(workQueue, certificateRepositoryObjectFetcher, validitionResult);
     }
 
-
     @Test
     public void shouldPrefetchRepository() {
-        certificateRepositoryObjectFetcher.prefetch(eq(ROOT_SIA_REPO_RSYNC_LOCATION), isA(ValidationResult.class));
-        replay(mocks);
-
         subject.prefetch(taContext);
 
-        verify(mocks);
+        verify(certificateRepositoryObjectFetcher).prefetch(eq(ROOT_SIA_REPO_RSYNC_LOCATION), isA(ValidationResult.class));
     }
 
     @Test
@@ -143,34 +131,28 @@ public class TopDownWalkerTest {
             }
         };
 
-        replay(mocks);
-
         subject.processManifest(taContext);
 
-        verify(mocks);
         assertTrue(fetchManifestCalled.booleanValue());
         assertTrue(processedManifestFilesCalled.booleanValue());
     }
 
     @Test
     public void shouldNotProcessFilesWhenManifestIsNull() {
-        expect(certificateRepositoryObjectFetcher.getManifest(eq(ROOT_SIA_MANIFEST_RSYNC_LOCATION), eq(taContext), isA(ValidationResult.class))).andReturn(null);
-        replay(mocks);
+        when(certificateRepositoryObjectFetcher.getManifest(eq(ROOT_SIA_MANIFEST_RSYNC_LOCATION), eq(taContext), isA(ValidationResult.class))).thenReturn(null);
 
         subject.processManifest(taContext);
 
-        verify(mocks);
+        verify(certificateRepositoryObjectFetcher).getManifest(eq(ROOT_SIA_MANIFEST_RSYNC_LOCATION), eq(taContext), isA(ValidationResult.class));
+        verifyNoMoreInteractions(certificateRepositoryObjectFetcher);
     }
 
     @Test
     public void shouldFetchManifest() {
         ManifestCms manifestCms = getRootManifestCms();
-        expect(certificateRepositoryObjectFetcher.getManifest(eq(ROOT_SIA_MANIFEST_RSYNC_LOCATION), eq(taContext), isA(ValidationResult.class))).andReturn(manifestCms);
-        replay(mocks);
+        when(certificateRepositoryObjectFetcher.getManifest(eq(ROOT_SIA_MANIFEST_RSYNC_LOCATION), eq(taContext), isA(ValidationResult.class))).thenReturn(manifestCms);
 
         assertEquals(manifestCms, subject.fetchManifest(ROOT_SIA_MANIFEST_RSYNC_LOCATION, taContext));
-
-        verify(mocks);
     }
 
     @Test
@@ -199,14 +181,10 @@ public class TopDownWalkerTest {
         ManifestCms manifestCms = getRootManifestCms();
         X509Crl crl = getCrl();
 
-        expect(certificateRepositoryObjectFetcher.getObject(eq(ROOT_SIA_REPO_RSYNC_LOCATION.resolve("foo1")), eq(taContext), eq(manifestCms.getFileContentSpecification("foo1")), isA(ValidationResult.class))).andReturn(ta);
-        expect(certificateRepositoryObjectFetcher.getObject(eq(ROOT_SIA_REPO_RSYNC_LOCATION.resolve("BaR")), eq(taContext), eq(manifestCms.getFileContentSpecification("BaR")), isA(ValidationResult.class))).andReturn(crl);
-
-        replay(mocks);
+        when(certificateRepositoryObjectFetcher.getObject(eq(ROOT_SIA_REPO_RSYNC_LOCATION.resolve("foo1")), eq(taContext), eq(manifestCms.getFileContentSpecification("foo1")), isA(ValidationResult.class))).thenReturn(ta);
+        when(certificateRepositoryObjectFetcher.getObject(eq(ROOT_SIA_REPO_RSYNC_LOCATION.resolve("BaR")), eq(taContext), eq(manifestCms.getFileContentSpecification("BaR")), isA(ValidationResult.class))).thenReturn(crl);
 
         subject.processManifestFiles(taContext, manifestCms);
-
-        verify(mocks);
 
         assertEquals(1, workQueue.size());
         assertEquals(ta, workQueue.remove().getCertificate());
@@ -216,13 +194,10 @@ public class TopDownWalkerTest {
     public void shouldSkipInvalidObjects() {
         ManifestCms manifestCms = getRootManifestCms();
 
-        expect(certificateRepositoryObjectFetcher.getObject(eq(ROOT_SIA_REPO_RSYNC_LOCATION.resolve("foo1")), eq(taContext), eq(manifestCms.getFileContentSpecification("foo1")), isA(ValidationResult.class))).andReturn(null);
-        expect(certificateRepositoryObjectFetcher.getObject(eq(ROOT_SIA_REPO_RSYNC_LOCATION.resolve("BaR")), eq(taContext), eq(manifestCms.getFileContentSpecification("BaR")), isA(ValidationResult.class))).andReturn(null);
-        replay(mocks);
+        when(certificateRepositoryObjectFetcher.getObject(eq(ROOT_SIA_REPO_RSYNC_LOCATION.resolve("foo1")), eq(taContext), eq(manifestCms.getFileContentSpecification("foo1")), isA(ValidationResult.class))).thenReturn(null);
+        when(certificateRepositoryObjectFetcher.getObject(eq(ROOT_SIA_REPO_RSYNC_LOCATION.resolve("BaR")), eq(taContext), eq(manifestCms.getFileContentSpecification("BaR")), isA(ValidationResult.class))).thenReturn(null);
 
         subject.processManifestFiles(taContext, manifestCms);
-
-        verify(mocks);
 
         assertTrue(workQueue.isEmpty());
     }
