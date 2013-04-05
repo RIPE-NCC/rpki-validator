@@ -30,7 +30,7 @@
 package net.ripe.rpki.validator
 package models
 
-import net.ripe.rpki.commons.crypto.{UnknownCertificateRepositoryObject, CertificateRepositoryObject}
+import net.ripe.rpki.commons.crypto.{UnknownCertificateRepositoryObject, GhostbustersRecord, CertificateRepositoryObject}
 import java.net.URI
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import akka.util.ByteString
@@ -53,8 +53,8 @@ object StoredRepositoryObject {
       case mft: ManifestCms => mft.getNotValidAfter
       case roa: RoaCms => roa.getValidityPeriod.getNotValidAfter
       case crl: X509Crl => crl.getNextUpdateTime
-      case unknown: UnknownCertificateRepositoryObject => {
-        // Make sure the unknown object stays in the cache long enough for the validation to finish
+      case _: GhostbustersRecord | _: UnknownCertificateRepositoryObject => {
+        // Make sure the object stays in the cache long enough for the validation to finish
         new DateTime(DateTimeZone.UTC).plusDays(1)
       }
     }

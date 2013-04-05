@@ -29,23 +29,19 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
-import net.ripe.rpki.validator.util.HierarchicalUriCache;
-import net.ripe.rpki.validator.util.UriToFileMapper;
-
-import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
-import net.ripe.rpki.commons.rsync.Rsync;
-import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory;
-import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectParserException;
-import net.ripe.rpki.commons.util.Specification;
-import net.ripe.rpki.commons.validation.ValidationResult;
-import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
-
+import static net.ripe.rpki.commons.validation.ValidationString.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-
-import static net.ripe.rpki.commons.validation.ValidationString.*;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory;
+import net.ripe.rpki.commons.rsync.Rsync;
+import net.ripe.rpki.commons.util.Specification;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.validator.util.HierarchicalUriCache;
+import net.ripe.rpki.validator.util.UriToFileMapper;
+import org.apache.commons.io.FileUtils;
+import org.apache.log4j.Logger;
 
 public class RsyncRpkiRepositoryObjectFetcher implements RpkiRepositoryObjectFetcher {
 
@@ -90,14 +86,7 @@ public class RsyncRpkiRepositoryObjectFetcher implements RpkiRepositoryObjectFet
             return null;
         }
 
-        CertificateRepositoryObject cro;
-        try {
-            cro = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(contents, result);
-        } catch (CertificateRepositoryObjectParserException ex) {
-            cro = null;
-        }
-        result.rejectIfNull(cro, KNOWN_OBJECT_TYPE, uri.toString());
-        return cro;
+        return CertificateRepositoryObjectFactory.createCertificateRepositoryObject(contents, result);
     }
 
     @Override

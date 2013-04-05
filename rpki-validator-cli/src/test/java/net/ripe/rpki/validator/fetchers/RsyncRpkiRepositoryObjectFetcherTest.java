@@ -114,7 +114,7 @@ public class RsyncRpkiRepositoryObjectFetcherTest {
     public void shouldNotFetchObjectIfContentsCannotBeParsed() {
         rsyncFileContents = new byte[] { 0x10, 0x12, 0x3 };
         assertNull("content should not be parsed", subject.fetch(TEST_OBJECT_CERT_URI, Specifications.<byte[]>alwaysTrue(), validationResult));
-        assertEquals(new ValidationCheck(ValidationStatus.ERROR, KNOWN_OBJECT_TYPE, TEST_OBJECT_CERT_URI.toString()), validationResult.getResult(new ValidationLocation(TEST_OBJECT_CERT_URI), KNOWN_OBJECT_TYPE));
+        assertEquals(new ValidationCheck(ValidationStatus.PASSED, KNOWN_OBJECT_TYPE, TEST_OBJECT_CERT_URI.toString()), validationResult.getResult(new ValidationLocation(TEST_OBJECT_CERT_URI), KNOWN_OBJECT_TYPE));
     }
 
     @Test

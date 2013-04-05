@@ -32,16 +32,14 @@ package net.ripe.rpki.validator.fetchers
 import grizzled.slf4j.Logging
 import java.net.URI
 import javax.servlet.http.HttpServletResponse.SC_OK
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
-import net.ripe.rpki.commons.crypto.crl.X509Crl
-import net.ripe.rpki.commons.crypto.util.{CertificateRepositoryObjectParserException, CertificateRepositoryObjectFactory}
-import net.ripe.rpki.commons.util.{Specifications, Specification}
-import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
+import net.ripe.rpki.commons.util.Specification
 import net.ripe.rpki.commons.validation.{ValidationString, ValidationResult}
 import org.apache.http.HttpResponse
 import org.apache.http.client.{ResponseHandler, HttpClient}
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.util.EntityUtils
+import net.ripe.rpki.commons.crypto.{GhostbustersRecord, UnknownCertificateRepositoryObject}
 
 class HttpObjectFetcher(httpClient: HttpClient) extends RpkiRepositoryObjectFetcher with Logging {
 
@@ -54,15 +52,7 @@ class HttpObjectFetcher(httpClient: HttpClient) extends RpkiRepositoryObjectFetc
       case Some(content: Array[Byte]) =>
         if (fileContentSpecification.isSatisfiedBy(content)) {
           result.pass(ValidationString.VALIDATOR_FILE_CONTENT, uri.toString)
-          try {
-            val cro = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(content, result)
-            result.pass(ValidationString.KNOWN_OBJECT_TYPE, uri.toString)
-            cro
-          } catch {
-            case e: CertificateRepositoryObjectParserException =>
-              result.error(ValidationString.KNOWN_OBJECT_TYPE, uri.toString)
-              null
-          }
+          CertificateRepositoryObjectFactory.createCertificateRepositoryObject(content, result)
         } else {
           result.error(ValidationString.VALIDATOR_FILE_CONTENT, uri.toString)
           null

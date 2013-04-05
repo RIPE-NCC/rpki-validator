@@ -98,12 +98,12 @@ class HttpObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndA
     validationResult.getFailuresForAllLocations should contain (new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_FILE_CONTENT, uri.toString))
   }
 
-  test("should get object  set failure if object is unkown") {
+  test("should get object  set failure if object is unknown") {
     val validationResult = ValidationResult.withLocation(uri)
     when(httpClient.execute(any[HttpGet](), any[ResponseHandler[Option[Array[Byte]]]]())).thenReturn(Some(Array[Byte](1)))
 
     subject.fetch(uri, Specifications.alwaysTrue(), validationResult) should be (null)
-    validationResult.getFailuresForAllLocations should contain (new ValidationCheck(ValidationStatus.ERROR, ValidationString.KNOWN_OBJECT_TYPE, uri.toString))
+    validationResult.getAllValidationChecksForCurrentLocation should contain (new ValidationCheck(ValidationStatus.PASSED, ValidationString.KNOWN_OBJECT_TYPE, uri.toString))
   }
 
   test("should get object return null and set error if download failed") {
