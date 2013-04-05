@@ -272,10 +272,8 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
     val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File(RsyncDiskCacheBasePath  + trustAnchorLocator.getFile().getName())))
-    val httpClient: DefaultHttpClient = new DefaultHttpClient(new PoolingClientConnectionManager)
 
-    val httpFetcher = if (httpSupport) Some(new HttpObjectFetcher(httpClient)) else None
-    val remoteFetcher = new RemoteObjectFetcher(rsyncFetcher, httpFetcher)
+    val remoteFetcher = new RemoteObjectFetcher(rsyncFetcher)
 
     new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DataSources.DurableDataSource))
   }

@@ -34,46 +34,13 @@ import java.net.URI
 import net.ripe.rpki.commons.validation.ValidationResult
 import net.ripe.rpki.commons.util.Specification
 
-class RemoteObjectFetcher(rsyncFetcher: RsyncRpkiRepositoryObjectFetcher, httpFetcherOption: Option[HttpObjectFetcher]) extends RpkiRepositoryObjectFetcher with Logging {
-
-  val uriMap: Map[URI, URI] = Map(
-    URI.create("rsync://rpki.ripe.net/") -> URI.create("http://certification.ripe.net/certification/repository/"),
-    URI.create("rsync://localhost:10873/online/") -> URI.create("http://localhost:8080/certification/repository/online/"))
+class RemoteObjectFetcher(rsyncFetcher: RsyncRpkiRepositoryObjectFetcher) extends RpkiRepositoryObjectFetcher with Logging {
 
   override def prefetch(uri: URI, result: ValidationResult) {
-    httpFetcherOption match {
-      case Some(httpFetcher) =>
-        mapRsynctoHttpUri(uri) match {
-          case Some(httpUri) =>
-            httpFetcher.prefetch(httpUri, result)
-          case None =>
-            rsyncFetcher.prefetch(uri, result)
-        }
-      case None =>
-        rsyncFetcher.prefetch(uri, result)
-    }
+    rsyncFetcher.prefetch(uri, result)
   }
 
   override def fetch(uri: URI, fileContentSpecification: Specification[Array[Byte]], result: ValidationResult) = {
-    httpFetcherOption match {
-      case Some(httpFetcher) =>
-        mapRsynctoHttpUri(uri) match {
-          case Some(httpUri) =>
-            httpFetcher.fetch(httpUri, fileContentSpecification, result)
-          case None =>
-            rsyncFetcher.fetch(uri, fileContentSpecification, result)
-        }
-      case None =>
-        rsyncFetcher.fetch(uri, fileContentSpecification, result)
-    }
-  }
-
-  def mapRsynctoHttpUri(uri: URI) = {
-    uriMap.find(p => uri.toString.startsWith(p._1.toString)) match {
-      case Some((rsyncUri, httpUri)) =>
-        Some(URI.create(uri.toString.replace(rsyncUri.toString, httpUri.toString)))
-      case _ =>
-        None
-    }
+    rsyncFetcher.fetch(uri, fileContentSpecification, result)
   }
 }

@@ -30,52 +30,27 @@
 package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
-import net.ripe.rpki.commons.validation.ValidationResult
 import org.mockito.Mockito.verify
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.mock.MockitoSugar
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
-@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+@RunWith(classOf[JUnitRunner])
 class RemoteObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter with MockitoSugar {
 
+  val uri: URI = URI.create("rsync://rpki.ripe.net/myRoa.roa")
   val mockRsyncFetcher = mock[RsyncRpkiRepositoryObjectFetcher]
-  val mockHttpFetcher = mock[HttpObjectFetcher]
+  val subject = new RemoteObjectFetcher(mockRsyncFetcher)
 
-  val subject = new RemoteObjectFetcher(mockRsyncFetcher, Some(mockHttpFetcher)) {
-    override val uriMap = Map(URI.create("rsync://rpki.ripe.net/") -> URI.create("http://foo.ripe.net/bar/"))
+  test("Should delegate prefetch to rsync") {
+    subject.prefetch(uri, null)
+    verify(mockRsyncFetcher).prefetch(uri, null)
   }
 
-  val nonMappableUri: URI = URI.create("rsync://whatever.ripe.net/myRoa.roa")
-  val mappableUri: URI = URI.create("rsync://rpki.ripe.net/repository/published/38/1/myRoa.roa")
-  val mappedUri: URI = URI.create("http://foo.ripe.net/bar/repository/published/38/1/myRoa.roa")
-
-
-  test("Should map from rsync to http") {
-    subject.mapRsynctoHttpUri(mappableUri) should be (Some(mappedUri))
-  }
-
-  test("Should return None if no mapping exists for the given uri") {
-    subject.mapRsynctoHttpUri(nonMappableUri) should be (None)
-  }
-
-  test("Should delegate prefetch to http if a uri mapping exists") {
-    subject.prefetch(mappableUri, null)
-    verify(mockHttpFetcher).prefetch(mappedUri, null)
-  }
-
-  test("Should delegate prefetch to rsync if no mapping exists for the given uri") {
-    subject.prefetch(nonMappableUri, null)
-    verify(mockRsyncFetcher).prefetch(nonMappableUri, null)
-  }
-
-  test("Should delegate object fetching to http if a uri mapping exists") {
-    subject.fetch(mappableUri, null, null)
-    verify(mockHttpFetcher).fetch(mappedUri, null, null)
-  }
-
-  test("Should delegate object fetching to rsync if no mapping exists for the given uri") {
-    subject.fetch(nonMappableUri, null, null)
-    verify(mockRsyncFetcher).fetch(nonMappableUri, null, null)
+  test("Should delegate object fetching to rsync") {
+    subject.fetch(uri, null, null)
+    verify(mockRsyncFetcher).fetch(uri, null, null)
   }
 }
