@@ -56,7 +56,6 @@ class Options(args: Array[String]) {
   private val noNotifyOption = parser.flag[Boolean](List("s", "silent"), "Stop the server from sending notify messages when it has updates.")
   private val dataFileNameOption = parser.option[String](List("f", "data-file"), "FILE", "Specify the data file used to load and store configuration. Default: " + Options.DEFAULT_DATA_FILE_NAME)
   private val feedbackUriOption = parser.option[String](List("feedback-uri"), "URI", "Specify the URI used to send back feedback metrics to RIPE NCC. Default: " + DefaultFeedbackUri)
-  private val httpSupportOption = parser.flag[Boolean](List("http-support"), "Use http instead of rsync for retrieving objects from rpki repositories. (Experimental)")
 
   def rtrPort: Int = rtrPortOption.value.getOrElse(Options.DEFAULT_RTR_PORT)
   def httpPort: Int = httpPortOption.value.getOrElse(Options.DEFAULT_HTTP_PORT)
@@ -64,7 +63,6 @@ class Options(args: Array[String]) {
   def noNotify: Boolean = noNotifyOption.value.getOrElse(false)
   def dataFileName: String = dataFileNameOption.value.getOrElse(Options.DEFAULT_DATA_FILE_NAME)
   def feedbackUri: String = feedbackUriOption.value.getOrElse(DefaultFeedbackUri)
-  def httpSupport: Boolean = httpSupportOption.value.getOrElse(false)
 
   parser.parse(args)
 }

@@ -200,7 +200,7 @@ trait ValidationProcess {
   def shutdown(): Unit = {}
 }
 
-class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, httpSupport: Boolean) extends ValidationProcess {
+class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int) extends ValidationProcess {
 
   private val options = new ValidationOptions()
   private val RsyncDiskCacheBasePath = "tmp/cache/"
