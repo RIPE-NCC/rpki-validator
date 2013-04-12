@@ -135,12 +135,17 @@ If you find any other problems, please contact us at <certification@ripe.net>.
 Version History
 ---------------
 
+2.8.1 - 12 April 2013
+= Fix performance issue introduced in 2.8
+
+2.8 - 5 April 2013
+= Added a warning if objects with unknown extensions (such as *.gbr) are found.
+
 2.7 - 28 November 2012
 = Made validator and projects this depends on available on GitHub and Maven Central
 = Updated pre-configured Trust Anchor Files for APNIC and LACNIC
 = Made Trust Anchor handling more robust
 = Disabled warnings about failure to send performance metrics
-
 
 2.6 - Internal release
 
