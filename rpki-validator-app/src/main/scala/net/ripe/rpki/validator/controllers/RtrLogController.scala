@@ -29,11 +29,11 @@
  */
 package net.ripe.rpki.validator.controllers
 
-import org.scalatra.ScalatraKernel
+import org.scalatra.ScalatraBase
 import net.ripe.rpki.validator.views.RtrLogView
 import org.joda.time.DateTime
 
-trait RtrLogController extends ScalatraKernel {
+trait RtrLogController extends ScalatraBase {
   protected def version: Int
   protected def lastUpdateTime: DateTime
 

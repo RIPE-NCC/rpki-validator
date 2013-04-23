@@ -30,36 +30,24 @@
 package net.ripe.rpki.validator
 package lib
 
-import org.joda.time._
-import org.joda.time.format.PeriodFormat
-import org.joda.time.format.DateTimeFormat
-import java.util.Locale
+import scalaz.Failure
+import scalaz.Success
+import net.ripe.ipresource._
 
-object DateAndTime {
-  def locale = new Locale("en", "UK")
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+class ValidationTest extends support.TestCase {
+  import Validation._
 
-  def dateTimeFormatter = DateTimeFormat.fullDateTime().withLocale(locale)
-  def periodFormatter = PeriodFormat.getDefault().withLocale(locale)
-
-  def formatDateTime(datetime: DateTime) = datetime.toString(dateTimeFormatter)
-
-  def periodInWords(period: Period, number: Int = 2): String = periodFormatter.print(keepMostSignificantPeriodFields(period, number))
-
-  def keepMostSignificantPeriodFields(period: Period, number: Int): Period = {
-    val values = period.getValues()
-    val mostSignificantField = values.indexWhere(_ != 0)
-    if (mostSignificantField < 0) {
-      period
-    } else {
-      val result = new MutablePeriod()
-      for (i <- mostSignificantField.until(mostSignificantField + number).intersect(values.indices)) {
-        result.setValue(i, values(i))
-      }
-      result.toPeriod()
-    }
+  test("validate IP range or prefix") {
+    parseIpRange("10.0.0.0/8") should equal(Success(IpRange.parse("10.0.0.0/8")))
+    parseIpRange("10.0.0.0-10.255.255.255") should equal(Success(IpRange.parse("10.0.0.0/8")))
+    parseIpRange("foo") should be('failure)
   }
 
-  implicit object DateTimeOrdering extends Ordering[DateTime] {
-    override def compare(x: DateTime, y: DateTime) = x.compareTo(y)
+  test("validate IP prefix only") {
+    parseIpPrefix("10.0.0.0-10.0.3.0") should be('failure)
+    parseIpPrefix("10.0.0.0/8") should equal(Success(IpRange.parse("10.0.0.0/8")))
+    parseIpPrefix("10.0.0.0-10.255.255.255") should equal(Success(IpRange.parse("10.0.0.0/8")))
+    parseIpPrefix("foo") should be('failure)
   }
 }

@@ -56,18 +56,18 @@
         </dependency>
         <dependency>
             <groupId>org.scalatra</groupId>
-            <artifactId>scalatra</artifactId>
+            <artifactId>scalatra_${scala.binary.version}</artifactId>
             <version>${scalatra.version}</version>
         </dependency>
         <dependency>
             <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-actor</artifactId>
-            <version>2.0.4</version>
+            <artifactId>akka-actor_${scala.binary.version}</artifactId>
+            <version>2.1.1</version>
         </dependency>
         <dependency>
             <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-agent</artifactId>
-            <version>2.0.4</version>
+            <artifactId>akka-agent_${scala.binary.version}</artifactId>
+            <version>2.1.1</version>
         </dependency>
         <dependency>
             <groupId>org.jboss.netty</groupId>
@@ -76,7 +76,7 @@
         </dependency>
         <dependency>
             <groupId>org.scalaz</groupId>
-            <artifactId>scalaz-core_2.9.2</artifactId>
+            <artifactId>scalaz-core_${scala.binary.version}</artifactId>
         </dependency>
         <dependency>
             <groupId>commons-cli</groupId>
@@ -98,21 +98,21 @@
 
         <dependency>
             <groupId>net.liftweb</groupId>
-            <artifactId>lift-json_2.9.1</artifactId>
-            <version>2.4</version>
+            <artifactId>lift-json_${scala.binary.version}</artifactId>
+            <version>2.5-RC1</version>
         </dependency>
 
         <dependency>
             <groupId>org.clapper</groupId>
-            <artifactId>argot_2.9.1</artifactId>
-            <version>0.3.5</version>
+            <artifactId>argot_${scala.binary.version}</artifactId>
+            <version>1.0.0</version>
         </dependency>
 
         <dependency>
             <!-- http://software.clapper.org/grizzled-slf4j/ -->
             <groupId>org.clapper</groupId>
-            <artifactId>grizzled-slf4j_2.9.2</artifactId>
-            <version>0.6.10</version>
+            <artifactId>grizzled-slf4j_${scala.binary.version}</artifactId>
+            <version>1.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -161,7 +161,7 @@
         <!-- Test deps -->
         <dependency>
             <groupId>org.scalatra</groupId>
-            <artifactId>scalatra-scalatest</artifactId>
+            <artifactId>scalatra-scalatest_${scala.binary.version}</artifactId>
             <version>${scalatra.version}</version>
             <scope>test</scope>
         </dependency>
@@ -171,7 +171,7 @@
         <dependencies>
             <dependency>
                 <groupId>org.scalaz</groupId>
-                <artifactId>scalaz-core_2.9.2</artifactId>
+                <artifactId>scalaz-core_${scala.binary.version}</artifactId>
                 <version>6.0.4</version>
             </dependency>
             <dependency>
@@ -283,6 +283,8 @@
                             <args>
                                 <arg>-deprecation</arg>
                                 <arg>-unchecked</arg>
+                                <arg>-feature</arg>
+                                <arg>-Xlint</arg>
                                 <arg>-Xmax-classfile-name</arg>
                                 <arg>130</arg>
                             </args>

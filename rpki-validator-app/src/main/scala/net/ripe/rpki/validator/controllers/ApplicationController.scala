@@ -37,7 +37,7 @@ import org.scalatra._
 import lib.Validation._
 import views.HomeView
 
-trait ApplicationController extends ScalatraKernel with FlashMapSupport with MethodOverride {
+trait ApplicationController extends ScalatraBase with FlashMapSupport with MethodOverride {
   get("/") {
     new HomeView()
   }

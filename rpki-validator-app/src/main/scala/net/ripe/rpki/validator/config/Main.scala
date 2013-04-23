@@ -43,7 +43,8 @@ import models._
 import bgp.preview._
 import scalaz.{ Success, Failure }
 import scala.concurrent.stm._
-import akka.dispatch.Future
+import scala.concurrent.Future
+import scala.math.Ordering.Implicits._
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.validation.ValidationOptions
@@ -71,11 +72,12 @@ object Main {
 }
 
 class Main(options: Options) { main =>
-  import akka.util.duration._
+  import scala.concurrent.duration._
 
   val logger = Logger[this.type]
 
   implicit val actorSystem = akka.actor.ActorSystem()
+  import actorSystem.dispatcher
 
   val startedAt = System.currentTimeMillis
 
@@ -121,10 +123,10 @@ class Main(options: Options) { main =>
   val rtrServer = runRtrServer()
   runWebServer()
 
-  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 10 seconds) { runValidator() }
-  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 2 hours) { refreshRisDumps() }
-  actorSystem.scheduler.schedule(initialDelay = 0 seconds, frequency = 24 hours) { networkMetrics() }
-  actorSystem.scheduler.schedule(initialDelay = 5 minutes, frequency = 1 hour) { feedbackMetrics.sendMetrics() }
+  actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 10.seconds) { runValidator() }
+  actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 2.hours) { refreshRisDumps() }
+  actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 24.hours) { networkMetrics() }
+  actorSystem.scheduler.schedule(initialDelay = 5.minutes, interval = 1.hour) { feedbackMetrics.sendMetrics() }
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }

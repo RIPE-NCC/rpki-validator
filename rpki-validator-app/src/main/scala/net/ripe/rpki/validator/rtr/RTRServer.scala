@@ -171,7 +171,7 @@ class RTRServerHandler(noCloseOnError: Boolean = false, clients: RtrSessions[Soc
         val channelFuture = event.getChannel().write(response)
         channelFuture.addListener(ChannelFutureListener.CLOSE)
       } catch {
-        case _ => event.getChannel().close()
+        case _: Exception => event.getChannel().close()
       }
     }
   }
