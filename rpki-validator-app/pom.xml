@@ -273,7 +273,7 @@
                             <goal>testCompile</goal>
                         </goals>
                         <configuration>
-                            <checkMultipleScalaVersions>false</checkMultipleScalaVersions>
+                            <checkMultipleScalaVersions>true</checkMultipleScalaVersions>
                             <jvmArgs>
                                 <arg>-XX:+TieredCompilation</arg> <!-- Much faster Scala compilation -->
                                 <arg>-XX:CICompilerCount=1</arg> <!-- Number of HotSpot background compiler threads -->
