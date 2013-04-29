@@ -231,9 +231,8 @@ object Pdus {
     var valueBytes = value.toByteArray()
 
     // sometimes we get extra zero bytes in front... strange... what am I missing? Sign bit?
-    while (valueBytes.head == 0) {
-      valueBytes = valueBytes.drop(1)
-    }
+
+    if (valueBytes.size > 1 && valueBytes.head == 0) valueBytes = valueBytes.drop(1)
 
     var extraBytesNeeded = bytesNeeded - valueBytes.length
     var prependBytes = new Array[Byte](extraBytesNeeded)
