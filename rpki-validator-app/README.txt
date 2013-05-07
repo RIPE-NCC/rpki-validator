@@ -135,6 +135,9 @@ If you find any other problems, please contact us at <certification@ripe.net>.
 Version History
 ---------------
 
+2.9 - 7 May 2013
+= Fix an issue that breaks the RTR interface
+
 2.8.1 - 12 April 2013
 = Fix performance issue introduced in 2.8
 
