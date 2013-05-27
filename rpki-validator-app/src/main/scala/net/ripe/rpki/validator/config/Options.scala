@@ -41,7 +41,7 @@ object Options {
   def parse(args: Array[String]): Either[String, Options] = try {
     Right(new Options(args))
   } catch {
-    case e: ArgotUsageException => Left(e.getMessage())
+    case e: ArgotUsageException => Left(e.getMessage)
   }
 }
 

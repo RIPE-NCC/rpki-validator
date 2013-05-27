@@ -36,8 +36,6 @@ import scala.collection.JavaConverters._
 import scala.concurrent.stm.Ref
 import scala.concurrent.stm.atomic
 import scala.math.Ordering.Implicits._
-import org.apache.http.impl.client.DefaultHttpClient
-import org.apache.http.impl.conn.PoolingClientConnectionManager
 import org.joda.time.DateTime
 import org.joda.time.DateTimeUtils
 import com.yammer.metrics.core.MetricsRegistry
@@ -90,8 +88,8 @@ case class TrustAnchor(
   manifest: Option[ManifestCms] = None,
   crl: Option[X509Crl] = None,
   lastUpdated: Option[DateTime] = None) {
-  def name: String = locator.getCaName()
-  def prefetchUris: Seq[URI] = locator.getPrefetchUris().asScala
+  def name: String = locator.getCaName
+  def prefetchUris: Seq[URI] = locator.getPrefetchUris.asScala
 
   def manifestNextUpdateTime: Option[DateTime] = manifest.map { manifest =>
     manifest.getNextUpdateTime min manifest.getCertificate.getValidityPeriod.getNotValidAfter
@@ -105,7 +103,7 @@ case class TrustAnchor(
     result match {
       case Success(validatedObjects) =>
         val nextUpdate = now.plusHours(4)
-        val trustAnchor = validatedObjects.get(locator.getCertificateLocation()).collect {
+        val trustAnchor = validatedObjects.get(locator.getCertificateLocation).collect {
           case ValidObject(_, _, certificate: X509ResourceCertificate) => certificate
         }
         val manifest = trustAnchor.flatMap(ta => validatedObjects.get(ta.getManifestUri)).collect {
@@ -209,15 +207,15 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   options.setMaxStaleDays(maxStaleDays)
 
   override def extractTrustAnchorLocator() = {
-    val uri = trustAnchorLocator.getCertificateLocation()
+    val uri = trustAnchorLocator.getCertificateLocation
 
     val validationResult = ValidationResult.withLocation(uri)
 
     val cro = consistentObjectFetcher.fetch(uri, Specifications.alwaysTrue(), validationResult)
     cro match {
       case certificate: X509ResourceCertificate =>
-        validationResult.rejectIfFalse(trustAnchorLocator.getPublicKeyInfo() == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.getCertificate()), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
-        if (validationResult.hasFailureForCurrentLocation()) {
+        validationResult.rejectIfFalse(trustAnchorLocator.getPublicKeyInfo == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.getCertificate), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
+        if (validationResult.hasFailureForCurrentLocation) {
           InvalidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
         } else {
           ValidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, certificate)
@@ -251,18 +249,18 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     builder.result()
   }
 
-  def wipeRsyncDiskCache() = {
+  def wipeRsyncDiskCache() {
     val diskCache = new File(RsyncDiskCacheBasePath)
-    if (diskCache.isDirectory()) {
+    if (diskCache.isDirectory) {
       FileUtils.cleanDirectory(diskCache)
     }
   }
 
   private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.Listener*): CertificateRepositoryObjectFetcher = {
-    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(new RpkiRepositoryObjectFetcherAdapter(consistentObjectFetcher), options);
-    val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher);
-    val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher);
-    validatingFetcher.setOuterMostDecorator(cachingFetcher);
+    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(new RpkiRepositoryObjectFetcherAdapter(consistentObjectFetcher), options)
+    val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher)
+    val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher)
+    validatingFetcher.setOuterMostDecorator(cachingFetcher)
 
     listeners.foreach(notifyingFetcher.addCallback)
 
@@ -272,7 +270,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   private[this] lazy val consistentObjectFetcher = {
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
-    val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File(RsyncDiskCacheBasePath  + trustAnchorLocator.getFile().getName())))
+    val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File(RsyncDiskCacheBasePath  + trustAnchorLocator.getFile.getName)))
 
     val remoteFetcher = new RemoteObjectFetcher(rsyncFetcher)
 
@@ -296,7 +294,7 @@ trait TrackValidationProcess extends ValidationProcess {
   abstract override def runProcess() = {
     val start = atomic { implicit transaction =>
       (for (
-        ta <- memoryImage().trustAnchors.all.find(_.locator == trustAnchorLocator);
+        ta <- memoryImage().trustAnchors.all.find(_.locator == trustAnchorLocator)
         if ta.status.isIdle && ta.enabled
       ) yield {
         memoryImage.transform { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
@@ -339,7 +337,7 @@ trait MeasureValidationProcess extends ValidationProcess {
       super.exceptionHandler(e)
   }
 
-  lazy val metrics = metricsBuilder.result
+  lazy val metrics = metricsBuilder.result()
 }
 
 trait MeasureRsyncExecution extends ValidationProcess {
@@ -407,15 +405,15 @@ trait ValidationProcessLogger extends ValidationProcess {
   override def objectFetcherListeners = super.objectFetcherListeners :+ ObjectFetcherLogger
 
   abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    logger.info("Loaded trust anchor " + trustAnchorLocator.getCaName() + " from location " + certificate.getLocation() + ", starting validation")
+    logger.info("Loaded trust anchor " + trustAnchorLocator.getCaName + " from location " + certificate.getLocation + ", starting validation")
     val objects = super.validateObjects(certificate)
-    logger.info("Finished validating " + trustAnchorLocator.getCaName() + ", fetched " + objects.size + " valid Objects")
+    logger.info("Finished validating " + trustAnchorLocator.getCaName + ", fetched " + objects.size + " valid Objects")
     objects
   }
 
   abstract override def exceptionHandler = {
     case e: Exception =>
-      logger.error("Error while validating trust anchor " + trustAnchorLocator.getCaName() + ": " + e, e)
+      logger.error("Error while validating trust anchor " + trustAnchorLocator.getCaName + ": " + e, e)
       super.exceptionHandler(e)
   }
 
@@ -427,7 +425,7 @@ trait ValidationProcessLogger extends ValidationProcess {
       logger.debug("Prefetched '" + uri + "'")
     }
     override def afterFetchFailure(uri: URI, result: ValidationResult) {
-      logger.warn("Failed to validate '" + uri + "': " + result.getFailuresForCurrentLocation().asScala.map(_.toString()).mkString(", "))
+      logger.warn("Failed to validate '" + uri + "': " + result.getFailuresForCurrentLocation.asScala.map(_.toString).mkString(", "))
     }
     override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
       logger.debug("Validated OBJECT '" + uri + "'")
@@ -466,6 +464,6 @@ trait MeasureInconsistentRepositories extends ValidationProcess {
     }
   }
 
-  lazy val inconsistencyMetrics = metricsBuilder.result
+  lazy val inconsistencyMetrics = metricsBuilder.result()
 
 }

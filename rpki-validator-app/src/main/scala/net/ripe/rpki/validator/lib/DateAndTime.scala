@@ -39,14 +39,14 @@ object DateAndTime {
   def locale = new Locale("en", "UK")
 
   def dateTimeFormatter = DateTimeFormat.fullDateTime().withLocale(locale)
-  def periodFormatter = PeriodFormat.getDefault().withLocale(locale)
+  def periodFormatter = PeriodFormat.getDefault.withLocale(locale)
 
   def formatDateTime(datetime: DateTime) = datetime.toString(dateTimeFormatter)
 
   def periodInWords(period: Period, number: Int = 2): String = periodFormatter.print(keepMostSignificantPeriodFields(period, number))
 
   def keepMostSignificantPeriodFields(period: Period, number: Int): Period = {
-    val values = period.getValues()
+    val values = period.getValues
     val mostSignificantField = values.indexWhere(_ != 0)
     if (mostSignificantField < 0) {
       period
@@ -55,7 +55,7 @@ object DateAndTime {
       for (i <- mostSignificantField.until(mostSignificantField + number).intersect(values.indices)) {
         result.setValue(i, values(i))
       }
-      result.toPeriod()
+      result.toPeriod
     }
   }
 

@@ -30,8 +30,6 @@
 package net.ripe.rpki.validator
 package views
 
-import scalaz._
-import Scalaz._
 import scala.xml._
 import models._
 import lib.Validation._
@@ -116,8 +114,8 @@ class WhitelistView(whitelist: Whitelist, validatedAnnouncements: Seq[BgpValidat
                     {
                       for { announcement <- announcements } yield {
                         <tr>
-                          <td> { announcement.asn.getValue().toString() } </td>
-                          <td> { announcement.prefix.toString() } </td>
+                          <td> { announcement.asn.getValue.toString } </td>
+                          <td> { announcement.prefix.toString } </td>
                         </tr>
                       }
                     }
@@ -125,7 +123,7 @@ class WhitelistView(whitelist: Whitelist, validatedAnnouncements: Seq[BgpValidat
                 }
 
                 <tr>
-                  <td>{ entry.asn.getValue() }</td>
+                  <td>{ entry.asn.getValue }</td>
                   <td>{ entry.prefix }</td>
                   <td>{ entry.maxPrefixLength.getOrElse("") }</td>
                   <td>

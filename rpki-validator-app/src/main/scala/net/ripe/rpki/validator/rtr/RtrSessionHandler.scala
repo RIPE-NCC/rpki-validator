@@ -63,10 +63,10 @@ class RtrSessionHandler[T] (remoteAddress: T,
   def determineErrorPdu(cause: Throwable): ErrorPdu = {
     sessionData.lastPduReceived_=(cause.getMessage)
     val result = cause match {
-      case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
-      case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString())
+      case cause: CorruptedFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString)
+      case cause: TooLongFrameException => ErrorPdu(ErrorPdu.CorruptData, Array.empty, cause.toString)
       case cause: ReadTimeoutException => ErrorPdu(ErrorPdu.InternalError, Array.empty, "Connection timed out")
-      case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString())
+      case cause => ErrorPdu(ErrorPdu.InternalError, Array.empty, cause.toString)
     }
     sessionData.lastPduSent = result
     result
@@ -109,7 +109,7 @@ class RtrSessionHandler[T] (remoteAddress: T,
           val maxLength: Int = rtrPrefix.maxPrefixLength.getOrElse(prefixLength)
           val asn: Asn = rtrPrefix.asn
 
-          prefix.getStart() match {
+          prefix.getStart match {
             case ipv4: Ipv4Address =>
               responsePdus = responsePdus :+ IPv4PrefixAnnouncePdu(ipv4, prefixLength.toByte, maxLength.toByte, asn)
             case ipv6: Ipv6Address =>

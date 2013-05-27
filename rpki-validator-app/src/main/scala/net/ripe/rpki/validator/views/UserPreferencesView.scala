@@ -102,7 +102,7 @@ object EnableFeedbackPrompt {
         Do you want to help the RIPE NCC gather information on the efficiency and reliability of the global RPKI system
         by submitting performance data?<br/>
         <a href="https://www.ripe.net/certification/rpki-validator-metrics">Learn More&hellip;</a>
-        { createEnableOrDisableButton(userPreferences, true) }{ createEnableOrDisableButton(userPreferences, false) }
+        { createEnableOrDisableButton(userPreferences, enable = true) }{ createEnableOrDisableButton(userPreferences, enable = false) }
       </div>
     case _ =>
       NodeSeq.Empty

@@ -54,7 +54,7 @@ abstract class WebFilter extends ScalatraFilter
   private def renderView: PartialFunction[Any, Any] = {
     case view: View =>
       contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view, newVersionDetails, userPreferences))
+      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view, newVersionDetails(), userPreferences))
     case view: DataTableJsonView[_] =>
       contentType = "application/json"
       view.renderJson

@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package controllers
 
-import scala.xml.Text
 import scalaz._,Scalaz._
 
 import org.scalatra._

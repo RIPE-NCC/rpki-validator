@@ -30,11 +30,7 @@
 package net.ripe.rpki.validator
 package bgp.preview
 
-import scala.collection.JavaConverters._
-import scalaz._, Scalaz._
-import scalaz.concurrent.Promise
 import net.ripe.rpki.commons.validation.roa.RouteValidityState
-import lib.Process._
 import lib.NumberResources._
 import models.RtrPrefix
 import net.ripe.ipresource.Asn
@@ -89,7 +85,7 @@ class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) ext
 
   private def validatesAnnouncedRoute(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
     prefix.asn == announced.asn &&
-      prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength()) >= announced.prefix.getPrefixLength()
+      prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength) >= announced.prefix.getPrefixLength
   }
 
 }

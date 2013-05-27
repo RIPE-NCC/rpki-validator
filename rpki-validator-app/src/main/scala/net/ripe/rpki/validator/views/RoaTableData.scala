@@ -46,11 +46,11 @@ abstract class RoaTableData(validatedObjects: ValidatedObjects) extends DataTabl
       case asn: Asn => _.asn == asn
       case searchString: String =>
         (record =>
-          searchString.isEmpty() ||
-            record.asn.toString().contains(searchString) ||
-            record.prefix.toString().contains(searchString) ||
-            record.maxPrefixLength.toString().contains(searchString) ||
-            record.trustAnchorLocator.map(_.getCaName.toUpperCase().contains(searchString)).getOrElse(false))
+          searchString.isEmpty ||
+            record.asn.toString.contains(searchString) ||
+            record.prefix.toString.contains(searchString) ||
+            record.maxPrefixLength.toString.contains(searchString) ||
+            record.trustAnchorLocator.map(_.getCaName.toUpperCase.contains(searchString)).getOrElse(false))
       case _ => _ => true
     }
   }
@@ -66,7 +66,7 @@ abstract class RoaTableData(validatedObjects: ValidatedObjects) extends DataTabl
   }
 
   override def getValuesForRecord(record: RtrPrefix) = {
-    List(record.asn.getValue().toString(), record.prefix.toString(), record.effectiveMaxPrefixLength.toString(),
+    List(record.asn.getValue.toString, record.prefix.toString, record.effectiveMaxPrefixLength.toString,
       record.trustAnchorLocator.map(_.getCaName).getOrElse(""))
   }
 }

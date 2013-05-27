@@ -30,12 +30,8 @@
 package net.ripe.rpki.validator
 package views
 
-import scalaz._
-import Scalaz._
 import scala.xml._
-import net.ripe.rpki.validator.rtr._
 import models._
-import scalaz.NonEmptyList
 import lib.Validation._
 
 class FiltersView(filters: Filters, getCurrentRtrPrefixes: () => Iterable[RtrPrefix], params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
@@ -90,12 +86,12 @@ class FiltersView(filters: Filters, getCurrentRtrPrefixes: () => Iterable[RtrPre
                     {
                       for { rtrPrefix <- filteredOut } yield {
                         <tr>
-                          <td> { rtrPrefix.asn.getValue().toString() } </td>
-                          <td> { rtrPrefix.prefix.toString() } </td>
+                          <td> { rtrPrefix.asn.getValue.toString } </td>
+                          <td> { rtrPrefix.prefix.toString } </td>
                           <td> { if (rtrPrefix.maxPrefixLength.isDefined) {
-                                 rtrPrefix.maxPrefixLength.get.toString()
+                                 rtrPrefix.maxPrefixLength.get.toString
                                } else {
-                                 rtrPrefix.prefix.getPrefixLength().toString()
+                                 rtrPrefix.prefix.getPrefixLength.toString
                                } 
                           }
                           </td>

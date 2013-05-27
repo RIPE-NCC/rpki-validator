@@ -30,9 +30,6 @@
 package net.ripe.rpki.validator
 package statistics
 
-import java.util.Date
-import org.joda.time.DateTimeUtils
-import org.apache.http.impl.client.DefaultHttpClient
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.StringEntity
 import org.apache.http.client.HttpClient
@@ -73,7 +70,7 @@ class FeedbackMetrics(httpClient: HttpClient, feedbackUri: String) extends Loggi
 
   type Metrics = Seq[Metric]
 
-  private val enabledRef = Ref(false)
+  private val enabledRef = Ref(initialValue = false)
   private[statistics] val queuedMetrics: Ref[Seq[Metrics]] = Ref(Vector.empty)
 
   def enabled(implicit mt: MaybeTxn) = enabledRef.single.get

@@ -31,7 +31,6 @@ package net.ripe.rpki.validator
 package views
 
 import java.net.URI
-import scala.collection.JavaConverters._
 import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.validation.{ValidationMessage, ValidationCheck}
 
@@ -43,12 +42,12 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
     searchCriterium match {
       case searchString: String =>
         (record => {
-            searchString.isEmpty() ||
-            record.uri.toString().toUpperCase().contains(searchString) ||
-            record.isValid.toString().toUpperCase().contains(searchString) ||
-            record.check.getStatus().toString().toUpperCase().contains(searchString) ||
-            record.message.toUpperCase().contains(searchString) ||
-            record.check.getKey().toUpperCase().contains(searchString)})
+            searchString.isEmpty ||
+            record.uri.toString.toUpperCase.contains(searchString) ||
+            record.isValid.toString.toUpperCase.contains(searchString) ||
+            record.check.getStatus.toString.toUpperCase.contains(searchString) ||
+            record.message.toUpperCase.contains(searchString) ||
+            record.check.getKey.toUpperCase.contains(searchString)})
       case _ => _ => true
     }
   }
@@ -57,7 +56,7 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
     sortColumn match {
       case 0 => implicitly[Ordering[URI]].on(_.uri)
       case 1 => implicitly[Ordering[Boolean]].on(_.isValid)
-      case 2 => implicitly[Ordering[String]].on(_.check.getKey())
+      case 2 => implicitly[Ordering[String]].on(_.check.getKey)
       case 3 => implicitly[Ordering[String]].on(_.message)
       case 4 => implicitly[Ordering[Boolean]].on(_.check.isOk)
       case _ => sys.error("unknown sort column: " + sortColumn)
@@ -65,11 +64,11 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
   }
 
   override def getValuesForRecord(record: ValidatedObjectDetail) = {
-    List(record.uri.toString(), record.isValid.toString, record.check.getKey(), record.message, record.check.getStatus().toString())
+    List(record.uri.toString, record.isValid.toString, record.check.getKey, record.message, record.check.getStatus.toString)
   }
   
 }
 
-case class ValidatedObjectDetail(val uri: URI, val isValid: Boolean, val check: ValidationCheck) {
+case class ValidatedObjectDetail(uri: URI, isValid: Boolean, check: ValidationCheck) {
   lazy val message = ValidationMessage.getMessage(check)
 }

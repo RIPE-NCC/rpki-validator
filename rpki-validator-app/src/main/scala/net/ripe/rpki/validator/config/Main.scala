@@ -45,9 +45,6 @@ import scalaz.{ Success, Failure }
 import scala.concurrent.stm._
 import scala.concurrent.Future
 import scala.math.Ordering.Implicits._
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
-import net.ripe.rpki.commons.crypto.crl.X509Crl
-import net.ripe.rpki.commons.validation.ValidationOptions
 import net.ripe.rpki.validator.statistics.FeedbackMetrics
 import org.apache.http.impl.client.DefaultHttpClient
 import org.joda.time.DateTimeUtils
@@ -87,7 +84,7 @@ class Main(options: Options) { main =>
 
   val bgpAnnouncementValidator = new BgpAnnouncementValidator
 
-  val dataFile = new File(options.dataFileName).getCanonicalFile()
+  val dataFile = new File(options.dataFileName).getCanonicalFile
   val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
 
   val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
@@ -97,8 +94,8 @@ class Main(options: Options) { main =>
 
   val httpClient = new DefaultHttpClient(new PoolingClientConnectionManager)
   val httpParams = httpClient.getParams
-  HttpConnectionParams.setConnectionTimeout(httpParams, 2 * 60 * 1000);
-  HttpConnectionParams.setSoTimeout(httpParams, 2 * 60 * 1000);
+  HttpConnectionParams.setConnectionTimeout(httpParams, 2 * 60 * 1000)
+  HttpConnectionParams.setSoTimeout(httpParams, 2 * 60 * 1000)
 
   val bgpRisDumpDownloader = new BgpRisDumpDownloader(httpClient)
   val feedbackMetrics = new FeedbackMetrics(httpClient, options.feedbackUri + "/" + ReleaseInfo.version)
@@ -130,7 +127,7 @@ class Main(options: Options) { main =>
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
-    val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false).asInstanceOf[ju.Collection[File]])
+    val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false))
     TrustAnchors.load(tals.asScala, "tmp/tals")
   }
 
@@ -168,7 +165,7 @@ class Main(options: Options) { main =>
           override val memoryImage = main.memoryImage
         }
         try {
-          process.runProcess match {
+          process.runProcess() match {
             case Success(validatedObjects) =>
               updateMemoryImage { _.updateValidatedObjects(trustAnchorLocator, validatedObjects.values.toSeq) }
             case Failure(_) =>
@@ -225,7 +222,7 @@ class Main(options: Options) { main =>
     import org.scalatra._
 
     val root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS)
-    root.setResourceBase(getClass().getResource("/public").toString())
+    root.setResourceBase(getClass.getResource("/public").toString)
     val defaultServletHolder = new ServletHolder(new DefaultServlet())
     defaultServletHolder.setName("default")
     defaultServletHolder.setInitParameter("dirAllowed", "false")

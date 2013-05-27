@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package lib
 
-import Validation._
 
 import java.net.URI
 import org.joda.time.DateTime
@@ -40,8 +39,6 @@ import grizzled.slf4j.Logging
 import org.joda.time.Duration
 import java.io.ByteArrayInputStream
 
-import scalaz._
-import Scalaz._
 
 case class NewVersionDetails(version: String, url: URI)
 

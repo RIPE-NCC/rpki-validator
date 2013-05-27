@@ -31,7 +31,6 @@ package net.ripe.rpki.validator
 package views
 
 import org.joda.time._
-import scala.collection.SortedMap
 import scala.math.Ordering.Implicits._
 import scala.xml.Text
 import scala.xml.NodeSeq
@@ -70,7 +69,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[T
           <tr>
             <td class="center">
               <form method="POST" action={ tab.url + "/toggle" } style="padding:0;margin:0;">
-                  <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
+                  <input type="hidden" name="name" value={ ta.locator.getCaName }/>
                 {
                 if (ta.enabled)
                     <input name="enable-ta" type="checkbox" checked="checked" onclick="this.form.submit();"/>
@@ -83,7 +82,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[T
             <td nowrap="nowrap">{ renderCounters(ta, validationStatusCounts.getOrElse(ta.locator, Map.empty)) }</td>{
               ta.certificate match {
                 case Some(certificate) =>
-                  val notValidAfter = certificate.getValidityPeriod().getNotValidAfter()
+                  val notValidAfter = certificate.getValidityPeriod.getNotValidAfter
                   <td><span rel="twipsy" data-original-title={ formatDateTime(notValidAfter) }>{ expiresIn(notValidAfter) }</span></td>
                 case None =>
                   <td></td>
@@ -119,7 +118,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[T
                       }</td>
                       <td class="center">
                         <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
-                            <input type="hidden" name="name" value={ ta.locator.getCaName() }/>
+                            <input type="hidden" name="name" value={ ta.locator.getCaName }/>
                             <input type="submit" class="btn span2" value="Update"/>
                         </form>
                       </td>

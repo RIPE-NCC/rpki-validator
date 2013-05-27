@@ -31,8 +31,6 @@ package net.ripe.rpki.validator
 package views
 
 import net.liftweb.json._
-import net.ripe.ipresource.IpRange
-import net.ripe.ipresource.Asn
 import lib.Validation._
 
 trait DataTableJsonView[R <: Any] {
@@ -45,7 +43,7 @@ trait DataTableJsonView[R <: Any] {
 
   private val iDisplayStart = getParam("iDisplayStart").toInt
   private val iDisplayLength = getParam("iDisplayLength").toInt
-  private val sSearch = getParam("sSearch").trim().toUpperCase()
+  private val sSearch = getParam("sSearch").trim().toUpperCase
 
   private val sortCol = getParam("iSortCol_0").toInt
   private val sortOrder = getParam("sSortDir_0")
@@ -53,7 +51,7 @@ trait DataTableJsonView[R <: Any] {
   private def searchCriterium = parseIpRange(sSearch).toOption orElse parseAsn(sSearch).toOption getOrElse sSearch
 
   def renderJson: String = {
-    val allRecords = getAllRecords
+    val allRecords = getAllRecords()
     val filteredRecords = filterRecords(allRecords, searchCriterium)
     val sortedRecords = sortRecords(filteredRecords, sortCol)
     val displayRecords = paginate(sortedRecords)

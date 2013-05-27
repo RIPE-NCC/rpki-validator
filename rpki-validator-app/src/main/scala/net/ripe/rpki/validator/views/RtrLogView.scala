@@ -67,7 +67,7 @@ class RtrLogView(version: Int, lastUpdateTime: DateTime) extends View {
             <td>{
               entry.data match {
                 case Left(badData) => logBinaryContent(badData.content)
-                case Right(pdu) => <pre>{ pdu.toPrettyContentString }</pre>
+                case Right(pdu) => <pre>{ pdu.toPrettyContentString() }</pre>
               }
             }</td>
           </tr>

@@ -35,16 +35,8 @@ import models.StoredRepositoryObject
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms.FileContentSpecification
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
-import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
 import net.ripe.rpki.commons.util.Specification
-import net.ripe.rpki.commons.util.Specifications
-import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_FILE_CONTENT
-import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_READ_FILE
-import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE
-import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_REPOSITORY_INCONSISTENT
-import net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_REPOSITORY_UNKNOWN
-import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.commons.validation.ValidationLocation
 import net.ripe.rpki.commons.validation.ValidationResult
 import net.ripe.rpki.commons.validation.ValidationString
@@ -128,14 +120,14 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, 
 
     import net.ripe.rpki.commons.validation.ValidationString._
 
-    val fetchFailureKeys = fetchResults.getFailuresForAllLocations().asScala.map(_.getKey()).toSet
+    val fetchFailureKeys = fetchResults.getFailuresForAllLocations.asScala.map(_.getKey).toSet
     val oldLocation = result.getCurrentLocation
     result.setLocation(new ValidationLocation(uri))
     fetchFailureKeys.foreach {
       case VALIDATOR_RSYNC_COMMAND =>
         result.warn(VALIDATOR_RSYNC_COMMAND, uri.toString)
       case VALIDATOR_READ_FILE =>
-        result.warn(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString);
+        result.warn(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString)
         result.addMetric(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString)
       case VALIDATOR_FILE_CONTENT =>
         result.warn(VALIDATOR_REPOSITORY_INCONSISTENT, uri.toString)

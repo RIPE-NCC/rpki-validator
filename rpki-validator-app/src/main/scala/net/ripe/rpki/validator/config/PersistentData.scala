@@ -49,7 +49,7 @@ class PersistentDataSerialiser {
     }
 
     def serialize(implicit format: Formats) = {
-      case asn: Asn => new JInt(new BigInt(asn.getValue()))
+      case asn: Asn => new JInt(new BigInt(asn.getValue))
     }
   }
 

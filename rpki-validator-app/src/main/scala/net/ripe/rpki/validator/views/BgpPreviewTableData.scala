@@ -35,7 +35,6 @@ import bgp.preview.BgpValidatedAnnouncement
 import net.ripe.ipresource.IpRange
 import net.ripe.ipresource.Asn
 import net.ripe.rpki.commons.validation.roa.RouteValidityState
-import scala.xml.NodeSeq
 import scala.xml.Xhtml
 
 abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement]) extends DataTableJsonView[BgpValidatedAnnouncement] {
@@ -57,11 +56,11 @@ abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[BgpValidat
         </thead>
         <tbody>{
           for (prefix <- announcement.validates) yield {
-            <tr><td>{ prefix.asn.getValue() }</td><td>{ prefix.prefix }</td><td>{ prefix.effectiveMaxPrefixLength }</td><td>VALID</td></tr>
+            <tr><td>{ prefix.asn.getValue }</td><td>{ prefix.prefix }</td><td>{ prefix.effectiveMaxPrefixLength }</td><td>VALID</td></tr>
           }
         }{
           for (prefix <- announcement.invalidates) yield {
-            <tr><td>{ prefix.asn.getValue() }</td><td>{ prefix.prefix }</td><td>{ prefix.effectiveMaxPrefixLength }</td><td>INVALID</td></tr>
+            <tr><td>{ prefix.asn.getValue }</td><td>{ prefix.prefix }</td><td>{ prefix.effectiveMaxPrefixLength }</td><td>INVALID</td></tr>
           }
         }</tbody>
       </table>
@@ -71,8 +70,8 @@ abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[BgpValidat
       <span class={ validityClass(announcement.validity) } rel="popover" data-content={ Xhtml.toXhtml(reason) } data-original-title="Details">{ announcement.validity }</span>
     }
     List(
-      announcement.asn.getValue().toString(),
-      announcement.prefix.toString(),
+      announcement.asn.getValue.toString,
+      announcement.prefix.toString,
       Xhtml.toXhtml(validity))
   }
 

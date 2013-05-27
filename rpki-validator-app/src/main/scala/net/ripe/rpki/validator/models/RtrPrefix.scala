@@ -37,17 +37,17 @@ import lib.Validation._
 import lib.NumberResources._
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 
-case class RtrPrefix(val asn: Asn, val prefix: IpRange, val maxPrefixLength: Option[Int], trustAnchorLocator: Option[TrustAnchorLocator] = None) {
-  val interval = NumberResourceInterval(prefix.getStart(), prefix.getEnd())
-  def effectiveMaxPrefixLength = maxPrefixLength.getOrElse(prefix.getPrefixLength())
+case class RtrPrefix(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int], trustAnchorLocator: Option[TrustAnchorLocator] = None) {
+  val interval = NumberResourceInterval(prefix.getStart, prefix.getEnd)
+  def effectiveMaxPrefixLength = maxPrefixLength.getOrElse(prefix.getPrefixLength)
 }
 
 object RtrPrefix {
   def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): ValidationNEL[FeedbackMessage, RtrPrefix] = {
-    if (!prefix.isLegalPrefix()) {
+    if (!prefix.isLegalPrefix) {
       ErrorMessage("must be a legal IPv4 or IPv6 prefix", Some("prefix")).failNel
     } else {
-      val allowedPrefixLengthRange = prefix.getPrefixLength() to prefix.getType().getBitSize()
+      val allowedPrefixLengthRange = prefix.getPrefixLength to prefix.getType.getBitSize
       val validated = optional(containedIn(allowedPrefixLengthRange)).apply(maxPrefixLength) map { _ =>
         new RtrPrefix(asn, prefix, maxPrefixLength)
       }

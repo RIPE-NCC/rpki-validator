@@ -56,7 +56,7 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
     try {
       val get = new HttpGet(dump.url)
       dump.lastModified foreach { lastModified =>
-        get.addHeader("If-Modified-Since", DateUtils.formatDate(lastModified.toDate()))
+        get.addHeader("If-Modified-Since", DateUtils.formatDate(lastModified.toDate))
       }
       val responseHandler = makeResponseHandler(dump)
 
@@ -71,19 +71,19 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
 
   private def lastModified(response: HttpResponse) = {
     Option(response.getFirstHeader("Last-Modified")) map { h =>
-      new DateTime(org.apache.http.impl.cookie.DateUtils.parseDate(h.getValue()))
+      new DateTime(org.apache.http.impl.cookie.DateUtils.parseDate(h.getValue))
     }
   }
 
   protected[preview] def makeResponseHandler(dump: BgpRisDump): ResponseHandler[BgpRisDump] = {
     val responseHandler = new ResponseHandler[BgpRisDump]() {
       override def handleResponse(response: HttpResponse): BgpRisDump = {
-        response.getStatusLine().getStatusCode() match {
+        response.getStatusLine.getStatusCode match {
           case SC_OK =>
             try {
-              BgpRisDump.parse(new GZIPInputStream(response.getEntity().getContent())) match {
+              BgpRisDump.parse(new GZIPInputStream(response.getEntity.getContent)) match {
                 case Left(exception) =>
-                  error("Error parsing BGP entries from " + dump.url + ". " + exception.toString(), exception)
+                  error("Error parsing BGP entries from " + dump.url + ". " + exception.toString, exception)
                   dump
                 case Right(entries) =>
                   val modified = lastModified(response)
@@ -92,7 +92,7 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
               }
             } catch {
               case exception: Exception =>
-                error("Error parsing BGP entries from " + dump.url + ". " + exception.toString(), exception)
+                error("Error parsing BGP entries from " + dump.url + ". " + exception.toString, exception)
                 dump
             }
           case SC_NOT_MODIFIED if dump.lastModified.isDefined =>
@@ -101,7 +101,7 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
             dump
           case _ =>
             EntityUtils.consume(response.getEntity)
-            warn("error retrieving BGP entries from " + dump.url + ". Code: " + response.getStatusLine().getStatusCode() + " " + response.getStatusLine().getReasonPhrase())
+            warn("error retrieving BGP entries from " + dump.url + ". Code: " + response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
             dump
         }
       }

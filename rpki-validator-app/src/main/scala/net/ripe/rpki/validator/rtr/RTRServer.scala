@@ -114,9 +114,9 @@ class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurren
   }
 
   def stopServer() {
-    val futureClose = RTRServer.allChannels.close();
+    val futureClose = RTRServer.allChannels.close()
     futureClose.await(30, SECONDS)
-    bootstrap.getFactory().releaseExternalResources()
+    bootstrap.getFactory.releaseExternalResources()
   }
 }
 
@@ -125,30 +125,30 @@ class RTRServerHandler(noCloseOnError: Boolean = false, clients: RtrSessions[Soc
   extends SimpleChannelUpstreamHandler with Logging {
 
   override def channelOpen(context: ChannelHandlerContext, event: ChannelStateEvent) {
-    RTRServer.allChannels.add(event.getChannel()) // will be removed automatically on close
-    val remoteAddress: SocketAddress = context.getChannel().getRemoteAddress()
+    RTRServer.allChannels.add(event.getChannel) // will be removed automatically on close
+    val remoteAddress: SocketAddress = context.getChannel.getRemoteAddress
     clients.connect(remoteAddress)
     logger.info("Client connected : " + remoteAddress)
   }
 
   override def channelDisconnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
     super.channelDisconnected(context, event)
-    val socketAddress = context.getChannel().getRemoteAddress()
-    clients.disconnect(socketAddress);
+    val socketAddress = context.getChannel.getRemoteAddress
+    clients.disconnect(socketAddress)
     info("Client disconnected : " + socketAddress)
   }
 
   def notifyChildren(pdu: Pdu) = RTRServer.allChannels.write(pdu)
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
-    val clientAddress = context.getChannel().getRemoteAddress()
+    val clientAddress = context.getChannel.getRemoteAddress
 
     // decode and process
-    val requestPdu = event.getMessage().asInstanceOf[Either[BadData, Pdu]]
+    val requestPdu = event.getMessage.asInstanceOf[Either[BadData, Pdu]]
     val responsePdus: Seq[Pdu] = clients.responseForRequest(clientAddress, requestPdu)
 
     // respond
-    val channelFuture = event.getChannel().write(responsePdus)
+    val channelFuture = event.getChannel.write(responsePdus)
 
     if (!noCloseOnError) {
       responsePdus.last match {
@@ -164,14 +164,14 @@ class RTRServerHandler(noCloseOnError: Boolean = false, clients: RtrSessions[Soc
     // Otherwise I will assume the code below is doing too little to be able to contain bugs ;)
     logger.warn(event.getCause)
 
-    if (event.getChannel().isOpen()) {
+    if (event.getChannel.isOpen) {
       val response: Pdu = clients.determineErrorPdu(context.getChannel.getRemoteAddress, event.getCause)
 
       try {
-        val channelFuture = event.getChannel().write(response)
+        val channelFuture = event.getChannel.write(response)
         channelFuture.addListener(ChannelFutureListener.CLOSE)
       } catch {
-        case _: Exception => event.getChannel().close()
+        case _: Exception => event.getChannel.close()
       }
     }
   }

@@ -31,7 +31,6 @@ package net.ripe.rpki.validator.views
  */
 
 import java.net.URI
-import scala.collection.JavaConverters._
 import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.validation.{ ValidationStatus, ValidationMessage, ValidationCheck }
 
@@ -42,10 +41,10 @@ abstract class ValidationResultsTableData(records: IndexedSeq[ValidatedObjectRes
   override def filter(searchCriterium: Any): ValidatedObjectResult => Boolean = {
     val searchString = searchCriterium.toString
 
-    record => searchString.isEmpty() ||
-      record.trustAnchorName.toUpperCase().contains(searchString) ||
-      record.uri.toString().toUpperCase().contains(searchString) ||
-      record.validationStatus.toString().toUpperCase().contains(searchString) ||
+    record => searchString.isEmpty ||
+      record.trustAnchorName.toUpperCase.contains(searchString) ||
+      record.uri.toString.toUpperCase.contains(searchString) ||
+      record.validationStatus.toString.toUpperCase.contains(searchString) ||
       record.messages.contains(searchString)
   }
 
@@ -60,7 +59,9 @@ abstract class ValidationResultsTableData(records: IndexedSeq[ValidatedObjectRes
   }
 
   override def getValuesForRecord(record: ValidatedObjectResult) = {
-    List(record.trustAnchorName, <span rel="twipsy" data-original-title={ record.uri.toString() }>{ record.uri.toString.split("/").last }</span>.toString, record.validationStatus.toString, record.messages)
+    List(record.trustAnchorName, <span rel="twipsy" data-original-title={record.uri.toString}>
+      {record.uri.toString.split("/").last}
+    </span>.toString(), record.validationStatus.toString, record.messages)
   }
 
 }

@@ -34,10 +34,7 @@ import org.jboss.netty.channel._
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory
 import java.net.InetSocketAddress
 import grizzled.slf4j.Logger
-import org.jboss.netty.buffer.ChannelBuffer
-import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
-import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
 
 class RTRClient(val port: Int) {
 
@@ -51,7 +48,7 @@ class RTRClient(val port: Int) {
   val bootstrap: ClientBootstrap = new ClientBootstrap(
     new NioClientSocketChannelFactory(
       Executors.newCachedThreadPool(),
-      Executors.newCachedThreadPool()));
+      Executors.newCachedThreadPool()))
 
   bootstrap.setPipelineFactory(new ChannelPipelineFactory {
     override def getPipeline: ChannelPipeline = {
@@ -70,12 +67,12 @@ class RTRClient(val port: Int) {
   val channelFuture: ChannelFuture = bootstrap.connect(new InetSocketAddress("localhost", port))
   channelFuture.await(1000)
 
-  def sendPdu(pduToSend: Pdu) = sendAny(pduToSend)
+  def sendPdu(pduToSend: Pdu) { sendAny(pduToSend) }
 
-  def sendData(data: Array[Byte]) = sendAny(data)
+  def sendData(data: Array[Byte]) { sendAny(data) }
 
-  private def sendAny(data: Any) = {
-    channelFuture.getChannel().write(data)
+  private def sendAny(data: Any) {
+    channelFuture.getChannel.write(data)
     logger.trace("data sent")
   }
 
@@ -85,30 +82,30 @@ class RTRClient(val port: Int) {
       Thread.sleep(5)
       waited += 5
     }
-    var result = receivedPdus.take(expectedNumber)
+    val result = receivedPdus.take(expectedNumber)
     receivedPdus = receivedPdus.drop(expectedNumber)
     result
   }
 
-  def getAllResponses(): List[Pdu] = {
-    var number = receivedPdus.length
-    var result = receivedPdus.take(number)
+  def getAllResponses: List[Pdu] = {
+    val number = receivedPdus.length
+    val result = receivedPdus.take(number)
     receivedPdus = receivedPdus.drop(number)
     result
   }
 
   def isConnected = {
     Thread.sleep(5) // make sure the RTR server gets some time to disconnect the client in tests.
-    channelFuture.getChannel().isConnected()
+    channelFuture.getChannel.isConnected
   }
 
-  def pduReceived(pdu: Pdu) = {
+  def pduReceived(pdu: Pdu) {
     logger.trace("Got back a PDU")
     receivedPdus = receivedPdus ++ List(pdu)
   }
 
-  def close(): Unit = {
-    channelFuture.getChannel().close().await()
+  def close() {
+    channelFuture.getChannel.close().await()
   }
 }
 
@@ -121,8 +118,8 @@ class RTRClientHandler(pduReceived: Pdu => Unit) extends SimpleChannelUpstreamHa
   }
 
   override def messageReceived(context: ChannelHandlerContext, event: MessageEvent) {
-    logger.trace("Got response: " + event.getMessage())
-    event.getMessage() match {
+    logger.trace("Got response: " + event.getMessage)
+    event.getMessage match {
       case Right(pdu: Pdu) =>
         pduReceived(pdu)
       case message =>
@@ -132,8 +129,8 @@ class RTRClientHandler(pduReceived: Pdu => Unit) extends SimpleChannelUpstreamHa
 
   override def exceptionCaught(context: ChannelHandlerContext, event: ExceptionEvent) {
     // TODO: handle? Or just let it explode
-    logger.error("Received exception: " + event.getCause().getMessage())
-    logger.debug("", event.getCause())
+    logger.error("Received exception: " + event.getCause.getMessage)
+    logger.debug("", event.getCause)
   }
 
 }

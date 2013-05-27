@@ -50,13 +50,13 @@ trait ExportController extends ApplicationController {
     response.addHeader("Pragma", "public")
     response.addHeader("Cache-Control", "no-cache")
 
-    val writer = response.getWriter()
+    val writer = response.getWriter
     writer.print(Header)
 
     for { prefix <- getRtrPrefixes } {
       val effectiveMaxPrefix = {
         prefix.maxPrefixLength match {
-          case None => prefix.prefix.getPrefixLength()
+          case None => prefix.prefix.getPrefixLength
           case Some(length) => length
         }
       }

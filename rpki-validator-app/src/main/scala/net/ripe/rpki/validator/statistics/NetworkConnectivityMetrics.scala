@@ -31,7 +31,6 @@ package net.ripe.rpki.validator.statistics
 
 import java.net._
 import org.joda.time.DateTimeUtils
-import org.apache.commons.io.IOUtils
 import java.io.IOException
 import grizzled.slf4j.Logger
 

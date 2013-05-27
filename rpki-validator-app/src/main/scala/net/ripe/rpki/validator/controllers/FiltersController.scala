@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package controllers
 
-import net.ripe.ipresource.IpRange
 import scalaz._
 import Scalaz._
 import lib.Validation._

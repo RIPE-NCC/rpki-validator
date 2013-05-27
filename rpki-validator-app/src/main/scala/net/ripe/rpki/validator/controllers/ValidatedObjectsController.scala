@@ -30,11 +30,6 @@
 package net.ripe.rpki.validator
 package controllers
 
-import scala.collection.JavaConverters._
-import org.joda.time.DateTimeZone
-import org.joda.time.format.DateTimeFormat
-import org.joda.time.DateTime
-import net.ripe.rpki.validator.config.Main
 import models._
 import grizzled.slf4j.Logging
 import views._
@@ -83,7 +78,7 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
     val Header = "URI, Object Validity, Check, Check Validity\n"
     val RowFormat = "\"%s\",%s,%s,%s\n"
 
-    val writer = response.getWriter()
+    val writer = response.getWriter
     writer.print(Header)
 
     val records = getValidationDetails

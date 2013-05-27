@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package controllers
 
-import net.ripe.rpki.commons.validation.roa.RouteValidityState
 
 import bgp.preview._
 import views.BgpPreviewView

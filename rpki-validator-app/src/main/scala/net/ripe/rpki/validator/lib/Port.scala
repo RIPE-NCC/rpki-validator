@@ -33,7 +33,7 @@ object Port {
   def any: Int = {
     val s = new java.net.ServerSocket(0)
     try {
-      s.getLocalPort()
+      s.getLocalPort
     } finally {
       s.close()
     }

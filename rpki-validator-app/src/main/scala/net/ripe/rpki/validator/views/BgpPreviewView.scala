@@ -32,12 +32,8 @@ package views
 
 import org.joda.time._
 import scala.xml.Text
-import scala.util.Random
 import bgp.preview._
 import lib.DateAndTime._
-import net.ripe.rpki.commons.validation.roa.RouteValidityState
-import net.ripe.ipresource.Asn
-import org.joda.time.format.DateTimeFormat
 
 class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump]) extends View with ViewHelpers {
 

@@ -30,16 +30,13 @@
 package net.ripe.rpki.validator
 package statistics
 
-import net.ripe.rpki.commons.validation.ValidationResult
 import java.net.URI
 import models.ValidatedObject
-import net.ripe.rpki.validator.models.ValidObject
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.validator.models.ValidObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import scala.collection.JavaConverters._
 import net.ripe.rpki.validator.models.InvalidObject
-import net.ripe.rpki.commons.validation.ValidationCheck
 import net.ripe.rpki.commons.validation.ValidationStatus
 import net.ripe.rpki.commons.validation.ValidationString
 

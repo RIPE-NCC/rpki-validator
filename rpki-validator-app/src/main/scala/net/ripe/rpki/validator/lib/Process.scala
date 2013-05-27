@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator.lib
 
 import scala.concurrent._
-import grizzled.slf4j.Logger
 import grizzled.slf4j.Logging
 
 object Process extends Logging {
@@ -39,7 +38,7 @@ object Process extends Logging {
     try {
       Thread.currentThread().setName(name)
       logger.info("Process '" + name + "' started.")
-      while (!Thread.currentThread().isInterrupted()) {
+      while (!Thread.currentThread().isInterrupted) {
         body
       }
       logger.info("Process '" + name + "' was interrupted, terminating.")

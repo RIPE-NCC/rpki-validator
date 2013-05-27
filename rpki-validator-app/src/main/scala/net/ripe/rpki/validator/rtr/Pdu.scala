@@ -30,9 +30,6 @@
 package net.ripe.rpki.validator
 package rtr
 
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
-import java.nio.charset.Charset
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.ChannelBuffers
 import java.nio.ByteOrder
@@ -101,7 +98,7 @@ case class CacheResponsePdu(nonce: Pdu.Nonce) extends Pdu {
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.5
  */
-case class IPv4PrefixAnnouncePdu(val ipv4PrefixStart: Ipv4Address, val prefixLength: Byte, val maxLength: Byte, val asn: Asn) extends Pdu {
+case class IPv4PrefixAnnouncePdu(ipv4PrefixStart: Ipv4Address, prefixLength: Byte, maxLength: Byte, asn: Asn) extends Pdu {
   override def pduType = PduTypes.IPv4Prefix
   override def length = 20
 }
@@ -109,7 +106,7 @@ case class IPv4PrefixAnnouncePdu(val ipv4PrefixStart: Ipv4Address, val prefixLen
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.6
  */
-case class IPv6PrefixAnnouncePdu(val ipv6PrefixStart: Ipv6Address, val prefixLength: Byte, val maxLength: Byte, val asn: Asn) extends Pdu {
+case class IPv6PrefixAnnouncePdu(ipv6PrefixStart: Ipv6Address, prefixLength: Byte, maxLength: Byte, asn: Asn) extends Pdu {
   override def pduType = PduTypes.IPv6Prefix
   override def length = 32
 }
@@ -228,7 +225,7 @@ object Pdus {
   }
 
   private def convertToPrependedByteArray(value: BigInteger, bytesNeeded: Int): Array[Byte] = {
-    var valueBytes = value.toByteArray()
+    var valueBytes = value.toByteArray
 
     // sometimes we get extra zero bytes in front... strange... what am I missing? Sign bit?
 
@@ -251,8 +248,8 @@ object Pdus {
     buffer.writeByte(length)
     buffer.writeByte(maxLength)
     buffer.writeByte(0)
-    buffer.writeBytes(convertToPrependedByteArray(prefix.getValue(), 4))
-    buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
+    buffer.writeBytes(convertToPrependedByteArray(prefix.getValue, 4))
+    buffer.writeBytes(convertToPrependedByteArray(asn.getValue, 4))
   }
 
   private def writeIPv6PrefixAnnouncePduPayload(buffer: ChannelBuffer, prefix: Ipv6Address, length: Byte, maxLength: Byte, asn: Asn): Unit = {
@@ -260,8 +257,8 @@ object Pdus {
     buffer.writeByte(length)
     buffer.writeByte(maxLength)
     buffer.writeByte(0)
-    buffer.writeBytes(convertToPrependedByteArray(prefix.getValue(), 16))
-    buffer.writeBytes(convertToPrependedByteArray(asn.getValue(), 4))
+    buffer.writeBytes(convertToPrependedByteArray(prefix.getValue, 16))
+    buffer.writeBytes(convertToPrependedByteArray(asn.getValue, 4))
   }
 
   private def parseSerialNotifyPdu(buffer: ChannelBuffer, nonce: Pdu.Nonce): Right[Nothing, SerialNotifyPdu] = {

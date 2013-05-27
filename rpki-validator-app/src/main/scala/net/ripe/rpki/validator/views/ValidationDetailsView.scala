@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package views
 
-import models.ValidatedObjects
 import scala.xml.Text
 
 class ValidationDetailsView() extends View {

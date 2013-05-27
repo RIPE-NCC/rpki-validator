@@ -29,9 +29,9 @@
  */
 package net.ripe.rpki.validator.rtr
 
-import collection.mutable.HashMap
 import net.ripe.rpki.validator.models.RtrPrefix
 import java.lang.Throwable
+import scala.collection.mutable
 
 
 class RtrSessions[T] (
@@ -40,17 +40,17 @@ class RtrSessions[T] (
                        getCurrentNonce: () => Pdu.Nonce) {
 
 
-  private val handlers = HashMap[T, RtrSessionHandler[T]]()
+  private val handlers = mutable.HashMap[T, RtrSessionHandler[T]]()
 
   def allClientData = handlers.values.map(_.sessionData)
 
   def connect(id: T) {
     val handler = handlers.getOrElseUpdate(id, new RtrSessionHandler[T](id, getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentNonce))
-    handler.connect
+    handler.connect()
   }
 
   def disconnect(id: T) {
-    handlerFor(id).disconnect
+    handlerFor(id).disconnect()
   }
 
   def serialNotify(serial: Long) = {

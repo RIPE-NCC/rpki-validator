@@ -29,14 +29,12 @@
  */
 package net.ripe.rpki.validator.lib
 
-import scala.collection.mutable.Builder
 import scalaz.FingerTree
 import scalaz.Finger
 import scalaz.Monoid
 import scalaz.Node
 import scalaz.Reducer
 import net.ripe.ipresource._
-import net.ripe.rpki.validator.models.RtrPrefix
 
 object NumberResources {
   implicit object AsnOrdering extends Ordering[Asn] {
@@ -58,10 +56,10 @@ object NumberResources {
      * Sort on start ascending and end descending.
      */
     override def compare(x: NumberResourceInterval, y: NumberResourceInterval): Int = {
-      var rc = x.start compareTo y.start
+      val rc = x.start compareTo y.start
       if (rc != 0) return rc
 
-      return y.end.compareTo(x.end)
+      y.end.compareTo(x.end)
     }
   }
 

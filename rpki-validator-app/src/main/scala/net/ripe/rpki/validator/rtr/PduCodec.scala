@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator.rtr
 
 import org.jboss.netty.channel._
-import org.jboss.netty.handler.codec.frame.FrameDecoder
 import org.jboss.netty.buffer.ChannelBuffer
 import grizzled.slf4j.Logger
 import org.jboss.netty.buffer.ChannelBuffers
@@ -60,7 +59,7 @@ class PduDecoder extends OneToOneDecoder {
 
     var decoded = Pdus.fromByteArray(buffer)
     // Hardcoded to "client" for now -> quick and dirty logging to have a useable test server
-    RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), decoded, "client"))
+    RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress, decoded, "client"))
 
     decoded
   }
@@ -81,14 +80,14 @@ class PduEncoder extends OneToOneEncoder {
         buffer.writeBytes(Pdus.encode(pdu))
 
         // Hardcoded to "server" for now -> only the server sends lists of pdus
-        RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), Right(pdu), "server"))
+        RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress, Right(pdu), "server"))
       }
       buffer
 
     case pdu: Pdu =>
       val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, pdu.length)
       buffer.writeBytes(Pdus.encode(pdu))
-      RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress(), Right(pdu), "server"))
+      RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress, Right(pdu), "server"))
       buffer
 
     case bytes: Array[Byte] =>
