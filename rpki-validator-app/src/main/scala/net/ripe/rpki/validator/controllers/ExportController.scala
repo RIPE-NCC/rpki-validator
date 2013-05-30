@@ -32,6 +32,8 @@ package controllers
 
 import views.ExportView
 import models.RtrPrefix
+import net.liftweb.json._
+import scala.Some
 
 trait ExportController extends ApplicationController {
 
@@ -46,7 +48,6 @@ trait ExportController extends ApplicationController {
     val RowFormat = "%s,%s,%s\n"
 
     contentType = "text/csv"
-    response.addHeader("Content-Disposition", "attachment; filename=roas.csv")
     response.addHeader("Pragma", "public")
     response.addHeader("Cache-Control", "no-cache")
 
@@ -62,7 +63,21 @@ trait ExportController extends ApplicationController {
       }
       writer.write(RowFormat.format(prefix.asn, prefix.prefix, effectiveMaxPrefix))
     }
+  }
 
+  get("/export.json") {
+    import net.liftweb.json.JsonDSL._
+
+    contentType = "text/json"
+    response.addHeader("Pragma", "public")
+    response.addHeader("Cache-Control", "no-cache")
+
+    val roas = getRtrPrefixes.map(rtr =>
+      ("asn" -> rtr.asn.toString) ~
+        ("prefix" -> rtr.prefix.toString) ~
+        ("maxLength" -> rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
+    )
+    response.getWriter.write(compact(render(("roas" -> roas))))
   }
 
 }

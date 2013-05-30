@@ -36,13 +36,14 @@ class ExportView extends View with ViewHelpers {
   def title = Text("Export")
   def body = {
     <p>
-    Here you are able to export the complete data set for use in an existing BGP decision making workflow. The output will be in CSV format and consist of all validated ROAs, minus your Ignore Filter entries, plus your Whitelist additions.
-  </p>
+    Here you are able to export the complete data set for use in an existing BGP decision making workflow. The output will be in CSV or JSON format and consist of all validated ROAs, minus your Ignore Filter entries, plus your Whitelist additions.
+    </p>
     <div class="alert-actions">
-      <a href="export.csv" class="btn">Download CSV</a>
-    <span class="help-inline">
-    This is a stable link. In other words you can copy the url and use a tool such as wget from cron to periodically get this export.
-    </span>
+      <a href="export.csv" class="btn">Get CSV</a>
+      <a href="export.json" class="btn">Get JSON</a>
+      <span class="help-inline">
+      These are stable links. In other words you can copy the url and use a tool such as wget from cron to periodically get this export.
+      </span>
     </div>
     <br/>
   }

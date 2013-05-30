@@ -60,7 +60,15 @@ AS6500,192.168.0.0/16,24
 """
       response.body should equal(expectedResponse)
       response.getHeader("Cache-Control") should equal("no-cache")
-      
+  }
+
+  test("Should export JSON with max lengths filled out") {
+    get("/export.json") {
+      status should equal(200)
+      body should equal( """{"roas":[{"asn":"AS6500","prefix":"10.0.0.0/8","maxLength":8},{"asn":"AS6500","prefix":"192.168.0.0/16","maxLength":24}]}""")
+      header("Content-Type") should equal("text/json;charset=UTF-8")
+      header("Pragma") should equal("public")
+      header("Cache-Control") should equal("no-cache")
     }
   }
 
