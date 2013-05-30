@@ -57,7 +57,7 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
 
   def removeWhitelistEntry(entry: RtrPrefix) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
 
-  def getDistinctRtrPrefixes(): Set[RtrPrefix] =
+  def getDistinctRtrPrefixes: Set[RtrPrefix] =
     Set.empty[RtrPrefix] ++ whitelist.entries ++ filters.filter(validatedObjects.getValidatedRtrPrefixes)
 
   def addFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.addFilter(filter))

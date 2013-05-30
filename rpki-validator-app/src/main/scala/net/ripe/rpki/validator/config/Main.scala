@@ -111,7 +111,7 @@ class Main(options: Options) { main =>
       memoryImage.transform(f)
 
       if (oldVersion != memoryImage().version) {
-        bgpAnnouncementValidator.startUpdate(main.bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
+        bgpAnnouncementValidator.startUpdate(main.bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes.toSeq)
         rtrServer.notify(memoryImage().version)
       }
     }
@@ -135,7 +135,7 @@ class Main(options: Options) { main =>
     Future.traverse(bgpRisDumps.single.get)(bgpRisDumpDownloader.download) foreach { dumps =>
       atomic { implicit transaction =>
         bgpRisDumps() = dumps
-        bgpAnnouncementValidator.startUpdate(dumps.flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes().toSeq)
+        bgpAnnouncementValidator.startUpdate(dumps.flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes.toSeq)
       }
     }
   }
@@ -205,7 +205,7 @@ class Main(options: Options) { main =>
         () => memoryImage.single.get.version
       },
       getCurrentRtrPrefixes = {
-        () => memoryImage.single.get.getDistinctRtrPrefixes()
+        () => memoryImage.single.get.getDistinctRtrPrefixes
       },
       getCurrentNonce = {
         () => Main.nonce
@@ -263,7 +263,7 @@ class Main(options: Options) { main =>
       override protected def bgpRisDumps = main.bgpRisDumps.single.get
       override protected def validatedAnnouncements = bgpAnnouncementValidator.validatedAnnouncements
 
-      override protected def getRtrPrefixes = memoryImage.single.get.getDistinctRtrPrefixes()
+      override protected def getRtrPrefixes = memoryImage.single.get.getDistinctRtrPrefixes
 
       protected def sessionData = rtrServer.rtrSessions.allClientData
 

@@ -82,7 +82,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
       noCloseOnError = false,
       noNotify = false,
       getCurrentCacheSerial = { () => cache.single.get.version },
-      getCurrentRtrPrefixes = { () => cache.single.get.getDistinctRtrPrefixes() },
+      getCurrentRtrPrefixes = { () => cache.single.get.getDistinctRtrPrefixes },
       getCurrentNonce = { () => nonce })
     server.startServer()
   }

@@ -49,7 +49,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
   test("Should find distinct ROA prefixes") {
 
     subject = new MemoryImage(Filters(), Whitelist(), trustAnchors, ROAS)
-    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes
 
     distinctRoaPrefixes.size should equal(4)
     distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V4_1)
@@ -60,7 +60,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
 
   test("Should list whitelist entries when no roas") {
     subject = new MemoryImage(Filters(), WHITELIST, trustAnchors, ValidatedObjects(trustAnchors))
-    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes
 
     distinctRoaPrefixes.size should equal(1)
     distinctRoaPrefixes should contain (ASN3_TO_WHITELIST1)
@@ -70,7 +70,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
     val whitelist = WHITELIST.addEntry(ASN1_TO_ROA_PREFIX_V4_2)
 
     subject = new MemoryImage(Filters(), whitelist, trustAnchors, ROAS)
-    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes
 
     distinctRoaPrefixes.size should equal(5)
     distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V4_1)
@@ -84,7 +84,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
     val whitelist = WHITELIST.addEntry(ASN1_TO_ROA_PREFIX_V4_2)
 
     subject = new MemoryImage(FILTERS, whitelist, trustAnchors, ROAS)
-    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes
 
     distinctRoaPrefixes.size should equal(4)
     distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V4_1)
@@ -99,7 +99,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
     val filters: Filters = FILTERS.addFilter(new IgnoreFilter(UNUSED_PREFIX_FOR_FILTER))
 
     subject = new MemoryImage(filters, whitelist, trustAnchors, ROAS)
-    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes
 
     distinctRoaPrefixes.size should equal(4)
     distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V4_1)
@@ -112,7 +112,7 @@ class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfte
     val whitelist = WHITELIST.addEntry(ASN1_TO_ROA_PREFIX_V6_1)
 
     subject = new MemoryImage(FILTERS, whitelist, trustAnchors, ROAS)
-    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes()
+    val distinctRoaPrefixes = subject.getDistinctRtrPrefixes
 
     distinctRoaPrefixes.size should equal(5)
     distinctRoaPrefixes should contain (ASN1_TO_ROA_PREFIX_V4_1)
