@@ -51,18 +51,10 @@ trait ExportController extends ApplicationController {
     response.addHeader("Pragma", "public")
     response.addHeader("Cache-Control", "no-cache")
 
-    val writer = response.getWriter
-    writer.print(Header)
-
-    for { prefix <- getRtrPrefixes } {
-      val effectiveMaxPrefix = {
-        prefix.maxPrefixLength match {
-          case None => prefix.prefix.getPrefixLength
-          case Some(length) => length
-        }
-      }
-      writer.write(RowFormat.format(prefix.asn, prefix.prefix, effectiveMaxPrefix))
-    }
+    val roas = getRtrPrefixes.map(rtr => {
+      RowFormat.format(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
+    })
+    response.getWriter.write(Header + roas.mkString)
   }
 
   get("/export.json") {

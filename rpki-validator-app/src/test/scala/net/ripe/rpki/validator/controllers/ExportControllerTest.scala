@@ -52,14 +52,19 @@ class ExportControllerTest extends ControllerTestCase {
   
   test("Should make CSV with max lengths filled out") {
     get("/export.csv") {
-      response.status should equal(200)
-      
-      val expectedResponse = """ASN,IP Prefix,Max Length
-AS6500,10.0.0.0/8,8
-AS6500,192.168.0.0/16,24
-"""
-      response.body should equal(expectedResponse)
-      response.getHeader("Cache-Control") should equal("no-cache")
+
+      val expectedResponse =
+        """ASN,IP Prefix,Max Length
+          |AS6500,10.0.0.0/8,8
+          |AS6500,192.168.0.0/16,24
+          |""".stripMargin
+
+      status should equal(200)
+      body should equal(expectedResponse)
+      header("Content-Type") should equal("text/csv;charset=UTF-8")
+      header("Pragma") should equal("public")
+      header("Cache-Control") should equal("no-cache")
+    }
   }
 
   test("Should export JSON with max lengths filled out") {
