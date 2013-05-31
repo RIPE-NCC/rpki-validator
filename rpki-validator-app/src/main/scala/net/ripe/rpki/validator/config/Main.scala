@@ -249,8 +249,6 @@ class Main(options: Options) { main =>
 
       override protected def trustAnchors = memoryImage.single.get.trustAnchors
       override protected def validatedObjects = memoryImage.single.get.validatedObjects
-      override protected def version = memoryImage.single.get.version
-      override protected def lastUpdateTime = memoryImage.single.get.lastUpdateTime
 
       override protected def filters = memoryImage.single.get.filters
       override protected def addFilter(filter: IgnoreFilter) = updateAndPersist { implicit transaction => updateMemoryImage(_.addFilter(filter)) }

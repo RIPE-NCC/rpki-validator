@@ -41,7 +41,6 @@ abstract class WebFilter extends ScalatraFilter
   with ApplicationController
   with ValidatedObjectsController
   with TrustAnchorsController
-  with RtrLogController
   with FiltersController
   with WhitelistController
   with BgpPreviewController

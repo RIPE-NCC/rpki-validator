@@ -59,8 +59,6 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
     override protected def sessionData = sys.error("TBD")
     override lazy val trustAnchors = sys.error("TBD")
     override lazy val validatedObjects = sys.error("TBD")
-    override lazy val version = sys.error("TBD")
-    override val lastUpdateTime = new DateTime
 
     override def userPreferences = UserPreferences(updateAlertActive = false)
     override def newVersionDetailFetcher = sys.error("TODO")

@@ -37,7 +37,6 @@ import scalaz.Validation
 import java.net.URI
 
 case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, version: Int = 0) {
-  val lastUpdateTime: DateTime = new DateTime
 
   def startProcessingTrustAnchor(locator: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(locator, description))
 
