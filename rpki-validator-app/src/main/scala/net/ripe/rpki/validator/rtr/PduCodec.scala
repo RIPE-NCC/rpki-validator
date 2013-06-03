@@ -36,38 +36,24 @@ import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.handler.codec.oneone.OneToOneEncoder
 import org.jboss.netty.handler.codec.oneone.OneToOneDecoder
 import java.nio.ByteOrder
-import java.net.SocketAddress
-import org.joda.time.DateTime
 
-object RtrPduLog {
-  private var _pduLog = Vector[RtrPduLogEntry]()
-  def pduLog = this.synchronized { _pduLog }
-
-  def log(entry: RtrPduLogEntry) {
-    this.synchronized {
-      _pduLog = _pduLog.takeRight(1999) :+ entry
-    }
-  }
-}
-
-case class RtrPduLogEntry(time: DateTime, childAddress: SocketAddress, data: Either[BadData, Pdu], sender: String)
 
 class PduDecoder extends OneToOneDecoder {
+  val logger = Logger("RTR")
 
   override def decode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = {
     val buffer = msg.asInstanceOf[ChannelBuffer]
 
-    var decoded = Pdus.fromByteArray(buffer)
-    // Hardcoded to "client" for now -> quick and dirty logging to have a useable test server
-    RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress, decoded, "client"))
+    val decoded = Pdus.fromByteArray(buffer)
+    // Hardcoded to "client" for now -> quick and dirty logging to have a usable test server
+    logger.info(RtrPduLogEntry(channel.getRemoteAddress, decoded, Client))
 
     decoded
   }
-
 }
 
 class PduEncoder extends OneToOneEncoder {
-  val logger = Logger[this.type]
+  val logger = Logger("RTR")
 
   override def encode(context: ChannelHandlerContext, channel: Channel, msg: Object): Object = msg match {
     case responsePdus: Seq[_] =>
@@ -80,14 +66,14 @@ class PduEncoder extends OneToOneEncoder {
         buffer.writeBytes(Pdus.encode(pdu))
 
         // Hardcoded to "server" for now -> only the server sends lists of pdus
-        RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress, Right(pdu), "server"))
+        logger.info(RtrPduLogEntry(channel.getRemoteAddress, Right(pdu), Server))
       }
       buffer
 
     case pdu: Pdu =>
       val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, pdu.length)
       buffer.writeBytes(Pdus.encode(pdu))
-      RtrPduLog.log(RtrPduLogEntry(new DateTime, channel.getRemoteAddress, Right(pdu), "server"))
+      logger.info(RtrPduLogEntry(channel.getRemoteAddress, Right(pdu), Server))
       buffer
 
     case bytes: Array[Byte] =>
@@ -96,3 +82,7 @@ class PduEncoder extends OneToOneEncoder {
       buffer
   }
 }
+
+sealed trait Sender
+case object Server extends Sender
+case object Client extends Sender

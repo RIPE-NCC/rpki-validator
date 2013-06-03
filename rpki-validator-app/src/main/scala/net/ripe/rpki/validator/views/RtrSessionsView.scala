@@ -45,61 +45,47 @@ class RtrSessionsView(sessions: Iterable[RtrSessionData], now: DateTime = new Da
 
   def body = {
     <p>
-      See below for a list routers that have connected to this validator.
+      This table shows all routers connected to this RPKI Validator. Requests and responses are described in <a href="http://tools.ietf.org/html/rfc6810">RFC 6810</a>. For debugging, please refer to rtr.log.
     </p>
 
     <table class="zebra-striped">
       <thead>
         <tr>
           <th>Remote Address</th>
-          <th>State</th>
-          <th>Last Request from Client</th>
-          <th>Last Serial Sent</th>
+          <th>Connection Time</th>
+          <th>Last Request Time</th>
+          <th>Last Request</th>
+          <th>Last Reply</th>
         </tr>
       </thead>
       <tbody>{
         if (sessions.isEmpty)
-          <tr><td colspan="4"><span class="label">No connections</span></td></tr>
+          <tr><td colspan="5"><span class="label">No connections</span></td></tr>
         else
-          for (sessionData <- sessions.iterator) yield {
+          for (sessionData <- sessions.iterator if sessionData.connected.value) yield {
             <tr>
               <td>{sessionData.remoteAddr.toString.replaceFirst("^/","")}</td>
-              <td>{formatConnectionState(sessionData)}</td>
+              <td>{formatConnectionTime(sessionData)}</td>
+              <td>{formatLastRequestTime(sessionData)}</td>
               <td>{formatPduReceived(sessionData)}</td>
               <td>{formatPduSent(sessionData)}</td>
             </tr>
           }
         }</tbody>
     </table>
-    <script><!--
-$(document).ready(function() {
-  $('[rel=twipsy]').twipsy({
-    "live": true
-  });
-});
-// --></script>
-
   }
 
-  def formatConnectionState(sessionData: RtrSessionData): NodeSeq = {
-    val connected = sessionData.connected.value
-    val labelClass = if (connected) "label success" else "label"
-    val stateText = if (connected) "Connected" else "Disconnected"
-    val timeText = sessionData.connected.time.toString(timeFormatter)
-    val periodText = periodInWords(new Period(sessionData.connected.time, now)) + " ago"
+  def formatConnectionTime(sessionData: RtrSessionData): NodeSeq = {
+    <span>{sessionData.connected.time.toString(timeFormatter)}</span>
+  }
 
-    <span rel="twipsy" data-original-title={periodText}>{timeText} </span>
-    <span class={labelClass}>{stateText}</span>
+  def formatLastRequestTime(sessionData: RtrSessionData): NodeSeq = {
+    <span>{sessionData.lastPduReceived.get.time.toString(timeFormatter)}</span>
   }
 
   def formatPduReceived(sessionData: RtrSessionData): NodeSeq = {
     if (sessionData.lastPduReceived.isDefined) {
-      val pduName = sessionData.lastPduReceived.get.value
-      val timeText = sessionData.lastPduReceived.get.time.toString(timeFormatter)
-      val periodText = periodInWords(new Period(sessionData.connected.time, now)) + " ago"
-
-      <span rel="twipsy" data-original-title={periodText}>{timeText} </span>
-      <strong>{pduName}</strong>
+      <span>{sessionData.lastPduReceived.get.value}</span>
     } else {
       NodeSeq.Empty
     }
@@ -107,17 +93,11 @@ $(document).ready(function() {
 
   def formatPduSent(sessionData: RtrSessionData): NodeSeq = {
     if (sessionData.lastPduSent.isDefined) {
-      val pduName = sessionData.lastPduSent.get.value.getClass.getSimpleName
-      val pduDetails = sessionData.lastPduSent.get.value.toPrettyContentString()
-      val timeText = sessionData.lastPduSent.get.time.toString(timeFormatter)
-      val periodText = periodInWords(new Period(sessionData.connected.time, now)) + " ago"
-
-      <span rel="twipsy" data-original-title={periodText}>{timeText} </span>
-      <strong rel="twipsy" data-original-title={pduDetails}>{pduName}</strong>
+      <span>{sessionData.lastPduSent.get.value.getClass.getSimpleName}</span>
     } else {
       NodeSeq.Empty
     }
   }
 
-  val timeFormatter = ISODateTimeFormat.time()
+  val timeFormatter = ISODateTimeFormat.dateTimeNoMillis()
 }

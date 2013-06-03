@@ -36,6 +36,7 @@ import java.nio.ByteOrder
 import net.ripe.ipresource._
 import java.math.BigInteger
 import scala.util.Random
+import java.net.SocketAddress
 
 sealed trait Pdu {
   def protocolVersion: Byte = 0
@@ -43,9 +44,10 @@ sealed trait Pdu {
   def headerShort: Short = 0
   def length: Int
 
-  def toPrettyContentString(): String = {
-    var bytes = Pdus.encode(this)
-    bytes.map(_.formatted("%02X")).grouped(4).map(_.mkString(" ")).mkString("\n")
+  def toPrettyContentString: String
+
+  def toEncodedByteArray: Array[Byte] = {
+    Pdus.encode(this)
   }
 }
 
@@ -63,6 +65,7 @@ case class SerialNotifyPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
   override def pduType = PduTypes.SerialNotify
   override def headerShort = nonce
   override def length = 12
+  override def toPrettyContentString: String = "Serial Notify (session-id: " + nonce + " , serial: " + serial + ")"
 
   assert(serial <= EndOfDataPdu.MAX_SERIAL)
 }
@@ -74,6 +77,7 @@ case class SerialQueryPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
   override def pduType = PduTypes.SerialQuery
   override def headerShort = nonce
   override def length = 12
+  override def toPrettyContentString: String = "Serial Query (session-id: " + nonce + " , serial: " + serial + ")"
 
   assert(serial <= EndOfDataPdu.MAX_SERIAL)
 }
@@ -84,6 +88,7 @@ case class SerialQueryPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
 case class ResetQueryPdu() extends Pdu {
   override def pduType = PduTypes.ResetQuery
   override def length = 8
+  override def toPrettyContentString: String = "Reset Query"
 }
 
 /**
@@ -93,6 +98,7 @@ case class CacheResponsePdu(nonce: Pdu.Nonce) extends Pdu {
   override def pduType = PduTypes.CacheResponse
   override def headerShort = nonce
   override def length = 8
+  override def toPrettyContentString: String = "Cache Response (session-id: " + nonce + ")"
 }
 
 /**
@@ -101,6 +107,7 @@ case class CacheResponsePdu(nonce: Pdu.Nonce) extends Pdu {
 case class IPv4PrefixAnnouncePdu(ipv4PrefixStart: Ipv4Address, prefixLength: Byte, maxLength: Byte, asn: Asn) extends Pdu {
   override def pduType = PduTypes.IPv4Prefix
   override def length = 20
+  override def toPrettyContentString: String = "Add IPv4 Prefix (prefix: " + ipv4PrefixStart + "/" + prefixLength + ", maxLength: " + maxLength + ", Asn: " + asn + ")"
 }
 
 /**
@@ -109,6 +116,8 @@ case class IPv4PrefixAnnouncePdu(ipv4PrefixStart: Ipv4Address, prefixLength: Byt
 case class IPv6PrefixAnnouncePdu(ipv6PrefixStart: Ipv6Address, prefixLength: Byte, maxLength: Byte, asn: Asn) extends Pdu {
   override def pduType = PduTypes.IPv6Prefix
   override def length = 32
+  override def toPrettyContentString: String = "Add IPv6 Prefix (prefix: " + ipv6PrefixStart + "/" + prefixLength + ", maxLength: " + maxLength + ", Asn: " + asn + ")"
+
 }
 
 /**
@@ -118,6 +127,7 @@ case class EndOfDataPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
   override def pduType = PduTypes.EndOfData
   override def headerShort: Short = nonce
   override def length = 12
+  override def toPrettyContentString: String = "End of Data (session-id: " + nonce + ", serial: " + serial + ")"
 
   assert(serial <= EndOfDataPdu.MAX_SERIAL)
 }
@@ -132,6 +142,7 @@ object EndOfDataPdu {
 case class CacheResetPdu() extends Pdu {
   override def pduType = PduTypes.CacheReset
   override def length = 8
+  override def toPrettyContentString: String = "Cache Reset"
 }
 
 case class ErrorPdu(errorCode: Int, causingPdu: Array[Byte], errorText: String) extends Pdu {
@@ -144,6 +155,8 @@ case class ErrorPdu(errorCode: Int, causingPdu: Array[Byte], errorText: String) 
   val errorTextLength = errorTextBytes.length
 
   override val length = 8 + 4 + causingPduLength + 4 + errorTextLength
+
+  override def toPrettyContentString: String = "Error (code: " + errorCode + ", description: " + errorText + ")"
 }
 
 object ErrorPdu {
@@ -321,6 +334,22 @@ object Pdus {
         Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
     }
   }
-
 }
 
+case class RtrPduLogEntry(childAddress: SocketAddress, data: Either[BadData, Pdu], sender: Sender) {
+  override def toString = {
+    val direction = sender match {
+      case Server => "<-"
+      case Client => "->"
+    }
+
+    def prettyPrintByteArray(array: Array[Byte]) = array.map(_.formatted("%02X")).mkString(" ")
+
+    val description = data match {
+      case Left(badData) => ("Unparsable Data", prettyPrintByteArray(badData.content))
+      case Right(pdu) => (pdu.toPrettyContentString, prettyPrintByteArray(pdu.toEncodedByteArray))
+    }
+
+    childAddress + " " + direction + " " + description._1 + ", hex: " + description._2
+  }
+}

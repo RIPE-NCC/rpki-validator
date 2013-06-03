@@ -39,7 +39,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler
 import org.jboss.netty.util.Timer
 import org.jboss.netty.util.HashedWheelTimer
-import grizzled.slf4j.Logging
+import grizzled.slf4j.{Logger, Logging}
 import org.jboss.netty.channel.group.{ ChannelGroup, DefaultChannelGroup }
 import org.jboss.netty.channel.ChannelHandler.Sharable
 import models.RtrPrefix
@@ -124,11 +124,14 @@ class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurren
 class RTRServerHandler(noCloseOnError: Boolean = false, clients: RtrSessions[SocketAddress])
   extends SimpleChannelUpstreamHandler with Logging {
 
+  val rtrLogger = Logger("RTR")
+
   override def channelOpen(context: ChannelHandlerContext, event: ChannelStateEvent) {
     RTRServer.allChannels.add(event.getChannel) // will be removed automatically on close
     val remoteAddress: SocketAddress = context.getChannel.getRemoteAddress
     clients.connect(remoteAddress)
-    logger.info("Client connected : " + remoteAddress)
+    info("Client connected : " + remoteAddress)
+    rtrLogger.info("Client connected : " + remoteAddress) // log to both, interesting in general, but also needed in debugging
   }
 
   override def channelDisconnected(context: ChannelHandlerContext, event: ChannelStateEvent) {
@@ -136,6 +139,7 @@ class RTRServerHandler(noCloseOnError: Boolean = false, clients: RtrSessions[Soc
     val socketAddress = context.getChannel.getRemoteAddress
     clients.disconnect(socketAddress)
     info("Client disconnected : " + socketAddress)
+    rtrLogger.info("Client disconnected : " + socketAddress) // log to both, interesting in general, but also needed in debugging
   }
 
   def notifyChildren(pdu: Pdu) = RTRServer.allChannels.write(pdu)
