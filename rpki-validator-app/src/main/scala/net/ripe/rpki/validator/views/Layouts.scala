@@ -93,10 +93,7 @@ object Layouts {
               case None => NodeSeq.Empty
             }
 
-
-            val enableFeedbackQuestion = EnableFeedbackPrompt.optionalFeedBackEnablePrompt(userPreferences)
-
-            (newVersionNotify ++ enableFeedbackQuestion) match {
+            newVersionNotify match {
               case NodeSeq.Empty => NodeSeq.Empty
               case messages => 
               <div class="alert-message block-message"  data-alert="alert">
