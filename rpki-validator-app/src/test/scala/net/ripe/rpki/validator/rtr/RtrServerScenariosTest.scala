@@ -62,7 +62,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
 
   var cache: scala.concurrent.stm.Ref[MemoryImage] = null
 
-  var nonce: Short = new Random().nextInt(65536).toShort
+  var sessionId: Short = new Random().nextInt(65536).toShort
   var tal: TrustAnchorLocator = null
 
 
@@ -83,7 +83,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
       noNotify = false,
       getCurrentCacheSerial = { () => cache.single.get.version },
       getCurrentRtrPrefixes = { () => cache.single.get.getDistinctRtrPrefixes },
-      getCurrentNonce = { () => nonce })
+      getCurrentSessionId = { () => sessionId })
     server.startServer()
   }
 
@@ -134,7 +134,7 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     var iter = responsePdus.iterator
 
     iter.next() match {
-      case CacheResponsePdu(responseNonce) => responseNonce should equal(nonce)
+      case CacheResponsePdu(responseSessionId) => responseSessionId should equal(sessionId)
       case _ => fail("Should get cache response")
     }
 
@@ -166,8 +166,8 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
 
     var lastSerial: Long = 0
     iter.next() match {
-      case EndOfDataPdu(responseNonce, serial) =>
-        responseNonce should equal(nonce)
+      case EndOfDataPdu(responseSessionId, serial) =>
+        responseSessionId should equal(sessionId)
         serial should equal(cache.single.get.version)
         lastSerial = serial
       case _ => fail("Expected end of data")
@@ -176,20 +176,20 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     client.isConnected should be(true)
 
     // Send serial, should get response with no new announcements/withdrawals
-    client.sendPdu(SerialQueryPdu(nonce = nonce, serial = lastSerial))
+    client.sendPdu(SerialQueryPdu(sessionId = sessionId, serial = lastSerial))
 
     var responsePdusBeforeNewRoas = client.getResponse(expectedNumber = 2)
     responsePdusBeforeNewRoas.size should equal(2)
 
     iter = responsePdusBeforeNewRoas.iterator
     iter.next() match {
-      case CacheResponsePdu(responseNonce) => responseNonce should equal(nonce)
+      case CacheResponsePdu(responseSessionId) => responseSessionId should equal(sessionId)
       case _ => fail("Should get cache response")
     }
 
     iter.next() match {
-      case EndOfDataPdu(responseNonce, serial) =>
-        responseNonce should equal(nonce)
+      case EndOfDataPdu(responseSessionId, serial) =>
+        responseSessionId should equal(sessionId)
         serial should equal(lastSerial)
       case _ => fail("Expected end of data")
     }
@@ -203,12 +203,12 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     var responsePdusAfterCacheUpdate = client.getResponse(expectedNumber = 1)
     responsePdusAfterCacheUpdate.size should equal(1)
     responsePdusAfterCacheUpdate.head match {
-      case SerialNotifyPdu(nonce, serial) =>
+      case SerialNotifyPdu(sessionId, serial) =>
       case _ => fail("Should get serial notify")
     }
 
     // Send serial, should get reset response (we don't support incremental updates yet)
-    client.sendPdu(SerialQueryPdu(nonce = nonce, serial = lastSerial))
+    client.sendPdu(SerialQueryPdu(sessionId = sessionId, serial = lastSerial))
 
     var responsePdusAfterNewRoas = client.getResponse(expectedNumber = 1)
     responsePdusAfterNewRoas.size should equal(1)

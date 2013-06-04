@@ -39,7 +39,7 @@ import org.jboss.netty.handler.timeout.ReadTimeoutException
 class RtrSessionHandler[T] (remoteAddress: T,
                         getCurrentCacheSerial: () => Int,
                         getCurrentRtrPrefixes: () => Set[RtrPrefix],
-                        getCurrentNonce: () => Pdu.Nonce) {
+                        getCurrentSessionId: () => Pdu.SessionId) {
 
   // assume we only get InetSocketAddress; other types will thow exception
   val sessionData = new RtrSessionData(remoteAddress.asInstanceOf[InetSocketAddress])
@@ -84,9 +84,9 @@ class RtrSessionHandler[T] (remoteAddress: T,
       case ResetQueryPdu() =>
         sessionData.lastPduReceived = "ResetQuery"
         processResetQuery
-      case SerialQueryPdu(nonce, serial) =>
+      case SerialQueryPdu(sessionId, serial) =>
         sessionData.lastPduReceived = "SerialQuery"
-        processSerialQuery(nonce, serial)
+        processSerialQuery(sessionId, serial)
       case _ =>
         sessionData.lastPduReceived = "Invalid Request"
         List(ErrorPdu(ErrorPdu.InvalidRequest, Array.empty, ""))
@@ -100,7 +100,7 @@ class RtrSessionHandler[T] (remoteAddress: T,
       case 0 => List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
       case _ =>
         var responsePdus: Vector[Pdu] = Vector.empty
-        responsePdus = responsePdus :+ CacheResponsePdu(nonce = getCurrentNonce.apply())
+        responsePdus = responsePdus :+ CacheResponsePdu(sessionId = getCurrentSessionId.apply())
 
         getCurrentRtrPrefixes().foreach { rtrPrefix =>
 
@@ -117,14 +117,14 @@ class RtrSessionHandler[T] (remoteAddress: T,
             case _ => assert(false)
           }
         }
-        responsePdus :+ EndOfDataPdu(nonce = getCurrentNonce.apply(), serial = getCurrentCacheSerial.apply())
+        responsePdus :+ EndOfDataPdu(sessionId = getCurrentSessionId.apply(), serial = getCurrentCacheSerial.apply())
     }
   }
 
 
-  private def processSerialQuery(nonce: Short, serial: Long) = {
-    if (nonce == getCurrentNonce.apply() && serial == getCurrentCacheSerial.apply()) {
-      List(CacheResponsePdu(nonce = nonce), EndOfDataPdu(nonce = nonce, serial = serial))
+  private def processSerialQuery(sessionId: Short, serial: Long) = {
+    if (sessionId == getCurrentSessionId.apply() && serial == getCurrentCacheSerial.apply()) {
+      List(CacheResponsePdu(sessionId = sessionId), EndOfDataPdu(sessionId = sessionId, serial = serial))
     } else {
       List(CacheResetPdu())
     }

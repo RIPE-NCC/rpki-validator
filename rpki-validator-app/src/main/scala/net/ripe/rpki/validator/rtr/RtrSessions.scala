@@ -37,7 +37,7 @@ import scala.collection.mutable
 class RtrSessions[T] (
                        getCurrentCacheSerial: () => Int,
                        getCurrentRtrPrefixes: () => Set[RtrPrefix],
-                       getCurrentNonce: () => Pdu.Nonce) {
+                       getCurrentSessionId: () => Pdu.SessionId) {
 
 
   private val handlers = mutable.HashMap[T, RtrSessionHandler[T]]()
@@ -45,7 +45,7 @@ class RtrSessions[T] (
   def allClientData = handlers.values.map(_.sessionData)
 
   def connect(id: T) {
-    val handler = handlers.getOrElseUpdate(id, new RtrSessionHandler[T](id, getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentNonce))
+    val handler = handlers.getOrElseUpdate(id, new RtrSessionHandler[T](id, getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentSessionId))
     handler.connect()
   }
 
@@ -54,7 +54,7 @@ class RtrSessions[T] (
   }
 
   def serialNotify(serial: Long) = {
-    val pdu = new SerialNotifyPdu(getCurrentNonce(), serial)
+    val pdu = new SerialNotifyPdu(getCurrentSessionId(), serial)
     handlers.values.foreach(_.serialNotify(pdu))
     pdu
   }

@@ -52,8 +52,8 @@ sealed trait Pdu {
 }
 
 object Pdu {
-  type Nonce = Short
-  def randomNonce() = Random.nextInt(65536).toShort
+  type SessionId = Short
+  def randomSessionid() = Random.nextInt(65536).toShort
 }
 
 case class BadData(errorCode: Int, content: Array[Byte])
@@ -61,11 +61,11 @@ case class BadData(errorCode: Int, content: Array[Byte])
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.1
  */
-case class SerialNotifyPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
+case class SerialNotifyPdu(sessionId: Pdu.SessionId, serial: Long) extends Pdu {
   override def pduType = PduTypes.SerialNotify
-  override def headerShort = nonce
+  override def headerShort = sessionId
   override def length = 12
-  override def toPrettyContentString: String = "Serial Notify (session-id: " + nonce + " , serial: " + serial + ")"
+  override def toPrettyContentString: String = "Serial Notify (session-id: " + sessionId + " , serial: " + serial + ")"
 
   assert(serial <= EndOfDataPdu.MAX_SERIAL)
 }
@@ -73,11 +73,11 @@ case class SerialNotifyPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.2
  */
-case class SerialQueryPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
+case class SerialQueryPdu(sessionId: Pdu.SessionId, serial: Long) extends Pdu {
   override def pduType = PduTypes.SerialQuery
-  override def headerShort = nonce
+  override def headerShort = sessionId
   override def length = 12
-  override def toPrettyContentString: String = "Serial Query (session-id: " + nonce + " , serial: " + serial + ")"
+  override def toPrettyContentString: String = "Serial Query (session-id: " + sessionId + " , serial: " + serial + ")"
 
   assert(serial <= EndOfDataPdu.MAX_SERIAL)
 }
@@ -94,11 +94,11 @@ case class ResetQueryPdu() extends Pdu {
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.4
  */
-case class CacheResponsePdu(nonce: Pdu.Nonce) extends Pdu {
+case class CacheResponsePdu(sessionId: Pdu.SessionId) extends Pdu {
   override def pduType = PduTypes.CacheResponse
-  override def headerShort = nonce
+  override def headerShort = sessionId
   override def length = 8
-  override def toPrettyContentString: String = "Cache Response (session-id: " + nonce + ")"
+  override def toPrettyContentString: String = "Cache Response (session-id: " + sessionId + ")"
 }
 
 /**
@@ -123,11 +123,11 @@ case class IPv6PrefixAnnouncePdu(ipv6PrefixStart: Ipv6Address, prefixLength: Byt
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.7
  */
-case class EndOfDataPdu(nonce: Pdu.Nonce, serial: Long) extends Pdu {
+case class EndOfDataPdu(sessionId: Pdu.SessionId, serial: Long) extends Pdu {
   override def pduType = PduTypes.EndOfData
-  override def headerShort: Short = nonce
+  override def headerShort: Short = sessionId
   override def length = 12
-  override def toPrettyContentString: String = "End of Data (session-id: " + nonce + ", serial: " + serial + ")"
+  override def toPrettyContentString: String = "End of Data (session-id: " + sessionId + ", serial: " + serial + ")"
 
   assert(serial <= EndOfDataPdu.MAX_SERIAL)
 }
@@ -200,7 +200,7 @@ object Pdus {
       case SerialQueryPdu(_, serial) => buffer.writeInt(serial.toInt)
       case errorPdu @ ErrorPdu(errorCode, causingPdu, errorText) => writeErrorPduPayload(buffer, errorPdu, causingPdu)
       case ResetQueryPdu() => // no payload
-      case CacheResponsePdu(_) => // no payload (nonce is in header)
+      case CacheResponsePdu(_) => // no payload (sessionId is in header)
       case IPv4PrefixAnnouncePdu(prefix, length, maxLength, asn) => writeIPv4PrefixAnnouncePduPayload(buffer, prefix, length, maxLength, asn)
       case IPv6PrefixAnnouncePdu(prefix, length, maxLength, asn) => writeIPv6PrefixAnnouncePduPayload(buffer, prefix, length, maxLength, asn)
       case EndOfDataPdu(_, serial) => buffer.writeInt(serial.toInt)
@@ -274,14 +274,14 @@ object Pdus {
     buffer.writeBytes(convertToPrependedByteArray(asn.getValue, 4))
   }
 
-  private def parseSerialNotifyPdu(buffer: ChannelBuffer, nonce: Pdu.Nonce): Right[Nothing, SerialNotifyPdu] = {
+  private def parseSerialNotifyPdu(buffer: ChannelBuffer, sessionId: Pdu.SessionId): Right[Nothing, SerialNotifyPdu] = {
     val serial = buffer.readUnsignedInt()
-    Right(SerialNotifyPdu(nonce, serial))
+    Right(SerialNotifyPdu(sessionId, serial))
   }
 
-  private def parseSerialQueryPdu(buffer: ChannelBuffer, nonce: Pdu.Nonce): Right[Nothing, SerialQueryPdu] = {
+  private def parseSerialQueryPdu(buffer: ChannelBuffer, sessionId: Pdu.SessionId): Right[Nothing, SerialQueryPdu] = {
     val serial = buffer.readUnsignedInt()
-    Right(SerialQueryPdu(nonce, serial))
+    Right(SerialQueryPdu(sessionId, serial))
   }
 
   private def parseErrorPdu(buffer: ChannelBuffer, headerShort: Short): Right[Nothing, ErrorPdu] = {
@@ -293,13 +293,13 @@ object Pdus {
     Right(ErrorPdu(headerShort, causingPdu, errorText))
   }
 
-  private def parseCacheResponsePdu(nonce: Pdu.Nonce): Right[Nothing, CacheResponsePdu] = {
-    Right(CacheResponsePdu(nonce))
+  private def parseCacheResponsePdu(sessionId: Pdu.SessionId): Right[Nothing, CacheResponsePdu] = {
+    Right(CacheResponsePdu(sessionId))
   }
 
-  private def parseEndOfDataPdu(buffer: ChannelBuffer, nonce: Pdu.Nonce): Right[Nothing, EndOfDataPdu] = {
+  private def parseEndOfDataPdu(buffer: ChannelBuffer, sessionId: Pdu.SessionId): Right[Nothing, EndOfDataPdu] = {
     val serial = buffer.readUnsignedInt()
-    Right(EndOfDataPdu(nonce, serial))
+    Right(EndOfDataPdu(sessionId, serial))
   }
 
   private def parseIPv4PrefixPdu(buffer: ChannelBuffer): Either[BadData, Pdu] = {

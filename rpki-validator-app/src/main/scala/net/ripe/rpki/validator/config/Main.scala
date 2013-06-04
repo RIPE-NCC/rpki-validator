@@ -57,7 +57,7 @@ import javax.servlet.DispatcherType
 import org.apache.http.impl.conn.PoolingClientConnectionManager
 
 object Main {
-  private val nonce: Pdu.Nonce = Pdu.randomNonce()
+  private val sessionId: Pdu.SessionId = Pdu.randomSessionid()
 
   def main(args: Array[String]): Unit = Options.parse(args) match {
     case Right(options) =>
@@ -207,8 +207,8 @@ class Main(options: Options) { main =>
       getCurrentRtrPrefixes = {
         () => memoryImage.single.get.getDistinctRtrPrefixes
       },
-      getCurrentNonce = {
-        () => Main.nonce
+      getCurrentSessionId = {
+        () => Main.sessionId
       })
     rtrServer.startServer()
     rtrServer

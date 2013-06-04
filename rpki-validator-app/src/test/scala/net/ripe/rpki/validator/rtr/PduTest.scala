@@ -60,7 +60,7 @@ class PduTest extends FunSuite with ShouldMatchers {
 
   // See http://tools.ietf.org/html/draft-ietf-r5r555555555555                                                                                                                                                                                                                              rpki-rtr-16#section-5.1
   test("should convert serial notify pdu to byte array and back") {
-    val serialNotifyPdu = new SerialNotifyPdu(nonce = PduTest.MAX_HEADER_SHORT_VALUE, serial = EndOfDataPdu.MAX_SERIAL)
+    val serialNotifyPdu = new SerialNotifyPdu(sessionId = PduTest.MAX_HEADER_SHORT_VALUE, serial = EndOfDataPdu.MAX_SERIAL)
     val expectedBytes = Array[Byte](
       0x0, 0x0, 255.toByte, 255.toByte,
       0x0, 0x0, 0x0, 0xc,
@@ -78,7 +78,7 @@ class PduTest extends FunSuite with ShouldMatchers {
 
   // See http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.2
   test("should convert serial query pdu to byte array and back") {
-    val serialQueryPdu = new SerialQueryPdu(nonce = PduTest.MAX_HEADER_SHORT_VALUE, serial = EndOfDataPdu.MAX_SERIAL)
+    val serialQueryPdu = new SerialQueryPdu(sessionId = PduTest.MAX_HEADER_SHORT_VALUE, serial = EndOfDataPdu.MAX_SERIAL)
     val expectedBytes = Array[Byte](
       0x0, 0x1, 255.toByte, 255.toByte,
       0x0, 0x0, 0x0, 0xc,
@@ -111,7 +111,7 @@ class PduTest extends FunSuite with ShouldMatchers {
   }
 
   test("should convert cache response pdu to byte array and back") {
-    val cacheResponsePdu = new CacheResponsePdu(nonce = PduTest.MAX_HEADER_SHORT_VALUE)
+    val cacheResponsePdu = new CacheResponsePdu(sessionId = PduTest.MAX_HEADER_SHORT_VALUE)
     val expectedBytes = Array[Byte](
       0x0, 0x3, 255.toByte, 255.toByte,
       0x0, 0x0, 0x0, 0x8)
@@ -186,7 +186,7 @@ class PduTest extends FunSuite with ShouldMatchers {
   }
 
   test("should convert end of data pdu to byte array and back") {
-    val endOfDataPdu = new EndOfDataPdu(nonce = PduTest.MAX_HEADER_SHORT_VALUE, serial = EndOfDataPdu.MAX_SERIAL)
+    val endOfDataPdu = new EndOfDataPdu(sessionId = PduTest.MAX_HEADER_SHORT_VALUE, serial = EndOfDataPdu.MAX_SERIAL)
     val expectedBytes = Array[Byte](
       0x0, 0x7, 255.toByte, 255.toByte,
       0x0, 0x0, 0x0, 0xc,
