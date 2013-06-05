@@ -135,6 +135,10 @@ If you find any other problems, please contact us at <certification@ripe.net>.
 Version History
 ---------------
 
+2.10 - 5 June 2013
+= Validated ROA cache can now be exported in JSON format
+= Router sessions logging format has changed according to RFC 6810
+
 2.9 - 7 May 2013
 = Fix an issue that breaks the RTR interface
 
