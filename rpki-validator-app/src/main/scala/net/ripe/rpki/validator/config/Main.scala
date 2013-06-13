@@ -46,7 +46,7 @@ import scala.concurrent.stm._
 import scala.concurrent.Future
 import scala.math.Ordering.Implicits._
 import net.ripe.rpki.validator.statistics.FeedbackMetrics
-import org.apache.http.impl.client.DefaultHttpClient
+import org.apache.http.impl.client.SystemDefaultHttpClient
 import org.joda.time.DateTimeUtils
 import net.ripe.rpki.validator.statistics.Metric
 import net.ripe.rpki.validator.util.TrustAnchorLocator
@@ -92,7 +92,7 @@ class Main(options: Options) { main =>
 
   val userPreferences = Ref(data.userPreferences)
 
-  val httpClient = new DefaultHttpClient(new PoolingClientConnectionManager)
+  val httpClient = new SystemDefaultHttpClient()
   val httpParams = httpClient.getParams
   HttpConnectionParams.setConnectionTimeout(httpParams, 2 * 60 * 1000)
   HttpConnectionParams.setSoTimeout(httpParams, 2 * 60 * 1000)
