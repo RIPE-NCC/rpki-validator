@@ -30,20 +30,55 @@
 
 -->
 <assembly>
-    <id>jar-with-dependencies</id>
+    <id>dist</id>
     <formats>
-        <format>jar</format>
+        <format>tar.gz</format>
     </formats>
-    <includeBaseDirectory>false</includeBaseDirectory>
     <dependencySets>
         <dependencySet>
-            <unpack>true</unpack>
-            <scope>runtime</scope>
+            <outputDirectory>lib</outputDirectory>
         </dependencySet>
     </dependencySets>
     <fileSets>
         <fileSet>
-            <directory>${project.build.outputDirectory}</directory>
+            <directory>conf</directory>
+            <outputDirectory>conf</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <!-- Workaround to create an empty 'log' directory-->
+            <directory>src/main/assembly</directory>
+            <outputDirectory>log</outputDirectory>
+            <excludes>
+                <exclude>*</exclude>
+            </excludes>
+        </fileSet>
+        <fileSet>
+            <!-- Workaround to create an empty 'data' directory-->
+            <directory>src/main/assembly</directory>
+            <outputDirectory>data</outputDirectory>
+            <excludes>
+                <exclude>*</exclude>
+            </excludes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/..</directory>
+            <outputDirectory/>
+            <includes>
+                <include>LICENSE.txt</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory/>
+            <includes>
+                <include>README.txt</include>
+                <include>UPGRADE.txt</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>src/main/scripts</directory>
+            <outputDirectory/>
+            <fileMode>0755</fileMode>
         </fileSet>
     </fileSets>
 </assembly>

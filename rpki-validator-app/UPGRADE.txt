@@ -17,6 +17,4 @@ Copying your settings:
 
 After unzipping this tool:
 
-mkdir <path-to-new-installation>/data
-cp <path-to-old-installation>data/configuration.json \
-   <path-to-new-installation>/data/
+cp <path-to-old-installation>data/configuration.json <path-to-new-installation>/data/
