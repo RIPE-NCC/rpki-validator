@@ -55,16 +55,35 @@ import net.ripe.rpki.validator.statistics.NetworkConnectivityMetrics
 import java.util.EnumSet
 import javax.servlet.DispatcherType
 import org.apache.http.impl.conn.PoolingClientConnectionManager
+import scala.Predef._
+import scalaz.Failure
+import net.ripe.rpki.validator.models.TrustAnchorData
+import net.ripe.rpki.validator.models.Idle
+import net.ripe.rpki.validator.lib.UserPreferences
+import scalaz.Success
+import net.ripe.rpki.validator.models.Whitelist
+import net.ripe.rpki.validator.models.IgnoreFilter
+import org.apache.log4j.xml.DOMConfigurator
 
 object Main {
   private val sessionId: Pdu.SessionId = Pdu.randomSessionid()
 
-  def main(args: Array[String]): Unit = Options.parse(args) match {
-    case Right(options) =>
-      new Main(options)
-    case Left(message) =>
-      println(message)
-      sys.exit(1)
+  def main(args: Array[String]): Unit = {
+    Options.parse(args) match {
+      case Right(options) =>
+        configureLogging()
+        new Main(options)
+      case Left(error) =>
+        Console.err.println(error)
+        sys.exit(1)
+    }
+  }
+
+  private def configureLogging() {
+    val configPath = "conf/log4j.xml"
+    val config = new File(configPath)
+    require(config.exists(), "Configuration file '%s' was not found.".format(configPath))
+    DOMConfigurator.configureAndWatch(config.getAbsolutePath)
   }
 }
 

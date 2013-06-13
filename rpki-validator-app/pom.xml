@@ -243,6 +243,7 @@
                     maven-assembly-plugin. In order to avoid double packaging we exclude them from the final jar -->
                     <excludes>
                         <exclude>tal/</exclude>
+                        <exclude>log4j.xml</exclude>
                     </excludes>
                 </configuration>
             </plugin>
@@ -313,6 +314,9 @@
             </plugin>
         </plugins>
         <resources>
+            <resource>
+                <directory>conf</directory>
+            </resource>
             <resource>
                 <directory>src/main/resources</directory>
                 <includes>
