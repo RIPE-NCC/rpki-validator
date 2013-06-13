@@ -50,7 +50,8 @@
 
         <jodatime.version>1.6.2</jodatime.version>
 
-        <slf4j.version>1.6.2</slf4j.version>
+        <slf4j.version>1.7.5</slf4j.version>
+        <log4j.version>1.2.17</log4j.version>
 
         <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
         <sonar.clover.reportPath>target/site/clover/clover.xml</sonar.clover.reportPath>
@@ -175,7 +176,7 @@
             <dependency>
                 <groupId>log4j</groupId>
                 <artifactId>log4j</artifactId>
-                <version>1.2.14</version>
+                <version>${log4j.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
