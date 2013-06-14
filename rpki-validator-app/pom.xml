@@ -193,6 +193,7 @@
     </dependencyManagement>
 
     <build>
+        <finalName>${project.artifactId}-${build.number}</finalName>
         <sourceDirectory>src/main/scala</sourceDirectory>
         <testSourceDirectory>src/test/scala</testSourceDirectory>
         <plugins>
