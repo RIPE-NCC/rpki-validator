@@ -72,19 +72,19 @@ Configuration of Trust Anchors
 This validator will automatically pick up any file matching this pattern:  
   <root-folder>/conf/tal/*.tal
 
-Four files are included with this distribution with the Trust Anchor details
-as they are known to us for AFRINIC, APNIC, LACNIC and RIPE NCC. 
+The Trust Anchor Locator files for four Regional Internet Registries are included
+with this distribution: AFRINIC, APNIC, Lacnic and RIPE NCC. 
 
 To access ARIN's TAL, the relying party will have to agree to ARIN's Relying
 Party Agreement. After that, the TAL will be emailed to the recipient. Please
-visit this ARIN web page for more information (starting late September 2012):
+visit this ARIN web page for more information:
 http://www.arin.net/public/rpki/tal/index.xhtml
 
 After obtaining ARIN's TAL, please copy it to the following location to use it:
   <root-folder>/conf/tal/
 
 If you compare the format of the included files to the Trust Anchor format defined here:
-http://tools.ietf.org/html/draft-ietf-sidr-ta-07
+http://tools.ietf.org/html/rfc6490
 
 You will notice that the format used here is slightly different. We are using key-value pairs
 to allow specifying some additional information. Make sure that you enter a value for ca.name.
@@ -121,10 +121,10 @@ Known Issues
 = The validator does not check for revocations or expiration times in between validation runs
 
 = The validator does not support incremental updates as defined here, yet:
-  http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.2
+  http://tools.ietf.org/html/rfc6810#section-6.2
   
   When the validator has any updates, it will respond with a cache-reset, as described here:
-  http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.3
+  http://tools.ietf.org/html/rfc6810#section-6.3
 
 = We have found that some routers require the -n and -s options. This is due to interoperability
   issues that are being worked on.
