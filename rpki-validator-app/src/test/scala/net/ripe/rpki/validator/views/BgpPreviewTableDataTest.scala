@@ -34,41 +34,41 @@ import net.ripe.rpki.validator.bgp.preview.BgpAnnouncement
 import net.ripe.rpki.validator.bgp.preview.BgpValidatedAnnouncement
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
-import net.ripe.rpki.commons.validation.roa.RouteValidityState
-import scala.collection.mutable.HashMap
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 import net.ripe.rpki.validator.models.RtrPrefix
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
-@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class BgpPreviewControllerTest extends FunSuite with ShouldMatchers {
+@RunWith(classOf[JUnitRunner])
+class BgpPreviewTableDataTest extends FunSuite with ShouldMatchers {
   import lib.NumberResourcesTest._
 
-  val announce1 = BgpValidatedAnnouncement(BgpAnnouncement(65001, "10.0.0.0/24"), validates = Seq(RtrPrefix(65001, "10.0.0.0/24", None)), invalidates = Seq.empty)
-  val announce2 = BgpValidatedAnnouncement(BgpAnnouncement(65002, "10.0.1.0/24"), validates = Seq.empty, invalidates = Seq(RtrPrefix(0, "10.0.1.0/24", None)))
-  val announce3 = BgpValidatedAnnouncement(BgpAnnouncement(65003, "10.0.2.0/24"), validates = Seq.empty, invalidates = Seq.empty)
+  val validAnnouncement = BgpValidatedAnnouncement(BgpAnnouncement(65001, "10.0.0.0/24"), valids = Seq(RtrPrefix(65001, "10.0.0.0/24")), invalidsLength = Seq(RtrPrefix(65001, "10.0.0.0/16", Some(20))))
+  val invalidAsnAnnouncement = BgpValidatedAnnouncement(BgpAnnouncement(65002, "10.0.1.0/24"), invalidsAsn = Seq(RtrPrefix(65001, "10.0.1.0/24")))
+  val invalidLengthAnnouncement = BgpValidatedAnnouncement(BgpAnnouncement(65003, "10.0.2.0/24"), invalidsAsn = Seq(RtrPrefix(65001, "10.0.2.0/24")), invalidsLength = Seq(RtrPrefix(65003, "10.0.0.0/16", Some(20))))
+  val unknownAnnouncement = BgpValidatedAnnouncement(BgpAnnouncement(65004, "10.0.3.0/24"))
 
-  val testAnnouncements: IndexedSeq[BgpValidatedAnnouncement] = IndexedSeq[BgpValidatedAnnouncement](announce1, announce2, announce3)
+  val announcements = IndexedSeq(validAnnouncement, invalidAsnAnnouncement, invalidLengthAnnouncement, unknownAnnouncement)
 
-  val subject = new BgpPreviewTableData(testAnnouncements) {
+  val subject = new BgpPreviewTableData(announcements) {
     override def getParam(name: String) = "1"
   }
 
-  test("Should filter overlapping IP resources") {
-    val filteredAnnouncements = subject.filterRecords(testAnnouncements, IpRange.parse("10/23"))
-
-    filteredAnnouncements should contain(announce1)
-    filteredAnnouncements should contain(announce2)
-    filteredAnnouncements should have length (2)
+  test("Should match IP resources or overlapping IP resources") {
+    subject.filterRecords(announcements, "10.0.0.0/23": IpRange) should (have size 2 and contain(validAnnouncement) and contain(invalidAsnAnnouncement))
   }
 
-  test("Should filter by ASN") {
-
-    val filteredAnnouncements = subject.filterRecords(testAnnouncements, Asn.parse("AS65001"))
-
-    filteredAnnouncements should contain(announce1)
-    filteredAnnouncements should have length (1)
-
+  test("Should match AS number") {
+    subject.filterRecords(announcements, "AS65001": String) should(have size 1 and contain(validAnnouncement))
+    subject.filterRecords(announcements, "AS65001": Asn) should(have size 1 and contain(validAnnouncement))
   }
 
+  test("Should match various keywords (ignoring case)") {
+    subject.filterRecords(announcements, "vAlId") should(have size 1 and contain(validAnnouncement))
+    subject.filterRecords(announcements, "UnknoWn") should(have size 1 and contain(unknownAnnouncement))
+    subject.filterRecords(announcements, "InvaliD") should(have size 2 and contain(invalidAsnAnnouncement) and contain(invalidLengthAnnouncement))
+    subject.filterRecords(announcements, "InvaliD ASN") should(have size 1 and contain(invalidAsnAnnouncement))
+    subject.filterRecords(announcements, "InvaliD Length") should(have size 1 and contain(invalidLengthAnnouncement))
+  }
 }

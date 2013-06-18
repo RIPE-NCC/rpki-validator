@@ -27,40 +27,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package models
+package net.ripe.rpki.validator.models
 
-import scalaz._
-import Scalaz._
-import net.ripe.ipresource.{ IpRange, Asn }
-import lib.Validation._
-import lib.NumberResources._
-import net.ripe.rpki.validator.util.TrustAnchorLocator
-
-case class RtrPrefix(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int] = None, trustAnchorLocator: Option[TrustAnchorLocator] = None) {
-  val interval = NumberResourceInterval(prefix.getStart, prefix.getEnd)
-  def effectiveMaxPrefixLength = maxPrefixLength.getOrElse(prefix.getPrefixLength)
+object RouteValidity extends Enumeration {
+  type RouteValidity = Value
+  val Valid = Value("Valid")
+  val InvalidAsn = Value("Invalid ASN")
+  val InvalidLength = Value("Invalid Length")
+  val Unknown = Value("Unknown")
 }
-
-object RtrPrefix {
-  def validate(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int]): ValidationNEL[FeedbackMessage, RtrPrefix] = {
-    if (!prefix.isLegalPrefix) {
-      ErrorMessage("must be a legal IPv4 or IPv6 prefix", Some("prefix")).failNel
-    } else {
-      val allowedPrefixLengthRange = prefix.getPrefixLength to prefix.getType.getBitSize
-      val validated = optional(containedIn(allowedPrefixLengthRange)).apply(maxPrefixLength) map { _ =>
-        new RtrPrefix(asn, prefix, maxPrefixLength)
-      }
-      liftFailErrorMessage(validated, Some("maxPrefixLength"))
-    }
-  }
-
-  /**
-   * Takes an RtrPrefix and returns the associated IP range.
-   */
-  implicit object RtrPrefixReducer extends Reducer[RtrPrefix, NumberResourceInterval] {
-    override def unit(prefix: RtrPrefix) = prefix.interval
-  }
-
-}
-

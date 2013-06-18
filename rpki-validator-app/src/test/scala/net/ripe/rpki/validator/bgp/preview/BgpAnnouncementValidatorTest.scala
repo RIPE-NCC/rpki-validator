@@ -32,81 +32,111 @@ package bgp.preview
 
 import org.scalatest.FunSuite
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.ShouldMatchers
-import models.RtrPrefix
-import net.ripe.ipresource.Asn
-import net.ripe.ipresource.IpRange
-import scalaz.concurrent.Promise
+import net.ripe.rpki.validator.models.{RouteValidity, RtrPrefix}
+import net.ripe.rpki.validator.models.RouteValidity._
+import net.ripe.ipresource.{IpResource, Asn, IpRange}
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import sun.awt.geom.Curve
+import org.omg.CORBA.DynAnyPackage.Invalid
 
-@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+@RunWith(classOf[JUnitRunner])
 class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers {
 
-  val AS1 = Asn.parse("AS65001")
-  val AS2 = Asn.parse("AS65002")
-  val AS3 = Asn.parse("AS65003")
-
-  val PREFIX1 = IpRange.parse("10.0.1.0/24")
-  val PREFIX2 = IpRange.parse("10.0.2.0/24")
-  val PREFIX3 = IpRange.parse("10.0.3.0/24")
-  val PREFIX4 = IpRange.parse("10.0.4.0/24")
-
-  val ANNOUNCED_ROUTE1 = BgpAnnouncement(AS1, PREFIX1)
-  val ANNOUNCED_ROUTE2 = BgpAnnouncement(AS2, PREFIX2)
-  val ANNOUNCED_ROUTE3 = BgpAnnouncement(AS3, PREFIX4)
-
-  val RTR_PREFIX1 = RtrPrefix(asn = AS1, prefix = PREFIX1, maxPrefixLength = None)
-  val RTR_PREFIX2 = RtrPrefix(asn = AS1, prefix = PREFIX2, maxPrefixLength = None)
-
-  val VALIDATED_ANNOUNCEMENT1 = BgpValidatedAnnouncement(route = ANNOUNCED_ROUTE1, validates = Seq[RtrPrefix](RTR_PREFIX1), invalidates = Seq.empty[RtrPrefix]) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
-  val VALIDATED_ANNOUNCEMENT2 = BgpValidatedAnnouncement(route = ANNOUNCED_ROUTE2, validates = Seq.empty[RtrPrefix], invalidates = Seq[RtrPrefix](RTR_PREFIX2)) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
-  val VALIDATED_ANNOUNCEMENT3 = BgpValidatedAnnouncement(route = ANNOUNCED_ROUTE3, validates = Seq.empty[RtrPrefix], invalidates = Seq.empty[RtrPrefix]) //route: AnnouncedRoute, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix])
-
-  val TEST_BGP_DUMPS = {
-    Seq(BgpRisDump("http://localhost/", None, Seq(
-        new BgpRisEntry(origin = AS1, prefix = PREFIX1, visibility = 10),
-        new BgpRisEntry(origin = AS2, prefix = PREFIX2, visibility = 5),
-        new BgpRisEntry(origin = AS2, prefix = PREFIX3, visibility = 4),
-        new BgpRisEntry(origin = AS3, prefix = PREFIX4, visibility = 5))))
-  }
-
-  val TEST_ANNOUNCEMENTS_FROM_RIS: IndexedSeq[BgpAnnouncement] = Vector(ANNOUNCED_ROUTE1, ANNOUNCED_ROUTE2, ANNOUNCED_ROUTE3)
-
-  val TEST_RTR_PREFIXES = Vector(RTR_PREFIX1, RTR_PREFIX2)
-
-  val TEST_VALIDATED_ANNOUNCEMENTS = {
-    Set.empty[BgpValidatedAnnouncement] +
-      VALIDATED_ANNOUNCEMENT1 +
-      VALIDATED_ANNOUNCEMENT2 +
-      VALIDATED_ANNOUNCEMENT3
-  }
+  import scala.language.implicitConversions
+  implicit def LongToAsn(asn: Long) = new Asn(asn)
+  implicit def StringToAsn(asn: String) = Asn.parse(asn)
+  implicit def StringToIpRange(prefix: String) = IpRange.parse(prefix)
+  implicit def TupleToBgpAnnouncement(x: (Int, String)) = BgpAnnouncement(x._1, x._2)
+  implicit def TupleToRtrPrefix(x: (Int, String)) = RtrPrefix(x._1, x._2)
+  implicit def TupleToRtrPrefix(x: (Int, String, Int)) = RtrPrefix(x._1, x._2, Some(x._3))
 
   implicit val actorSystem = akka.actor.ActorSystem()
   private val subject = new BgpAnnouncementValidator
 
-//  test("should update announced routes with visibility threshold 5") {
-//    val announcementValidator = new BgpAnnouncementValidator {
-//      override protected def retrieveBgpRisDumps(dumps: Promise[Seq[BgpRisDump]]) = Promise { TEST_BGP_DUMPS }
-//    }
-//
-//    announcementValidator.updateBgpRisDumps()
-//    val announcementsFound = announcementValidator.announcedRoutes.get
-//
-//    announcementsFound.size should equal(TEST_ANNOUNCEMENTS_FROM_RIS.size)
-//
-//    announcementsFound.foreach {
-//      announcement => TEST_ANNOUNCEMENTS_FROM_RIS should contain(announcement)
-//    }
-//  }
-//
   test("should validate prefixes") {
-    subject.startUpdate(TEST_ANNOUNCEMENTS_FROM_RIS, TEST_RTR_PREFIXES)
+    val announcements = Seq[BgpAnnouncement]((65001, "10.0.1.0/24"), (65002, "10.0.2.0/24"), (65003, "10.0.3.0/24"), (65004, "10.0.4.0/24"))
+    val prefixes = Seq[RtrPrefix]((65001, "10.0.1.0/24"), (65001, "10.0.2.0/24"), (65003, "10.0.3.0/24", 20))
 
-    val result = subject.validatedAnnouncements
-    result.size should equal(TEST_VALIDATED_ANNOUNCEMENTS.size)
-    TEST_VALIDATED_ANNOUNCEMENTS.foreach {
-      expectedAnnouncement => result should contain(expectedAnnouncement)
-    }
+    subject.startUpdate(announcements, prefixes)
+
+    subject.validatedAnnouncements should have size 4
+    subject.validatedAnnouncements should be(Seq(
+      BgpValidatedAnnouncement((65001, "10.0.1.0/24"), valids = Seq((65001, "10.0.1.0/24"))),
+      BgpValidatedAnnouncement((65002, "10.0.2.0/24"), invalidsAsn = Seq((65001, "10.0.2.0/24"))),
+      BgpValidatedAnnouncement((65003, "10.0.3.0/24"), invalidsLength = Seq((65003, "10.0.3.0/24", 20))),
+      BgpValidatedAnnouncement((65004, "10.0.4.0/24"))))
   }
 
+  test("validity should be Unknown if there are no RTR prefixes") {
+    val announcements = Seq[BgpAnnouncement]((65001, "10.0.1.0/24"))
+    val prefixes = Seq.empty
+
+    subject.startUpdate(announcements, prefixes)
+
+    subject.validatedAnnouncements.map(x=> (x.asn, x.prefix, x.validity)) should be(Seq((65001: Asn, "10.0.1.0/24": IpRange, Unknown)))
+  }
+
+  test("validity should be Valid if there is an appropriate RTR prefix") {
+    val announcements = Seq[BgpAnnouncement]((65001, "10.0.1.0/24"))
+    val prefixes = Seq[RtrPrefix]((65001, "10.0.1.0/24"))
+
+    subject.startUpdate(announcements, prefixes)
+
+    subject.validatedAnnouncements.map(x=> (x.asn, x.prefix, x.validity)) should be(Seq((65001: Asn, "10.0.1.0/24": IpRange, Valid)))
+  }
+
+  test("validity should be Invalid ASN if there is an appropriate RTR prefix") {
+    val announcements = Seq[BgpAnnouncement]((65001, "10.0.1.0/24"))
+    val prefixes = Seq[RtrPrefix]((65002, "10.0.1.0/24"))
+
+    subject.startUpdate(announcements, prefixes)
+
+    subject.validatedAnnouncements.map(x=> (x.asn, x.prefix, x.validity)) should be(Seq((65001: Asn, "10.0.1.0/24": IpRange, InvalidAsn)))
+  }
+
+  test("validity should be Invalid Length if there is an appropriate RTR prefix") {
+    val announcements = Seq[BgpAnnouncement]((65001, "10.0.1.0/24"))
+    val prefixes = Seq[RtrPrefix]((65001, "10.0.1.0/24", 20))
+
+    subject.startUpdate(announcements, prefixes)
+
+    subject.validatedAnnouncements.map(x=> (x.asn, x.prefix, x.validity)) should be(Seq((65001: Asn, "10.0.1.0/24": IpRange, InvalidLength)))
+  }
+
+  test("should fail to construct BgpValidatedAnnouncement if invalidsLength contains a VRP that refers to a different ASN") {
+    val announcement = (65001, "10.0.1.0/24"): BgpAnnouncement
+    val invalidsAsn = Seq[RtrPrefix]((65002, "10.0.1.0/24"))
+
+    val e = evaluating { BgpValidatedAnnouncement(announcement, invalidsLength = invalidsAsn) } should produce [IllegalArgumentException]
+    e.getMessage should equal ("requirement failed: invalidsLength must only contain VRPs that refer to the same ASN")
+  }
+
+  test("should fail to construct BgpValidatedAnnouncement if invalidsAsn contains a VRP with the announced ASN") {
+    val announcement = (65001, "10.0.1.0/24"): BgpAnnouncement
+    val invalidsLength = Seq[RtrPrefix]((65001, "10.0.0.0/16", 20))
+
+    val e = evaluating { BgpValidatedAnnouncement(announcement, invalidsAsn = invalidsLength) } should produce [IllegalArgumentException]
+    e.getMessage should equal ("requirement failed: invalidsAsn must not contain the announced ASN")
+  }
+
+  test("validity should be determined by RTR prefixes") {
+    val announcement = (65001, "10.0.1.0/24"): BgpAnnouncement
+    val valids = Seq[RtrPrefix]((65001, "10.0.1.0/24"))
+    val invalidsAsn = Seq[RtrPrefix]((65002, "10.0.1.0/24"))
+    val invalidsLength = Seq[RtrPrefix]((65001, "10.0.0.0/16", 20))
+
+    BgpValidatedAnnouncement(announcement).validity should be(Unknown)
+
+    BgpValidatedAnnouncement(announcement, invalidsLength = invalidsLength).validity should be(InvalidLength)
+    BgpValidatedAnnouncement(announcement, invalidsAsn = invalidsAsn, invalidsLength = invalidsLength).validity should be(InvalidLength)
+
+    BgpValidatedAnnouncement(announcement, invalidsAsn = invalidsAsn).validity should be(InvalidAsn)
+
+    BgpValidatedAnnouncement(announcement, valids).validity should be(Valid)
+    BgpValidatedAnnouncement(announcement, valids, invalidsAsn).validity should be(Valid)
+    BgpValidatedAnnouncement(announcement, valids, invalidsLength = invalidsLength).validity should be(Valid)
+    BgpValidatedAnnouncement(announcement, valids, invalidsAsn, invalidsLength).validity should be(Valid)
+  }
 }

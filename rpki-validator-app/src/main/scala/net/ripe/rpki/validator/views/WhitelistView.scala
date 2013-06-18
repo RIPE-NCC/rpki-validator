@@ -34,7 +34,6 @@ import scala.xml._
 import models._
 import lib.Validation._
 import bgp.preview.BgpValidatedAnnouncement
-import net.ripe.rpki.commons.validation.roa.RouteValidityState
 
 class WhitelistView(whitelist: Whitelist, validatedAnnouncements: Seq[BgpValidatedAnnouncement], params: Map[String, String] = Map.empty, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
   private val fieldNameToText = Map("asn" -> "Origin", "prefix" -> "Prefix", "maxPrefixLength" -> "Maximum prefix length")
@@ -101,7 +100,7 @@ class WhitelistView(whitelist: Whitelist, validatedAnnouncements: Seq[BgpValidat
                 }
 
                 // Will work because we only match on affected announcements and will have no unknowns
-                var (validated, invalidated) = affectedAnnouncements.partition(_.validity == RouteValidityState.VALID)
+                var (validated, invalidated) = affectedAnnouncements.partition(_.validity == RouteValidity.Valid)
 
                 // Validates only matches on asn
                 validated = validated.filter { _.asn == entry.asn }

@@ -30,12 +30,12 @@
 package net.ripe.rpki.validator
 package bgp.preview
 
-import net.ripe.rpki.commons.validation.roa.RouteValidityState
 import lib.NumberResources._
-import models.RtrPrefix
+import net.ripe.rpki.validator.models.{RouteValidity, RtrPrefix}
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import grizzled.slf4j.Logging
+import net.ripe.rpki.validator.models.RouteValidity._
 
 case class BgpAnnouncement private (asn: Asn, interval: NumberResourceInterval) {
   def prefix = interval.start.upTo(interval.end).asInstanceOf[IpRange]
@@ -43,13 +43,17 @@ case class BgpAnnouncement private (asn: Asn, interval: NumberResourceInterval) 
 object BgpAnnouncement {
   def apply(asn: Asn, prefix: IpRange) = new BgpAnnouncement(asn, NumberResourceInterval(prefix.getStart, prefix.getEnd))
 }
-case class BgpValidatedAnnouncement(route: BgpAnnouncement, validates: Seq[RtrPrefix], invalidates: Seq[RtrPrefix]) {
-  def asn = route.asn
-  def prefix = route.prefix
+case class BgpValidatedAnnouncement(announced: BgpAnnouncement, valids: Seq[RtrPrefix] = Seq.empty, invalidsAsn: Seq[RtrPrefix] = Seq.empty, invalidsLength: Seq[RtrPrefix] = Seq.empty) {
+  require(!invalidsAsn.exists(_.asn == announced.asn), "invalidsAsn must not contain the announced ASN")
+  require(!invalidsLength.exists(_.asn != announced.asn), "invalidsLength must only contain VRPs that refer to the same ASN")
+
+  def asn = announced.asn
+  def prefix = announced.prefix
   def validity = {
-    if (validates.nonEmpty) RouteValidityState.VALID
-    else if (invalidates.nonEmpty) RouteValidityState.INVALID
-    else RouteValidityState.UNKNOWN
+    if (valids.nonEmpty) RouteValidity.Valid
+    else if (invalidsLength.nonEmpty) RouteValidity.InvalidLength
+    else if (invalidsAsn.nonEmpty) RouteValidity.InvalidAsn
+    else RouteValidity.Unknown
   }
 }
 
@@ -64,8 +68,10 @@ class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) ext
 
   def validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement] = _validatedAnnouncements.await(30.seconds)
 
-  def startUpdate(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]): Unit = _validatedAnnouncements.sendOff {
-    _ => validate(announcements, prefixes)
+  def startUpdate(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]) {
+    _validatedAnnouncements.sendOff {
+      _ => validate(announcements, prefixes)
+    }
   }
 
   private def validate(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]): IndexedSeq[BgpValidatedAnnouncement] = {
@@ -74,8 +80,15 @@ class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) ext
 
     val result = announcements.par.map({ route =>
       val matchingPrefixes = prefixTree.findExactAndAllLessSpecific(route.interval)
-      val (validates, invalidates) = matchingPrefixes.partition(validatesAnnouncedRoute(_, route))
-      BgpValidatedAnnouncement(route, validates, invalidates)
+      val groupedByValidity = matchingPrefixes.groupBy {
+        case prefix if hasInvalidAsn(prefix, route) => InvalidAsn
+        case prefix if hasInvalidPrefixLength(prefix, route) => InvalidLength
+        case _ => Valid
+      }
+      BgpValidatedAnnouncement(route,
+        groupedByValidity.getOrElse(Valid, Seq.empty),
+        groupedByValidity.getOrElse(InvalidAsn, Seq.empty),
+        groupedByValidity.getOrElse(InvalidLength, Seq.empty))
     }).seq.toIndexedSeq
 
     info("Completed validating " + result.size + " BGP announcements with " + prefixes.size + " RTR prefixes.")
@@ -83,9 +96,11 @@ class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) ext
     result
   }
 
-  private def validatesAnnouncedRoute(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
-    prefix.asn == announced.asn &&
-      prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength) >= announced.prefix.getPrefixLength
+  private def hasInvalidAsn(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
+    prefix.asn != announced.asn
   }
 
+  private def hasInvalidPrefixLength(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
+    prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength) < announced.prefix.getPrefixLength
+  }
 }
