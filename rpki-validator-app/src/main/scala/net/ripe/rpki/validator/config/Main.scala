@@ -240,27 +240,18 @@ class Main(options: Options) { main =>
     import org.eclipse.jetty.server.NCSARequestLog
     import org.scalatra._
 
-    val root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS)
-    root.setResourceBase(getClass.getResource("/public").toString)
-    val defaultServletHolder = new ServletHolder(new DefaultServlet())
-    defaultServletHolder.setName("default")
-    defaultServletHolder.setInitParameter("dirAllowed", "false")
-    root.addServlet(defaultServletHolder, "/*")
-    root.addFilter(new FilterHolder(new WebFilter {
+    val webFilter = new WebFilter {
       private val dataFileLock = new Object()
       private def updateAndPersist(f: InTxn => Unit) {
         dataFileLock synchronized {
           val (image, userPreferences) = atomic { implicit transaction =>
             f(transaction)
-
             feedbackMetrics.enabled = main.userPreferences.get.isFeedbackEnabled
-
             (memoryImage.get, main.userPreferences.get)
           }
           PersistentDataSerialiser.write(
             PersistentData(filters = image.filters, whitelist = image.whitelist, userPreferences = userPreferences,
-              trustAnchorData = image.trustAnchors.all.map(ta => ta.name -> TrustAnchorData(ta.enabled))(collection.breakOut)),
-            dataFile)
+              trustAnchorData = image.trustAnchors.all.map(ta => ta.name -> TrustAnchorData(ta.enabled))(collection.breakOut)), dataFile)
         }
       }
 
@@ -294,7 +285,15 @@ class Main(options: Options) { main =>
       override protected def updateTrustAnchorState(locator: TrustAnchorLocator, enabled: Boolean) = updateAndPersist { implicit transaction =>
         memoryImage.transform(_.updateTrustAnchorState(locator, enabled))
       }
-    }), "/*", EnumSet.allOf(classOf[DispatcherType]))
+    }
+
+    val root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS)
+    root.setResourceBase(getClass.getResource("/public").toString)
+    val defaultServletHolder = new ServletHolder(new DefaultServlet())
+    defaultServletHolder.setName("default")
+    defaultServletHolder.setInitParameter("dirAllowed", "false")
+    root.addServlet(defaultServletHolder, "/*")
+    root.addFilter(new FilterHolder(webFilter), "/*", EnumSet.allOf(classOf[DispatcherType]))
 
     val requestLogHandler = {
       val handler = new RequestLogHandler()
