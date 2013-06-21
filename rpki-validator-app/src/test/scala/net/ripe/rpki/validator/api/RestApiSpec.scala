@@ -27,38 +27,26 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package config
+package net.ripe.rpki.validator.api
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
-import net.ripe.rpki.validator.views.DataTableJsonView
-import net.ripe.rpki.validator.api.BgpPrefixOriginValidationController
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import net.ripe.rpki.validator.support.FeatureSpecification
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with ValidatedObjectsController
-  with TrustAnchorsController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController
-  with ExportController
-  with RtrSessionsController
-  with UserPreferencesController {
+@RunWith(classOf[JUnitRunner])
+class RestApiSpec extends FeatureSpecification {
 
-  private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
+  feature("the user can query the REST API") {
 
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view, newVersionDetails(), userPreferences))
-    case view: DataTableJsonView[_] =>
-      contentType = "application/json"
-      view.renderJson
+    scenario("the request URL doesn't match any route") {
+      get("/api/not/found") {
+        status should be(404)
+        header("Set-Cookie") should be(null)
+        header("Content-Type") should be("text/json;charset=UTF-8")
+        body should be("""{
+                         |  "message":"Unrecognized request URL (GET: /api/not/found})."
+                         |}""".stripMargin)
+      }
+    }
   }
-
-  override protected def renderPipeline = renderView orElse super.renderPipeline
 }

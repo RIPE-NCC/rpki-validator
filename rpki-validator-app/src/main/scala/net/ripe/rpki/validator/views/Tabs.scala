@@ -40,7 +40,7 @@ object Tabs {
   val FiltersTab = Tab(Text("Ignore Filters"), "/filters")
   val WhitelistTab = Tab(Text("Whitelist"), "/whitelist")
   val BgpPreviewTab = Tab(Text("BGP Preview"), "/bgp-preview")
-  val ExportTab = Tab(Text("Export"), "/export")
+  val ExportTab = Tab(Text("Export and API"), "/export")
   val RtrSessionsTab = Tab(Text("Router Sessions"), "/rtr-sessions")
   val RtrLogTab = Tab(Text("rpki-rtr log"), "/rtr-log")
   val ValidationResultsTab = Tab(Text("Validation Results"), "/validation-results")

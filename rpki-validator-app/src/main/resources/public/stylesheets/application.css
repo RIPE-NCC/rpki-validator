@@ -213,3 +213,7 @@ span.object-counter {
 .center {
   text-align:center;
 }
+
+.monospace {
+    font: 12px Monaco, "Courier New", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", monospace;
+}

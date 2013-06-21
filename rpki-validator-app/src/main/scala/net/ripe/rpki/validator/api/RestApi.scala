@@ -27,38 +27,23 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package config
+package net.ripe.rpki.validator.api
 
-import org.scalatra._
-import scala.xml.Xhtml
-import controllers._
-import views.View
-import views.Layouts
-import net.ripe.rpki.validator.views.DataTableJsonView
-import net.ripe.rpki.validator.api.BgpPrefixOriginValidationController
+import org.scalatra.ScalatraServlet
+import net.liftweb.json._
 
-abstract class WebFilter extends ScalatraFilter
-  with ApplicationController
-  with ValidatedObjectsController
-  with TrustAnchorsController
-  with FiltersController
-  with WhitelistController
-  with BgpPreviewController
-  with ExportController
-  with RtrSessionsController
-  with UserPreferencesController {
+abstract class RestApi extends ScalatraServlet with BgpPrefixOriginValidationController {
+  import net.liftweb.json.JsonDSL._
 
-  private def isAjaxRequest: Boolean = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"))
-
-  private def renderView: PartialFunction[Any, Any] = {
-    case view: View =>
-      contentType = "text/html"
-      "<!DOCTYPE html>\n" + Xhtml.toXhtml(if (isAjaxRequest) Layouts.none(view) else Layouts.standard(view, newVersionDetails(), userPreferences))
-    case view: DataTableJsonView[_] =>
-      contentType = "application/json"
-      view.renderJson
+  before() {
+    contentType ="text/json;charset=UTF-8"
+    response.setHeader("Set-Cookie", null) // watch out for scalatra.FlashMapSupport
   }
 
-  override protected def renderPipeline = renderView orElse super.renderPipeline
+  notFound {
+    status = 404
+    response.getWriter.write(pretty(render(
+      "message" -> s"Unrecognized request URL (${request.getMethod}: ${request.getRequestURI}})."
+    )))
+  }
 }

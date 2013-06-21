@@ -33,19 +33,54 @@ import scala.xml.Text
 class ExportView extends View with ViewHelpers {
 
   def tab = Tabs.ExportTab
-  def title = Text("Export")
+  def title = Text("Export and API")
   def body = {
-    <p>
-    Here you are able to export the complete data set for use in an existing BGP decision making workflow. The output will be in CSV or JSON format and consist of all validated ROAs, minus your Ignore Filter entries, plus your Whitelist additions.
-    </p>
-    <div class="alert-actions">
-      <a href="export.csv" class="btn">Get CSV</a>
-      <a href="export.json" class="btn">Get JSON</a>
-      <span class="help-inline">
-      These are stable links. In other words you can copy the url and use a tool such as wget from cron to periodically get this export.
-      </span>
-    </div>
-    <br/>
+    <h2>Export</h2>
+      <p>
+        Here you are able to export the complete ROA data set for use in an existing BGP decision making workflow. The output will be in CSV or JSON format and consist of all validated ROAs, minus your Ignore Filter entries, plus your Whitelist additions.
+      </p>
+      <div class="alert-actions">
+        <a href="export.csv" class="btn">Get CSV</a>
+        <a href="export.json" class="btn">Get JSON</a>
+        <span class="help-inline">
+          These are stable links. In other words you can copy the url and use a tool such as wget from cron to periodically get this export.
+        </span>
+      </div><br /><br />
+      <h2>API</h2>
+      <p>You can ask this RPKI Validator for validity information about a BGP announcement. You will get a response in JSON format containing the following data:</p>
+      <ul>
+        <li>The RPKI validity state, as described in <a href="http://tools.ietf.org/html/rfc6811">RFC6811</a></li>
+        <li>The validated ROA prefixes that caused the state</li>
+        <li>In case of an 'Invalid' state, the reason:</li>
+        <ul>
+          <li>The prefix is originated from an unautorised AS</li>
+          <li>The prefix is more specific than allowed in the Maximum Length of the ROA</li>
+        </ul>
+      </ul>
+      <h3>Examples</h3>
+
+      <div class="well monospace">
+        GET /api/v1/validity/:ASN/:prefix
+      </div>
+      <table class="monospace">
+        <tr>
+          <td>Valid</td><td>{apiLink("AS12654", "93.175.146.0/24")}</td>
+        </tr>
+        <tr>
+          <td>Invalid (AS)</td><td>{apiLink("AS12654", "93.175.147.0/24")}</td>
+        </tr>
+        <tr>
+          <td>Invalid (length)</td><td>{apiLink("AS196615", "93.175.147.0/25")}</td>
+        </tr>
+        <tr>
+          <td>Not Found</td><td>{apiLink("AS12654", "2001:7fb:ff03::/48")}</td>
+        </tr>
+      </table>
+  }
+
+  def apiLink(asn: String, prefix: String) = {
+    val link = s"/api/v1/validity/$asn/$prefix"
+    <a href={link}>{link}</a>
   }
 
 }

@@ -31,20 +31,21 @@ package net.ripe.rpki.validator
 package support
 
 import org.junit.runner.RunWith
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{GivenWhenThen, BeforeAndAfterAll}
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.mock.MockitoSugar
 import org.scalatra.test.scalatest.ScalatraFunSuite
-import net.ripe.rpki.validator.config.WebFilter
+import net.ripe.rpki.validator.config.{WebFilter}
 import org.scalatra.test.scalatest.ScalatraFeatureSpec
 import org.joda.time.DateTime
 import models._
 import lib.UserPreferences
 import net.ripe.rpki.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.api.RestApi
 
 @RunWith(classOf[JUnitRunner])
-abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatchers with MockitoSugar {
+abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatchers with MockitoSugar with GivenWhenThen {
   addFilter(new WebFilter {
     override protected def startTrustAnchorValidation(trustAnchors: Seq[String]) = sys.error("TODO")
     override protected def filters = sys.error("TODO")
@@ -65,4 +66,8 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with ShouldMatch
     override def updateUserPreferences(userPreferences: UserPreferences) = sys.error("TODO")
     override protected def updateTrustAnchorState(locator: TrustAnchorLocator, enabled: Boolean) {}
   }, "/*")
+
+  addServlet(new RestApi {
+    protected def getVrpObjects = ???
+  }, "/api/*")
 }

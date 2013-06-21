@@ -64,6 +64,7 @@ import scalaz.Success
 import net.ripe.rpki.validator.models.Whitelist
 import net.ripe.rpki.validator.models.IgnoreFilter
 import org.apache.log4j.xml.DOMConfigurator
+import net.ripe.rpki.validator.api.RestApi
 
 object Main {
   private val sessionId: Pdu.SessionId = Pdu.randomSessionid()
@@ -287,12 +288,17 @@ class Main(options: Options) { main =>
       }
     }
 
+    val restApiServlet = new RestApi() {
+      protected def getVrpObjects = memoryImage.single.get.getDistinctRtrPrefixes
+    }
+
     val root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS)
     root.setResourceBase(getClass.getResource("/public").toString)
     val defaultServletHolder = new ServletHolder(new DefaultServlet())
     defaultServletHolder.setName("default")
     defaultServletHolder.setInitParameter("dirAllowed", "false")
     root.addServlet(defaultServletHolder, "/*")
+    root.addServlet(new ServletHolder(restApiServlet), "/api/*")
     root.addFilter(new FilterHolder(webFilter), "/*", EnumSet.allOf(classOf[DispatcherType]))
 
     val requestLogHandler = {

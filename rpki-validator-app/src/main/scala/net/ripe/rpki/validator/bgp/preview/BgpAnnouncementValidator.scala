@@ -59,6 +59,31 @@ case class BgpValidatedAnnouncement(announced: BgpAnnouncement, valids: Seq[RtrP
 
 object BgpAnnouncementValidator {
   val VISIBILITY_THRESHOLD = 5
+
+  def validate(announcement: BgpAnnouncement, prefixes: Seq[RtrPrefix]): BgpValidatedAnnouncement = {
+    validate(announcement, NumberResourceIntervalTree(prefixes: _*))
+  }
+
+  def validate(announcement: BgpAnnouncement, prefixTree: NumberResourceIntervalTree[RtrPrefix]): BgpValidatedAnnouncement = {
+    val matchingPrefixes = prefixTree.findExactAndAllLessSpecific(announcement.interval)
+    val groupedByValidity = matchingPrefixes.groupBy {
+      case prefix if hasInvalidAsn(prefix, announcement) => InvalidAsn
+      case prefix if hasInvalidPrefixLength(prefix, announcement) => InvalidLength
+      case _ => Valid
+    }
+    BgpValidatedAnnouncement(announcement,
+      groupedByValidity.getOrElse(Valid, Seq.empty),
+      groupedByValidity.getOrElse(InvalidAsn, Seq.empty),
+      groupedByValidity.getOrElse(InvalidLength, Seq.empty))
+  }
+
+  private def hasInvalidAsn(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
+    prefix.asn != announced.asn
+  }
+
+  private def hasInvalidPrefixLength(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
+    prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength) < announced.prefix.getPrefixLength
+  }
 }
 class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) extends Logging {
   import actorSystem.dispatcher
@@ -78,29 +103,10 @@ class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) ext
     info("Started validating " + announcements.size + " BGP announcements with " + prefixes.size + " RTR prefixes.")
     val prefixTree = NumberResourceIntervalTree(prefixes: _*)
 
-    val result = announcements.par.map({ route =>
-      val matchingPrefixes = prefixTree.findExactAndAllLessSpecific(route.interval)
-      val groupedByValidity = matchingPrefixes.groupBy {
-        case prefix if hasInvalidAsn(prefix, route) => InvalidAsn
-        case prefix if hasInvalidPrefixLength(prefix, route) => InvalidLength
-        case _ => Valid
-      }
-      BgpValidatedAnnouncement(route,
-        groupedByValidity.getOrElse(Valid, Seq.empty),
-        groupedByValidity.getOrElse(InvalidAsn, Seq.empty),
-        groupedByValidity.getOrElse(InvalidLength, Seq.empty))
-    }).seq.toIndexedSeq
+    val result = announcements.par.map(BgpAnnouncementValidator.validate(_, prefixTree)).seq.toIndexedSeq
 
     info("Completed validating " + result.size + " BGP announcements with " + prefixes.size + " RTR prefixes.")
 
     result
-  }
-
-  private def hasInvalidAsn(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
-    prefix.asn != announced.asn
-  }
-
-  private def hasInvalidPrefixLength(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
-    prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength) < announced.prefix.getPrefixLength
   }
 }
