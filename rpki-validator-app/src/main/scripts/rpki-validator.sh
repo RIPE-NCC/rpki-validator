@@ -48,6 +48,20 @@ function info {
     echo -e "[ info ] $1"
 }
 
+function usage {
+cat << EOF
+Usage: $0 start [OPTIONS]
+   or  $0 stop
+   or  $0 status
+
+Where OPTIONS include:
+    -h    Start web user interface on specified port (Default 8080)
+    -r    Allow routers to connect on on specified port (Default 8282)
+    -n    Stop the server from closing connections when it receives fatal errors
+    -s    Stop the server from sending notify messages when it has updates
+EOF
+}
+
 #
 # Specify the location of the Java home directory. If set then $JAVA will
 # be defined to $JAVA_HOME/bin/java
@@ -73,11 +87,48 @@ fi
 FIRST_ARG="$1"
 shift
 
+HTTP_PORT_FLAG=h
+RTR_PORT_FLAG=r
+NO_CLOSE_ON_ERROR_FLAG=n
+SILENT_FLAG=s
+
+HTTP_PORT_VALUE=8080
+RTR_PORT_VALUE=8082
+NO_CLOSE_ON_ERROR_VALUE=
+SILENT_VALUE=
+
 case ${FIRST_ARG} in
     start)
         if [ ${RUNNING} == "true" ]; then
             error_exit "${APP_NAME} is already running"
         fi
+
+        # parse command line args
+        while getopts "${HTTP_PORT_FLAG}:${RTR_PORT_FLAG}:${NO_CLOSE_ON_ERROR_FLAG}${SILENT_FLAG}" OPTION
+        do
+         case $OPTION in
+            $HTTP_PORT_FLAG)
+                HTTP_PORT_VALUE=$OPTARG
+                ;;
+            $RTR_PORT_FLAG)
+                RTR_PORT_VALUE=$OPTARG
+                ;;
+            $NO_CLOSE_ON_ERROR_FLAG)
+                NO_CLOSE_ON_ERROR_VALUE=1
+                ;;
+            $SILENT_FLAG)
+                SILENT_VALUE=1
+                ;;
+            ?)
+                usage
+                exit
+                ;;
+         esac
+        done
+
+        APPLICATION_ARGS="-$HTTP_PORT_FLAG $HTTP_PORT_VALUE -$RTR_PORT_FLAG $RTR_PORT_VALUE"
+        [ -z $NO_CLOSE_ON_ERROR_VALUE ] || APPLICATION_ARGS="$APPLICATION_ARGS -$NO_CLOSE_ON_ERROR_FLAG"
+        [ -z $SILENT_VALUE ] || APPLICATION_ARGS="$APPLICATION_ARGS -$SILENT_FLAG"
 
         info "Starting ${APP_NAME}..."
 
@@ -86,10 +137,14 @@ case ${FIRST_ARG} in
         ${JAVA_CMD} ${DEFAULT_JVM_ARGUMENTS} ${JAVA_OPTS} \
             -classpath ${CLASSPATH} \
             -Dapp.name=${APP_NAME} \
-            net.ripe.rpki.validator.config.Main "$@" &
+            net.ripe.rpki.validator.config.Main ${APPLICATION_ARGS} &
 
-        echo $! > ${PID_FILE}
+        PID=$!
+        echo $PID > $PID_FILE
         info "writing logs under log directory"
+        info "Web user interface is available on port ${HTTP_PORT_VALUE}"
+        info "Routers can connect on port ${RTR_PORT_VALUE}"
+        info "Writing PID ${PID} to ${PID_FILE}"
         ;;
     stop)
         info "Stopping ${APP_NAME}..."
@@ -104,12 +159,15 @@ case ${FIRST_ARG} in
             info "${APP_NAME} is running"
             exit 0
         else
-            error_exit "${APP_NAME} is not running"
+            info "${APP_NAME} is not running"
+            exit 0
         fi
         ;;
     *)
-        info "Usage: $0 { start | stop | status }"
+        usage
+        exit
         ;;
 esac
 
 exit $?
+
