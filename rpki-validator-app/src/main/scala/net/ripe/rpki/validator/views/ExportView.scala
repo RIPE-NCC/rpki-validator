@@ -76,6 +76,7 @@ class ExportView extends View with ViewHelpers {
           <td>Not Found</td><td>{apiLink("AS12654", "2001:7fb:ff03::/48")}</td>
         </tr>
       </table>
+      <p>You can find additional documentation <a href="https://www.ripe.net/data-tools/developer-documentation/rpki-validator-api">here</a>.</p>
   }
 
   def apiLink(asn: String, prefix: String) = {
