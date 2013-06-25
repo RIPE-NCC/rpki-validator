@@ -53,7 +53,7 @@ class ExportView extends View with ViewHelpers {
         <li>The validated ROA prefixes that caused the state</li>
         <li>In case of an 'Invalid' state, the reason:</li>
         <ul>
-          <li>The prefix is originated from an unautorised AS</li>
+          <li>The prefix is originated from an unauthorised AS</li>
           <li>The prefix is more specific than allowed in the Maximum Length of the ROA</li>
         </ul>
       </ul>
