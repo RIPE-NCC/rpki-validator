@@ -56,7 +56,7 @@ Usage: $0 start [OPTIONS]
 
 Where OPTIONS include:
     -h    Start web user interface on specified port (Default 8080)
-    -r    Allow routers to connect on on specified port (Default 8282)
+    -r    Allow routers to connect on specified port (Default 8282)
     -n    Stop the server from closing connections when it receives fatal errors
     -s    Stop the server from sending notify messages when it has updates
 EOF
@@ -93,7 +93,7 @@ NO_CLOSE_ON_ERROR_FLAG=n
 SILENT_FLAG=s
 
 HTTP_PORT_VALUE=8080
-RTR_PORT_VALUE=8082
+RTR_PORT_VALUE=8282
 NO_CLOSE_ON_ERROR_VALUE=
 SILENT_VALUE=
 
