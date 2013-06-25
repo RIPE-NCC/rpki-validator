@@ -48,7 +48,7 @@ trait BgpPrefixOriginValidationController extends ScalatraBase {
     response.addHeader("Cache-Control", "no-cache,no-store")
 
     val asn = parseAsn(params("asn")).orHalt
-    val prefix = parseIpRange(s"${params("prefix")}/${params("length")}").orHalt
+    val prefix = parseIpPrefix(s"${params("prefix")}/${params("length")}").orHalt
 
     val announcement = BgpAnnouncementValidator.validate(BgpAnnouncement(asn, prefix), getVrpObjects.toSeq)
 

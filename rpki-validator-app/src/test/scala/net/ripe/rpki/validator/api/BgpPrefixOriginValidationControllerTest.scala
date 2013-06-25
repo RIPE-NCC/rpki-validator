@@ -106,7 +106,7 @@ class BgpPrefixOriginValidationControllerTest extends ScalatraFunSuite with Shou
       header("Set-Cookie") should be(null)
       header("Content-Type") should be("text/json;charset=UTF-8")
       body should be("""{
-                       |  "message":"'10.0.0.0/33' is not a valid IPv4 or IPv6 range or prefix"
+                       |  "message":"'10.0.0.0/33' is not a valid IPv4 or IPv6 prefix"
                        |}""".stripMargin)
     }
     get(s"$basePath/AS65535.0/::/129") {
@@ -114,7 +114,7 @@ class BgpPrefixOriginValidationControllerTest extends ScalatraFunSuite with Shou
       header("Set-Cookie") should be(null)
       header("Content-Type") should be("text/json;charset=UTF-8")
       body should be("""{
-                       |  "message":"'::/129' is not a valid IPv4 or IPv6 range or prefix"
+                       |  "message":"'::/129' is not a valid IPv4 or IPv6 prefix"
                        |}""".stripMargin)
     }
   }

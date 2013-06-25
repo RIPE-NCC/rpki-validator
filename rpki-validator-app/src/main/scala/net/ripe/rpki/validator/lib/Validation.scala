@@ -106,11 +106,13 @@ object Validation {
     case _: Exception => (quote(s) + " is not a valid IPv4 or IPv6 range or prefix").fail
   }
 
-  def parseIpPrefix(s: String): Validation[String, IpRange] =
-    parseIpRange(s).flatMap { rangeOrPrefix =>
-      if (rangeOrPrefix.isLegalPrefix) rangeOrPrefix.success
-      else (quote(s) + " is not a valid IPv4 or IPv6 prefix").fail
-    }
+  def parseIpPrefix(s: String): Validation[String, IpRange] = try {
+    val rangeOrPrefix = IpRange.parse(s)
+    if (rangeOrPrefix.isLegalPrefix) rangeOrPrefix.success
+    else (quote(s) + " is not a valid IPv4 or IPv6 prefix").fail
+  } catch {
+    case _: Exception => (quote(s) + " is not a valid IPv4 or IPv6 prefix").fail
+  }
 
   def parseNonNegativeInt(s: String): Validation[String, Int] = parseInt(s).flatMap { x =>
     if (x >= 0)
