@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.ripe.rpki</groupId>
     <artifactId>rpki-validator</artifactId>
-    <version>2.11-SNAPSHOT</version>
+    <version>2.11</version>
     <packaging>pom</packaging>
     <inceptionYear>2008</inceptionYear>
 
