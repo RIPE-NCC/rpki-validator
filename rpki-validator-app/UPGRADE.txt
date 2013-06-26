@@ -5,9 +5,10 @@ Overview:
 =========
 
 Upgrading to a new version of this tool should be as simple as:
+
 - Downloading the new version
-- Unzipping it
-- Copy your settings from the old version to the new version -- see below
+- Unpacking it
+- Copying your settings from the old version to the new version -- see below
 - Stopping the old version
 - Starting the new version
 
@@ -15,7 +16,7 @@ Upgrading to a new version of this tool should be as simple as:
 Copying your settings:
 ======================
 
-After unzipping this tool:
+After unpacking this tool:
 
 cp <path-to-old-installation>data/configuration.json <path-to-new-installation>/data/
 

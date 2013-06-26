@@ -75,32 +75,31 @@ class HomeView extends View with ViewHelpers {
             <div class="span16">
                     <div id="trustAnchors" class="stepDescription selected">
                         <p>
-                          Trust Anchors are the entry points used for validation in any
-                          Public Key Infrastructure (PKI) system. This validator is intended for the validation
-                          of Resource PKI (RPKI) systems. It is pre-configured with Trust Anchors for all the
-                          RIRs who are running such systems now.
+                          Trust anchors are the entry points used for validation in any Public Key Infrastructure (PKI)
+                          system.
                         </p>
-                        <br />
                         <p>
-                          If you would like to add or change the Trust Anchors that are used by this
-                          validator, please see the README.txt file for details.
+                          This RPKI Validator is pre-configured with the trust anchors for AFRINIC, APNIC, Lacnic and
+                          RIPE NCC. In order to obtain the trust anchor for the ARIN RPKI repository, you will first
+                          have to accept their <a href="https://www.arin.net/public/rpki/tal/index.xhtml">Relying
+                          Party Agreement</a>. Please refer to the README.txt for details on how to add trust anchors to this Validator.
                         </p>
                     </div>
                     <div id="roas" class="stepDescription">
                         <p>
-                          Route Origin Attestations (ROAs) are used in the RPKI to authorise specific ASNs
-                          to originate prefixes. Only the legitimate holder of the prefix can create a valid ROA.
+                          Route Origin Attestations (ROAs) are used in the RPKI to authorise specific ASNs to originate
+                          prefixes. In addition, a ROA specifies the maximum prefix length that the AS is authorised to
+                          originate. Only the legitimate holder of the prefix can create a valid ROA.
                         </p>
                         <p>
-                          It should be noted that ROAs are intended to be positive attestations, but the presence of
-                          a ROA for an ASN and prefix combination implies that announcements for this prefix from
-                          <strong>other</strong> origin ASNs, or for <strong>more specific</strong> prefixes, should be considered
-                          invalid.
+                          ROAs are intended to be positive attestations, but the presence of a ROA for an ASN and
+                          prefix combination implies that announcements of this prefix from other origin ASNs, or for
+                          more specific prefixes, will be considered invalid.
                         </p>
                         <p>
-                          More than one ROA may exist for the same prefix, and, as long as one of
-                          them matches the announcement, it is considered valid. The announcement validation rules
-                          are defined in an IETF standard and are explained in more detail in the Router section.
+                          More than one ROA may exist for the same prefix, and, as long as one of them matches the announcement,
+                          it is considered valid. The announcement validation rules are defined in
+                          <a href="http://tools.ietf.org/html/rfc6483">RFC 6483</a> and are explained in more detail in the Router section.
                         </p>
                     </div>
                     <div id="ignoreFilters" class="stepDescription">
@@ -130,8 +129,9 @@ class HomeView extends View with ViewHelpers {
           based on all the ROAs that were validated, minus your ignore list entries, plus your own whitelist entries.
       </p>
       <p>
-          The protocol for this is being standardised in the IETF and a number of vendors are currently implementing
-          support for this in their router Operating Systems.
+        The RPKI to Router Protocol is standardised in <a href="http://tools.ietf.org/html/rfc6810">RFC 6810</a> and
+        several vendors have <a href="http://www.ripe.net/lir-services/resource-management/certification/router-configuration">
+        implemented support</a> for this in their router Operating Systems.
       </p>
       <br/>
       <h3>Announcement Validation in the Router</h3>
