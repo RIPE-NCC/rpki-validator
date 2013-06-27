@@ -29,10 +29,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+# Don't edit this script, but use JAVA_OPTS to override these settings.
 DEFAULT_JVM_ARGUMENTS="-Xms512m -Xmx512m"
-
-# Example running the validator with more memory (may help performance) and a socks proxy for http (fetching the BGP dumps from RIS)
-#DEFAULT_JVM_ARGUMENTS="-Xms1024m -Xmx1024m -DsocksProxyHost=localhost -DsocksProxyPort=10800"
 
 EXECUTION_DIR=`dirname "$BASH_SOURCE"`
 cd ${EXECUTION_DIR}
