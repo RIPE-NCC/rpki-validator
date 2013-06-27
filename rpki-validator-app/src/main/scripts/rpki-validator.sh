@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 #
 # The BSD License
 #
@@ -29,6 +29,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+# Don't edit this script, but use JAVA_OPTS to override these settings.
 DEFAULT_JVM_ARGUMENTS="-Xms512m -Xmx512m"
 
 EXECUTION_DIR=`dirname "$BASH_SOURCE"`
