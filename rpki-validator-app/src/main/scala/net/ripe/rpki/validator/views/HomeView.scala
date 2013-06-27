@@ -79,10 +79,11 @@ class HomeView extends View with ViewHelpers {
                           system.
                         </p>
                         <p>
-                          This RPKI Validator is pre-configured with the trust anchors for AFRINIC, APNIC, Lacnic and
+                          This RPKI Validator is preconfigured with the trust anchors for AFRINIC, APNIC, Lacnic and
                           RIPE NCC. In order to obtain the trust anchor for the ARIN RPKI repository, you will first
                           have to accept their <a href="https://www.arin.net/public/rpki/tal/index.xhtml">Relying
-                          Party Agreement</a>. Please refer to the README.txt for details on how to add trust anchors to this Validator.
+                          Party Agreement</a>. Please refer to the README.txt for details on how to add trust anchors to
+                          this application.
                         </p>
                     </div>
                     <div id="roas" class="stepDescription">
@@ -97,15 +98,15 @@ class HomeView extends View with ViewHelpers {
                           more specific prefixes, will be considered invalid.
                         </p>
                         <p>
-                          More than one ROA may exist for the same prefix, and, as long as one of them matches the announcement,
+                          More than one ROA may exist for the same prefix and as long as one of them matches the announcement
                           it is considered valid. The announcement validation rules are defined in
                           <a href="http://tools.ietf.org/html/rfc6483">RFC 6483</a> and are explained in more detail in the Router section.
                         </p>
                     </div>
                     <div id="ignoreFilters" class="stepDescription">
                         <p>
-                          Because ROAs may invalidate certain announcements, and you as an operator may disagree with that invalidation,
-                  this validator tool allows you to <strong>ignore</strong> all ROAs that would otherwise affect certain prefixes.
+                          ROAs may invalidate certain announcements and you as an operator may want to override that. This
+                          RPKI Validator allows you to <strong>ignore</strong> all ROAs that would otherwise affect certain prefixes.
                         </p>
                         <p>
                           If you use this option, it will be as though no ROAs exist for this prefix.

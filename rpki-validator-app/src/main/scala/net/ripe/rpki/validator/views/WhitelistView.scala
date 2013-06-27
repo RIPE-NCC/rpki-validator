@@ -45,7 +45,7 @@ class WhitelistView(whitelist: Whitelist, validatedAnnouncements: Seq[BgpValidat
     <div class="alert-message block-message info" data-alert="alert">
     <a class="close" href="#">×</a>
       <p>
-        By adding a whitelist entry you can manually authorize an ASN to announce a prefix in addition to validated ROAs
+        By adding a whitelist entry you can manually authorise an ASN to originate a prefix in addition to the validated ROAs
         from the repository.
       </p>
       <p>
@@ -53,7 +53,6 @@ class WhitelistView(whitelist: Whitelist, validatedAnnouncements: Seq[BgpValidat
         just like ROAs. This may be intentional (you are whitelisting ASN A, ASN B is hijacking), or not (ASN B should also
         be authorised, or you made a mistake). When you create a whitelist entry here, make sure to check the table below
         for a report on prefixes validated / invalidated by this entry and verify that no unintentional side effects occured.
-        E.g. create an additional entry for another ASN, or delete this entry and re-create it as needed.
       </p>
     </div>
     <h2>Add entry</h2>

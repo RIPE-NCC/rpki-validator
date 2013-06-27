@@ -50,19 +50,18 @@ class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump]) extends View with ViewHelpers
     <div class="alert-message block-message info" data-alert="alert">
       <a class="close" href="#">×</a>
       <p>
-        This page provides a <strong>preview</strong>
-        of the likely rpki validity states your routers will
-        associate with BGP announcements. This preview is based on:
+        This page provides a <strong>preview</strong> of the likely RPKI validity states your routers will associate
+        with BGP announcements. This preview is based on:
       </p>
       <ul>
         <li>The <a href="http://www.ris.ripe.net/dumps/">RIPE NCC Route Collector information</a> that <span id="bgp-dump-last-updated">{lastUpdated}</span>.</li>
         <li>BGP announcements that are seen by { BgpAnnouncementValidator.VISIBILITY_THRESHOLD } or more peers.</li>
-        <li>Validation rules defined in the <a href="http://tools.ietf.org/html/rfc6483#section-2">IETF standard</a>.</li>
-        <li>The validated ROAs found by this validator after applying your filters and additional whitelist entries.</li>
+        <li>The validation rules defined in <a href="http://tools.ietf.org/html/rfc6483#section-2">RFC 6483</a>.</li>
+        <li>The validated ROAs found by this RPKI Validator after applying your filters and additional whitelist entries.</li>
       </ul>
       <br/>
       <p>
-        Please note that the actual validation of announcements is done in your routers and that the announcements that your routers see may differ from the announcements used here.
+        Please note that the BGP announcements your routers see may differ from the ones listed here.
       </p>
     </div>
     <table id="bgp-preview-table" class="zebra-striped" style="display: none;">

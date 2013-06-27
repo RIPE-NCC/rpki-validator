@@ -58,7 +58,7 @@ class UserPreferencesView(val userPreferences: UserPreferences, val messages: Se
                   case false => <input name="enable-update-checks" type="checkbox"/>
                 }
               }
-              Automatically check for new versions of this validator
+              Automatically check for new versions of this application
             </label>
             <label class="checkbox">
               Accept repositories that are no longer updated for up to
