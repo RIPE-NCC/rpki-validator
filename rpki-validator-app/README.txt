@@ -186,6 +186,11 @@ If you find any other problems, please contact us at <certification@ripe.net>.
 Version History
 ---------------
 
+2.11.1 - 12 July 2013
+= Bug fix release, validator was rejecting *all* subsequent manifests as soon as one
+  object was rejected for a Trust Anchor. 
+= All users are recommended to upgrade to this release.
+
 2.11 - 26 June 2013
 = Application packaging is now in tar format
 = Included a script to start, stop and check the status of the application
