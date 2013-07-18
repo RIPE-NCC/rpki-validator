@@ -183,6 +183,13 @@ Known Issues
 If you find any other problems, please contact us at <certification@ripe.net>.
 
 
+Source Code
+-----------
+
+The RIPE NCC RPKI Validator is an open source project on Github
+https://github.com/RIPE-NCC/rpki-validator/
+
+
 Version History
 ---------------
 
