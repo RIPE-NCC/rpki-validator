@@ -122,7 +122,7 @@ object DataSources {
    */
   lazy val DurableDataSource = {
     val result = new BasicDataSource
-    result.setUrl("jdbc:h2:data/rpki-objects")
+    result.setUrl("jdbc:h2:data/rpki-object-cache")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
     migrate(result)
@@ -134,7 +134,7 @@ object DataSources {
    */
   lazy val InMemoryDataSource = {
     val result = new BasicDataSource
-    result.setUrl("jdbc:h2:mem:rpki-objects")
+    result.setUrl("jdbc:h2:mem:rpki-object-cache")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
     migrate(result)
@@ -144,8 +144,7 @@ object DataSources {
   private def migrate(dataSource: DataSource) {
     val flyway = new Flyway
     flyway.setDataSource(dataSource)
-    flyway.setBaseDir("/db/objectstore/migration")
-    flyway.setBasePackage("net.ripe.rpki.validator.store.migration")
+    flyway.setLocations("/db/objectstore/migration")
     flyway.migrate
   }
 }
