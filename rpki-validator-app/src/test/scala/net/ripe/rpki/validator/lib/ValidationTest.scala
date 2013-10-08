@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package lib
 
-import scalaz.Failure
 import scalaz.Success
 import net.ripe.ipresource._
 

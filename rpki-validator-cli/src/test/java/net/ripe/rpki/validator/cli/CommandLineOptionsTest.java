@@ -29,16 +29,14 @@
  */
 package net.ripe.rpki.validator.cli;
 
-import static org.junit.Assert.*;
-
-import net.ripe.rpki.validator.cli.CommandLineOptions;
+import org.apache.commons.cli.ParseException;
+import org.junit.Test;
 
 import java.io.File;
 import java.net.URI;
 import java.util.Arrays;
 
-import org.apache.commons.cli.ParseException;
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 public class CommandLineOptionsTest {
 

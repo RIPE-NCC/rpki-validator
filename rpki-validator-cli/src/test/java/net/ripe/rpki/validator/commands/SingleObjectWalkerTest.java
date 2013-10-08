@@ -29,13 +29,6 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import static net.ripe.rpki.validator.RepositoryObjectsSetUpHelper.*;
-import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
-
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.util.Specification;
@@ -48,6 +41,14 @@ import net.ripe.rpki.validator.fetchers.CertificateRepositoryObjectFetcher;
 import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+
+import static net.ripe.rpki.validator.RepositoryObjectsSetUpHelper.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 
 

@@ -29,16 +29,6 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import static net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper.*;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-import javax.security.auth.x500.X500Principal;
-import java.math.BigInteger;
-import java.net.URI;
-import java.security.KeyPair;
-import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.Queue;
 import net.ripe.ipresource.IpResourceSet;
 import net.ripe.ipresource.IpResourceType;
 import net.ripe.rpki.commons.crypto.ValidityPeriod;
@@ -59,6 +49,18 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Before;
 import org.junit.Test;
+
+import javax.security.auth.x500.X500Principal;
+import java.math.BigInteger;
+import java.net.URI;
+import java.security.KeyPair;
+import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.Queue;
+
+import static net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 
 public class TopDownWalkerTest {

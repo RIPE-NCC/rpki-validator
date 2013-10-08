@@ -29,10 +29,9 @@
  */
 package net.ripe.rpki.validator.commands;
 
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.rpki.validator.cli.CommandLineOptions;
 import net.ripe.rpki.validator.util.TrustAnchorExtractor;
-
-import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 
 import java.util.ArrayList;
 import java.util.List;

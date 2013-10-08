@@ -32,9 +32,6 @@ package net.ripe.rpki.validator.rtr
 import org.scalatest.FunSuite
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
-import java.nio.charset.Charset
 import org.scalatest.matchers.ShouldMatchers
 import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
 

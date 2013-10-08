@@ -34,7 +34,6 @@ import scala.xml._
 import lib.UserPreferences
 import lib.Validation._
 
-import controllers.UserPreferencesController
 
 class UserPreferencesView(val userPreferences: UserPreferences, val messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
 

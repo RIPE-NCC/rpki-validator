@@ -29,12 +29,12 @@
  */
 package net.ripe.rpki.validator.commands;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.log4j.Logger;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
-
-import org.apache.commons.io.IOUtils;
-import org.apache.log4j.Logger;
 
 public class PrintVersionCommand {
 

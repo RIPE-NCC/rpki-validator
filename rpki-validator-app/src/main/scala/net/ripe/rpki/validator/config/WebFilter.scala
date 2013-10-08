@@ -36,7 +36,6 @@ import controllers._
 import views.View
 import views.Layouts
 import net.ripe.rpki.validator.views.DataTableJsonView
-import net.ripe.rpki.validator.api.BgpPrefixOriginValidationController
 
 abstract class WebFilter extends ScalatraFilter
   with ApplicationController

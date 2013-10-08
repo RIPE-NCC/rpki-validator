@@ -29,13 +29,13 @@
  */
 package net.ripe.rpki.validator.summary;
 
-import static org.mockito.Mockito.*;
-import static org.junit.Assert.assertEquals;
+import org.joda.time.DateTime;
+import org.junit.Test;
 
 import java.math.BigInteger;
 
-import org.joda.time.DateTime;
-import org.junit.Test;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class ValidationSummaryPrinterTest {
     

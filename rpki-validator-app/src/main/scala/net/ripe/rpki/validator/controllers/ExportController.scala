@@ -33,7 +33,6 @@ package controllers
 import views.ExportView
 import models.RtrPrefix
 import net.liftweb.json._
-import scala.Some
 
 trait ExportController extends ApplicationController {
 

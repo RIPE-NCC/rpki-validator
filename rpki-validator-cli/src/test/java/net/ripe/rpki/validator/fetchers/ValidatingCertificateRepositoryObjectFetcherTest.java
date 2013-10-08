@@ -29,9 +29,6 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
-import static net.ripe.rpki.validator.RepositoryObjectsSetUpHelper.*;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
 import net.ripe.rpki.commons.crypto.crl.X509Crl;
@@ -46,6 +43,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import static net.ripe.rpki.validator.RepositoryObjectsSetUpHelper.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 
 public class ValidatingCertificateRepositoryObjectFetcherTest {

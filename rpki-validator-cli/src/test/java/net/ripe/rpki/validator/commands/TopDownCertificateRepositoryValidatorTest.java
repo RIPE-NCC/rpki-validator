@@ -29,16 +29,6 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import static net.ripe.rpki.validator.commands.TopDownCertificateRepositoryValidator.*;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
 import net.ripe.ipresource.IpResourceSet;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.validation.ValidationResult;
@@ -49,6 +39,18 @@ import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+
+import static net.ripe.rpki.validator.commands.TopDownCertificateRepositoryValidator.*;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class TopDownCertificateRepositoryValidatorTest {
 

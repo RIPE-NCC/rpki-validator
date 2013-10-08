@@ -32,13 +32,12 @@
  */
 package net.ripe.rpki.validator.output;
 
-import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
-
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.validation.ValidationCheck;
 import net.ripe.rpki.commons.validation.ValidationLocation;
 import net.ripe.rpki.commons.validation.ValidationMessage;
 import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
 import org.apache.log4j.Logger;
 
 import java.net.URI;

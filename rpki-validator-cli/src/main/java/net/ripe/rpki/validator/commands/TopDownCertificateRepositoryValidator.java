@@ -29,6 +29,9 @@
  */
 package net.ripe.rpki.validator.commands;
 
+import net.ripe.rpki.commons.rsync.Rsync;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.rpki.validator.fetchers.CachingCertificateRepositoryObjectFetcher;
 import net.ripe.rpki.validator.fetchers.CertificateRepositoryObjectFetcher;
 import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
@@ -42,19 +45,15 @@ import net.ripe.rpki.validator.runtimeproblems.ValidatorIOException;
 import net.ripe.rpki.validator.summary.ValidationSummaryCollector;
 import net.ripe.rpki.validator.summary.ValidationSummaryPrinter;
 import net.ripe.rpki.validator.util.UriToFileMapper;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.Validate;
+import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import net.ripe.rpki.commons.rsync.Rsync;
-import net.ripe.rpki.commons.validation.ValidationLocation;
-import net.ripe.rpki.commons.validation.ValidationResult;
-import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.Validate;
-import org.apache.log4j.Logger;
 
 
 /**

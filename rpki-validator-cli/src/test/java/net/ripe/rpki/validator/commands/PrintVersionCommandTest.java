@@ -29,16 +29,14 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import static org.junit.Assert.*;
-
-import net.ripe.rpki.validator.commands.PrintVersionCommand;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 
 public class PrintVersionCommandTest {

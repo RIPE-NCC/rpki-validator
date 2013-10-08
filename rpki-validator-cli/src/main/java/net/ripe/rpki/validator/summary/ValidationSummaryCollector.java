@@ -29,14 +29,17 @@
  */
 package net.ripe.rpki.validator.summary;
 
-import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
-
-import net.ripe.ipresource.*;
+import net.ripe.ipresource.Asn;
+import net.ripe.ipresource.IpResource;
+import net.ripe.ipresource.IpResourceSet;
+import net.ripe.ipresource.IpResourceType;
+import net.ripe.ipresource.UniqueIpResource;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms;
 import net.ripe.rpki.commons.crypto.cms.roa.RoaPrefix;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
 
 import java.math.BigInteger;
 import java.net.URI;

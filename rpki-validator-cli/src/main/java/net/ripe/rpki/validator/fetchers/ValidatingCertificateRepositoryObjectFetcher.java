@@ -29,10 +29,6 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
-import static net.ripe.rpki.commons.validation.ValidationString.*;
-
-import java.io.File;
-import java.net.URI;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
 import net.ripe.rpki.commons.crypto.crl.CrlLocator;
@@ -45,6 +41,11 @@ import net.ripe.rpki.commons.validation.ValidationString;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import org.apache.commons.lang.Validate;
 import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.net.URI;
+
+import static net.ripe.rpki.commons.validation.ValidationString.*;
 
 
 public class ValidatingCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {

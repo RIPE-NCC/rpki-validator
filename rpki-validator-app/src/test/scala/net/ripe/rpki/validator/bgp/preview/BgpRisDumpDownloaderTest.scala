@@ -31,17 +31,11 @@ package net.ripe.rpki.validator.bgp.preview
 
 import org.scalatest.FunSuite
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.ShouldMatchers
 import javax.servlet.http.HttpServletResponse._
-import org.apache.http.impl.client.DefaultHttpClient
-import org.apache.http.client.methods.HttpUriRequest
-import org.apache.http.client.ResponseHandler
 import org.apache.http.ProtocolVersion
 import org.apache.http.message._
-import org.apache.http.HttpEntity
 import org.apache.http.entity._
-import org.apache.commons.io.IOUtils
 import org.apache.http.impl.cookie.DateUtils
 import org.joda.time.DateTime
 import java.util.Date

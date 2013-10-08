@@ -29,13 +29,11 @@
  */
 package net.ripe.rpki.validator.util;
 
-import static org.junit.Assert.*;
-
-import net.ripe.rpki.validator.util.HierarchicalUriCache;
+import org.junit.Test;
 
 import java.net.URI;
 
-import org.junit.Test;
+import static org.junit.Assert.*;
 
 
 public class HierarchicalUriCacheTest {

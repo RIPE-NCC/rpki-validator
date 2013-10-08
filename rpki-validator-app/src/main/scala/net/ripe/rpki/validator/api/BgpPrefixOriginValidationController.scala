@@ -31,7 +31,7 @@ package net.ripe.rpki.validator.api
 
 import net.ripe.rpki.validator.models.RtrPrefix
 import scalaz.Validation
-import org.scalatra.{FlashMapSupport, ScalatraBase, Ok, BadRequest}
+import org.scalatra.{ScalatraBase, Ok, BadRequest}
 import net.liftweb.json._
 import net.ripe.rpki.validator.lib.Validation._
 import net.ripe.rpki.validator.bgp.preview.{BgpAnnouncement, BgpAnnouncementValidator}

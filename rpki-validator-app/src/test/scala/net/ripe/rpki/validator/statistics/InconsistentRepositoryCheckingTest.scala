@@ -33,7 +33,6 @@ import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
-import net.ripe.rpki.commons.validation.ValidationResult
 import net.ripe.rpki.validator.models.ValidatedObject
 import net.ripe.rpki.validator.models.ValidObject
 import java.net.URI
@@ -43,13 +42,11 @@ import java.math.BigInteger
 import net.ripe.rpki.commons.crypto.ValidityPeriod
 import org.joda.time.DateTime
 import org.bouncycastle.asn1.x509.KeyUsage
-import net.ripe.rpki.commons.crypto.util.KeyPairFactoryTest
 import net.ripe.ipresource.IpResourceSet
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateInformationAccessDescriptor
 import net.ripe.rpki.commons.crypto.x509cert.RpkiSignedObjectEeCertificateBuilder
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsBuilder
 import net.ripe.rpki.commons.crypto.crl.X509CrlBuilder
-import net.ripe.rpki.validator.models.InvalidObject
 import net.ripe.rpki.validator.models.InvalidObject
 import net.ripe.rpki.commons.validation.ValidationCheck
 import net.ripe.rpki.commons.validation.ValidationStatus

@@ -39,7 +39,6 @@ import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsObjectMother
 import net.ripe.rpki.commons.crypto.cms.roa.RoaPrefix
 import net.ripe.rpki.commons.validation.ValidationCheck
-import net.ripe.rpki.commons.validation.ValidationResult
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import org.joda.time.DateTime

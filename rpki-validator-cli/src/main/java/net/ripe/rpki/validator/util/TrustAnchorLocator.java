@@ -29,6 +29,11 @@
  */
 package net.ripe.rpki.validator.util;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.Validate;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -38,11 +43,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.Validate;
 
 /**
  * Represents a Trust Anchor Locator as defined <a href="http://tools.ietf.org/html/draft-ietf-sidr-ta-07">here</a>

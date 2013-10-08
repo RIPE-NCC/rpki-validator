@@ -33,7 +33,6 @@ import net.ripe.rpki.validator.commands.BottomUpValidationCommand;
 import net.ripe.rpki.validator.commands.PrintCertificateRepositoryObjectCommand;
 import net.ripe.rpki.validator.commands.PrintVersionCommand;
 import net.ripe.rpki.validator.commands.TopDownValidationCommand;
-
 import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;

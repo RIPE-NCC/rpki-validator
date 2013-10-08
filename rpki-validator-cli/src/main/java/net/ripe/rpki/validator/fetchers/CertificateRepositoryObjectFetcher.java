@@ -29,14 +29,14 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
-import java.net.URI;
-
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
 import net.ripe.rpki.commons.crypto.crl.CrlLocator;
 import net.ripe.rpki.commons.util.Specification;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+
+import java.net.URI;
 
 
 public interface CertificateRepositoryObjectFetcher extends CrlLocator {

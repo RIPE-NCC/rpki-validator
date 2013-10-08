@@ -29,8 +29,6 @@
  */
 package net.ripe.rpki.validator.summary;
 
-import net.ripe.rpki.validator.summary.ValidationSummaryCollector;
-
 import net.ripe.ipresource.Asn;
 import net.ripe.ipresource.IpRange;
 import net.ripe.ipresource.IpResourceSet;
@@ -49,7 +47,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 
 public class ValidationSummaryCollectorTest {

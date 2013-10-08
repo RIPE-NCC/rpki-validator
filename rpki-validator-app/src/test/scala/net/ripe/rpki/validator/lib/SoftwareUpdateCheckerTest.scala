@@ -29,12 +29,10 @@
  */
 package net.ripe.rpki.validator.lib
 
-import grizzled.slf4j.Logging
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 import java.net.URI
-import java.io.InputStream
 
 import org.joda.time.DateTime
 import org.joda.time.DateTimeUtils

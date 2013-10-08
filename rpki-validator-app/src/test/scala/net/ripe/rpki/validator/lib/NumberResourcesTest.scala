@@ -30,9 +30,7 @@
 package net.ripe.rpki.validator
 package lib
 
-import org.junit.runner.RunWith
 import org.scalatest.FunSpec
-import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
 
 import NumberResources.NumberResourceInterval

@@ -29,17 +29,16 @@
  */
 package net.ripe.rpki.validator.util;
 
+import net.ripe.rpki.commons.crypto.x509cert.X509CertificateUtil;
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
+import net.ripe.rpki.commons.rsync.Rsync;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.rpki.validator.cli.CommandLineOptions;
 import net.ripe.rpki.validator.runtimeproblems.ValidatorIOException;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-
-import net.ripe.rpki.commons.rsync.Rsync;
-import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
-import net.ripe.rpki.commons.crypto.x509cert.X509CertificateUtil;
-import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 
 
 public class TrustAnchorExtractor {

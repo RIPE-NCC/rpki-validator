@@ -49,7 +49,6 @@ import scala.util.Random
 import net.ripe.rpki.commons.crypto.ValidityPeriod
 import org.joda.time.DateTime
 import scala.collection.JavaConverters._
-import net.ripe.rpki.commons.validation.ValidationResult
 import net.ripe.rpki.commons.validation.ValidationCheck
 
 @RunWith(classOf[JUnitRunner])

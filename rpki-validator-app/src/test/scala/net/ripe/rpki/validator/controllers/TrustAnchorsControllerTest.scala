@@ -32,7 +32,6 @@ package controllers
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import org.scalatra.ScalatraFilter
 import support.ControllerTestCase
 import models._
 import net.ripe.rpki.validator.util.TrustAnchorLocator

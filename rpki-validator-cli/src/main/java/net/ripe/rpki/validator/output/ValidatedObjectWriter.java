@@ -29,11 +29,10 @@
  */
 package net.ripe.rpki.validator.output;
 
-import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
-import net.ripe.rpki.validator.util.UriToFileMapper;
-
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
+import net.ripe.rpki.validator.util.UriToFileMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.log4j.Logger;

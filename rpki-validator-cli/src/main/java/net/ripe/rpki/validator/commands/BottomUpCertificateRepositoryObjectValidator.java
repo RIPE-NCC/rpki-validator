@@ -29,15 +29,19 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import net.ripe.rpki.validator.fetchers.*;
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
+import net.ripe.rpki.commons.rsync.Rsync;
+import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.validator.fetchers.CachingCertificateRepositoryObjectFetcher;
+import net.ripe.rpki.validator.fetchers.CertificateRepositoryObjectFetcher;
+import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
+import net.ripe.rpki.validator.fetchers.RpkiRepositoryObjectFetcherAdapter;
+import net.ripe.rpki.validator.fetchers.RsyncRpkiRepositoryObjectFetcher;
+import net.ripe.rpki.validator.fetchers.ValidatingCertificateRepositoryObjectFetcher;
 import net.ripe.rpki.validator.output.ObjectFetcherResultLogger;
 import net.ripe.rpki.validator.runtimeproblems.ValidatorIOException;
 import net.ripe.rpki.validator.util.UriToFileMapper;
-
-import net.ripe.rpki.commons.rsync.Rsync;
-import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
-import net.ripe.rpki.commons.validation.ValidationResult;
-import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

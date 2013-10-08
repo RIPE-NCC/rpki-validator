@@ -29,9 +29,8 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import net.ripe.rpki.validator.cli.CommandLineOptions;
-
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.validator.cli.CommandLineOptions;
 
 import java.io.File;
 import java.net.URI;

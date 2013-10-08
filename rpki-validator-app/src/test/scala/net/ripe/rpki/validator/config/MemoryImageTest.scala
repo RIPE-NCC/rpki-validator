@@ -34,7 +34,6 @@ import org.scalatest.matchers.ShouldMatchers
 import scala.Predef._
 import net.ripe.rpki.validator.models._
 import net.ripe.rpki.validator.testing.TestingObjectMother._
-import net.ripe.rpki.validator.lib.UserPreferences
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {

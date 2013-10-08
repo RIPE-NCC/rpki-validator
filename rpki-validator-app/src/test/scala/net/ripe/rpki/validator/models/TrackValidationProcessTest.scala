@@ -32,15 +32,13 @@ package net.ripe.rpki.validator.models
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.{BeforeAndAfter, FunSuite}
 import scalaz.Failure
-import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import java.net.URI
 import scala.concurrent.stm._
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import net.ripe.rpki.validator.config.MemoryImage
-import org.mockito.Mockito._
 import org.joda.time.DateTime
 import java.io.File
-import java.util.{Collections, Date}
+import java.util.Collections
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TrackValidationProcessTest extends FunSuite with ShouldMatchers with BeforeAndAfter {

@@ -29,11 +29,11 @@
  */
 package net.ripe.rpki.validator.util;
 
+import org.apache.commons.lang.StringUtils;
+
 import java.net.URI;
 import java.util.HashSet;
 import java.util.Set;
-
-import org.apache.commons.lang.StringUtils;
 
 public class HierarchicalUriCache {
 

@@ -37,9 +37,7 @@ import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.mock.MockitoSugar
 import org.scalatra.ScalatraFilter
 import org.scalatra.test.scalatest.ScalatraFunSuite
-import org.scalatra.test.scalatest.ScalatraFeatureSpec
 
-import config.WebFilter
 
 @RunWith(classOf[JUnitRunner])
 abstract class ControllerTestCase extends ScalatraFunSuite with ShouldMatchers with MockitoSugar {

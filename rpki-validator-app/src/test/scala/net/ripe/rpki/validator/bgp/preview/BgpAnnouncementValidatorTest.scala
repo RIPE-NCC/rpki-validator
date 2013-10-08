@@ -33,13 +33,11 @@ package bgp.preview
 import org.scalatest.FunSuite
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.matchers.ShouldMatchers
-import net.ripe.rpki.validator.models.{RouteValidity, RtrPrefix}
+import net.ripe.rpki.validator.models.RtrPrefix
 import net.ripe.rpki.validator.models.RouteValidity._
-import net.ripe.ipresource.{IpResource, Asn, IpRange}
+import net.ripe.ipresource.{Asn, IpRange}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import sun.awt.geom.Curve
-import org.omg.CORBA.DynAnyPackage.Invalid
 
 @RunWith(classOf[JUnitRunner])
 class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers {

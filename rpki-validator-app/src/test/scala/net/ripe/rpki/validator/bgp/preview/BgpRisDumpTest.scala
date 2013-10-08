@@ -30,11 +30,8 @@
 package net.ripe.rpki.validator.bgp.preview
 
 import org.scalatest.FunSuite
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.ShouldMatchers
 import net.ripe.ipresource._
-import java.net.URL
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class BgpRisDumpTest extends FunSuite with ShouldMatchers {

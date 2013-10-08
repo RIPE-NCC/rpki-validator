@@ -31,7 +31,6 @@ package net.ripe.rpki.validator
 package config
 
 import net.ripe.rpki.validator.util.TrustAnchorLocator
-import org.joda.time.DateTime
 import models._
 import scalaz.Validation
 import java.net.URI

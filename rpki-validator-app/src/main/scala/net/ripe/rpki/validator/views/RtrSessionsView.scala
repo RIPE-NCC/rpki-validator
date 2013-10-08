@@ -33,9 +33,7 @@ package views
 import scala.xml._
 
 import rtr.RtrSessionData
-import lib.DateAndTime._
-import Tabs._
-import org.joda.time.{DateTime, Period}
+import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 
 class RtrSessionsView(sessions: Iterable[RtrSessionData], now: DateTime = new DateTime) extends View with ViewHelpers {

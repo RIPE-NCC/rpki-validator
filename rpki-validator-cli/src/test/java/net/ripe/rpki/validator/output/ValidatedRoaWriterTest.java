@@ -29,14 +29,12 @@
  */
 package net.ripe.rpki.validator.output;
 
-import net.ripe.rpki.validator.output.ValidatedRoaWriter;
-import net.ripe.rpki.validator.output.ValidatedRoaWriter.RoaData;
-
 import net.ripe.ipresource.Asn;
 import net.ripe.rpki.commons.crypto.ValidityPeriod;
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms;
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsObjectMother;
 import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.validator.output.ValidatedRoaWriter.RoaData;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Before;
@@ -45,7 +43,7 @@ import org.junit.Test;
 import java.net.URI;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class ValidatedRoaWriterTest {
 

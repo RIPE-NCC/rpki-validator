@@ -29,8 +29,6 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import net.ripe.rpki.validator.commands.TopDownWalkerWorkQueue;
-
 import net.ripe.ipresource.IpResourceSet;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest;

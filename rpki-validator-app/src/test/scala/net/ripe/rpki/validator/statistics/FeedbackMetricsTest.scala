@@ -29,7 +29,6 @@
  */
 package net.ripe.rpki.validator.statistics
 
-import scala.concurrent.stm.atomic
 
 import org.apache.http.HttpVersion
 import org.apache.http.client.HttpClient

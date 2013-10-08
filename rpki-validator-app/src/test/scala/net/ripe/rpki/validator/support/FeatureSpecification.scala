@@ -31,14 +31,12 @@ package net.ripe.rpki.validator
 package support
 
 import org.junit.runner.RunWith
-import org.scalatest.{GivenWhenThen, BeforeAndAfterAll}
+import org.scalatest.GivenWhenThen
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.mock.MockitoSugar
-import org.scalatra.test.scalatest.ScalatraFunSuite
-import net.ripe.rpki.validator.config.{WebFilter}
+import net.ripe.rpki.validator.config.WebFilter
 import org.scalatra.test.scalatest.ScalatraFeatureSpec
-import org.joda.time.DateTime
 import models._
 import lib.UserPreferences
 import net.ripe.rpki.validator.util.TrustAnchorLocator

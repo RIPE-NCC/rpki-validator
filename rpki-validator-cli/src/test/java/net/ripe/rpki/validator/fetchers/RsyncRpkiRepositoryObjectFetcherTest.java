@@ -29,12 +29,6 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
-import static net.ripe.rpki.commons.validation.ValidationString.*;
-import static org.junit.Assert.*;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.rsync.Rsync;
 import net.ripe.rpki.commons.util.Specifications;
@@ -48,6 +42,13 @@ import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+
+import static net.ripe.rpki.commons.validation.ValidationString.*;
+import static org.junit.Assert.*;
 
 public class RsyncRpkiRepositoryObjectFetcherTest {
 

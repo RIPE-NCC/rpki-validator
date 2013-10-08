@@ -29,16 +29,15 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import net.ripe.rpki.validator.fetchers.CertificateRepositoryObjectFetcher;
-import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
-
-import net.ripe.rpki.commons.validation.ValidationString;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.util.Specifications;
 import net.ripe.rpki.commons.validation.ValidationLocation;
 import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.ValidationString;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
+import net.ripe.rpki.validator.fetchers.CertificateRepositoryObjectFetcher;
+import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
 
 import java.net.URI;
 import java.util.ArrayList;

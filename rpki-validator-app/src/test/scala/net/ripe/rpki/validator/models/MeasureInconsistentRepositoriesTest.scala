@@ -30,10 +30,8 @@
 package net.ripe.rpki.validator
 package models
 
-import statistics._
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
-import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
 import net.ripe.rpki.validator.statistics.InconsistentRepositoryCheckingTest
 import java.net.URI
 

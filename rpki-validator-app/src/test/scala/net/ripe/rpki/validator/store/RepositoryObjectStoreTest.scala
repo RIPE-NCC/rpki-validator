@@ -34,11 +34,9 @@ import models._
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import java.net.URI
 import org.scalatest.BeforeAndAfter
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsTest
-import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTimeUtils
 import org.joda.time.DateTime
 

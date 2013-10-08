@@ -29,10 +29,11 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
-import java.net.URI;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.util.Specification;
 import net.ripe.rpki.commons.validation.ValidationResult;
+
+import java.net.URI;
 
 public interface RpkiRepositoryObjectFetcher {
     void prefetch(URI uri, ValidationResult result);
