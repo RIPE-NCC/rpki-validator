@@ -84,8 +84,9 @@ public class TrustAnchorLocator {
         String[] lines = contents.trim().split("\\s*(\r\n|\n\r|\n|\r)\\s*");
         URI location = new URI(lines[0]);
         int i = 1;
-        while (lines[i].startsWith("rsync://"))
-            ++i;
+        while (lines[i].startsWith("rsync://")) {
+            i++;
+        }
         String publicKeyInfo = StringUtils.join(Arrays.copyOfRange(lines, i, lines.length));
         return new TrustAnchorLocator(file, caName, location, publicKeyInfo, new ArrayList<URI>());
     }

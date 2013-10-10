@@ -50,7 +50,7 @@ import static net.ripe.rpki.commons.validation.ValidationString.*;
 
 public class ValidatingCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {
 
-    private static final Logger log = Logger.getLogger(ValidatingCertificateRepositoryObjectFetcher.class);
+    private static final Logger LOG = Logger.getLogger(ValidatingCertificateRepositoryObjectFetcher.class);
 
     private final CertificateRepositoryObjectFetcher fetcher;
     private CertificateRepositoryObjectFetcher outerMostDecorator;
@@ -146,7 +146,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
             ManifestCms manifestCms = fetcher.getManifest(uri, context, result);
             return (ManifestCms) processCertificateRepositoryObject(uri, context, result, manifestCms);
         } catch (Exception e) {
-            log.error("There was an exception trying to get manifest: " + uri.toString(), e);
+            LOG.error("There was an exception trying to get manifest: " + uri.toString(), e);
             result.rejectIfFalse(false, VALIDATOR_INTERNAL_ERROR);
             return null;
         }
@@ -163,7 +163,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
         CertificateRepositoryObject certificateRepositoryObject = fetcher.getObject(uri, context, fileContentSpecification, result);
         return processCertificateRepositoryObject(uri, context, result, certificateRepositoryObject);
         } catch (Exception e) {
-            log.error("There was an exception trying to get object for uri: " + uri.toString(), e);
+            LOG.error("There was an exception trying to get object for uri: " + uri.toString(), e);
             result.rejectIfFalse(false, VALIDATOR_INTERNAL_ERROR);
             return null;
         }
