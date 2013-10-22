@@ -10,9 +10,9 @@ Requirements
   uses the following rsync(1) options: --update, --times, --copy-links, --recursive, and
   --delete.
   
-= SUN Java 6
+= Oracle JDK 7
 
-  This software was developed and tested using SUN Java 1.6. This Java version should be 
+  This software was developed and tested using Oracle JDK 7. This Java version should be
   available without restrictions for all major platforms, though it may not be included 
   in your distribution by default.
 
@@ -35,6 +35,9 @@ Requirements
 
   For performance this tool keeps a lot of data in memory. This also helps multi-threading
   allowing the tool to work faster by doing tasks in parallel.
+
+  The memory settings can be increased as described below. Lowering the maximum memory usage
+  to values lower than 1GB will result out-of-memory related crashes.
   
   
 Usage
@@ -78,12 +81,12 @@ override the default.
 
 Examples:
 
-= If you want to change the memory settings to use 128MB minimum and 256MB maximum
+= If you want to change the memory settings to use 1024MB minimum and 2048MB maximum
   
-  export JAVA_OPTS="-Xms128m -Xmx256m"
+  export JAVA_OPTS="-Xms1024m -Xmx2048"
   
   Be aware though that if you give this tool too little memory it will become slow first, 
-  and then stop working properly.
+  and then stop working properly. We found that at least 1024MB is needed.
   
 = If you want to use a SOCKS proxy, like for example webcache.example.com:8888
 

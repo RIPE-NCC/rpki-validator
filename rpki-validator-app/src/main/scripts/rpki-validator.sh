@@ -30,7 +30,7 @@
 #
 
 # Don't edit this script, but use JAVA_OPTS to override these settings.
-DEFAULT_JVM_ARGUMENTS="-Xms512m -Xmx512m"
+DEFAULT_JVM_ARGUMENTS="-Xms1024m -Xmx1024m"
 
 EXECUTION_DIR=`dirname "$BASH_SOURCE"`
 cd ${EXECUTION_DIR}
