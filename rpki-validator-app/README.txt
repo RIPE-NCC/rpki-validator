@@ -72,6 +72,20 @@ Usage
   http://yourhost:http-port/    (e.g. http://localhost:8080/)
 
 
+KIOSK MODE
+----------
+
+You can run the validator in so-called "kiosk" mode. In this mode it will be accessible
+read-only to anyone, but any action or update will require authentication with a password.
+
+To enable this mode export the following environment variable before running the validator:
+
+   export RIPE_NCC_RPKI_VALIDATOR_ADMIN_PASSWORD="secret"
+
+When prompted for a username and password, enter "admin" for the user, and *your* secret password.
+
+
+
 Configuring additional options
 ------------------------------
 
@@ -195,6 +209,11 @@ https://github.com/RIPE-NCC/rpki-validator/
 
 Version History
 ---------------
+
+2.12 - 22 October 2013
+= Changed default memory settings from 512MB to 1024MB after out of memory problems with
+  the current size of rpki repositories
+= Added support to run validator in "Kiosk" mode
 
 2.11.1 - 12 July 2013
 = Bug fix release, validator was rejecting *all* subsequent manifests as soon as one

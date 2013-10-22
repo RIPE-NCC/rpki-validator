@@ -35,8 +35,9 @@ import scalaz._,Scalaz._
 import org.scalatra._
 import lib.Validation._
 import views.HomeView
+import net.ripe.rpki.validator.authentication.AuthenticationSupport
 
-trait ApplicationController extends ScalatraBase with FlashMapSupport with MethodOverride {
+trait ApplicationController extends ScalatraBase with FlashMapSupport with MethodOverride with AuthenticationSupport {
   get("/") {
     new HomeView()
   }
@@ -53,4 +54,8 @@ trait ApplicationController extends ScalatraBase with FlashMapSupport with Metho
     val result = validator(value)
     liftFailErrorMessage(result, Some(name))
   }
+
+  override def post(transformers: RouteTransformer*)(action: => Any) = addRoute(Post, transformers, authenticatedAction(action))
+  override def put(transformers: RouteTransformer*)(action: => Any) = addRoute(Put, transformers, authenticatedAction(action))
+  override def delete(transformers: RouteTransformer*)(action: => Any) = addRoute(Delete, transformers, authenticatedAction(action))
 }
