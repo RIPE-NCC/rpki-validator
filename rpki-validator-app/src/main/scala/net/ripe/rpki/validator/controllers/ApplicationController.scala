@@ -55,7 +55,7 @@ trait ApplicationController extends ScalatraBase with FlashMapSupport with Metho
     liftFailErrorMessage(result, Some(name))
   }
 
-  override def post(transformers: RouteTransformer*)(action: => Any) = addRoute(Post, transformers, authenticatedAction(action))
-  override def put(transformers: RouteTransformer*)(action: => Any) = addRoute(Put, transformers, authenticatedAction(action))
-  override def delete(transformers: RouteTransformer*)(action: => Any) = addRoute(Delete, transformers, authenticatedAction(action))
+  override def post(transformers: RouteTransformer*)(action: => Any) = super.post(transformers:_*) { authenticatedAction(action) }
+  override def put(transformers: RouteTransformer*)(action: => Any) = super.put(transformers:_*) { authenticatedAction(action) }
+  override def delete(transformers: RouteTransformer*)(action: => Any) = super.delete(transformers:_*) { authenticatedAction(action) }
 }

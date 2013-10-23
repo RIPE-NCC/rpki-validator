@@ -35,7 +35,7 @@ import org.scalatra.auth.{ScentryConfig, ScentrySupport}
 
 
 object AdminLoginStrategy {
-  val ADMIN_PASSWORD_ENVIRONMENT_VAR = "RIPE_NCC_RPKI_VALIDATOR_ADMIN_PASSWORD"
+  val AdminPasswordEnvironmentVar = "RIPE_NCC_RPKI_VALIDATOR_ADMIN_PASSWORD"
 }
 
 /**
@@ -45,10 +45,10 @@ object AdminLoginStrategy {
  */
 class AdminLoginStrategy (protected override val app: ScalatraBase, realm: String) extends BasicAuthStrategy[User](app, realm) {
 
-  protected def getUserId(user: User): String = user.id
+  override protected def getUserId(user: User): String = user.id
 
-  protected def validate(userName: String, password: String): Option[User] = {
-    sys.env.get(AdminLoginStrategy.ADMIN_PASSWORD_ENVIRONMENT_VAR) match {
+  override protected def validate(userName: String, password: String): Option[User] = {
+    sys.env.get(AdminLoginStrategy.AdminPasswordEnvironmentVar) match {
       case Some(adminPassword) => {
         if (userName == "admin" && password == adminPassword) {
           Some(User(userName))
@@ -69,10 +69,10 @@ trait AuthenticationSupport extends ScentrySupport[User] with BasicAuthSupport[U
 
   val realm = "RPKI Validator KIOSK mode, see README.txt for details"
 
-  protected def fromSession = { case id: String => User(id)  }
-  protected def toSession   = { case usr: User => usr.id }
+  override protected def fromSession = { case id: String => User(id)  }
+  override protected def toSession   = { case usr: User => usr.id }
 
-  protected val scentryConfig = (new ScentryConfig {}).asInstanceOf[ScentryConfiguration]
+  override protected val scentryConfig = new ScentryConfig {}.asInstanceOf[ScentryConfiguration]
 
   override protected def registerAuthStrategies = {
     scentry.register("Basic", app => new AdminLoginStrategy(app, realm))
@@ -82,7 +82,7 @@ trait AuthenticationSupport extends ScentrySupport[User] with BasicAuthSupport[U
    * Prompts for basic authentication if the admin password env variable has been set.
    */
   def authenticatedAction(action: => Any) = {
-    sys.env.get(AdminLoginStrategy.ADMIN_PASSWORD_ENVIRONMENT_VAR) match {
+    sys.env.get(AdminLoginStrategy.AdminPasswordEnvironmentVar) match {
       case Some(password) => {
         basicAuth()
         action
