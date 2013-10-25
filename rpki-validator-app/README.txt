@@ -36,8 +36,8 @@ Requirements
   For performance this tool keeps a lot of data in memory. This also helps multi-threading
   allowing the tool to work faster by doing tasks in parallel.
 
-  The memory settings can be increased as described below. Lowering the maximum memory usage
-  to values lower than 1GB will result out-of-memory related crashes.
+  The memory settings can be increased as described below. Lowering the maximum memory 
+  usage to values lower than 1GB will result out-of-memory related crashes.
   
   
 Usage
@@ -72,18 +72,24 @@ Usage
   http://yourhost:http-port/    (e.g. http://localhost:8080/)
 
 
-KIOSK MODE
-----------
+Kiosk mode (experimental)
+-------------------------
 
-You can run the validator in so-called "kiosk" mode. In this mode it will be accessible
-read-only to anyone, but any action or update will require authentication with a password.
+You can run the validator in so-called "kiosk" mode. In this mode the application will be 
+accessible read-only to anyone, but any action or update will require authentication with 
+a username and password.
 
-To enable this mode export the following environment variable before running the validator:
+To enable kiosk mode, export this environment variable before running the validator:
 
-   export RIPE_NCC_RPKI_VALIDATOR_ADMIN_PASSWORD="secret"
+  export RIPE_NCC_RPKI_VALIDATOR_ADMIN_PASSWORD="your_secret_password"
 
-When prompted for a username and password, enter "admin" for the user, and *your* secret password.
+When prompted for credentials, enter "admin" for the user and your secret password.
 
+Note: This a basic, experimental feature. Kiosk mode is merely intended to prevent 
+unauthorised people from making (accidental) changes. The password you configure is stored
+in plain text. When a user enters the credentials, they are sent unencrypted. Lastly, the 
+credentials remain valid for the entire browser session, so you need to quit your browser 
+to log out.
 
 
 Configuring additional options
@@ -210,10 +216,10 @@ https://github.com/RIPE-NCC/rpki-validator/
 Version History
 ---------------
 
-2.12 - 22 October 2013
+2.12 - 25 October 2013
 = Changed default memory settings from 512MB to 1024MB after out of memory problems with
-  the current size of rpki repositories
-= Added support to run validator in "Kiosk" mode
+  the current size of RPKI repositories
+= Added experimental support to run validator in "Kiosk" mode
 
 2.11.1 - 12 July 2013
 = Bug fix release, validator was rejecting *all* subsequent manifests as soon as one
