@@ -44,6 +44,7 @@ import akka.util.ByteString
 import javax.sql.DataSource
 import models.StoredRepositoryObject
 import org.joda.time.DateTimeZone
+import java.io.File
 
 /**
  * Used to store/retrieve consistent sets of rpki objects seen for certificate authorities
@@ -120,9 +121,9 @@ object DataSources {
   /**
    * Store data on disk.
    */
-  lazy val DurableDataSource = {
+  def DurableDataSource(dataDirBasePath: File) = {
     val result = new BasicDataSource
-    result.setUrl("jdbc:h2:data/rpki-object-cache")
+    result.setUrl("jdbc:h2:" + dataDirBasePath + File.separator + "rpki-object-cache")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
     migrate(result)

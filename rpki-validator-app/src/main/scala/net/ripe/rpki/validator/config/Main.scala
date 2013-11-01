@@ -72,7 +72,7 @@ object Main {
   def main(args: Array[String]): Unit = {
     Options.parse(args) match {
       case Right(options) =>
-        configureLogging()
+        configureLogging(options.log4jConfigurationFileLocation)
         new Main(options)
       case Left(error) =>
         Console.err.println(error)
@@ -80,11 +80,9 @@ object Main {
     }
   }
 
-  private def configureLogging() {
-    val configPath = "conf/log4j.xml"
-    val config = new File(configPath)
-    require(config.exists(), "Configuration file '%s' was not found.".format(configPath))
-    DOMConfigurator.configureAndWatch(config.getAbsolutePath)
+  private def configureLogging(configFile: File) {
+    require(configFile.exists(), "Configuration file '%s' was not found.".format(configFile))
+    DOMConfigurator.configureAndWatch(configFile.getAbsolutePath)
   }
 }
 
@@ -104,8 +102,8 @@ class Main(options: Options) { main =>
 
   val bgpAnnouncementValidator = new BgpAnnouncementValidator
 
-  val dataFile = new File(options.dataFileName).getCanonicalFile
-  val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData(whitelist = Whitelist()))
+  val dataFile = options.dataFileLocation
+  val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData())
 
   val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
   val roas = ValidatedObjects(new TrustAnchors(trustAnchors.filter(ta => ta.enabled)))
@@ -147,8 +145,8 @@ class Main(options: Options) { main =>
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
-    val tals = new ju.ArrayList(FileUtils.listFiles(new File("conf/tal"), Array("tal"), false))
-    TrustAnchors.load(tals.asScala, "tmp/tals")
+    val tals = new ju.ArrayList(FileUtils.listFiles(options.talDirLocation, Array("tal"), false))
+    TrustAnchors.load(tals.asScala)
   }
 
   private def refreshRisDumps() {
@@ -181,7 +179,7 @@ class Main(options: Options) { main =>
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays) with TrackValidationProcess with MeasureValidationProcess with MeasureRsyncExecution with ValidationProcessLogger with MeasureInconsistentRepositories {
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays,  options.workDirLocation) with TrackValidationProcess with MeasureValidationProcess with MeasureRsyncExecution with ValidationProcessLogger with MeasureInconsistentRepositories {
           override val memoryImage = main.memoryImage
         }
         try {
@@ -303,7 +301,7 @@ class Main(options: Options) { main =>
 
     val requestLogHandler = {
       val handler = new RequestLogHandler()
-      val requestLog = new NCSARequestLog("./log/access.log")
+      val requestLog = new NCSARequestLog(options.accessLogFileName)
       requestLog.setRetainDays(90)
       requestLog.setAppend(true)
       requestLog.setExtended(false)

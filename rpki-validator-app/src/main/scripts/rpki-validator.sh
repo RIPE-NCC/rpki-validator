@@ -29,6 +29,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+
+
+
 # Don't edit this script, but use JAVA_OPTS to override these settings.
 DEFAULT_JVM_ARGUMENTS="-Xms1024m -Xmx1024m"
 
@@ -36,9 +39,24 @@ EXECUTION_DIR=`dirname "$BASH_SOURCE"`
 cd ${EXECUTION_DIR}
 
 APP_NAME="rpki-validator"
-CONF_DIR="config"
-LIB_DIR="lib"
 PID_FILE=${APP_NAME}.pid
+
+
+# Set the following environment variables if you want to override the
+# default locations for various files and resources used by this application.
+#
+# Be aware that if you use an alternative log4j.xml configuration file,
+# you may want to edit that file to change the locations of the validation.log,
+# and rtr.log files.
+CONF_DIR=${RPKI_VALIDATOR_CONF_DIR:="conf"}   # Application expects to find log4j.xml here
+LIB_DIR=${RPKI_VALIDATOR_LIB_DIR:="lib"}      # Contents added to the java classpath, contains libraries used by this application
+DATA_DIR=${RPKI_VALIDATOR_DATA_DIR:="data"}   # Will use this to store in-app settings and data
+TAL_DIR=${RPKI_VALIDATOR_TAL_DIR:="conf/tal"} # Will read all *.tal files here
+WORK_DIR=${RPKI_VALIDATOR_WORK_DIR:="tmp"}    # Will use this to cache and download objects using rsync
+ACCESS_LOG=${RPKI_VALIDATOR_ACCESS_LOG:="log/access.log"} # Http access log
+
+LOCATION_OPTIONS="-c $CONF_DIR -d $DATA_DIR -t $TAL_DIR -w $WORK_DIR -a $ACCESS_LOG"
+
 
 function error_exit {
     echo -e "[ error ] $1"
@@ -127,13 +145,13 @@ case ${FIRST_ARG} in
          esac
         done
 
-        APPLICATION_ARGS="-$HTTP_PORT_FLAG $HTTP_PORT_VALUE -$RTR_PORT_FLAG $RTR_PORT_VALUE"
+        APPLICATION_ARGS="$LOCATION_OPTIONS -$HTTP_PORT_FLAG $HTTP_PORT_VALUE -$RTR_PORT_FLAG $RTR_PORT_VALUE"
         [ -z $NO_CLOSE_ON_ERROR_VALUE ] || APPLICATION_ARGS="$APPLICATION_ARGS -$NO_CLOSE_ON_ERROR_FLAG"
         [ -z $SILENT_VALUE ] || APPLICATION_ARGS="$APPLICATION_ARGS -$SILENT_FLAG"
 
         info "Starting ${APP_NAME}..."
 
-        CLASSPATH=${CONF_DIR}:"$LIB_DIR/*"
+        CLASSPATH=:"$LIB_DIR/*"
 
         ${JAVA_CMD} ${DEFAULT_JVM_ARGUMENTS} ${JAVA_OPTS} \
             -classpath ${CLASSPATH} \

@@ -145,7 +145,7 @@ class TrustAnchors(val all: Seq[TrustAnchor]) {
 }
 
 object TrustAnchors extends Logging {
-  def load(files: Seq[File], outputDirectory: String): TrustAnchors = {
+  def load(files: Seq[File]): TrustAnchors = {
     val now = new DateTime
     info("Loading trust anchors...")
     val trustAnchors = for (file <- files) yield {
@@ -199,12 +199,13 @@ trait ValidationProcess {
   def shutdown(): Unit = {}
 }
 
-class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int) extends ValidationProcess {
+class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, workingDirectory: File) extends ValidationProcess {
 
-  private val options = new ValidationOptions()
-  private val RsyncDiskCacheBasePath = "tmp/cache/"
+  private val validationOptions = new ValidationOptions()
+  private val RsyncDiskCacheBasePath = workingDirectory.toString + File.separator + "cache" + File.separator
+  private val RepositoryObjectStore = DataSources.DurableDataSource(workingDirectory)
 
-  options.setMaxStaleDays(maxStaleDays)
+  validationOptions.setMaxStaleDays(maxStaleDays)
 
   override def extractTrustAnchorLocator() = {
     val uri = trustAnchorLocator.getCertificateLocation
@@ -230,7 +231,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val fetcher = createFetcher(new RoaCollector(trustAnchorLocator, builder) +: objectFetcherListeners: _*)
 
     // purge cache
-    val cache = new RepositoryObjectStore(DataSources.DurableDataSource)
+    val cache = new RepositoryObjectStore(RepositoryObjectStore)
     cache.purgeExpired(maxStaleDays)
 
     trustAnchorLocator.getPrefetchUris.asScala.foreach { prefetchUri =>
@@ -257,7 +258,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   }
 
   private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.Listener*): CertificateRepositoryObjectFetcher = {
-    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(new RpkiRepositoryObjectFetcherAdapter(consistentObjectFetcher), options)
+    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(new RpkiRepositoryObjectFetcherAdapter(consistentObjectFetcher), validationOptions)
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher)
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher)
     validatingFetcher.setOuterMostDecorator(cachingFetcher)
@@ -274,7 +275,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
 
     val remoteFetcher = new RemoteObjectFetcher(rsyncFetcher)
 
-    new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(DataSources.DurableDataSource))
+    new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(RepositoryObjectStore))
   }
 
   private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[(URI, ValidatedObject), _]) extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {

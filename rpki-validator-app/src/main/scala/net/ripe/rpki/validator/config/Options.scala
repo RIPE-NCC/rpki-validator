@@ -31,18 +31,26 @@ package net.ripe.rpki.validator.config
 
 import org.clapper.argot._
 import org.clapper.argot.ArgotConverters._
+import java.io.File
 
 object Options {
 
-  val DEFAULT_RTR_PORT = 8282
-  val DEFAULT_HTTP_PORT = 8080
-  val DEFAULT_DATA_FILE_NAME = "data/configuration.json"
+  val DefaultRtrPort = 8282
+  val DefaultHttpPort = 8080
+
+  val DefaultDataDir = "data"
+  val DefaultConfigDirPath = "conf"
+  val DefaultTalDirPath = "conf/tal"
+  val DefaultWorkDir = "tmp"
+  val DefaultAccessLogFile = "log/access.log"
 
   def parse(args: Array[String]): Either[String, Options] = try {
     Right(new Options(args))
   } catch {
     case e: ArgotUsageException => Left(e.getMessage)
   }
+
+  val defaults = new Options(Array.empty[String])
 }
 
 class Options(args: Array[String]) {
@@ -50,19 +58,41 @@ class Options(args: Array[String]) {
 
   private val parser = new ArgotParser(programName = "rpki-validator")
 
-  private val rtrPortOption = parser.option[Int](List("r", "rtr-port"), "RTR-PORT", "The port the rtr-rpki tcp server will listen on. Default: " + Options.DEFAULT_RTR_PORT)
-  private val httpPortOption = parser.option[Int](List("h", "http-port"), "HTTP-PORT", "The http port the for the User Interface. Default: " + Options.DEFAULT_HTTP_PORT)
+  private val rtrPortOption = parser.option[Int](List("r", "rtr-port"), "RTR-PORT", "The port the rtr-rpki tcp server will listen on. Default: " + Options.DefaultRtrPort)
+  private val httpPortOption = parser.option[Int](List("h", "http-port"), "HTTP-PORT", "The http port the for the User Interface. Default: " + Options.DefaultHttpPort)
   private val noCloseOption = parser.flag[Boolean](List("n", "no-close-on-error"), "Stop the server from closing connections when it receives fatal errors.")
   private val noNotifyOption = parser.flag[Boolean](List("s", "silent"), "Stop the server from sending notify messages when it has updates.")
-  private val dataFileNameOption = parser.option[String](List("f", "data-file"), "FILE", "Specify the data file used to load and store configuration. Default: " + Options.DEFAULT_DATA_FILE_NAME)
   private val feedbackUriOption = parser.option[String](List("feedback-uri"), "URI", "Specify the URI used to send back feedback metrics to RIPE NCC. Default: " + DefaultFeedbackUri)
 
-  def rtrPort: Int = rtrPortOption.value.getOrElse(Options.DEFAULT_RTR_PORT)
-  def httpPort: Int = httpPortOption.value.getOrElse(Options.DEFAULT_HTTP_PORT)
+  private val optionalDataDirPath = parser.option[String](List("d", "data-dir"), "DATA_DIR", "Specify the data file used to load and store configuration. Default: " + Options.DefaultDataDir)
+  private val optionalConfigDirPath = parser.option[String](List("c", "config-dir"), "CONFIG_DIR", "Alternative base path for configuration files. Default: " + Options.DefaultConfigDirPath)
+  private val optionalTalDirPath = parser.option[String](List("t", "tal-dir"), "TAL_DIR", "Alternative path for TAL files. Default: " + Options.DefaultTalDirPath)
+  private val optionalWorkDirPath = parser.option[String](List("w", "work-dir"), "WORK_DIR", "Alternative path for work dir, used to download files with rsync. Default: " + Options.DefaultWorkDir)
+  private val optionalLogDirAccessLogFile = parser.option[String](List("a", "access-log"), "ACCESS_LOG", "Alternative path to access log file. Default: " + Options.DefaultAccessLogFile)
+
+  def rtrPort: Int = rtrPortOption.value.getOrElse(Options.DefaultRtrPort)
+  def httpPort: Int = httpPortOption.value.getOrElse(Options.DefaultHttpPort)
   def noCloseOnError: Boolean = noCloseOption.value.getOrElse(false)
   def noNotify: Boolean = noNotifyOption.value.getOrElse(false)
-  def dataFileName: String = dataFileNameOption.value.getOrElse(Options.DEFAULT_DATA_FILE_NAME)
+
   def feedbackUri: String = feedbackUriOption.value.getOrElse(DefaultFeedbackUri)
+
+  private def resolveFile(path: String, fileName: String): File = new File(path + File.separator + fileName)
+
+
+  def dataFileLocation = optionalDataDirPath.value match {
+    case None => resolveFile(Options.DefaultDataDir, "data.json")
+    case Some(path) => resolveFile(path, "data.json")
+  }
+
+  def log4jConfigurationFileLocation = optionalConfigDirPath.value match {
+    case None => resolveFile(Options.DefaultConfigDirPath , "log4j.xml")
+    case Some(path) => resolveFile(path, "log4j.xml")
+  }
+
+  def talDirLocation = new File(optionalTalDirPath.value.getOrElse(Options.DefaultTalDirPath))
+  def workDirLocation = new File(optionalWorkDirPath.value.getOrElse(Options.DefaultWorkDir))
+  def accessLogFileName = optionalLogDirAccessLogFile.value.getOrElse(Options.DefaultAccessLogFile)
 
   parser.parse(args)
 }
