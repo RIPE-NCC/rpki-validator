@@ -30,8 +30,6 @@
 #
 
 
-
-
 # Don't edit this script, but use JAVA_OPTS to override these settings.
 DEFAULT_JVM_ARGUMENTS="-Xms1024m -Xmx1024m"
 
@@ -67,6 +65,10 @@ function info {
     echo -e "[ info ] $1"
 }
 
+function warn {
+    echo -e "[ warn ] $1"
+}
+
 function usage {
 cat << EOF
 Usage: $0 start [OPTIONS]
@@ -82,13 +84,18 @@ EOF
 }
 
 #
-# Specify the location of the Java home directory. If set then $JAVA will
+# Specify the location of the Java home directory. If set then $JAVA_CMD will
 # be defined to $JAVA_HOME/bin/java
 #
 if [ -d "${JAVA_HOME}"  ] ; then
     JAVA_CMD="${JAVA_HOME}/bin/java"
 else
-    error_exit "JAVA_HOME is not set. Please export JAVA_HOME."
+    warn "JAVA_HOME is not set, will try to find java on path."
+    JAVA_CMD=`which java`
+fi
+
+if [ -z $JAVA_CMD ]; then
+    error_exit "Can not find java on path. Make sure java is installed and/or set JAVA_HOME"
 fi
 
 #
