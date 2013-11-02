@@ -81,7 +81,11 @@ class ApplicationOptionsTest extends FunSuite with ShouldMatchers {
     ApplicationOptions.accessLogFileName should equal("log/access.log")
   }
 
-  test("Should use conf/log4j.xml as default location for log4j config") {
-    ApplicationOptions.log4jConfigurationFileLocation should equal(new File("conf/log4j.xml"))
+  test("Should use log/validator.log as default location for application log") {
+    ApplicationOptions.applicationLogFileName should equal("log/validator.log")
+  }
+
+  test("Should use log/rtr.log as default location for application log") {
+    ApplicationOptions.rtrLogFileName should equal("log/rtr.log")
   }
 }

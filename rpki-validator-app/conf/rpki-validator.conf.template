@@ -30,5 +30,6 @@ include "application"
 #locations.libdir=lib
 #locations.pidfile=validator.pid
 
-#logging.log4j.config=conf/log4j.xml
-#logging.access.log.file=log/access.log
+#logging.application.file=log/validator.log
+#logging.rtr.file=log/rtr.log
+#logging.access.file=log/access.log

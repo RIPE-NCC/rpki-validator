@@ -53,7 +53,8 @@ object ApplicationOptions {
   def talDirLocation = new File(config.getString("locations.taldir"))
   def workDirLocation = new File(config.getString("locations.workdir"))
 
-  def log4jConfigurationFileLocation = new File(config.getString("logging.log4j.config"))
-  def accessLogFileName = config.getString("logging.access.log.file")
+  def applicationLogFileName = config.getString("logging.application.file")
+  def rtrLogFileName = config.getString("logging.rtr.file")
+  def accessLogFileName = config.getString("logging.access.file")
 
 }

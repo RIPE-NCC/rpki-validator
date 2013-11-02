@@ -70,13 +70,9 @@ object Main {
   private val sessionId: Pdu.SessionId = Pdu.randomSessionid()
 
   def main(args: Array[String]): Unit = {
-    configureLogging(ApplicationOptions.log4jConfigurationFileLocation)
+    System.setProperty("VALIDATOR_LOG_FILE", ApplicationOptions.applicationLogFileName)
+    System.setProperty("RTR_LOG_FILE", ApplicationOptions.rtrLogFileName)
     new Main()
-  }
-
-  private def configureLogging(configFile: File) {
-    require(configFile.exists(), "Configuration file '%s' was not found.".format(configFile))
-    DOMConfigurator.configureAndWatch(configFile.getAbsolutePath)
   }
 }
 
@@ -297,7 +293,7 @@ class Main() { main =>
 
     val requestLogHandler = {
       val handler = new RequestLogHandler()
-      val requestLog = new NCSARequestLog(net.ripe.rpki.validator.config.ApplicationOptions.accessLogFileName)
+      val requestLog = new NCSARequestLog(ApplicationOptions.accessLogFileName)
       requestLog.setRetainDays(90)
       requestLog.setAppend(true)
       requestLog.setExtended(false)

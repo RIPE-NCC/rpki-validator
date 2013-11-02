@@ -41,13 +41,13 @@
         </layout>
     </appender>
     <appender name="FILE" class="org.apache.log4j.FileAppender">
-        <param name="File" value="log/validator.log" />
+        <param name="File" value="${VALIDATOR_LOG_FILE}" />
         <layout class="org.apache.log4j.PatternLayout">
             <param name="ConversionPattern" value="%d %-5p %c{2}: %m%n" />
         </layout>
     </appender>
     <appender name="RTR_APPENDER" class="org.apache.log4j.RollingFileAppender">
-        <param name="File" value="log/rtr.log" />
+        <param name="File" value="${RTR_LOG_FILE}" />
         <param name="MaxFileSize" value="20MB" />
         <param name="MaxBackupIndex" value="1" />
         <layout class="org.apache.log4j.PatternLayout">
