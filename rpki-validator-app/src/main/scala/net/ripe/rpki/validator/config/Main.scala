@@ -70,14 +70,8 @@ object Main {
   private val sessionId: Pdu.SessionId = Pdu.randomSessionid()
 
   def main(args: Array[String]): Unit = {
-    Options.parse(args) match {
-      case Right(options) =>
-        configureLogging(options.log4jConfigurationFileLocation)
-        new Main(options)
-      case Left(error) =>
-        Console.err.println(error)
-        sys.exit(1)
-    }
+    configureLogging(ApplicationOptions.log4jConfigurationFileLocation)
+    new Main()
   }
 
   private def configureLogging(configFile: File) {
@@ -86,7 +80,7 @@ object Main {
   }
 }
 
-class Main(options: Options) { main =>
+class Main() { main =>
   import scala.concurrent.duration._
 
   val logger = Logger[this.type]
@@ -102,7 +96,7 @@ class Main(options: Options) { main =>
 
   val bgpAnnouncementValidator = new BgpAnnouncementValidator
 
-  val dataFile = options.dataFileLocation
+  val dataFile = ApplicationOptions.dataFileLocation
   val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData())
 
   val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
@@ -116,7 +110,7 @@ class Main(options: Options) { main =>
   HttpConnectionParams.setSoTimeout(httpParams, 2 * 60 * 1000)
 
   val bgpRisDumpDownloader = new BgpRisDumpDownloader(httpClient)
-  val feedbackMetrics = new FeedbackMetrics(httpClient, options.feedbackUri + "/" + ReleaseInfo.version)
+  val feedbackMetrics = new FeedbackMetrics(httpClient, ApplicationOptions.feedbackUri + "/" + ReleaseInfo.version)
   feedbackMetrics.enabled = data.userPreferences.isFeedbackEnabled
 
   val memoryImage = Ref(
@@ -145,7 +139,7 @@ class Main(options: Options) { main =>
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
-    val tals = new ju.ArrayList(FileUtils.listFiles(options.talDirLocation, Array("tal"), false))
+    val tals = new ju.ArrayList(FileUtils.listFiles(ApplicationOptions.talDirLocation, Array("tal"), false))
     TrustAnchors.load(tals.asScala)
   }
 
@@ -179,7 +173,7 @@ class Main(options: Options) { main =>
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays,  options.workDirLocation) with TrackValidationProcess with MeasureValidationProcess with MeasureRsyncExecution with ValidationProcessLogger with MeasureInconsistentRepositories {
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays,  ApplicationOptions.workDirLocation) with TrackValidationProcess with MeasureValidationProcess with MeasureRsyncExecution with ValidationProcessLogger with MeasureInconsistentRepositories {
           override val memoryImage = main.memoryImage
         }
         try {
@@ -206,19 +200,21 @@ class Main(options: Options) { main =>
   }
 
   private def runWebServer() {
-    val server = setup(new Server(options.httpPort))
+    val server = setup(new Server(ApplicationOptions.httpPort))
 
     sys.addShutdownHook({
       server.stop()
       logger.info("Terminating...")
     })
     server.start()
-    logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + options.httpPort + ". Hit CTRL+C to terminate.")
+    logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + ApplicationOptions.httpPort + ". Hit CTRL+C to terminate.")
   }
 
   private def runRtrServer(): RTRServer = {
-    val rtrServer = new RTRServer(port = options.rtrPort, noCloseOnError = options.noCloseOnError,
-      noNotify = options.noNotify,
+    val rtrServer = new RTRServer(
+      port = ApplicationOptions.rtrPort,
+      closeOnError = ApplicationOptions.rtrCloseOnError,
+      sendNotify = ApplicationOptions.rtrSendNotify,
       getCurrentCacheSerial = {
         () => memoryImage.single.get.version
       },
@@ -301,7 +297,7 @@ class Main(options: Options) { main =>
 
     val requestLogHandler = {
       val handler = new RequestLogHandler()
-      val requestLog = new NCSARequestLog(options.accessLogFileName)
+      val requestLog = new NCSARequestLog(net.ripe.rpki.validator.config.ApplicationOptions.accessLogFileName)
       requestLog.setRetainDays(90)
       requestLog.setAppend(true)
       requestLog.setExtended(false)

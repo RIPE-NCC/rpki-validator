@@ -78,8 +78,8 @@ class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with Before
     cache = scala.concurrent.stm.Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects))
     server = new RTRServer(
       port = port,
-      noCloseOnError = false,
-      noNotify = false,
+      closeOnError = true,
+      sendNotify = true,
       getCurrentCacheSerial = { () => cache.single.get.version },
       getCurrentRtrPrefixes = { () => cache.single.get.getDistinctRtrPrefixes },
       getCurrentSessionId = { () => sessionId })

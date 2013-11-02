@@ -53,7 +53,7 @@ object RTRServer {
   val allChannels: ChannelGroup = new DefaultChannelGroup("rtr-server")
 }
 
-class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurrentCacheSerial: () => Int,
+class RTRServer(port: Int, closeOnError: Boolean, sendNotify: Boolean, getCurrentCacheSerial: () => Int,
                 getCurrentRtrPrefixes: () => Set[RtrPrefix], getCurrentSessionId: () => Pdu.SessionId)(implicit actorSystem: akka.actor.ActorSystem)
   extends Logging {
 
@@ -64,13 +64,13 @@ class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurren
 
   val rtrSessions = new RtrSessions[SocketAddress](getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentSessionId)
 
-  val serverHandler = new RTRServerHandler(noCloseOnError, rtrSessions)
+  val serverHandler = new RTRServerHandler(closeOnError, rtrSessions)
 
   // Use an agent to make notification sending transactional.
   private val notifier = akka.agent.Agent(())
 
   def notify(serial: Long) = notifier.send { _ =>
-    if (!noNotify) {
+    if (sendNotify) {
       info("Sending Notify with serial %s to all clients".format(serial))
       serverHandler.notifyChildren(rtrSessions.serialNotify(serial))
     }
@@ -121,7 +121,7 @@ class RTRServer(port: Int, noCloseOnError: Boolean, noNotify: Boolean, getCurren
 }
 
 @Sharable
-class RTRServerHandler(noCloseOnError: Boolean = false, clients: RtrSessions[SocketAddress])
+class RTRServerHandler(closeOnError: Boolean = true, clients: RtrSessions[SocketAddress])
   extends SimpleChannelUpstreamHandler with Logging {
 
   val rtrLogger = Logger("RTR")
@@ -154,7 +154,7 @@ class RTRServerHandler(noCloseOnError: Boolean = false, clients: RtrSessions[Soc
     // respond
     val channelFuture = event.getChannel.write(responsePdus)
 
-    if (!noCloseOnError) {
+    if (closeOnError) {
       responsePdus.last match {
         case ErrorPdu(errorCode, _, _) if (ErrorPdu.isFatal(errorCode)) =>
           channelFuture.addListener(ChannelFutureListener.CLOSE)

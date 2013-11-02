@@ -29,7 +29,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-
 # Don't edit this script, but use JAVA_OPTS to override these settings.
 DEFAULT_JVM_ARGUMENTS="-Xms1024m -Xmx1024m"
 
@@ -38,23 +37,6 @@ cd ${EXECUTION_DIR}
 
 APP_NAME="rpki-validator"
 PID_FILE=${APP_NAME}.pid
-
-
-# Set the following environment variables if you want to override the
-# default locations for various files and resources used by this application.
-#
-# Be aware that if you use an alternative log4j.xml configuration file,
-# you may want to edit that file to change the locations of the validation.log,
-# and rtr.log files.
-CONF_DIR=${RPKI_VALIDATOR_CONF_DIR:="conf"}   # Application expects to find log4j.xml here
-LIB_DIR=${RPKI_VALIDATOR_LIB_DIR:="lib"}      # Contents added to the java classpath, contains libraries used by this application
-DATA_DIR=${RPKI_VALIDATOR_DATA_DIR:="data"}   # Will use this to store in-app settings and data
-TAL_DIR=${RPKI_VALIDATOR_TAL_DIR:="conf/tal"} # Will read all *.tal files here
-WORK_DIR=${RPKI_VALIDATOR_WORK_DIR:="tmp"}    # Will use this to cache and download objects using rsync
-ACCESS_LOG=${RPKI_VALIDATOR_ACCESS_LOG:="log/access.log"} # Http access log
-
-LOCATION_OPTIONS="-c $CONF_DIR -d $DATA_DIR -t $TAL_DIR -w $WORK_DIR -a $ACCESS_LOG"
-
 
 function error_exit {
     echo -e "[ error ] $1"
@@ -71,15 +53,9 @@ function warn {
 
 function usage {
 cat << EOF
-Usage: $0 start [OPTIONS]
-   or  $0 stop
-   or  $0 status
-
-Where OPTIONS include:
-    -h    Start web user interface on specified port (Default 8080)
-    -r    Allow routers to connect on specified port (Default 8282)
-    -n    Stop the server from closing connections when it receives fatal errors
-    -s    Stop the server from sending notify messages when it has updates
+Usage: $0 start [-c my-configuration.conf]
+   or  $0 stop [-c my-configuration.conf]
+   or  $0 status [-c my-configuration.conf]
 EOF
 }
 
@@ -98,8 +74,50 @@ if [ -z $JAVA_CMD ]; then
     error_exit "Cannot find java on path. Make sure java is installed and/or set JAVA_HOME"
 fi
 
+
+# See how we're called
+FIRST_ARG="$1"
+shift
+if [[ -n $MODE ]]; then
+   usage
+   exit
+fi
+
+
+# Parse config file, if given
+getopts ":c:" OPT_NAME
+CONFIG_FILE=$OPTARG
+
+HTTP_PORT_VALUE="8080"
+RTR_PORT_VALUE="8282"
+LIB_DIR="lib"
+
+ENV_ARGUMENTS="-Dapp.name=${APP_NAME}"
+if [[ -n $CONFIG_FILE ]]; then
+
+    if [[ ! $CONFIG_FILE =~ .*conf$ ]]; then
+         error_exit "Configuration file name must end with .conf"
+    fi
+
+    if [[ ! -r $CONFIG_FILE ]]; then
+         error_exit "Can't read config file: $CONFIG_FILE"
+    fi
+
+    ALT_HTTP_PORT=`grep "^ui.http.port" $CONFIG_FILE | awk -F "=" '{ print $2 }'`
+    ALT_RTR_PORT=`grep "^rtr.port" $CONFIG_FILE | awk -F "=" '{ print $2 }'`
+    ALT_LIB_DIR=`grep "^locations.libdir" $CONFIG_FILE | awk -F "=" '{ print $2 }'`
+    ALT_PID_FILE=`grep "^locations.pidfile" $CONFIG_FILE | awk -F "=" '{ print $2 }'`
+
+    ENV_ARGUMENTS="$ENV_ARGUMENTS -Dconfig.file=$CONFIG_FILE"
+    LIB_DIR=${ALT_LIB_DIR:-$LIB_DIR}
+    HTTP_PORT_VALUE=${ALT_HTTP_PORT:-$HTTP_PORT_VALUE}
+    RTR_PORT_VALUE=${ALT_RTR_PORT:-$RTR_PORT_VALUE}
+    PID_FILE=${ALT_PID_FILE:-$PID_FILE}
+fi
+
+
 #
-# Determine if is already running
+# Determine if the application is already running
 #
 RUNNING="false"
 if [ -e ${PID_FILE} ]; then
@@ -109,19 +127,6 @@ if [ -e ${PID_FILE} ]; then
     fi
 fi
 
-# Remove the first argument from the arguments list. Remaining arguments will be passed into the java application
-FIRST_ARG="$1"
-shift
-
-HTTP_PORT_FLAG=h
-RTR_PORT_FLAG=r
-NO_CLOSE_ON_ERROR_FLAG=n
-SILENT_FLAG=s
-
-HTTP_PORT_VALUE=8080
-RTR_PORT_VALUE=8282
-NO_CLOSE_ON_ERROR_VALUE=
-SILENT_VALUE=
 
 case ${FIRST_ARG} in
     start)
@@ -129,41 +134,14 @@ case ${FIRST_ARG} in
             error_exit "${APP_NAME} is already running"
         fi
 
-        # parse command line args
-        while getopts "${HTTP_PORT_FLAG}:${RTR_PORT_FLAG}:${NO_CLOSE_ON_ERROR_FLAG}${SILENT_FLAG}" OPTION
-        do
-         case $OPTION in
-            $HTTP_PORT_FLAG)
-                HTTP_PORT_VALUE=$OPTARG
-                ;;
-            $RTR_PORT_FLAG)
-                RTR_PORT_VALUE=$OPTARG
-                ;;
-            $NO_CLOSE_ON_ERROR_FLAG)
-                NO_CLOSE_ON_ERROR_VALUE=1
-                ;;
-            $SILENT_FLAG)
-                SILENT_VALUE=1
-                ;;
-            ?)
-                usage
-                exit
-                ;;
-         esac
-        done
-
-        APPLICATION_ARGS="$LOCATION_OPTIONS -$HTTP_PORT_FLAG $HTTP_PORT_VALUE -$RTR_PORT_FLAG $RTR_PORT_VALUE"
-        [ -z $NO_CLOSE_ON_ERROR_VALUE ] || APPLICATION_ARGS="$APPLICATION_ARGS -$NO_CLOSE_ON_ERROR_FLAG"
-        [ -z $SILENT_VALUE ] || APPLICATION_ARGS="$APPLICATION_ARGS -$SILENT_FLAG"
-
         info "Starting ${APP_NAME}..."
 
         CLASSPATH=:"$LIB_DIR/*"
 
         ${JAVA_CMD} ${DEFAULT_JVM_ARGUMENTS} ${JAVA_OPTS} \
             -classpath ${CLASSPATH} \
-            -Dapp.name=${APP_NAME} \
-            net.ripe.rpki.validator.config.Main ${APPLICATION_ARGS} &
+            $ENV_ARGUMENTS \
+            net.ripe.rpki.validator.config.Main &
 
         PID=$!
         echo $PID > $PID_FILE

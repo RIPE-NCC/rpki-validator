@@ -32,6 +32,7 @@ package net.ripe.rpki.validator.authentication
 import org.scalatra.ScalatraBase
 import org.scalatra.auth.strategy.{BasicAuthSupport, BasicAuthStrategy}
 import org.scalatra.auth.{ScentryConfig, ScentrySupport}
+import net.ripe.rpki.validator.config.ApplicationOptions
 
 
 object AdminLoginStrategy {
@@ -48,15 +49,10 @@ class AdminLoginStrategy (protected override val app: ScalatraBase, realm: Strin
   override protected def getUserId(user: User): String = user.id
 
   override protected def validate(userName: String, password: String): Option[User] = {
-    sys.env.get(AdminLoginStrategy.AdminPasswordEnvironmentVar) match {
-      case Some(adminPassword) => {
-        if (userName == "admin" && password == adminPassword) {
-          Some(User(userName))
-        } else {
-          None
-        }
-      }
-      case None => None
+    if (userName == ApplicationOptions.httpKioskUser && password == ApplicationOptions.httpKioskPass) {
+      Some(User(userName))
+    } else {
+      None
     }
   }
 }
@@ -82,12 +78,11 @@ trait AuthenticationSupport extends ScentrySupport[User] with BasicAuthSupport[U
    * Prompts for basic authentication if the admin password env variable has been set.
    */
   def authenticatedAction(action: => Any) = {
-    sys.env.get(AdminLoginStrategy.AdminPasswordEnvironmentVar) match {
-      case Some(password) => {
-        basicAuth()
-        action
-      }
-      case None => action
+    if(ApplicationOptions.httpKioskEnabled) {
+      basicAuth()
+      action
+    } else {
+      action
     }
   }
 }
