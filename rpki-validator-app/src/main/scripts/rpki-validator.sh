@@ -95,7 +95,7 @@ else
 fi
 
 if [ -z $JAVA_CMD ]; then
-    error_exit "Can not find java on path. Make sure java is installed and/or set JAVA_HOME"
+    error_exit "Cannot find java on path. Make sure java is installed and/or set JAVA_HOME"
 fi
 
 #
