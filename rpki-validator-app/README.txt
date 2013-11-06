@@ -1,6 +1,22 @@
 RIPE NCC RPKI Validator
 =======================
 
+Source Code
+-----------
+
+The RIPE NCC RPKI Validator is an open source project on Github. Please contribute!
+
+  https://github.com/RIPE-NCC/rpki-validator/
+
+
+Support
+-------
+
+Please contact <certification@ripe.net> with any questions relating to the
+RIPE NCC RPKI Validator or the RIPE NCC Resource Certification (RPKI) service.
+
+
+
 Requirements
 -------------
 
@@ -20,10 +36,11 @@ Requirements
 
   $ java -version
   
-  The JAVA_HOME environment variable must be set. There are many guides that explain how
-  to do this, but these basic steps should get you started for a single user.
+  The JAVA_HOME environment variable should be set. If it is not, the application will try
+  to find it. There are many guides that explain how to do this, but these basic steps 
+  should get you started for a single user.
   
-  1. Find the path to java by running:
+  1. Find the path to Java by running:
   
   $ whereis java
   
@@ -43,7 +60,7 @@ Requirements
 Usage
 -----
 
-= Untar the downloaded package
+= Decompress the downloaded package
 = Run the RPKI Validator script from the root folder to start, stop and check the status 
   of the application
 
@@ -53,41 +70,60 @@ Usage
 
     OPTIONS
 
-        -h HTTP-PORT       Start the web user interface on the specified port.
-                           Default: 8080
-
-
-        -r RTR-PORT        Allow RPKI-capable routers to connect on the specified port.
-                           Default: 8282
-
-        -n                 Stop the server from closing connections when it receives 
-                           fatal errors.
-
-        -s                 Stop the server from sending notify messages when it has
-                           updates.
+        -c my.config       Start the application with the settings specified in your
+                           configuration file
 
 = Once the application has started, it will write the current PID to rpki-validator.pid 
   and start logging to the log directory. You can access the web user interface here:
   
   http://yourhost:http-port/    (e.g. http://localhost:8080/)
 
+                           
+Configuration file
+------------------
 
-Kiosk mode (experimental)
--------------------------
+You can override the default settings of the RPKI Validator by referring to a 
+configuration file when starting the application. There is a template available in the 
+/conf directory. Uncomment and change any of the lines in this file, save it with a name 
+of your choice and start the application referring to your file using the -c flag.
 
-You can run the validator in so-called "kiosk" mode. In this mode the application will be 
-accessible read-only to anyone, but any action or update will require authentication with 
-a username and password.
+Usage:
 
-To enable kiosk mode, export this environment variable before running the validator:
+  ui.http.port         Start the web user interface on the specified port.
+                       Default: 8080
+                     
+  ui.kiosk.enable      In kiosk mode the application will be accessible read-only to 
+                       anyone, but any action or update will require authentication with a
+                       username and password.
+                       Default: false
+                     
+  ui.kiosk.user        Kiosk mode username
+                       Default: admin
+                     
+  ui.kiosk.pass        Kiosk mode password
+                       Default: admin
 
-  export RIPE_NCC_RPKI_VALIDATOR_ADMIN_PASSWORD="your_secret_password"
+  rtr.port             Allow RPKI-capable routers to connect on the specified port.
+                       Default: 8282
+                     
+  rtr.send-notify      Stop the server from sending notify messages when it has updates.
+                       Default: true
+  
+  rtr.close-on-error   Stop the server from closing connections when it receives fatal 
+                       errors.
+                       Default: true
+  
+  In addition, you can change the location of any of the files and working directories
+  this application uses. All paths are relative to where the rpki-validator.sh script is 
+  installed.
 
-When prompted for credentials, enter "admin" for the user and your secret password.
 
-Note: This a basic, experimental feature. Kiosk mode is merely intended to prevent 
-unauthorised people from making (accidental) changes. The password you configure is stored
-in plain text. When a user enters the credentials, they are sent unencrypted. Lastly, the 
+Notes on kiosk mode
+-------------------
+
+This a basic, experimental feature. Kiosk mode is merely intended to prevent unauthorised 
+people from making (accidental) changes. The password you configure is stored in plain 
+text. When a user enters the credentials, they are sent unencrypted. Lastly, the 
 credentials remain valid for the entire browser session, so you need to quit your browser 
 to log out.
 
@@ -125,7 +161,7 @@ This validator will automatically pick up any file matching this pattern:
   <root-folder>/conf/tal/*.tal
 
 The Trust Anchor Locator (TAL) files for four Regional Internet Registries are included
-with this distribution: AFRINIC, APNIC, Lacnic and RIPE NCC. 
+with this distribution: AFRINIC, APNIC, LACNIC and RIPE NCC. 
 
 To access ARIN's TAL, you will have to agree to ARIN's Relying Party Agreement. After 
 that, the TAL will be emailed to the recipient. Please visit this ARIN web page for
@@ -206,15 +242,14 @@ Known Issues
 If you find any other problems, please contact us at <certification@ripe.net>.
 
 
-Source Code
------------
-
-The RIPE NCC RPKI Validator is an open source project on Github
-https://github.com/RIPE-NCC/rpki-validator/
-
-
 Version History
 ---------------
+
+2.13 - 6 November 2013
+= The application now uses a single configuration file to override all default settings.
+= The application will now try to find your Java installation if you have not specified
+  your JAVA_HOME.
+= Bug and conformance fixes, as well as other magical improvements
 
 2.12 - 25 October 2013
 = Changed default memory settings from 512MB to 1024MB after out of memory problems with
@@ -296,12 +331,4 @@ Version History
 = It allows manual controls and overrides through filters and white lists
 = It allows integration in existing (RPSL based) workflows
 = It is capable of communicating with RPKI-capable routers
-
-
-Support
--------
-
-Please contact <certification@ripe.net> with any questions relating to the
-RIPE NCC RPKI Validator or the RIPE NCC Resource Certification (RPKI) service.
-
 
