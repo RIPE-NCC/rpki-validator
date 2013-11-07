@@ -38,7 +38,7 @@ import net.ripe.rpki.validator.util.UriToFileMapper
 import java.io.File
 import java.net.URI
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
-import net.ripe.rpki.commons.validation.ValidationResult
+import net.ripe.rpki.commons.validation._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.util.Specification
@@ -46,17 +46,16 @@ import net.ripe.rpki.commons.util.Specifications
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
 import net.ripe.rpki.commons.crypto.crl.X509CrlTest
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsTest
-import net.ripe.rpki.commons.validation.ValidationLocation
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
 import net.ripe.rpki.validator.models.StoredRepositoryObject
 import org.scalatest.BeforeAndAfter
-import net.ripe.rpki.commons.validation.ValidationString
-import net.ripe.rpki.commons.validation.ValidationStatus
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.mockito.stubbing.Answer
 import org.mockito.invocation.InvocationOnMock
+import java.util
+import scala.Some
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter with MockitoSugar {
@@ -118,8 +117,9 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult)
 
-    validationResult.getWarnings should have size 1
+    validationResult.getWarnings should have size 2
     validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
+    validationResult.getWarnings.get(1).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)
     store.getLatestByUrl(mftUri) should equal(None)
 
   }
@@ -147,8 +147,9 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     subject.fetch(mftWrongHashUri, Specifications.alwaysTrue(), validationResult)
 
     // Should see warnings
-    validationResult.getWarnings should have size 1
+    validationResult.getWarnings should have size 2
     validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCONSISTENT)
+    validationResult.getWarnings.get(1).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)
 
     // And metrics
     val metrics = validationResult.getMetrics(new ValidationLocation(mftWrongHashUri))
@@ -157,8 +158,7 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
     // And since it's not in the cache, also errors
     val failures = validationResult.getFailures(new ValidationLocation(mftWrongHashUri))
-    failures should have size 1
-    failures.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)
+    failures should have size 0
     store.getLatestByUrl(mftWrongHashUri) should equal(None)
   }
 
@@ -206,18 +206,23 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     subject.fetch(nonExistentUri, mft.getFileContentSpecification(roaFileName), validationResult) should equal(roa)
   }
 
-  test("Should give an error in case we can not get the object from the store") {
-    val rsyncFetcher = new TestRemoteObjectFetcher(Map.empty)
+  test("Should fall back to remote object from inconsistent repository if no consistent repository object is available") {
+    val entries = Map(
+      mftUri -> mft,
+      roaUri -> roa)
+
+    val rsyncFetcher = new TestRemoteObjectFetcher(entries)
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = ValidationResult.withLocation(mftUri)
 
-    subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(null)
-    validationResult.getWarnings should have size 1
+    subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(mft)
+    validationResult.getWarnings should have size 2
     validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
-    validationResult.getFailures(new ValidationLocation(mftUri)) should have size 1
+    validationResult.getWarnings.get(1).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)
+    validationResult.getFailures(new ValidationLocation(mftUri)) should have size 0
   }
 
-  test("Should add a warning when object cannot be retrieved from remote repository due to an rsync failure") {
+  test("Should add a failure when object cannot be retrieved from remote repository due to an rsync failure") {
     val rsyncFetcher = mock[RpkiRepositoryObjectFetcher]
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = ValidationResult.withLocation(mftUri)
@@ -232,9 +237,14 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
 
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(null)
 
-    validationResult.getWarnings should have size 1
-    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_RSYNC_COMMAND)
-    validationResult.getFailures(new ValidationLocation(mftUri)) should have size 1
+    val warnings = validationResult.getWarnings
+    warnings should have size 2
+    warnings.get(0).getKey should equal(ValidationString.VALIDATOR_RSYNC_COMMAND)
+    warnings.get(1).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)
+
+    val failures: util.List[ValidationCheck] = validationResult.getFailures(new ValidationLocation(mftUri))
+    failures should have size 1
+    failures.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND)
   }
 
 }

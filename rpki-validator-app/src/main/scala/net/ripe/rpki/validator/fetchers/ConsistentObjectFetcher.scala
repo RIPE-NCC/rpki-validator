@@ -58,23 +58,37 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, 
    * If it is, we put the new manifest and all the contents in our durable object store for future use, and return the new manifest.
    */
   override def fetch(uri: URI, specification: Specification[Array[Byte]], result: ValidationResult): CertificateRepositoryObject = {
-    val storedObject = specification match {
+    specification match {
       case filecontentSpec: FileContentSpecification =>
-        store.getByHash(filecontentSpec.getHash)
+        storedObjectToCro(uri, store.getByHash(filecontentSpec.getHash), result)
       case _ =>
-        fetchAndStoreObject(uri, specification, result)
-        store.getLatestByUrl(uri)
+        val remoteCro = fetchAndStoreObject(uri, specification, result)
+        val consistentCro = store.getLatestByUrl(uri)
+        consistentCro match {
+          case Some(storedObject) => storedObjectToCro(uri, consistentCro, result)
+          case None => {
+            result.warnForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString)
+            remoteCro match {
+              case Some(cro) => cro
+              case None => {
+                result.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, uri.toString)
+                null
+              }
+            }
+          }
+        }
     }
-    storedObjectToCro(uri, storedObject, result)
+
   }
 
-  private[this] def fetchAndStoreObject(uri: URI, specification: Specification[Array[Byte]], result: ValidationResult) {
+  private[this] def fetchAndStoreObject(uri: URI, specification: Specification[Array[Byte]], result: ValidationResult): Option[CertificateRepositoryObject] = {
     val cro = Option {
       val fetchResults = ValidationResult.withLocation(uri)
       val cro = remoteObjectFetcher.fetch(uri, specification, fetchResults)
       warnAboutFetchFailures(uri, result, fetchResults)
       cro
     }
+
     cro foreach {
       case manifest: ManifestCms =>
         val fetchResults2 = fetchAndStoreConsistentObjectSet(uri, manifest)
@@ -82,6 +96,8 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, 
       case cro =>
         store.put(StoredRepositoryObject(uri = uri, repositoryObject = cro))
     }
+
+    cro
   }
 
   private[this] def storedObjectToCro(uri: URI, storedObject: Option[StoredRepositoryObject], result: ValidationResult): CertificateRepositoryObject = {
