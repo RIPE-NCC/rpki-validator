@@ -66,15 +66,6 @@ class UserPreferencesView(val userPreferences: UserPreferences, val messages: Se
               </span>
               days.
             </label>
-            <label class="checkbox">
-              {
-                userPreferences.enableFeedback match {
-                  case Some(true) => <input name="enable-feedback" type="checkbox" checked="checked"/>
-                  case _ => <input name="enable-feedback" type="checkbox"/>
-                }
-              }
-              Submit performance data to the RIPE NCC (<a href="https://www.ripe.net/certification/rpki-validator-metrics">Learn More&hellip;</a>)
-            </label>
           </div>
           <div>
             <br/>

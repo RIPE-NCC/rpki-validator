@@ -45,8 +45,6 @@ object ApplicationOptions {
   def rtrCloseOnError: Boolean = config.getBoolean("rtr.close-on-error")
   def rtrSendNotify: Boolean = config.getBoolean("rtr.send-notify")
 
-  def feedbackUri: String = "https://ba-feedback-server.ripe.net/metrics/rpki-validator"
-
   private def resolveFile(path: String, fileName: String): File = new File(path + File.separator + fileName)
 
   def dataFileLocation = resolveFile(config.getString("locations.datadir"), "data.json")
@@ -56,5 +54,4 @@ object ApplicationOptions {
   def applicationLogFileName = config.getString("logging.application.file")
   def rtrLogFileName = config.getString("logging.rtr.file")
   def accessLogFileName = config.getString("logging.access.file")
-
 }

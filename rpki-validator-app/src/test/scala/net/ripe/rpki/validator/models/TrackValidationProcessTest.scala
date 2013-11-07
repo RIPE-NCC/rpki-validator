@@ -39,6 +39,7 @@ import net.ripe.rpki.validator.config.MemoryImage
 import org.joda.time.DateTime
 import java.io.File
 import java.util.Collections
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TrackValidationProcessTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
@@ -70,4 +71,16 @@ class TrackValidationProcessTest extends FunSuite with ShouldMatchers with Befor
     val result = subject.runProcess()
     result should equal(Failure("Trust anchor not idle or enabled"));
   }
+}
+
+class MyValidationProcess extends ValidationProcess {
+  val certificateUri = URI.create("rsync://rpki.ripe.net/rootcer")
+
+  override def exceptionHandler = {
+    case e: Exception => Failure("")
+  }
+  override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = Map.empty[URI, ValidatedObject]
+  override def finishProcessing() {}
+  override val trustAnchorLocator = new TrustAnchorLocator(new File(""), "caName", certificateUri, "publicKeyInfo", Collections.emptyList())
+  override def extractTrustAnchorLocator() = { throw new RuntimeException("Make validation process fail") }
 }

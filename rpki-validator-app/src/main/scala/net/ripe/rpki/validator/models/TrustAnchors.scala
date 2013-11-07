@@ -60,8 +60,6 @@ import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.validator.config.MemoryImage
 import net.ripe.rpki.validator.fetchers._
 import net.ripe.rpki.validator.lib.DateAndTime._
-import net.ripe.rpki.validator.statistics.InconsistentRepositoryChecker
-import net.ripe.rpki.validator.statistics.Metric
 import net.ripe.rpki.validator.store.DataSources
 import net.ripe.rpki.validator.store.RepositoryObjectStore
 import scalaz._
@@ -316,92 +314,6 @@ trait TrackValidationProcess extends ValidationProcess {
   }
 }
 
-trait MeasureValidationProcess extends ValidationProcess {
-  private[this] val metricsBuilder = Vector.newBuilder[Metric]
-  private[this] val startedAt = DateTimeUtils.currentTimeMillis
-
-  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    metricsBuilder += Metric("trust.anchor[%s].extracted.elapsed.ms" format trustAnchorLocator.getCertificateLocation, (DateTimeUtils.currentTimeMillis - startedAt).toString, DateTimeUtils.currentTimeMillis)
-    val result = super.validateObjects(certificate)
-    metricsBuilder += Metric("trust.anchor[%s].validation" format trustAnchorLocator.getCertificateLocation, "OK", DateTimeUtils.currentTimeMillis)
-    result
-  }
-
-  abstract override def finishProcessing() = {
-    super.finishProcessing()
-    val stop = DateTimeUtils.currentTimeMillis
-    metricsBuilder += Metric("trust.anchor[%s].validation.elapsed.ms" format trustAnchorLocator.getCertificateLocation, (stop - startedAt).toString, DateTimeUtils.currentTimeMillis)
-  }
-  abstract override def exceptionHandler = {
-    case e: Exception =>
-      metricsBuilder += Metric("trust.anchor[%s].validation" format trustAnchorLocator.getCertificateLocation, "failed: " + e, DateTimeUtils.currentTimeMillis)
-      super.exceptionHandler(e)
-  }
-
-  lazy val metrics = metricsBuilder.result()
-}
-
-trait MeasureRsyncExecution extends ValidationProcess {
-  private[this] val registry = new MetricsRegistry
-  override def objectFetcherListeners = super.objectFetcherListeners :+ RsyncExecution
-
-  private object RsyncExecution extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
-    override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
-      update("rsync.prefetch.failure", uri, RsyncRpkiRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC, result)
-    }
-    override def afterPrefetchSuccess(uri: URI, result: ValidationResult) {
-      update("rsync.prefetch.success", uri, RsyncRpkiRepositoryObjectFetcher.RSYNC_PREFETCH_VALIDATION_METRIC, result)
-    }
-    override def afterFetchFailure(uri: URI, result: ValidationResult) {
-      update("rsync.fetch.file.failure", uri, RsyncRpkiRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC, result)
-    }
-    override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
-      update("rsync.fetch.file.success", uri, RsyncRpkiRepositoryObjectFetcher.RSYNC_FETCH_FILE_VALIDATION_METRIC, result)
-    }
-
-    private[this] def update(callback: String, uri: URI, name: String, result: ValidationResult) {
-      val metric = result.getMetrics(new ValidationLocation(uri)).asScala.find(_.getName == name)
-      metric foreach { metric =>
-        try {
-          val elapsedTime = metric.getValue.toLong
-          registry.newTimer(classOf[MeasureRsyncExecution], "%s[%s]" format (name, uri.getHost)).update(elapsedTime, TimeUnit.MILLISECONDS)
-        } catch {
-          case _: NumberFormatException => // Ignore
-        }
-      }
-    }
-  }
-
-  def rsyncMetrics: Seq[Metric] = {
-    val now = DateTimeUtils.currentTimeMillis
-    registry.allMetrics.asScala.flatMap {
-      case (name, timer: Timer) =>
-        Vector(
-          Metric(name.getName + ".count", timer.count.toString, now),
-          Metric(name.getName + ".mean", timer.mean.toString, now),
-          Metric(name.getName + ".min", timer.min.toString, now),
-          Metric(name.getName + ".max", timer.max.toString, now),
-          Metric(name.getName + ".stdDev", timer.stdDev.toString, now),
-          Metric(name.getName + ".75p", timer.getSnapshot.get75thPercentile.toString, now),
-          Metric(name.getName + ".95p", timer.getSnapshot.get95thPercentile.toString, now),
-          Metric(name.getName + ".98p", timer.getSnapshot.get98thPercentile.toString, now),
-          Metric(name.getName + ".99p", timer.getSnapshot.get99thPercentile.toString, now),
-          Metric(name.getName + ".999p", timer.getSnapshot.get999thPercentile.toString, now),
-          Metric(name.getName + ".median", timer.getSnapshot.getMedian.toString, now),
-          Metric(name.getName + ".rate.1m", timer.oneMinuteRate.toString, now),
-          Metric(name.getName + ".rate.5m", timer.fiveMinuteRate.toString, now),
-          Metric(name.getName + ".rate.15m", timer.fifteenMinuteRate.toString, now))
-      case _ =>
-        Vector.empty
-    }.toIndexedSeq
-  }
-
-  abstract override def shutdown(): Unit = {
-    registry.shutdown()
-    super.shutdown()
-  }
-}
-
 trait ValidationProcessLogger extends ValidationProcess {
   override def objectFetcherListeners = super.objectFetcherListeners :+ ObjectFetcherLogger
 
@@ -432,39 +344,4 @@ trait ValidationProcessLogger extends ValidationProcess {
       logger.debug("Validated OBJECT '" + uri + "'")
     }
   }
-}
-
-/**
- * Checks the Validated Objects for inconsistent repositories and reports metrics for this.
- */
-trait MeasureInconsistentRepositories extends ValidationProcess {
-
-  private[this] val metricsBuilder = Vector.newBuilder[Metric]
-
-  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    val objects = super.validateObjects(certificate)
-    extractInconsistencies(objects)
-    objects
-  }
-
-  private[models] def extractInconsistencies(objects: Map[URI, ValidatedObject]) = {
-    val now = DateTimeUtils.currentTimeMillis
-    val inconsistencyStats = InconsistentRepositoryChecker.check(objects)
-
-    val totalRepositoriesMetric = Metric("trust.anchor[%s].repositories.total.count" format trustAnchorLocator.getCertificateLocation, inconsistencyStats.size.toString, now)
-
-    metricsBuilder += totalRepositoriesMetric
-
-    val inconsistentRepositories = inconsistencyStats.filter(_._2 == true).keys
-    val totalInconsistentRepoMetric = Metric("trust.anchor[%s].repositories.inconsistent.count" format trustAnchorLocator.getCertificateLocation, inconsistentRepositories.size.toString, now)
-
-    metricsBuilder += totalInconsistentRepoMetric
-    for (uri <- inconsistentRepositories) {
-      val inconsistentRepoMetric = Metric("trust.anchor[%s].repository.is.inconsistent" format trustAnchorLocator.getCertificateLocation, uri.toString, now)
-      metricsBuilder += inconsistentRepoMetric
-    }
-  }
-
-  lazy val inconsistencyMetrics = metricsBuilder.result()
-
 }

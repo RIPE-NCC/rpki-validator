@@ -41,27 +41,21 @@ import rtr.RTRServer
 import lib._
 import models._
 import bgp.preview._
-import scalaz.{ Success, Failure }
 import scala.concurrent.stm._
 import scala.concurrent.Future
 import scala.math.Ordering.Implicits._
-import net.ripe.rpki.validator.statistics.FeedbackMetrics
 import org.apache.http.impl.client.SystemDefaultHttpClient
 import org.joda.time.DateTimeUtils
-import net.ripe.rpki.validator.statistics.Metric
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.apache.http.params.HttpConnectionParams
-import net.ripe.rpki.validator.statistics.NetworkConnectivityMetrics
 import java.util.EnumSet
 import javax.servlet.DispatcherType
-import org.apache.http.impl.conn.PoolingClientConnectionManager
 import scala.Predef._
 import scalaz.Failure
 import net.ripe.rpki.validator.models.TrustAnchorData
 import net.ripe.rpki.validator.models.Idle
 import net.ripe.rpki.validator.lib.UserPreferences
 import scalaz.Success
-import net.ripe.rpki.validator.models.Whitelist
 import net.ripe.rpki.validator.models.IgnoreFilter
 import org.apache.log4j.xml.DOMConfigurator
 import net.ripe.rpki.validator.api.RestApi
@@ -106,8 +100,6 @@ class Main() { main =>
   HttpConnectionParams.setSoTimeout(httpParams, 2 * 60 * 1000)
 
   val bgpRisDumpDownloader = new BgpRisDumpDownloader(httpClient)
-  val feedbackMetrics = new FeedbackMetrics(httpClient, ApplicationOptions.feedbackUri + "/" + ReleaseInfo.version)
-  feedbackMetrics.enabled = data.userPreferences.isFeedbackEnabled
 
   val memoryImage = Ref(
     MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors), roas))
@@ -130,8 +122,6 @@ class Main() { main =>
 
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 10.seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 2.hours) { refreshRisDumps() }
-  actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 24.hours) { networkMetrics() }
-  actorSystem.scheduler.schedule(initialDelay = 5.minutes, interval = 1.hour) { feedbackMetrics.sendMetrics() }
 
   private def loadTrustAnchors(): TrustAnchors = {
     import java.{ util => ju }
@@ -169,7 +159,7 @@ class Main() { main =>
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays,  ApplicationOptions.workDirLocation) with TrackValidationProcess with MeasureValidationProcess with MeasureRsyncExecution with ValidationProcessLogger with MeasureInconsistentRepositories {
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays,  ApplicationOptions.workDirLocation) with TrackValidationProcess with ValidationProcessLogger {
           override val memoryImage = main.memoryImage
         }
         try {
@@ -180,19 +170,10 @@ class Main() { main =>
           }
         } finally {
           val now = DateTimeUtils.currentTimeMillis
-          feedbackMetrics.store(process.metrics ++ process.rsyncMetrics ++ process.inconsistencyMetrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt))
           process.shutdown()
         }
       }
     }
-  }
-
-  private def networkMetrics() {
-    val networkMetrics = memoryImage.single().trustAnchors.all.flatMap { ta =>
-      new NetworkConnectivityMetrics(ta.locator.getCertificateLocation).metrics
-    }
-    val now = DateTimeUtils.currentTimeMillis
-    feedbackMetrics.store(networkMetrics ++ Metric.baseMetrics(now) ++ Metric.validatorMetrics(now, startedAt))
   }
 
   private def runWebServer() {
@@ -237,7 +218,6 @@ class Main() { main =>
         dataFileLock synchronized {
           val (image, userPreferences) = atomic { implicit transaction =>
             f(transaction)
-            feedbackMetrics.enabled = main.userPreferences.get.isFeedbackEnabled
             (memoryImage.get, main.userPreferences.get)
           }
           PersistentDataSerialiser.write(

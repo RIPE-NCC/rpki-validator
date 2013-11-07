@@ -144,10 +144,8 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, 
         result.warn(VALIDATOR_RSYNC_COMMAND, uri.toString)
       case VALIDATOR_READ_FILE =>
         result.warn(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString)
-        result.addMetric(VALIDATOR_REPOSITORY_INCOMPLETE, uri.toString)
       case VALIDATOR_FILE_CONTENT =>
         result.warn(VALIDATOR_REPOSITORY_INCONSISTENT, uri.toString)
-        result.addMetric(VALIDATOR_REPOSITORY_INCONSISTENT, uri.toString)
       case _ =>
         result.warn(VALIDATOR_REPOSITORY_UNKNOWN, uri.toString)
     }

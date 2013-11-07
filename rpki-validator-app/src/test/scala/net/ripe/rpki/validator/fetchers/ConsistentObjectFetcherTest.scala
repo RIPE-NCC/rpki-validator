@@ -151,11 +151,6 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCONSISTENT)
     validationResult.getWarnings.get(1).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)
 
-    // And metrics
-    val metrics = validationResult.getMetrics(new ValidationLocation(mftWrongHashUri))
-    metrics should have size 1
-    metrics.get(0).getName should equal(ValidationString.VALIDATOR_REPOSITORY_INCONSISTENT)
-
     // And since it's not in the cache, also errors
     val failures = validationResult.getFailures(new ValidationLocation(mftWrongHashUri))
     failures should have size 0
@@ -184,11 +179,6 @@ class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with Befo
     // But should see warnings about fetching
     validationResult.getResult(new ValidationLocation(mftUri), ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE).getStatus() should be(ValidationStatus.WARNING)
     validationResult.getFailuresForCurrentLocation should have size 0
-
-    // And metrics
-    val metrics = validationResult.getMetrics(new ValidationLocation(mftUri))
-    metrics should have size 1
-    metrics.get(0).getName should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
   }
 
   test("Should get object by hash if we can") {

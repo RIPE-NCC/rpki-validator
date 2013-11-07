@@ -62,9 +62,8 @@ trait UserPreferencesController extends ApplicationController with SoftwareUpdat
   private def submittedUserPreferences: ValidationNEL[FeedbackMessage, UserPreferences] = {
     val enableUpdateChecks = validateParameter("enable-update-checks", parseCheckBoxValue)
     val maxStale = validateParameter("max-stale-days", required(parseNonNegativeInt))
-    val enableFeedback = validateParameter("enable-feedback", parseCheckBoxValue).map(b => Some(b))
 
-    (enableUpdateChecks |@| maxStale |@| enableFeedback).apply(UserPreferences)
+    (enableUpdateChecks |@| maxStale).apply(UserPreferences)
   }
 }
 
