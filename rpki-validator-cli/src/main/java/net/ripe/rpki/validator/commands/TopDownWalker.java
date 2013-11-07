@@ -34,6 +34,7 @@ import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.validation.ValidationLocation;
 import net.ripe.rpki.commons.validation.ValidationResult;
+import net.ripe.rpki.commons.validation.ValidationString;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.rpki.validator.fetchers.CertificateRepositoryObjectFetcher;
 import org.apache.commons.lang.Validate;
@@ -80,8 +81,10 @@ public class TopDownWalker {
 
     void prefetch(CertificateRepositoryObjectValidationContext context) {
         URI repositoryURI = context.getRepositoryURI();
-        validationResult.setLocation(new ValidationLocation(repositoryURI));
-        certificateRepositoryObjectFetcher.prefetch(repositoryURI, validationResult);
+        if (repositoryURI != null) {
+            validationResult.setLocation(new ValidationLocation(repositoryURI));
+            certificateRepositoryObjectFetcher.prefetch(repositoryURI, validationResult);
+        }
     }
 
     void processManifest(CertificateRepositoryObjectValidationContext context) {
@@ -94,13 +97,22 @@ public class TopDownWalker {
 
     ManifestCms fetchManifest(URI manifestURI, CertificateRepositoryObjectValidationContext context) {
         validationResult.setLocation(new ValidationLocation(manifestURI));
-        return certificateRepositoryObjectFetcher.getManifest(manifestURI, context, validationResult);
+        try {
+            return certificateRepositoryObjectFetcher.getManifest(manifestURI, context, validationResult);
+        } catch (RuntimeException e) {
+            validationResult.error(ValidationString.VALIDATOR_OBJECT_PROCESSING_EXCEPTION, manifestURI.toString());
+            return null;
+        }
     }
 
     void processManifestFiles(CertificateRepositoryObjectValidationContext context, ManifestCms manifestCms) {
         URI repositoryURI = context.getRepositoryURI();
         for (String fileName: manifestCms.getFileNames()) {
-            processManifestEntry(manifestCms, context, repositoryURI, fileName);
+            try {
+                processManifestEntry(manifestCms, context, repositoryURI, fileName);
+            } catch (RuntimeException e) {
+                validationResult.error(ValidationString.VALIDATOR_OBJECT_PROCESSING_EXCEPTION, repositoryURI.resolve(fileName).toString());
+            }
         }
     }
 
