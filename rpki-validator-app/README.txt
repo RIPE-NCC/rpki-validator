@@ -70,8 +70,8 @@ Usage
 
     OPTIONS
 
-        -c my.config       Start the application with the settings specified in your
-                           configuration file
+        -c /path/to/my.config  Override the default config file location:
+                                   conf/rpki-validator.conf (relative to script)
 
 = Once the application has started, it will write the current PID to rpki-validator.pid 
   and start logging to the log directory. You can access the web user interface here:
@@ -82,10 +82,10 @@ Usage
 Configuration file
 ------------------
 
-You can override the default settings of the RPKI Validator by referring to a 
-configuration file when starting the application. There is a template available in the 
-/conf directory. Uncomment and change any of the lines in this file, save it with a name 
-of your choice and start the application referring to your file using the -c flag.
+You can override the default settings of the RPKI Validator by editing the configuration
+file. If you want to be sure that future upgrades do not override your local changes, you
+may want to make a local copy of the configuration file and refer to it explicitly using
+the -c option.
 
 Usage:
 

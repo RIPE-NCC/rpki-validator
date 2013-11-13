@@ -53,9 +53,9 @@ function warn {
 
 function usage {
 cat << EOF
-Usage: $0 start [-c my-configuration.conf]
-   or  $0 stop [-c my-configuration.conf]
-   or  $0 status [-c my-configuration.conf]
+Usage: $0 start  [-c /path/to/my-configuration.conf]
+   or  $0 stop   [-c /path/to/my-configuration.conf]
+   or  $0 status [-c /path/to/my-configuration.conf]
 EOF
 }
 
@@ -83,38 +83,33 @@ if [[ -n $MODE ]]; then
    exit
 fi
 
-
-# Parse config file, if given
+# Determine config file location
 getopts ":c:" OPT_NAME
-CONFIG_FILE=$OPTARG
+CONFIG_FILE=${OPTARG:-conf/rpki-validator.conf}
 
-HTTP_PORT_VALUE="8080"
-RTR_PORT_VALUE="8282"
-LIB_DIR="lib"
-
-ENV_ARGUMENTS="-Dapp.name=${APP_NAME}"
-if [[ -n $CONFIG_FILE ]]; then
-
-    if [[ ! $CONFIG_FILE =~ .*conf$ ]]; then
-         error_exit "Configuration file name must end with .conf"
-    fi
-
-    if [[ ! -r $CONFIG_FILE ]]; then
-         error_exit "Can't read config file: $CONFIG_FILE"
-    fi
-
-    ALT_HTTP_PORT=`grep "^ui.http.port" $CONFIG_FILE | awk -F "=" '{ print $2 }'`
-    ALT_RTR_PORT=`grep "^rtr.port" $CONFIG_FILE | awk -F "=" '{ print $2 }'`
-    ALT_LIB_DIR=`grep "^locations.libdir" $CONFIG_FILE | awk -F "=" '{ print $2 }'`
-    ALT_PID_FILE=`grep "^locations.pidfile" $CONFIG_FILE | awk -F "=" '{ print $2 }'`
-
-    ENV_ARGUMENTS="$ENV_ARGUMENTS -Dconfig.file=$CONFIG_FILE"
-    LIB_DIR=${ALT_LIB_DIR:-$LIB_DIR}
-    HTTP_PORT_VALUE=${ALT_HTTP_PORT:-$HTTP_PORT_VALUE}
-    RTR_PORT_VALUE=${ALT_RTR_PORT:-$RTR_PORT_VALUE}
-    PID_FILE=${ALT_PID_FILE:-$PID_FILE}
+if [[ ! $CONFIG_FILE =~ .*conf$ ]]; then
+        error_exit "Configuration file name must end with .conf"
 fi
 
+if [[ ! -r $CONFIG_FILE ]]; then
+    error_exit "Can't read config file: $CONFIG_FILE"
+fi
+
+function parse_config_line {
+    local CONFIG_KEY=$1
+    local VALUE=`grep "^$CONFIG_KEY" $CONFIG_FILE | awk -F "=" '{ print $2 }'`
+
+    if [ -z $VALUE ]; then
+        error_exit "Cannot find value for: $CONFIG_KEY in config-file: $CONFIG_FILE"
+    fi
+
+    eval "$2=$VALUE"
+}
+
+parse_config_line "ui.http.port" HTTP_PORT_VALUE
+parse_config_line "rtr.port" RTR_PORT_VALUE
+parse_config_line "locations.libdir" LIB_DIR
+parse_config_line "locations.pidfile" PID_FILE
 
 #
 # Determine if the application is already running
@@ -140,7 +135,7 @@ case ${FIRST_ARG} in
 
         ${JAVA_CMD} ${DEFAULT_JVM_ARGUMENTS} ${JAVA_OPTS} \
             -classpath ${CLASSPATH} \
-            $ENV_ARGUMENTS \
+            "-Dapp.name=${APP_NAME} -Dconfig.file=$CONFIG_FILE" \
             net.ripe.rpki.validator.config.Main &
 
         PID=$!

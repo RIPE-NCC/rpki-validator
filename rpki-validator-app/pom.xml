@@ -306,7 +306,6 @@
                         <exclude>log/**</exclude>
                         <exclude>tmp/**</exclude>
                         <exclude>**/*.conf</exclude>
-                        <exclude>**/*.template</exclude>
                         <exclude>**/*.jmx</exclude>
                         <exclude>**/*.tal</exclude>
                         <exclude>**/*.txt</exclude>
