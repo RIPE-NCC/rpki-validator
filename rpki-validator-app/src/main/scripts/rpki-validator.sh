@@ -29,8 +29,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# Don't edit this script, but use JAVA_OPTS to override these settings.
-DEFAULT_JVM_ARGUMENTS="-Xms1024m -Xmx1024m"
+
 
 EXECUTION_DIR=`dirname "$BASH_SOURCE"`
 cd ${EXECUTION_DIR}
@@ -95,21 +94,47 @@ if [[ ! -r $CONFIG_FILE ]]; then
     error_exit "Can't read config file: $CONFIG_FILE"
 fi
 
+function parse_optional_config_line {
+    local CONFIG_KEY=$1
+    local VALUE=`grep "^$CONFIG_KEY" $CONFIG_FILE | sed 's/#.*//g' | awk -F "=" '{ print $2 }'`
+    eval "$2=$VALUE"
+}
+
 function parse_config_line {
     local CONFIG_KEY=$1
-    local VALUE=`grep "^$CONFIG_KEY" $CONFIG_FILE | awk -F "=" '{ print $2 }'`
+    local VALUE=`grep "^$CONFIG_KEY" $CONFIG_FILE | sed 's/#.*//g' | awk -F "=" '{ print $2 }'`
 
     if [ -z $VALUE ]; then
         error_exit "Cannot find value for: $CONFIG_KEY in config-file: $CONFIG_FILE"
     fi
-
     eval "$2=$VALUE"
+}
+
+function parse_jvm_options {
+    parse_config_line "jvm.memory.initial" JVM_XMS
+    parse_config_line "jvm.memory.maximum" JVM_XMX
+
+    parse_optional_config_line "jvm.proxy.socks.host" JVM_SOCKS_PROXY_HOST
+    parse_optional_config_line "jvm.proxy.socks.port" JVM_SOCKS_PROXY_PORT
+
+    parse_optional_config_line "jvm.proxy.http.host" JVM_HTTP_PROXY_HOST
+    parse_optional_config_line "jvm.proxy.http.port" JVM_HTTP_PROXY_PORT
+
+    JVM_OPTIONS="-Xms$JVM_XMS -Xmx$JVM_XMX"
+    if [[ -n $JVM_SOCKS_PROXY_HOST && -n $JVM_SOCKS_PROXY_PORT ]]; then
+        JVM_OPTIONS="$JVM_OPTIONS -DsocksProxyHost=$JVM_SOCKS_PROXY_HOST -DsocksProxyPort=$JVM_SOCKS_PROXY_PORT"
+    elif [[ -n $JVM_HTTP_PROXY_HOST && -n $JVM_HTTP_PROXY_PORT ]]; then
+        JVM_OPTIONS="$JVM_OPTIONS -Dhttp.proxyHost=$JVM_HTTP_PROXY_HOST -Dhttp.proxyPort=$JVM_HTTP_PROXY_PORT"
+    fi
 }
 
 parse_config_line "ui.http.port" HTTP_PORT_VALUE
 parse_config_line "rtr.port" RTR_PORT_VALUE
+
 parse_config_line "locations.libdir" LIB_DIR
 parse_config_line "locations.pidfile" PID_FILE
+
+parse_jvm_options
 
 #
 # Determine if the application is already running
@@ -133,7 +158,9 @@ case ${FIRST_ARG} in
 
         CLASSPATH=:"$LIB_DIR/*"
 
-        ${JAVA_CMD} ${DEFAULT_JVM_ARGUMENTS} ${JAVA_OPTS} \
+        DEFAULT_JVM_ARGUMENTS="-Xms1024m -Xmx1024m"
+
+        ${JAVA_CMD} ${JVM_OPTIONS} ${JAVA_OPTS} \
             -classpath ${CLASSPATH} \
             "-Dapp.name=${APP_NAME} -Dconfig.file=$CONFIG_FILE" \
             net.ripe.rpki.validator.config.Main &

@@ -128,29 +128,16 @@ credentials remain valid for the entire browser session, so you need to quit you
 to log out.
 
 
-Configuring additional options
-------------------------------
+Configuring additional Java Virtual Machine (JVM) options
+---------------------------------------------------------
 
-This RPKI Validator allows you to set the several variables that you may want to control 
-in your environment. You can do this by using the JAVA_OPTS environment variable to 
-override the default.
+The configuration file allows you to change the most import memory options and/or specify
+a SOCKS or HTTP proxy to be used by the Java Virtual Machine (JVM) that will run this
+application.
 
-Examples:
-
-= If you want to change the memory settings to use 1024MB minimum and 2048MB maximum
-  
-  export JAVA_OPTS="-Xms1024m -Xmx2048"
-  
-  Be aware though that if you give this tool too little memory it will become slow first, 
-  and then stop working properly. We found that at least 1024MB is needed.
-  
-= If you want to use a SOCKS proxy, like for example webcache.example.com:8888
-
-  export JAVA_OPTS="-DsocksProxyHost=webcache.example.com -DsocksProxyPort=8888"
-
-= If you want to use a HTTP proxy, like for example webcache.example.com:8888
-
-  export JAVA_OPTS="-Dhttp.proxyHost=webcache.example.com -Dhttp.proxyPort=8888"
+Additionally, you can use the JAVA_OPTS environment variable to pass in more JVM options,
+not supported by the configuration file and start script. Use this very carefully though,
+we can give no guarantees about the result.
 
 
 Configuring Trust Anchors
@@ -236,16 +223,13 @@ Known Issues
   When the validator has any updates, it will respond with a cache-reset, as described 
   here: http://tools.ietf.org/html/rfc6810#section-6.3
 
-= We have found that some routers require the -n and -s options. This is due to 
-  interoperability issues that may exist on some platforms.
-
 If you find any other problems, please contact us at <certification@ripe.net>.
 
 
 Version History
 ---------------
 
-2.13 - 6 November 2013
+2.13 - 15 November 2013
 = The application now uses a single configuration file to override all default settings.
 = The application will now try to find your Java installation if you have not specified
   your JAVA_HOME.
