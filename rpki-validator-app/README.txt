@@ -16,7 +16,6 @@ Please contact <certification@ripe.net> with any questions relating to the
 RIPE NCC RPKI Validator or the RIPE NCC Resource Certification (RPKI) service.
 
 
-
 Requirements
 -------------
 
@@ -52,9 +51,6 @@ Requirements
 
   For performance this tool keeps a lot of data in memory. This also helps multi-threading
   allowing the tool to work faster by doing tasks in parallel.
-
-  The memory settings can be increased as described below. Lowering the maximum memory 
-  usage to values lower than 1GB will result out-of-memory related crashes.
   
   
 Usage
@@ -64,14 +60,12 @@ Usage
 = Run the RPKI Validator script from the root folder to start, stop and check the status 
   of the application
 
-       ./rpki-validator.sh start [OPTIONS]
-   or  ./rpki-validator.sh stop
-   or  ./rpki-validator.sh status
-
-    OPTIONS
-
-        -c /path/to/my.config  Override the default config file location:
-                                   conf/rpki-validator.conf (relative to script)
+       ./rpki-validator.sh start  [-c /path/to/my-configuration.conf]
+   or  ./rpki-validator.sh stop   [-c /path/to/my-configuration.conf]
+   or  ./rpki-validator.sh status [-c /path/to/my-configuration.conf]
+   
+  Note: you only have to use the -c flag if you change the name and/or location of the
+  configuration file, as explained below.   
 
 = Once the application has started, it will write the current PID to rpki-validator.pid 
   and start logging to the log directory. You can access the web user interface here:
@@ -83,49 +77,24 @@ Configuration file
 ------------------
 
 You can override the default settings of the RPKI Validator by editing the configuration
-file. If you want to be sure that future upgrades do not override your local changes, you
-may want to make a local copy of the configuration file and refer to it explicitly using
-the -c option.
+file at the following location:
 
-Usage:
+  conf/rpki-validator.conf
 
-  ui.http.port         Start the web user interface on the specified port.
-                       Default: 8080
-                     
-  ui.kiosk.enable      In kiosk mode the application will be accessible read-only to 
-                       anyone, but any action or update will require authentication with a
-                       username and password.
-                       Default: false
-                     
-  ui.kiosk.user        Kiosk mode username
-                       Default: admin
-                     
-  ui.kiosk.pass        Kiosk mode password
-                       Default: admin
-
-  rtr.port             Allow RPKI-capable routers to connect on the specified port.
-                       Default: 8282
-                     
-  rtr.send-notify      Stop the server from sending notify messages when it has updates.
-                       Default: true
+If you want to be sure that future upgrades do not overwrite your local changes, you may 
+want to make a local copy of the configuration file and refer to it explicitly using
+the -c option. For usage, please refer to the configuration file comments.  
   
-  rtr.close-on-error   Stop the server from closing connections when it receives fatal 
-                       errors.
-                       Default: true
-  
-  In addition, you can change the location of any of the files and working directories
-  this application uses. All paths are relative to where the rpki-validator.sh script is 
-  installed.
-
 
 Notes on kiosk mode
 -------------------
 
-This a basic, experimental feature. Kiosk mode is merely intended to prevent unauthorised 
-people from making (accidental) changes. The password you configure is stored in plain 
-text. When a user enters the credentials, they are sent unencrypted. Lastly, the 
-credentials remain valid for the entire browser session, so you need to quit your browser 
-to log out.
+In kiosk mode the application will be accessible read-only to anyone, but any action or
+update will require authentication with a username and password. This a basic, 
+experimental feature. Kiosk mode is merely intended to prevent unauthorised people from 
+making (accidental) changes. The password you configure is stored in plain text. When a 
+user enters the credentials, they are sent unencrypted. Lastly, the credentials remain 
+valid for the entire browser session, so you need to quit your browser to log out.
 
 
 Configuring additional Java Virtual Machine (JVM) options
@@ -315,4 +284,3 @@ Version History
 = It allows manual controls and overrides through filters and white lists
 = It allows integration in existing (RPSL based) workflows
 = It is capable of communicating with RPKI-capable routers
-
