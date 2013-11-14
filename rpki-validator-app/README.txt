@@ -35,18 +35,16 @@ Requirements
 
   $ java -version
   
-  The JAVA_HOME environment variable should be set. If it is not, the application will try
-  to find it. There are many guides that explain how to do this, but these basic steps 
-  should get you started for a single user.
-  
-  1. Find the path to Java by running:
-  
-  $ whereis java
-  
-  2. Add the location of your Java installation to your .bash_profile:
-  
-  export JAVA_HOME=/path/to/your/java
-  
+  The start script will try to find java on the path, using 'which java'.
+
+  If this is not what you want, e.g. because you have multiple java versions on your
+  system, or you just don't want to have it on the normal path, then you can specify
+  a java installation explicitly by setting the JAVA_HOME directory.
+
+  Beware that JAVA_HOME should not point to the java executable itself, but the installation
+  directory of your java distribution. The executable is expected here:
+      $JAVA_HOME/bin/java
+
 = At least 1GB of free memory
 
   For performance this tool keeps a lot of data in memory. This also helps multi-threading
