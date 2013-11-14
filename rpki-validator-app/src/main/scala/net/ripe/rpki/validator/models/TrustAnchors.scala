@@ -31,15 +31,11 @@ package net.ripe.rpki.validator.models
 
 import java.io.File
 import java.net.URI
-import java.util.concurrent.TimeUnit
 import scala.collection.JavaConverters._
 import scala.concurrent.stm.Ref
 import scala.concurrent.stm.atomic
 import scala.math.Ordering.Implicits._
 import org.joda.time.DateTime
-import org.joda.time.DateTimeUtils
-import com.yammer.metrics.core.MetricsRegistry
-import com.yammer.metrics.core.Timer
 import grizzled.slf4j.Logger
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.commands.TopDownWalker
@@ -59,7 +55,7 @@ import net.ripe.rpki.commons.crypto.x509cert.X509CertificateUtil
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.validator.config.MemoryImage
 import net.ripe.rpki.validator.fetchers._
-import net.ripe.rpki.validator.lib.DateAndTime._
+import net.ripe.rpki.validator.lib.DateAndTime._ // Ignore unused warnings: is used for implicit def
 import net.ripe.rpki.validator.store.DataSources
 import net.ripe.rpki.validator.store.RepositoryObjectStore
 import scalaz._

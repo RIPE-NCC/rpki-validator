@@ -178,6 +178,22 @@ Full documentation can be found here:
   https://www.ripe.net/developers/rpki-validator-api
 
 
+Monitoring
+----------
+You can monitor the health of this application using this url:
+
+   http://<your-host>:<your-port>/health
+
+This url will return some json text with information on each test.
+
+Monitoring tools should check the http status of the response.
+    200 -> Everything is okay
+    500 -> One or more checks failed
+
+For the moment we only check that the rsync binary can be found and executed,
+but we may add more checks in the future.
+
+
 Known Issues
 ------------
 
@@ -200,6 +216,7 @@ Version History
 = The application now uses a single configuration file to override all default settings.
 = The application will now try to find your Java installation if you have not specified
   your JAVA_HOME.
+= Added basic application monitoring
 = Bug and conformance fixes, as well as other magical improvements
 
 2.12 - 25 October 2013

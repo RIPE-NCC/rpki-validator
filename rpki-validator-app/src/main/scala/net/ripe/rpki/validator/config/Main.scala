@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator
 package config
 
-import java.io.File
 import scala.collection.JavaConverters._
 import org.apache.commons.io.FileUtils
 import org.eclipse.jetty.server.Server
@@ -57,8 +56,9 @@ import net.ripe.rpki.validator.models.Idle
 import net.ripe.rpki.validator.lib.UserPreferences
 import scalaz.Success
 import net.ripe.rpki.validator.models.IgnoreFilter
-import org.apache.log4j.xml.DOMConfigurator
 import net.ripe.rpki.validator.api.RestApi
+import com.codahale.metrics.servlets.{HealthCheckServlet, MetricsServlet}
+import net.ripe.rpki.validator.config.health.HealthChecks
 
 object Main {
   private val sessionId: Pdu.SessionId = Pdu.randomSessionid()
@@ -118,7 +118,11 @@ class Main() { main =>
   }
 
   val rtrServer = runRtrServer()
+
+
+
   runWebServer()
+
 
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 10.seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 2.hours) { refreshRisDumps() }
@@ -269,6 +273,7 @@ class Main() { main =>
     defaultServletHolder.setInitParameter("dirAllowed", "false")
     root.addServlet(defaultServletHolder, "/*")
     root.addServlet(new ServletHolder(restApiServlet), "/api/*")
+    root.addServlet(new ServletHolder(new HealthCheckServlet(HealthChecks.registry)), "/health")
     root.addFilter(new FilterHolder(webFilter), "/*", EnumSet.allOf(classOf[DispatcherType]))
 
     val requestLogHandler = {
