@@ -39,6 +39,13 @@
             <outputDirectory>lib</outputDirectory>
         </dependencySet>
     </dependencySets>
+    <files>
+        <file>
+            <source>src/test/resources/application.conf</source>
+            <outputDirectory>conf</outputDirectory>
+            <destName>rpki-validator.conf</destName>
+        </file>
+    </files>
     <fileSets>
         <fileSet>
             <directory>conf</directory>
