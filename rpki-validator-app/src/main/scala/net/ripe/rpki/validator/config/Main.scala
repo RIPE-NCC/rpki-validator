@@ -64,12 +64,6 @@ object Main {
   private val sessionId: Pdu.SessionId = Pdu.randomSessionid()
 
   def main(args: Array[String]): Unit = {
-
-    // For development, set config.file property to default if it's not set
-    if (System.getProperty("config.file") == null) {
-      System.setProperty("config.file", "conf/rpki-validator.conf")
-    }
-
     System.setProperty("VALIDATOR_LOG_FILE", ApplicationOptions.applicationLogFileName)
     System.setProperty("RTR_LOG_FILE", ApplicationOptions.rtrLogFileName)
     new Main()

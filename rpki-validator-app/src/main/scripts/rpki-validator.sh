@@ -111,16 +111,13 @@ function parse_config_line {
 }
 
 function parse_jvm_options {
-    parse_config_line "jvm.memory.initial" JVM_XMS
-    parse_config_line "jvm.memory.maximum" JVM_XMX
-
     parse_optional_config_line "jvm.proxy.socks.host" JVM_SOCKS_PROXY_HOST
     parse_optional_config_line "jvm.proxy.socks.port" JVM_SOCKS_PROXY_PORT
 
     parse_optional_config_line "jvm.proxy.http.host" JVM_HTTP_PROXY_HOST
     parse_optional_config_line "jvm.proxy.http.port" JVM_HTTP_PROXY_PORT
 
-    JVM_OPTIONS="-Xms$JVM_XMS -Xmx$JVM_XMX"
+    JVM_OPTIONS="-Dapp.name=${APP_NAME} -Dconfig.file=$CONFIG_FILE"
     if [[ -n $JVM_SOCKS_PROXY_HOST && -n $JVM_SOCKS_PROXY_PORT ]]; then
         JVM_OPTIONS="$JVM_OPTIONS -DsocksProxyHost=$JVM_SOCKS_PROXY_HOST -DsocksProxyPort=$JVM_SOCKS_PROXY_PORT"
     elif [[ -n $JVM_HTTP_PROXY_HOST && -n $JVM_HTTP_PROXY_PORT ]]; then
@@ -133,6 +130,9 @@ parse_config_line "rtr.port" RTR_PORT_VALUE
 
 parse_config_line "locations.libdir" LIB_DIR
 parse_config_line "locations.pidfile" PID_FILE
+
+parse_config_line "jvm.memory.initial" JVM_XMS
+parse_config_line "jvm.memory.maximum" JVM_XMX
 
 parse_jvm_options
 
@@ -157,12 +157,11 @@ case ${FIRST_ARG} in
         info "Starting ${APP_NAME}..."
 
         CLASSPATH=:"$LIB_DIR/*"
+        MEM_OPTIONS="-Xms$JVM_XMS -Xmx$JVM_XMX"
 
-        DEFAULT_JVM_ARGUMENTS="-Xms1024m -Xmx1024m"
-
-        ${JAVA_CMD} ${JVM_OPTIONS} ${JAVA_OPTS} \
+        ${JAVA_CMD} ${JVM_OPTIONS} ${MEM_OPTIONS} ${JAVA_OPTS} \
+            "-Dapp.name=${APP_NAME} -Dconfig.file=$CONFIG_FILE " \
             -classpath ${CLASSPATH} \
-            "-Dapp.name=${APP_NAME} -Dconfig.file=$CONFIG_FILE" \
             net.ripe.rpki.validator.config.Main &
 
         PID=$!

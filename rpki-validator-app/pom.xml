@@ -273,6 +273,7 @@
                     maven-assembly-plugin. In order to avoid double packaging we exclude them from the final jar -->
                     <excludes>
                         <exclude>tal/</exclude>
+                        <exclude>**/application.conf</exclude>
                     </excludes>
                 </configuration>
             </plugin>

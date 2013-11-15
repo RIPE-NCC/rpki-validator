@@ -41,7 +41,7 @@
     </dependencySets>
     <files>
         <file>
-            <source>src/test/resources/application.conf</source>
+            <source>src/main/resources/application.conf</source>
             <outputDirectory>conf</outputDirectory>
             <destName>rpki-validator.conf</destName>
         </file>
