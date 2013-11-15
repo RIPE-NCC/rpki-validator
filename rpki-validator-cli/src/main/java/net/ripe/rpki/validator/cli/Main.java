@@ -34,28 +34,41 @@ import net.ripe.rpki.validator.commands.PrintCertificateRepositoryObjectCommand;
 import net.ripe.rpki.validator.commands.PrintVersionCommand;
 import net.ripe.rpki.validator.commands.TopDownValidationCommand;
 import org.apache.commons.cli.ParseException;
+import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 
 
 public final class Main {
 
-    private static final Logger LOG = Logger.getLogger(Main.class);
+    private static Logger getLogger() {
+        return Logger.getLogger(Main.class);
+    }
 
     private CommandLineOptions options;
-
 
     private Main() {
     }
 
     public static void main(String[] args) {
         try {
+            setUpLogging();
             new Main().run(args);
             System.exit(0);
         } catch (Exception e) {
-            LOG.error(e.getMessage());
+            getLogger().error(e.getMessage());
             System.exit(1);
         }
+    }
+
+    private static void setUpLogging() {
+        ConsoleAppender console = new ConsoleAppender(new PatternLayout("%d{ABSOLUTE} %-5p %m%n"));
+
+        Logger ripeNet = Logger.getLogger("net.ripe");
+        ripeNet.setLevel(Level.INFO);
+
+        Logger.getRootLogger().addAppender(console);
     }
 
     private void run(String[] args) {
@@ -85,7 +98,7 @@ public final class Main {
         try {
             options.parse(args);
         } catch (ParseException e) {
-            LOG.fatal(e.getMessage());
+            getLogger().fatal(e.getMessage());
             System.exit(1);
         }
 
