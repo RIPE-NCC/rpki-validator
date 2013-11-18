@@ -42,7 +42,7 @@ trait TrustAnchorsController extends ApplicationController {
   protected def startTrustAnchorValidation(trustAnchors: Seq[String])
 
   get("/trust-anchors") {
-    new views.TrustAnchorsView(trustAnchors, validatedObjects.validationStatusCounts, messages = feedbackMessages)
+    new views.TrustAnchorsView(trustAnchors, validatedObjects.validationStatusCountByTal, messages = feedbackMessages)
   }
 
   post("/trust-anchors/update") {

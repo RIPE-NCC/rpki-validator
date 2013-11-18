@@ -59,8 +59,9 @@ case class ValidObject(uri: URI, checks: Set[ValidationCheck], repositoryObject:
 }
 
 class ValidatedObjects(val all: Map[TrustAnchorLocator, Seq[ValidatedObject]]) {
-  def validationStatusCounts: Map[TrustAnchorLocator, Map[ValidationStatus, Int]] = for ((locator, validatedObjects) <- all) yield {
-    locator -> validatedObjects.groupBy(_.validationStatus).map(p => p._1 -> p._2.size)
+
+  def validationStatusCountByTal: Map[TrustAnchorLocator, Map[ValidationStatus, Int]] = for ((locator, validatedObjects) <- all) yield {
+    locator -> ValidatedObjects.statusCounts(validatedObjects)
   }
 
   def getValidatedRtrPrefixes = {
@@ -74,7 +75,14 @@ class ValidatedObjects(val all: Map[TrustAnchorLocator, Seq[ValidatedObject]]) {
   }
 
   def update(locator: TrustAnchorLocator, validatedObjects: Seq[ValidatedObject]) = {
-    new ValidatedObjects(all.updated(locator, validatedObjects))
+
+    val currentObjects: Seq[ValidatedObject] = all.get(locator) match {
+      case Some(oldValidatedObjects) => oldValidatedObjects
+      case None => Seq.empty
+    }
+
+    val validatedObjectsWithTaHealth = ValidatedObjects.getValidatedObjectsWithRepositoryHealth(locator.getCertificateLocation, currentObjects , validatedObjects)
+    new ValidatedObjects(all.updated(locator, validatedObjectsWithTaHealth))
   }
 
   def removeTrustAnchor(locator: TrustAnchorLocator) = {
@@ -88,5 +96,21 @@ object ValidatedObjects {
 
   def apply(trustAnchors: TrustAnchors): ValidatedObjects = {
     new ValidatedObjects(trustAnchors.all.map(ta => ta.locator -> Seq.empty[ValidatedObject])(collection.breakOut))
+  }
+
+  def getValidatedObjectsWithRepositoryHealth(taUri: URI, currentValidatedObjects: Seq[ValidatedObject], newValidatedObjects: Seq[ValidatedObject]): Seq[ValidatedObject] = {
+    if (currentValidatedObjects.size * 0.9 >= newValidatedObjects.size
+         && ValidatedObjects.statusCounts(newValidatedObjects).isDefinedAt(ValidationStatus.ERROR) ) {
+
+      newValidatedObjects :+ InvalidObject(
+          taUri,
+          Set(new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_REPOSITORY_OBJECT_DROP, currentValidatedObjects.size.toString, newValidatedObjects.size.toString)))
+    } else {
+      newValidatedObjects
+    }
+  }
+
+  def statusCounts(validatedObjects: Seq[ValidatedObject]): Map[ValidationStatus, Int] = {
+    validatedObjects.groupBy(_.validationStatus).map(p => p._1 -> p._2.size)
   }
 }
