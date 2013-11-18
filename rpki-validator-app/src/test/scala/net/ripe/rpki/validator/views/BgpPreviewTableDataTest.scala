@@ -34,14 +34,13 @@ import net.ripe.rpki.validator.bgp.preview.BgpAnnouncement
 import net.ripe.rpki.validator.bgp.preview.BgpValidatedAnnouncement
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
 import net.ripe.rpki.validator.models.RtrPrefix
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @RunWith(classOf[JUnitRunner])
-class BgpPreviewTableDataTest extends FunSuite with ShouldMatchers {
+class BgpPreviewTableDataTest extends ValidatorTestCase {
   import lib.NumberResourcesTest._
 
   val validAnnouncement = BgpValidatedAnnouncement(BgpAnnouncement(65001, "10.0.0.0/24"), valids = Seq(RtrPrefix(65001, "10.0.0.0/24")), invalidsLength = Seq(RtrPrefix(65001, "10.0.0.0/16", Some(20))))

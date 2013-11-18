@@ -38,6 +38,7 @@ import NumberResources.NumberResourceIntervalTree
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import net.ripe.rpki.validator.models.RtrPrefix
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 object NumberResourcesTest {
   import scala.language.implicitConversions
@@ -49,7 +50,7 @@ object NumberResourcesTest {
 }
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class NumberResourcesTest extends FunSpec with ShouldMatchers {
+class NumberResourcesTest extends ValidatorTestCase {
   import NumberResourcesTest._
 
   val Prefix_10_8 = IpRange.parse("10/8")
@@ -62,93 +63,104 @@ class NumberResourcesTest extends FunSpec with ShouldMatchers {
   val RtrPrefix_10_8 = RtrPrefix(65535, Prefix_10_8, None)
   val RtrPrefix_10_9 = RtrPrefix(Asn.parse("AS65530"), Prefix_10_9, None)
 
-  describe("NumberResourceInterval 10/8") {
-    it("should contain 10/9") {
-      Range_10_8.contains(Range_10_9) should be(true)
-    }
-    it("should not contain 127/8") {
-      Range_10_8.contains(Range_127_8) should be(false)
-    }
+  test("NumberResourceInterval 10/8 should contain 10/9") {
+    Range_10_8.contains(Range_10_9) should be(true)
   }
 
-  describe("Empty NumberResourceIntervalTree") {
+  test("NumberResourceInterval 10/8 should not contain 127/8") {
+    Range_10_8.contains(Range_127_8) should be(false)
+  }
+
+  test("Empty NumberResourceIntervalTree should be empty") {
     val subject = NumberResourceIntervalTree.empty[RtrPrefix]
-    it("should be empty") {
-      subject should be('empty)
-    }
-    it("should not find any match") {
-      subject.findExactAndAllLessSpecific(Range_10_8) should be('empty)
-    }
+    subject should be('empty)
+
+  }
+  test("Empty NumberResourceIntervalTree should not find any match") {
+    val subject = NumberResourceIntervalTree.empty[RtrPrefix]
+    subject.findExactAndAllLessSpecific(Range_10_8) should be('empty)
   }
 
-  describe("Singleton NumberResourceIntervalTree") {
+  test("Singleton NumberResourceIntervalTree should not be empty") {
     val subject = NumberResourceIntervalTree(RtrPrefix_10_8)
-    it("should not be empty") {
-      subject should not be ('empty)
-    }
-
-    it("should find exact match") {
-      subject.findExactAndAllLessSpecific(Range_10_8) should contain(RtrPrefix_10_8)
-    }
-
-    it("should find containing match") {
-      subject.findExactAndAllLessSpecific(Range_10_9) should contain(RtrPrefix_10_8)
-    }
-
-    it("should not find range outside") {
-      subject.findExactAndAllLessSpecific(Range_127_8) should be('empty)
-    }
+    subject should not be ('empty)
   }
 
-  describe("Multi-entry NumberResourceIntervalTree") {
+  test("Singleton NumberResourceIntervalTree should find exact match") {
+    val subject = NumberResourceIntervalTree(RtrPrefix_10_8)
+    subject.findExactAndAllLessSpecific(Range_10_8) should contain(RtrPrefix_10_8)
+  }
+
+  test("Singleton NumberResourceIntervalTree should find containing match") {
+    val subject = NumberResourceIntervalTree(RtrPrefix_10_8)
+    subject.findExactAndAllLessSpecific(Range_10_9) should contain(RtrPrefix_10_8)
+  }
+
+  test("Singleton NumberResourceIntervalTree should not find range outside") {
+    val subject = NumberResourceIntervalTree(RtrPrefix_10_8)
+    subject.findExactAndAllLessSpecific(Range_127_8) should be('empty)
+  }
+
+
+  test("Multi-entry NumberResourceIntervalTree should not be empty") {
     val subject = NumberResourceIntervalTree(RtrPrefix_10_8, RtrPrefix_10_9)
-    it("should not be empty") {
-      subject should not be ('empty)
-    }
-
-    it("should find exact match") {
-      subject.findExactAndAllLessSpecific(Range_10_8) should contain(RtrPrefix_10_8)
-    }
-
-    it("should find containing matches") {
-      subject.findExactAndAllLessSpecific(Range_10_9) should (contain(RtrPrefix_10_8) and contain(RtrPrefix_10_9))
-    }
-
-    it("should not find range outside") {
-      subject.findExactAndAllLessSpecific(Range_127_8) should be('empty)
-    }
+    subject should not be ('empty)
   }
 
-  describe("Many distinct entry NumberResourceIntervalTree") {
+  test("Multi-entry NumberResourceIntervalTree should find exact match") {
+    val subject = NumberResourceIntervalTree(RtrPrefix_10_8, RtrPrefix_10_9)
+    subject.findExactAndAllLessSpecific(Range_10_8) should contain(RtrPrefix_10_8)
+  }
+
+  test("Multi-entry NumberResourceIntervalTree should find containing matches") {
+    val subject = NumberResourceIntervalTree(RtrPrefix_10_8, RtrPrefix_10_9)
+    subject.findExactAndAllLessSpecific(Range_10_9) should (contain(RtrPrefix_10_8) and contain(RtrPrefix_10_9))
+  }
+
+  test("Multi-entry NumberResourceIntervalTree should not find range outside") {
+    val subject = NumberResourceIntervalTree(RtrPrefix_10_8, RtrPrefix_10_9)
+    subject.findExactAndAllLessSpecific(Range_127_8) should be('empty)
+  }
+
+
+  test("Many distinct entry NumberResourceIntervalTree should find exact matches") {
     val prefixes = (1 to 100) map { i =>
       RtrPrefix(i, IpRange.parse(i + "/8"), None)
     }
     val subject = NumberResourceIntervalTree(prefixes: _*)
-    it("should find exact matches") {
-      for (prefix <- prefixes) {
-        subject.findExactAndAllLessSpecific(prefix.prefix) should (have size (1) and contain(prefix))
-      }
-    }
-    it("should find containing match") {
-      subject.findExactAndAllLessSpecific("1/9") should (have size (1) and contain(RtrPrefix(1, "1/8", None)))
-      subject.findExactAndAllLessSpecific("33/9") should (have size (1) and contain(RtrPrefix(33, "33/8", None)))
-      subject.findExactAndAllLessSpecific("99/9") should (have size (1) and contain(RtrPrefix(99, "99/8", None)))
-      subject.findExactAndAllLessSpecific("100/9") should (have size (1) and contain(RtrPrefix(100, "100/8", None)))
+
+    for (prefix <- prefixes) {
+      subject.findExactAndAllLessSpecific(prefix.prefix) should (have size (1) and contain(prefix))
     }
   }
+  test("Many distinct entry NumberResourceIntervalTree should find containing match") {
+    val prefixes = (1 to 100) map { i =>
+      RtrPrefix(i, IpRange.parse(i + "/8"), None)
+    }
+    val subject = NumberResourceIntervalTree(prefixes: _*)
 
-  describe("Many overlapping entry NumberResourceIntervalTree") {
+    subject.findExactAndAllLessSpecific("1/9") should (have size (1) and contain(RtrPrefix(1, "1/8", None)))
+    subject.findExactAndAllLessSpecific("33/9") should (have size (1) and contain(RtrPrefix(33, "33/8", None)))
+    subject.findExactAndAllLessSpecific("99/9") should (have size (1) and contain(RtrPrefix(99, "99/8", None)))
+    subject.findExactAndAllLessSpecific("100/9") should (have size (1) and contain(RtrPrefix(100, "100/8", None)))
+  }
+
+  test("should find exact matches") {
     val prefixes = (0 to 30) map { i =>
       RtrPrefix(i, "0/" + i, Some(i))
     }
     val subject = NumberResourceIntervalTree(prefixes: _*)
-    it("should find exact matches") {
-      for (prefix <- prefixes) {
-        subject.findExactAndAllLessSpecific(prefix.prefix) should (have size (prefix.maxPrefixLength.get + 1) and contain(prefix))
-      }
+
+    for (prefix <- prefixes) {
+      subject.findExactAndAllLessSpecific(prefix.prefix) should (have size (prefix.maxPrefixLength.get + 1) and contain(prefix))
     }
-    it("should find containing match") {
-      subject.findExactAndAllLessSpecific("0/31") should equal(prefixes)
+  }
+  test("should find containing match") {
+    val prefixes = (0 to 30) map { i =>
+      RtrPrefix(i, "0/" + i, Some(i))
     }
+    val subject = NumberResourceIntervalTree(prefixes: _*)
+
+    subject.findExactAndAllLessSpecific("0/31") should equal(prefixes)
   }
 }

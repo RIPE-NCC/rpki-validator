@@ -31,17 +31,16 @@ package net.ripe.rpki.validator
 package store
 
 import models._
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
 import java.net.URI
 import org.scalatest.BeforeAndAfter
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsTest
 import org.joda.time.DateTimeUtils
 import org.joda.time.DateTime
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class RepositoryObjectStoreTest extends FunSuite with BeforeAndAfter with ShouldMatchers {
+class RepositoryObjectStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
   val EXAMPLE_MANIFEST = ManifestCmsTest.getRootManifestCms
   val EXAMPLE_MANIFEST_URI = URI.create("rsync://some.host/example.mft")

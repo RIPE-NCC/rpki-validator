@@ -28,12 +28,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator
-package features
+package support
 
-import support.FeatureSpecification
+import org.scalatest.FunSuite
+import org.scalatest.matchers.ShouldMatchers
 
-class TrustAnchorsSpec extends FeatureSpecification {
-  feature("Trust anchor") {
-    scenario("view configured trust anchors")(pending)
-  }
-}
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+abstract class ValidatorTestCase extends JunitLog4JSetup with FunSuite with ShouldMatchers

@@ -29,12 +29,11 @@
  */
 package net.ripe.rpki.validator.bgp.preview
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
 import net.ripe.ipresource._
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class BgpRisDumpTest extends FunSuite with ShouldMatchers {
+class BgpRisDumpTest extends ValidatorTestCase {
 
   test("should parse empty line") {
     BgpRisDump.parseLine("") should equal(None)

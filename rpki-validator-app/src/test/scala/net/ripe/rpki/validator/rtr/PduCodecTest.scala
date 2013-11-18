@@ -29,17 +29,16 @@
  */
 package net.ripe.rpki.validator.rtr
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.jboss.netty.buffer.ChannelBuffer
 import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
 import org.scalatest.mock.MockitoSugar
 import org.jboss.netty.channel._
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @RunWith(classOf[JUnitRunner])
-class PduCodecTest extends FunSuite with ShouldMatchers with MockitoSugar {
+class PduCodecTest extends ValidatorTestCase with MockitoSugar {
 
   test("should encode NoDataAvailablePdu") {
     val encoder = new PduEncoder()

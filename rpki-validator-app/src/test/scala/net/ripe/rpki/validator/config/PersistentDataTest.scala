@@ -30,16 +30,15 @@
 package net.ripe.rpki.validator
 package config
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
 import net.ripe.ipresource.{IpRange, Asn}
 import java.io.File
 import org.apache.commons.io.FileUtils
 import models._
 import lib.UserPreferences
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class PersistentDataTest extends FunSuite with ShouldMatchers {
+class PersistentDataTest extends ValidatorTestCase {
 
   val serialiser = new PersistentDataSerialiser
 

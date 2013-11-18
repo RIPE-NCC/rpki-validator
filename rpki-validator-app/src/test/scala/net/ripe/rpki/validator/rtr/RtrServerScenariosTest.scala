@@ -30,10 +30,8 @@
 package net.ripe.rpki.validator.rtr
 
 import org.junit.runner.RunWith
-import org.scalatest.FunSuite
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.BeforeAndAfter
 import net.ripe.rpki.validator.lib._
 import net.ripe.rpki.validator.config._
@@ -50,9 +48,10 @@ import net.ripe.rpki.commons.crypto.ValidityPeriod
 import org.joda.time.DateTime
 import scala.collection.JavaConverters._
 import net.ripe.rpki.commons.validation.ValidationCheck
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @RunWith(classOf[JUnitRunner])
-class RtrServerScenariosTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
+class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll with BeforeAndAfter {
 
   val port = Port.any
 

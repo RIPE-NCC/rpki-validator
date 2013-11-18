@@ -32,10 +32,10 @@ package lib
 
 import org.joda.time.Period
 
-import support.TestCase
+import support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class DateAndTimeTest extends TestCase {
+class DateAndTimeTest extends ValidatorTestCase {
   import DateAndTime._
 
   test("keep first significant field") {

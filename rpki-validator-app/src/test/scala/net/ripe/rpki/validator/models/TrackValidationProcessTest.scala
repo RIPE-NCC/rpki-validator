@@ -29,8 +29,7 @@
  */
 package net.ripe.rpki.validator.models
 
-import org.scalatest.matchers.ShouldMatchers
-import org.scalatest.{BeforeAndAfter, FunSuite}
+import org.scalatest.BeforeAndAfter
 import scalaz.Failure
 import java.net.URI
 import scala.concurrent.stm._
@@ -40,9 +39,10 @@ import org.joda.time.DateTime
 import java.io.File
 import java.util.Collections
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class TrackValidationProcessTest extends FunSuite with ShouldMatchers with BeforeAndAfter {
+class TrackValidationProcessTest extends ValidatorTestCase with BeforeAndAfter {
 
   class MyTrackValidationProcessTrustAnchor(trustAnchors: Seq[TrustAnchor]) extends MyValidationProcess with TrackValidationProcess {
     override val memoryImage = Ref(MemoryImage(Filters(), Whitelist(), new TrustAnchors(trustAnchors), ValidatedObjects(new TrustAnchors(trustAnchors))))

@@ -29,14 +29,14 @@
  */
 package net.ripe.rpki.validator.config
 
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import scala.Predef._
 import net.ripe.rpki.validator.models._
 import net.ripe.rpki.validator.testing.TestingObjectMother._
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class MemoryImageTest extends FunSuite with BeforeAndAfterAll with BeforeAndAfter with ShouldMatchers {
+class MemoryImageTest extends ValidatorTestCase with BeforeAndAfterAll with BeforeAndAfter {
 
   var subject: MemoryImage = null
   var trustAnchors: TrustAnchors = null

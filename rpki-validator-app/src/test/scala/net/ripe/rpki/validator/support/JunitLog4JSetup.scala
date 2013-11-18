@@ -27,11 +27,17 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package support
+package net.ripe.rpki.validator.support
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
+import net.ripe.rpki.validator.config.ApplicationOptions
 
-@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-abstract class TestCase extends FunSuite with ShouldMatchers
+/**
+ * Be sure to extend this FIRST from your junit tests.
+ *
+ * We need this because we refer to system properties for filenames in log4j.xml.
+ * This config also gets picked up by *static* LOG fields in libraries, so order of loading is important.
+ */
+trait JunitLog4JSetup {
+  System.setProperty("VALIDATOR_LOG_FILE", ApplicationOptions.applicationLogFileName)
+  System.setProperty("RTR_LOG_FILE", ApplicationOptions.rtrLogFileName)
+}

@@ -39,11 +39,11 @@ import scala._
 import scala.Some
 import org.scalatest.BeforeAndAfter
 import org.scalatra.test.scalatest.ScalatraFunSuite
-import org.scalatest.matchers.ShouldMatchers
 import org.scalatra.ScalatraFilter
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @RunWith(classOf[JUnitRunner])
-class BgpPrefixOriginValidationControllerTest extends ScalatraFunSuite with ShouldMatchers with BeforeAndAfter {
+class BgpPrefixOriginValidationControllerTest extends ValidatorTestCase with ScalatraFunSuite with BeforeAndAfter {
 
   import scala.language.implicitConversions
   implicit def LongToAsn(asn: Long) = new Asn(asn)

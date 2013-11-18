@@ -29,13 +29,11 @@
  */
 package net.ripe.rpki.validator.config
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
 import java.io.File
-import org.junit.Ignore
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class ApplicationOptionsTest extends FunSuite with ShouldMatchers {
+class ApplicationOptionsTest extends ValidatorTestCase {
 
   test("Should use 8080 as default http port") {
     ApplicationOptions.httpPort should equal(8080)

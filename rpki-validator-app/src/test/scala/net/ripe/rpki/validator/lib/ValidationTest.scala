@@ -32,9 +32,10 @@ package lib
 
 import scalaz.Success
 import net.ripe.ipresource._
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class ValidationTest extends support.TestCase {
+class ValidationTest extends ValidatorTestCase {
   import Validation._
 
   test("validate IP range or prefix") {

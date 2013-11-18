@@ -30,15 +30,14 @@
 package net.ripe.rpki.validator.lib
 
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
 import java.net.URI
 
 import org.joda.time.DateTime
 import org.joda.time.DateTimeUtils
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class SoftwareUpdateCheckerTest extends FunSuite with ShouldMatchers {
+class SoftwareUpdateCheckerTest extends ValidatorTestCase {
 
   // Note: this should reflect whatever we have in the latest-version.properties file in src/test/resources
   val currentVersion = "2.0.2"

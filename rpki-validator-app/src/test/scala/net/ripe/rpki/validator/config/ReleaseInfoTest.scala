@@ -29,11 +29,10 @@
  */
 package net.ripe.rpki.validator.config
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class ReleaseInfoTest extends FunSuite with ShouldMatchers {
+class ReleaseInfoTest extends ValidatorTestCase {
 
   test("should return version number") {
     ReleaseInfo.version should include regex ("""\d\.\d""")

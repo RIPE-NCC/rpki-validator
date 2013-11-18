@@ -30,17 +30,16 @@
 package net.ripe.rpki.validator
 package bgp.preview
 
-import org.scalatest.FunSuite
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.matchers.ShouldMatchers
 import net.ripe.rpki.validator.models.RtrPrefix
 import net.ripe.rpki.validator.models.RouteValidity._
 import net.ripe.ipresource.{Asn, IpRange}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @RunWith(classOf[JUnitRunner])
-class BgpAnnouncementValidatorTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers {
+class BgpAnnouncementValidatorTest extends ValidatorTestCase with BeforeAndAfterAll {
 
   import scala.language.implicitConversions
   implicit def LongToAsn(asn: Long) = new Asn(asn)

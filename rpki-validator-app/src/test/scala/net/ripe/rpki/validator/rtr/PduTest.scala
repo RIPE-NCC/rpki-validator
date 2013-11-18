@@ -29,13 +29,12 @@
  */
 package net.ripe.rpki.validator.rtr
 
-import org.scalatest.FunSuite
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import org.scalatest.matchers.ShouldMatchers
 import org.jboss.netty.buffer.BigEndianHeapChannelBuffer
 
 import net.ripe.ipresource._
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 
 object PduTest {
@@ -48,7 +47,7 @@ object PduTest {
 }
 
 @RunWith(classOf[JUnitRunner])
-class PduTest extends FunSuite with ShouldMatchers {
+class PduTest extends ValidatorTestCase {
 
   test("convert to byte array an ErrorPdu without causingPdu nor errorText") {
     val bytes = Pdus.encode(PduTest.NoDataAvailablePdu)

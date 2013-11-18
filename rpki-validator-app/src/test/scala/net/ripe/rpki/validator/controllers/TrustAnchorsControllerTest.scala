@@ -37,7 +37,7 @@ import models._
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 
 @RunWith(classOf[JUnitRunner])
-class TrustAnchorControllersTest extends ControllerTestCase {
+class TrustAnchorsControllerTest extends ControllerTestCase {
   override def controller = new ControllerFilter with TrustAnchorsController {
     override def trustAnchors = new TrustAnchors(Seq.empty)
     override def validatedObjects = new ValidatedObjects(Map.empty)

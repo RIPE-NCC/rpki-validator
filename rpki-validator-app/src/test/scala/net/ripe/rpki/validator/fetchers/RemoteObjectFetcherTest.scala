@@ -31,14 +31,14 @@ package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
 import org.mockito.Mockito.verify
-import org.scalatest.{BeforeAndAfter, FunSuite}
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @RunWith(classOf[JUnitRunner])
-class RemoteObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter with MockitoSugar {
+class RemoteObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
 
   val uri: URI = URI.create("rsync://rpki.ripe.net/myRoa.roa")
   val mockRsyncFetcher = mock[RsyncRpkiRepositoryObjectFetcher]

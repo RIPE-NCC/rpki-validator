@@ -29,8 +29,6 @@
  */
 package net.ripe.rpki.validator.fetchers
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
 import net.ripe.rpki.validator.store.DataSources
 import net.ripe.rpki.validator.store.RepositoryObjectStore
 import net.ripe.rpki.commons.rsync.Rsync
@@ -56,9 +54,10 @@ import org.mockito.stubbing.Answer
 import org.mockito.invocation.InvocationOnMock
 import java.util
 import scala.Some
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class ConsistentObjectFetcherTest extends FunSuite with ShouldMatchers with BeforeAndAfter with MockitoSugar {
+class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
 
   val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
   before {

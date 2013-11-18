@@ -30,15 +30,13 @@
 package net.ripe.rpki.validator
 package views
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
-
 import testing.TestingObjectMother._
 import models.RtrPrefix
 import lib.Java
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class RoaTableDataTest extends FunSuite with ShouldMatchers {
+class RoaTableDataTest extends ValidatorTestCase {
 
   val ROA_TABLE_RECORD_1 = RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix(), Java.toOption(ROA_PREFIX_V4_1.getMaximumLength), Option(TAL))
   val ROA_TABLE_RECORD_2 = RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix(), Java.toOption(ROA_PREFIX_V4_2.getMaximumLength), Option(TAL))

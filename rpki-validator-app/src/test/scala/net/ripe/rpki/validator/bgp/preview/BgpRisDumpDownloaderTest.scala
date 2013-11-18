@@ -29,9 +29,7 @@
  */
 package net.ripe.rpki.validator.bgp.preview
 
-import org.scalatest.FunSuite
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.matchers.ShouldMatchers
 import javax.servlet.http.HttpServletResponse._
 import org.apache.http.ProtocolVersion
 import org.apache.http.message._
@@ -41,9 +39,10 @@ import org.joda.time.DateTime
 import java.util.Date
 import org.scalatest.mock.MockitoSugar
 import org.apache.http.client.HttpClient
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class BgpRisDumpDownloaderTest extends FunSuite with BeforeAndAfterAll with ShouldMatchers with MockitoSugar {
+class BgpRisDumpDownloaderTest extends ValidatorTestCase with BeforeAndAfterAll with MockitoSugar {
 
   val mockHttpClient = mock[HttpClient]
   val http11Protocol = new ProtocolVersion("http", 1, 1)
