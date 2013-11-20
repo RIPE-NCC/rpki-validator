@@ -44,7 +44,7 @@ class RepositoryObjectStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
   val EXAMPLE_MANIFEST = ManifestCmsTest.getRootManifestCms
   val EXAMPLE_MANIFEST_URI = URI.create("rsync://some.host/example.mft")
-  val EXAMPLE_MANIFEST_OBJECT = StoredRepositoryObject(uri = EXAMPLE_MANIFEST_URI, repositoryObject = EXAMPLE_MANIFEST)
+  val EXAMPLE_MANIFEST_OBJECT = StoredRepositoryObject(uri = EXAMPLE_MANIFEST_URI, binary = EXAMPLE_MANIFEST.getEncoded)
 
   val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
 
@@ -67,12 +67,12 @@ class RepositoryObjectStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
     DateTimeUtils.setCurrentMillisFixed(now.getMillis)
     val mft_now = ManifestCmsTest.getRootManifestCms
-    val manifest_now_stored = StoredRepositoryObject(uri = mft_uri, repositoryObject = mft_now)
+    val manifest_now_stored = StoredRepositoryObject(uri = mft_uri, binary = mft_now.getEncoded)
     store.put(manifest_now_stored)
 
     DateTimeUtils.setCurrentMillisFixed(now.plusDays(1).getMillis)
     val mft_tomorrow = ManifestCmsTest.getRootManifestCms
-    val mft_tomorrow_stored = StoredRepositoryObject(uri = mft_uri, repositoryObject = mft_tomorrow)
+    val mft_tomorrow_stored = StoredRepositoryObject(uri = mft_uri, binary = mft_tomorrow.getEncoded)
     store.put(mft_tomorrow_stored)
 
     store.getLatestByUrl(mft_uri) should equal(Some(mft_tomorrow_stored))
@@ -85,7 +85,7 @@ class RepositoryObjectStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
   test("Should store multiple objects including already existing") {
     val ROA_OBJECT = RoaCmsTest.getRoaCms
-    val ROA_RETRIEVED_OBJECT = StoredRepositoryObject(uri = URI.create("rsync://some.host/example.roa"), repositoryObject = ROA_OBJECT)
+    val ROA_RETRIEVED_OBJECT = StoredRepositoryObject(uri = URI.create("rsync://some.host/example.roa"), binary = ROA_OBJECT.getEncoded)
 
     store.put(EXAMPLE_MANIFEST_OBJECT)
     store.put(Seq(EXAMPLE_MANIFEST_OBJECT, ROA_RETRIEVED_OBJECT))

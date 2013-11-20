@@ -68,6 +68,16 @@ public class RsyncRpkiRepositoryObjectFetcher implements RpkiRepositoryObjectFet
 
     @Override
     public CertificateRepositoryObject fetch(URI uri, Specification<byte[]> fileContentSpecification, ValidationResult result) {
+        byte[] contents = fetchContent(uri, fileContentSpecification, result);
+
+        if (result.hasFailureForCurrentLocation() || contents == null) {
+            return null;
+        } else {
+            return CertificateRepositoryObjectFactory.createCertificateRepositoryObject(contents, result);
+        }
+    }
+
+    public byte[] fetchContent(URI uri, Specification<byte[]> fileContentSpecification, ValidationResult result) {
         File destinationFile = uriToFileMapper.map(uri, result);
         if (destinationFile == null) {
             return null;
@@ -88,7 +98,7 @@ public class RsyncRpkiRepositoryObjectFetcher implements RpkiRepositoryObjectFet
             return null;
         }
 
-        return CertificateRepositoryObjectFactory.createCertificateRepositoryObject(contents, result);
+        return contents;
     }
 
     @Override

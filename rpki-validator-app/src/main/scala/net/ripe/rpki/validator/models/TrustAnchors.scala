@@ -266,10 +266,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val rsync = new Rsync()
     rsync.setTimeoutInSeconds(300)
     val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File(RsyncDiskCacheBasePath  + trustAnchorLocator.getFile.getName)))
-
-    val remoteFetcher = new RemoteObjectFetcher(rsyncFetcher)
-
-    new ConsistentObjectFetcher(remoteFetcher, new RepositoryObjectStore(RepositoryObjectStore))
+    new ConsistentObjectFetcher(rsyncFetcher, new RepositoryObjectStore(RepositoryObjectStore))
   }
 
   private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[(URI, ValidatedObject), _]) extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {

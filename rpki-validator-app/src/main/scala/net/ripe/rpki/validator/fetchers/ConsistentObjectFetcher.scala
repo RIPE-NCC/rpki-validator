@@ -43,7 +43,7 @@ import net.ripe.rpki.commons.validation.ValidationString
 import scala.collection.JavaConverters._
 import store.RepositoryObjectStore
 
-class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, store: RepositoryObjectStore) extends RpkiRepositoryObjectFetcher {
+class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetcher, store: RepositoryObjectStore) extends RpkiRepositoryObjectFetcher {
 
   /**
    * Pass this on to the remote object fetcher
@@ -94,7 +94,7 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, 
         val fetchResults2 = fetchAndStoreConsistentObjectSet(uri, manifest)
         warnAboutFetchFailures(uri, result, fetchResults2)
       case cro =>
-        store.put(StoredRepositoryObject(uri = uri, repositoryObject = cro))
+        store.put(StoredRepositoryObject(uri = uri, binary = cro.getEncoded))
     }
 
     cro
@@ -113,15 +113,22 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RpkiRepositoryObjectFetcher, 
   private[this] def fetchAndStoreConsistentObjectSet(manifestUri: URI, mft: ManifestCms): ValidationResult = {
     val fetchResults = ValidationResult.withLocation(manifestUri)
 
-    val mftStoredRepositoryObject = StoredRepositoryObject(uri = manifestUri, repositoryObject = mft)
+    val mftStoredRepositoryObject = StoredRepositoryObject(uri = manifestUri, binary = mft.getEncoded)
 
     store.getByHash(mftStoredRepositoryObject.hash.toArray) match {
       case None =>
         val retrievedObjects: Seq[StoredRepositoryObject] = mft.getFileNames.asScala.toSeq.flatMap { fileName =>
             val objectUri = manifestUri.resolve(fileName)
             fetchResults.setLocation(new ValidationLocation(objectUri))
-            val cro = Option(remoteObjectFetcher.fetch(objectUri, mft.getFileContentSpecification(fileName), fetchResults))
-            cro.map(cro => StoredRepositoryObject(uri = objectUri, repositoryObject = cro))
+            try {
+              val bytes = Option(remoteObjectFetcher.fetchContent(objectUri, mft.getFileContentSpecification(fileName), fetchResults))
+              bytes.map(bytes => StoredRepositoryObject(uri = objectUri, binary = bytes))
+            } catch {
+              case e: RuntimeException =>
+                fetchResults.error(ValidationString.OBJECTS_GENERAL_PARSING, objectUri.toString)
+                None
+            }
+
           }
         if (!fetchResults.hasFailures) {
           store.put(mftStoredRepositoryObject +: retrievedObjects)

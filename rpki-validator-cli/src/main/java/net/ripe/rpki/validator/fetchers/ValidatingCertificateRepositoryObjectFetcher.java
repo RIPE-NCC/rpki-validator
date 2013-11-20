@@ -147,7 +147,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
             return (ManifestCms) processCertificateRepositoryObject(uri, context, result, manifestCms);
         } catch (Exception e) {
             LOG.error("There was an exception trying to get manifest: " + uri.toString(), e);
-            result.rejectIfFalse(false, VALIDATOR_INTERNAL_ERROR);
+            result.rejectIfFalse(false, OBJECTS_GENERAL_PARSING, uri.toString());
             return null;
         }
 
@@ -164,7 +164,7 @@ public class ValidatingCertificateRepositoryObjectFetcher implements Certificate
         return processCertificateRepositoryObject(uri, context, result, certificateRepositoryObject);
         } catch (Exception e) {
             LOG.error("There was an exception trying to get object for uri: " + uri.toString(), e);
-            result.rejectIfFalse(false, VALIDATOR_INTERNAL_ERROR);
+            result.rejectIfFalse(false, OBJECTS_GENERAL_PARSING, uri.toString());
             return null;
         }
     }

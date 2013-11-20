@@ -54,6 +54,7 @@ import org.mockito.stubbing.Answer
 import org.mockito.invocation.InvocationOnMock
 import java.util
 import scala.Some
+import scala.collection.JavaConverters._
 import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
@@ -99,9 +100,9 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult)
 
     validationResult.hasFailures should be(false)
-    store.getLatestByUrl(mftUri) should equal(Some(StoredRepositoryObject(uri = mftUri, repositoryObject = mft)))
-    store.getLatestByUrl(crlUri) should equal(Some(StoredRepositoryObject(uri = crlUri, repositoryObject = crl)))
-    store.getLatestByUrl(roaUri) should equal(Some(StoredRepositoryObject(uri = roaUri, repositoryObject = roa)))
+    store.getLatestByUrl(mftUri) should equal(Some(StoredRepositoryObject(uri = mftUri, binary = mft.getEncoded)))
+    store.getLatestByUrl(crlUri) should equal(Some(StoredRepositoryObject(uri = crlUri, binary = crl.getEncoded)))
+    store.getLatestByUrl(roaUri) should equal(Some(StoredRepositoryObject(uri = roaUri, binary = roa.getEncoded)))
   }
 
   test("Should not store mft when entry is missing") {
@@ -117,8 +118,9 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult)
 
     validationResult.getWarnings should have size 2
-    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
-    validationResult.getWarnings.get(1).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)
+    validationResult.getWarnings.asScala.map(_.getKey) contains
+      (List(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE, ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE))
+
     store.getLatestByUrl(mftUri) should equal(None)
 
   }
@@ -147,8 +149,8 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
 
     // Should see warnings
     validationResult.getWarnings should have size 2
-    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCONSISTENT)
-    validationResult.getWarnings.get(1).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)
+    validationResult.getWarnings.asScala.map(_.getKey) contains
+      (List(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE, ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE))
 
     // And since it's not in the cache, also errors
     val failures = validationResult.getFailures(new ValidationLocation(mftWrongHashUri))
@@ -162,9 +164,9 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = ValidationResult.withLocation(mftUri)
 
-    store.put(StoredRepositoryObject(uri = mftUri, repositoryObject = mft))
-    store.put(StoredRepositoryObject(uri = roaUri, repositoryObject = roa))
-    store.put(StoredRepositoryObject(uri = crlUri, repositoryObject = crl))
+    store.put(StoredRepositoryObject(uri = mftUri, binary = mft.getEncoded))
+    store.put(StoredRepositoryObject(uri = roaUri, binary = roa.getEncoded))
+    store.put(StoredRepositoryObject(uri = crlUri, binary = crl.getEncoded))
 
     // Should get it from store
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(mft)
@@ -185,12 +187,12 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
 
 
-    store.put(StoredRepositoryObject(uri = mftUri, repositoryObject = mft))
+    store.put(StoredRepositoryObject(uri = mftUri, binary = mft.getEncoded))
     val nonExistentUri = URI.create("rsync://some.host/doesnotexist.roa")
     val validationResult = ValidationResult.withLocation(nonExistentUri)
 
-    store.put(StoredRepositoryObject(uri = nonExistentUri, repositoryObject = roa))
-    store.put(StoredRepositoryObject(uri = crlUri, repositoryObject = crl))
+    store.put(StoredRepositoryObject(uri = nonExistentUri, binary = roa.getEncoded))
+    store.put(StoredRepositoryObject(uri = crlUri, binary = crl.getEncoded))
 
     subject.fetch(nonExistentUri, mft.getFileContentSpecification(roaFileName), validationResult) should equal(roa)
   }
@@ -206,13 +208,12 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
 
     subject.fetch(mftUri, Specifications.alwaysTrue(), validationResult) should equal(mft)
     validationResult.getWarnings should have size 2
-    validationResult.getWarnings.get(0).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE)
-    validationResult.getWarnings.get(1).getKey should equal(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)
-    validationResult.getFailures(new ValidationLocation(mftUri)) should have size 0
+    validationResult.getWarnings.asScala.map(_.getKey) contains
+      (List(ValidationString.VALIDATOR_REPOSITORY_INCOMPLETE, ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE))
   }
 
   test("Should add a failure when object cannot be retrieved from remote repository due to an rsync failure") {
-    val rsyncFetcher = mock[RpkiRepositoryObjectFetcher]
+    val rsyncFetcher = mock[RsyncRpkiRepositoryObjectFetcher]
     val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
     val validationResult = ValidationResult.withLocation(mftUri)
 
@@ -238,18 +239,16 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
 
 }
 
-class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RemoteObjectFetcher(new RsyncRpkiRepositoryObjectFetcher(new Rsync, new UriToFileMapper(new File(System.getProperty("java.io.tmpdir"))))) {
-
-  val ALWAYS_TRUE_SPECIFICATION = Specifications.alwaysTrue[Array[Byte]]
+class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RsyncRpkiRepositoryObjectFetcher(new Rsync, new UriToFileMapper(new File(System.getProperty("java.io.tmpdir")))) {
 
   override def prefetch(uri: URI, result: ValidationResult) = {}
 
-  override def fetch(uri: URI, specification: Specification[Array[Byte]], result: ValidationResult) = {
+  override def fetchContent(uri: URI, specification: Specification[Array[Byte]], result: ValidationResult) = {
     result.setLocation(new ValidationLocation(uri))
     entries.get(uri) match {
       case Some(repositoryObject) =>
         if (result.rejectIfFalse(specification.isSatisfiedBy(repositoryObject.getEncoded), VALIDATOR_FILE_CONTENT, uri.toString())) {
-          repositoryObject
+          repositoryObject.getEncoded
         } else {
           null
         }

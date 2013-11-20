@@ -43,20 +43,30 @@ import net.ripe.rpki.commons.validation.ValidationResult
 
 object StoredRepositoryObject {
 
-  def apply(uri: URI, repositoryObject: CertificateRepositoryObject): StoredRepositoryObject = {
 
-    val binaryObject = ByteString(repositoryObject.getEncoded)
-    val hash = ByteString(ManifestCms.hashContents(repositoryObject.getEncoded))
+  def apply(uri: URI, binary: Array[Byte]): StoredRepositoryObject = {
 
-    val expires = CertificateRepositoryObjectFactory.createCertificateRepositoryObject(repositoryObject.getEncoded, ValidationResult.withLocation(uri)) match {
-      case cert: X509ResourceCertificate => cert.getValidityPeriod.getNotValidAfter
-      case mft: ManifestCms => mft.getNotValidAfter
-      case roa: RoaCms => roa.getValidityPeriod.getNotValidAfter
-      case crl: X509Crl => crl.getNextUpdateTime
-      case _: GhostbustersRecord | _: UnknownCertificateRepositoryObject => {
-        // Make sure the object stays in the cache long enough for the validation to finish
-        new DateTime(DateTimeZone.UTC).plusDays(1)
+    val defaultTime: DateTime = new DateTime(DateTimeZone.UTC).plusDays(1)
+
+    val binaryObject = ByteString(binary)
+    val hash = ByteString(ManifestCms.hashContents(binary))
+
+    /**
+     * See: GRE-412
+     *
+     * There was a case where a ROA had a notAfter time *before* the notBefore time and we can not parse
+     * its ValidityPeriod.
+     */
+    val expires = try {
+      CertificateRepositoryObjectFactory.createCertificateRepositoryObject(binary, ValidationResult.withLocation(uri)) match {
+        case cert: X509ResourceCertificate => cert.getValidityPeriod.getNotValidAfter
+        case mft: ManifestCms => mft.getNotValidAfter
+        case roa: RoaCms => roa.getValidityPeriod.getNotValidAfter
+        case crl: X509Crl => crl.getNextUpdateTime
+        case _: GhostbustersRecord | _: UnknownCertificateRepositoryObject => defaultTime
       }
+    } catch {
+      case e: RuntimeException => defaultTime
     }
 
     StoredRepositoryObject(hash = hash, uri = uri, binaryObject = binaryObject, expires = expires)
