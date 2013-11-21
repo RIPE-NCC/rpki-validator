@@ -50,16 +50,15 @@ abstract class ValidationResultsTableData(records: IndexedSeq[ValidatedObjectRes
 
   override def ordering(sortColumn: Int) = {
     sortColumn match {
-      case 0 => implicitly[Ordering[String]].on(_.trustAnchorName)
-      case 1 => implicitly[Ordering[URI]].on(_.uri)
-      case 2 => implicitly[Ordering[ValidationStatus]].on(_.validationStatus)
-      case 3 => implicitly[Ordering[String]].on(_.messages)
+      case 0 => implicitly[Ordering[URI]].on(_.uri)
+      case 1 => implicitly[Ordering[ValidationStatus]].on(_.validationStatus)
+      case 2 => implicitly[Ordering[String]].on(_.messages)
       case _ => sys.error("unknown sort column: " + sortColumn)
     }
   }
 
   override def getValuesForRecord(record: ValidatedObjectResult) = {
-    List(record.trustAnchorName, <span rel="twipsy" data-original-title={record.uri.toString}>
+    List(<span rel="twipsy" data-original-title={record.uri.toString}>
       {record.uri.toString.split("/").last}
     </span>.toString(), record.validationStatus.toString, record.messages)
   }

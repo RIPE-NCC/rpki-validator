@@ -96,9 +96,8 @@ class TrustAnchorMonitorView(ta: TrustAnchor, validatedObjectsOption: Option[Seq
       <table id="validation-details-table" class="zebra-striped" style="display: none;" data-source={ s"${Tabs.TrustAnchorMonitorTab.url}/validation-detail/${ta.identifierHash}" }>
         <thead>
           <tr>
-            <th>Trust Anchor</th>
             <th>Object</th>
-            <th>Validity</th>
+            <th>Severity</th>
             <th>Validation Message</th>
           </tr>
         </thead>
