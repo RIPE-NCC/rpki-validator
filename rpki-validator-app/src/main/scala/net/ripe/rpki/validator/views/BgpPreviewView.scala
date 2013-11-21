@@ -35,7 +35,7 @@ import scala.xml.Text
 import bgp.preview._
 import lib.DateAndTime._
 
-class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump]) extends View with ViewHelpers {
+class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump], search: String) extends View with ViewHelpers {
 
   val now = new Instant()
 
@@ -64,7 +64,7 @@ class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump]) extends View with ViewHelpers
         Please note that the BGP announcements your routers see may differ from the ones listed here.
       </p>
     </div>
-    <table id="bgp-preview-table" class="zebra-striped" style="display: none;">
+    <table id="bgp-preview-table" class="zebra-striped" style="display: none;" data-search={ search }>
       <thead>
         <tr>
           <th width="200px">ASN</th>
@@ -78,6 +78,7 @@ class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump]) extends View with ViewHelpers
     <script><!--
 $(document).ready(function() {
   $('#bgp-preview-table').dataTable({
+        "oSearch": {"sSearch": $('#bgp-preview-table').attr('data-search')},
         "sPaginationType": "full_numbers",
         "bProcessing": true,
         "bServerSide": true,

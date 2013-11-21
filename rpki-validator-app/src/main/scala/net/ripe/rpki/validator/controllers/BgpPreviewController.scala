@@ -43,7 +43,7 @@ trait BgpPreviewController extends ApplicationController {
   private def baseUrl = views.Tabs.BgpPreviewTab.url
 
   get(baseUrl) {
-    new BgpPreviewView(bgpRisDumps)
+    new BgpPreviewView(bgpRisDumps, params.getOrElse("q", ""))
   }
 
   get("/bgp-preview-data") {
