@@ -39,7 +39,7 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
   protected def validatedObjects: ValidatedObjects
 
   get("/roas") {
-    new RoasView(validatedObjects)
+    new RoasView(validatedObjects, params.getOrElse("q", ""))
   }
 
   get("/roas-data") {

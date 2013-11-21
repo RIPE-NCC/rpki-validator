@@ -34,7 +34,7 @@ import scala.xml._
 import models.ValidatedObjects
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 
-class RoasView(validatedObjects: ValidatedObjects) extends View {
+class RoasView(validatedObjects: ValidatedObjects, search: String) extends View {
   def tab = Tabs.RoasTab
   def title = Text("Validated ROAs")
   def body = {
@@ -46,7 +46,7 @@ class RoasView(validatedObjects: ValidatedObjects) extends View {
         optional(loading.nonEmpty, <p>Still retrieving and validating ROAs from { listTrustAnchorNames(loading.keys.toSeq) }.</p>)
       }
     </div>
-    <table id="roas-table" class="zebra-striped" style="display: none;">
+    <table id="roas-table" class="zebra-striped" style="display: none;" data-search={ search }>
       <thead>
         <tr>
           <th>ASN</th>
@@ -61,6 +61,7 @@ class RoasView(validatedObjects: ValidatedObjects) extends View {
     <script><!--
 $(document).ready(function() {
   $('#roas-table').dataTable({
+        "oSearch": {"sSearch": $('#roas-table').attr('data-search')},
         "sPaginationType": "full_numbers",
         "bProcessing": true,
         "bServerSide": true,
