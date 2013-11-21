@@ -78,7 +78,7 @@ Configuration file
 You can override the default settings of the RPKI Validator by editing the configuration
 file at the following location:
 
-  conf/rpki-validator.conf
+  <root-folder>/conf/rpki-validator.conf
 
 If you want to be sure that future upgrades do not overwrite your local changes, you may 
 want to make a local copy of the configuration file and refer to it explicitly using
@@ -153,7 +153,7 @@ This validator has a RESTful API that allows you to get the full validated ROA s
 
 Usage:
 
-= CSV format: http://yourhost:http-port/export.csv
+= CSV format:  http://yourhost:http-port/export.csv
 = JSON format: http://yourhost:http-port/export.json
 
 You can also query this RPKI Validator for validity information about a BGP announcement. 
@@ -184,15 +184,15 @@ Deep Links
 You can specify an AS Number or prefix in the URL of the ROA and BGP Preview pages to get
 direct, bookmark-able access to information. For example:
 
-  http://yourhost:http-port/roas?q=93.175.146.0/24
-  http://yourhost:http-port/bgp-preview?q=AS12654
+= http://yourhost:http-port/roas?q=93.175.146.0/24
+= http://yourhost:http-port/bgp-preview?q=AS12654
 
 
 Monitoring
 ----------
 You can monitor the health of the application itself using this url:
 
-   http://<your-host>:<your-port>/health
+   http://yourhost:http-port/health
 
 This url will return data in JSON format with information on each test.
 
