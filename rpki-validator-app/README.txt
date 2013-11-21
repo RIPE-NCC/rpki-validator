@@ -41,9 +41,10 @@ Requirements
   system, or you just don't want to have it on the normal path, then you can specify
   a java installation explicitly by setting the JAVA_HOME directory.
 
-  Beware that JAVA_HOME should not point to the java executable itself, but the installation
-  directory of your java distribution. The executable is expected here:
-      $JAVA_HOME/bin/java
+  Beware that JAVA_HOME should not point to the java executable itself, but the 
+  installation directory of your java distribution. The executable is expected here:
+      
+  $JAVA_HOME/bin/java
 
 = At least 1GB of free memory
 
@@ -177,21 +178,37 @@ Full documentation can be found here:
 
   https://www.ripe.net/developers/rpki-validator-api
 
+Deep Links
+----------
+
+You can specify an AS Number or prefix in the URL of the ROA and BGP Preview pages to get
+direct, bookmark-able access to information. For example:
+
+  http://yourhost:http-port/roas?q=93.175.146.0/24
+  http://yourhost:http-port/bgp-preview?q=AS12654
+
 
 Monitoring
 ----------
-You can monitor the health of this application using this url:
+You can monitor the health of the application itself using this url:
 
    http://<your-host>:<your-port>/health
 
-This url will return some json text with information on each test.
+This url will return data in JSON format with information on each test.
 
 Monitoring tools should check the http status of the response.
-    200 -> Everything is okay
+    200 -> Everything is OK
     500 -> One or more checks failed
 
-For the moment we only check that the rsync binary can be found and executed,
-but we may add more checks in the future.
+For the moment we only check that the rsync binary can be found and executed, but we may
+add more checks in the future.
+
+In addition, each Trust Anchor has a dedicated monitoring page showing statistics, 
+validation warning and errors. Clicking one of the "Processed Items" links on the Trust 
+Anchors page will take you to a page with a unique monitoring link for this Trust Anchor.
+
+If you want use a monitoring tool to get alerts about any issues, you can get the contents
+of this page using the unique link for a Trust Anchor and grep for the string "ALERT".
 
 
 Known Issues
@@ -206,8 +223,6 @@ Known Issues
   When the validator has any updates, it will respond with a cache-reset, as described 
   here: http://tools.ietf.org/html/rfc6810#section-6.3
 
-If you find any other problems, please contact us at <certification@ripe.net>.
-
 
 Version History
 ---------------
@@ -216,7 +231,7 @@ Version History
 = The application now uses a single configuration file to override all default settings.
 = The application will now try to find your Java installation if you have not specified
   your JAVA_HOME.
-= Added basic application monitoring
+= Added basic application and Trust Anchor monitoring
 = Bug and conformance fixes, as well as other magical improvements
 
 2.12 - 25 October 2013
