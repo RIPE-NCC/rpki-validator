@@ -227,7 +227,7 @@ Known Issues
 Version History
 ---------------
 
-2.13 - 15 November 2013
+2.13 - 22 November 2013
 = The application now uses a single configuration file to override all default settings.
 = The application will now try to find your Java installation if you have not specified
   your JAVA_HOME.
