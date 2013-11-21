@@ -1,6 +1,3 @@
-package net.ripe.rpki.validator
-package views
-
 /**
  * The BSD License
  *
@@ -30,44 +27,15 @@ package views
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+package net.ripe.rpki.validator.lib
 
-import scala.xml.Text
+import net.ripe.rpki.validator.support.ValidatorTestCase
 
-class ValidationResultsView(search: String) extends View {
+class HashSupportTest extends ValidatorTestCase {
 
-  def tab = Tabs.ValidationResultsTab
-
-  def title = Text("Validation Results")
-
-  def body = {
-    <table id="validation-details-table" class="zebra-striped" style="display: none;" data-search={ search }>
-      <thead>
-        <tr>
-          <th>Trust Anchor</th>
-          <th>Object</th>
-          <th>Validity</th>
-          <th>Validation Message</th>
-        </tr>
-      </thead>
-      <tbody>
-      </tbody>
-    </table>
-      <script>
-        <!--
-$(document).ready(function() {
-  $('[rel=twipsy]').twipsy({
-    "live": true
-  });
-  $('#validation-details-table').dataTable({
-        "oSearch": {"sSearch": $('#validation-details-table').attr('data-search')},
-        "sPaginationType": "full_numbers",
-        "bProcessing": true,
-        "bServerSide": true,
-        "sAjaxSource": "validation-results-data"
-    }).show();
-});
-// -->
-      </script>
+  test("should encode value to short hash") {
+    val hash = HashSupport.createShortHexEncodedHash("test")
+    hash should have length(10)
   }
 
 }

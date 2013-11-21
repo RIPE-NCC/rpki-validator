@@ -27,25 +27,33 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.views
+package net.ripe.rpki.validator.lib
 
-import scala.xml._
+import org.bouncycastle.crypto.digests.SHA256Digest
+import org.bouncycastle.crypto.io.DigestOutputStream
+import org.apache.commons.codec.binary.Hex
 
-case class Tab(text: NodeSeq, url: String)
+object HashSupport {
 
-object Tabs {
-  val HomeTab = Tab(Text("Home"), "/")
-  val TrustAnchorsTab = Tab(Text("Trust Anchors"), "/trust-anchors")
-  val TrustAnchorMonitorTab = Tab(Text("Trust Anchor Monitoring"), "/trust-anchor-monitor")
-  val RoasTab = Tab(Text("ROAs"), "/roas")
-  val FiltersTab = Tab(Text("Ignore Filters"), "/filters")
-  val WhitelistTab = Tab(Text("Whitelist"), "/whitelist")
-  val BgpPreviewTab = Tab(Text("BGP Preview"), "/bgp-preview")
-  val ExportTab = Tab(Text("Export and API"), "/export")
-  val RtrSessionsTab = Tab(Text("Router Sessions"), "/rtr-sessions")
-  val RtrLogTab = Tab(Text("rpki-rtr log"), "/rtr-log")
-  val ValidationDetailsTab = Tab(Text("Validation Details"), "/validation-details")
-  val UserPreferencesTab = Tab(<img src="/images/cogs.png" width="15" height="17" alt="Settings"/>, "/user-preferences")
+  /**
+   * Create a short hash that can be used as a safe identifier
+   * for some resource, e.g. in a url.
+   *
+   * Uses 5 bytes, i.e. 10 hex characters. 40 bits of entropy.
+   */
+  def createShortHexEncodedHash(s: String): String = {
+    val digest = new SHA256Digest
+    val digestOut = new DigestOutputStream(digest)
 
-  def visibleTabs = Seq(HomeTab, TrustAnchorsTab, RoasTab, FiltersTab, WhitelistTab, BgpPreviewTab, ExportTab, RtrSessionsTab, UserPreferencesTab)
+    digestOut.write(s.getBytes)
+    digestOut.flush
+
+    val digestValue = new Array[Byte](digest.getDigestSize)
+    digest.doFinal(digestValue, 0)
+
+    val enoughBytes = for (i <- 0 until 5) yield { digestValue(i) }
+
+    Hex.encodeHexString(enoughBytes.toArray)
+  }
+
 }

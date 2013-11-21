@@ -55,7 +55,10 @@ import net.ripe.rpki.commons.crypto.x509cert.X509CertificateUtil
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.validator.config.MemoryImage
 import net.ripe.rpki.validator.fetchers._
-import net.ripe.rpki.validator.lib.DateAndTime._ // Ignore unused warnings: is used for implicit def
+import net.ripe.rpki.validator.lib.HashSupport
+
+// Ignore unused warning for implicit def from net.ripe.rpki.validator.lib.DateAndTime._
+import net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.rpki.validator.store.DataSources
 import net.ripe.rpki.validator.store.RepositoryObjectStore
 import scalaz._
@@ -82,6 +85,9 @@ case class TrustAnchor(
   manifest: Option[ManifestCms] = None,
   crl: Option[X509Crl] = None,
   lastUpdated: Option[DateTime] = None) {
+
+  def identifierHash: String = HashSupport.createShortHexEncodedHash(locator.getPublicKeyInfo)
+
   def name: String = locator.getCaName
   def prefetchUris: Seq[URI] = locator.getPrefetchUris.asScala
 

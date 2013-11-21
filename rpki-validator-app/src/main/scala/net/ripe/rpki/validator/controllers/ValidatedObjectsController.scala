@@ -48,16 +48,6 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
     }
   }
 
-  get("/validation-results") {
-    new ValidationResultsView(params.getOrElse("q", ""))
-  }
-
-  get("/validation-results-data") {
-    new ValidationResultsTableData(getValidationResults) {
-      override def getParam(name: String) = params(name)
-    }
-  }
-
   get("/validation-details") {
     new ValidationDetailsView()
   }

@@ -34,6 +34,11 @@ import scalaz._, Scalaz._
 import models._
 import lib.Validation._
 import net.ripe.rpki.validator.util.TrustAnchorLocator
+import net.ripe.rpki.validator.views._
+import net.ripe.rpki.commons.validation.ValidationStatus
+import scalaz.Success
+import net.ripe.rpki.validator.models.TrustAnchor
+import scalaz.Failure
 
 trait TrustAnchorsController extends ApplicationController {
   protected def trustAnchors: TrustAnchors
@@ -41,11 +46,43 @@ trait TrustAnchorsController extends ApplicationController {
   protected def validatedObjects: ValidatedObjects
   protected def startTrustAnchorValidation(trustAnchors: Seq[String])
 
-  get("/trust-anchors") {
+  get(s"${Tabs.TrustAnchorsTab.url}") {
     new views.TrustAnchorsView(trustAnchors, validatedObjects.validationStatusCountByTal, messages = feedbackMessages)
   }
 
-  post("/trust-anchors/update") {
+  get(s"${Tabs.TrustAnchorMonitorTab.url}/:identifierHash") {
+    validateParameter("identifierHash", required(trustAnchorByIdentifierHash)) match {
+      case Success(trustAnchor) => {
+        new views.TrustAnchorMonitorView(
+          ta = trustAnchor,
+          validatedObjectsOption = validatedObjects.all.get(trustAnchor.locator),
+          messages = feedbackMessages)
+      }
+      case Failure(feedbackMessage) =>
+        redirectWithFeedbackMessages(s"${Tabs.TrustAnchorsTab.url}", feedbackMessage)
+    }
+  }
+
+  get(s"${Tabs.TrustAnchorMonitorTab.url}/validation-detail/:identifierHash") {
+    val validatedObjectResultsForTa: IndexedSeq[ValidatedObjectResult] = validateParameter("identifierHash", required(trustAnchorByIdentifierHash)) match {
+      case Success(trustAnchor) =>  {
+        val validatedObjectsForTa: Seq[ValidatedObject] = validatedObjects.all.getOrElse(trustAnchor.locator, Seq.empty)
+        val records = for {
+          validatedObject: ValidatedObject <- validatedObjectsForTa if validatedObject.validationStatus != ValidationStatus.PASSED
+        } yield {
+          ValidatedObjectResult(trustAnchor.name, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
+        }
+        records.seq.toIndexedSeq
+      }
+      case Failure(feedbackMessage) => IndexedSeq.empty
+    }
+
+    new ValidationResultsTableData(validatedObjectResultsForTa) {
+      override def getParam(name: String) = params(name)
+    }
+  }
+
+  post(s"${Tabs.TrustAnchorsTab.url}/update") {
     validateParameter("name", required(trustAnchorByName)) match {
       case Success(trustAnchor) =>
         startTrustAnchorValidation(Seq(trustAnchor.name))
@@ -56,7 +93,7 @@ trait TrustAnchorsController extends ApplicationController {
     }
   }
 
-  post("/trust-anchors/toggle") {
+  post(s"${Tabs.TrustAnchorsTab.url}/toggle") {
     validateParameter("name", required(trustAnchorByName)) match {
       case Success(trustAnchor) =>
         val enabled = !trustAnchor.enabled
@@ -71,6 +108,9 @@ trait TrustAnchorsController extends ApplicationController {
         redirectWithFeedbackMessages("/trust-anchors", feedbackMessage)
     }
   }
+
+  private def trustAnchorByIdentifierHash(s: String): Validation[String, TrustAnchor] =
+    trustAnchors.all.find(_.identifierHash == s).map(_.success).getOrElse(("No trust anchor with identifier '" + s + "' found").fail)
 
   private def trustAnchorByName(s: String): Validation[String, TrustAnchor] =
     trustAnchors.all.find(_.name == s).map(_.success).getOrElse(("No trust anchor with name '" + s + "' found").fail)

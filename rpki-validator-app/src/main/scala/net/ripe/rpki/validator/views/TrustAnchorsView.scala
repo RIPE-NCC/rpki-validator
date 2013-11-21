@@ -157,27 +157,16 @@ $(function () {
     def badge(level: String, count: Int) = {
       val clazz = "object-counter label " + level
       val style = if (count > 0) "" else "opacity: 0.25;"
-      <span class={ clazz } style={ style }>{ count }</span>
-    }
-    def link(s: NodeSeq, helpText: String): NodeSeq = (
+      val helpText = "Click to view monitor page"
       <span rel="twipsy" data-original-title={ helpText }>
-        <a href={ Tabs.ValidationResultsTab.url + "?q=" + ta.name }>{ s }</a>
-      </span>)
+        <a href={ Tabs.TrustAnchorMonitorTab.url + "/" + ta.identifierHash }>{<span class={ clazz } style={ style }>{ count }</span>}</a>
+      </span>
+    }
 
     <span>
       { badge("success", counters.getOrElse(ValidationStatus.PASSED, 0)) }
-      {
-        counters.getOrElse(ValidationStatus.WARNING, 0) match {
-          case 0 => badge("warning", 0)
-          case nr => link(badge("warning", nr), nr + " warnings exist, click to view")
-        }
-      }
-      {
-        counters.getOrElse(ValidationStatus.ERROR, 0) match {
-          case 0 => badge("important", 0)
-          case nr => link(badge("important", nr), nr + " errors exist, click to view")
-        }
-      }
+      { badge("warning", counters.getOrElse(ValidationStatus.WARNING, 0)) }
+      { badge("important", counters.getOrElse(ValidationStatus.ERROR, 0)) }
     </span>
   }
 
