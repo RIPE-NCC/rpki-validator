@@ -68,7 +68,7 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
   def resolveFileName(uri: URI): String = new File(uri.getPath).getName
 
   val crl = X509CrlTest.createCrl
-  val crlUri = issuingCertificate.getCrlUri
+  val crlUri = X509ResourceCertificateTest.TEST_TA_CRL
   val crlFileName = resolveFileName(crlUri)
 
   val roa = RoaCmsTest.getRoaCms
