@@ -133,7 +133,7 @@ object DataSources {
   /**
    * For unit testing
    */
-  lazy val InMemoryDataSource = {
+  def InMemoryDataSource = {
     val result = new BasicDataSource
     result.setUrl("jdbc:h2:mem:rpki-object-cache")
     result.setDriverClassName("org.h2.Driver")

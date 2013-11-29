@@ -212,16 +212,15 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
 
     val validationResult = ValidationResult.withLocation(uri)
 
-    val cro = consistentObjectFetcher.fetch(uri, Specifications.alwaysTrue(), validationResult)
-    cro match {
-      case certificate: X509ResourceCertificate =>
+    consistentObjectFetcher.getTrustAnchorCertificate(uri, validationResult) match {
+      case Some(certificate) =>
         validationResult.rejectIfFalse(trustAnchorLocator.getPublicKeyInfo == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.getCertificate), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
         if (validationResult.hasFailureForCurrentLocation) {
           InvalidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
         } else {
           ValidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, certificate)
         }
-      case _ =>
+      case None =>
         InvalidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
     }
   }
@@ -258,7 +257,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   }
 
   private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.Listener*): CertificateRepositoryObjectFetcher = {
-    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(new RpkiRepositoryObjectFetcherAdapter(consistentObjectFetcher), validationOptions)
+    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(consistentObjectFetcher, validationOptions)
     val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher)
     val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher)
     validatingFetcher.setOuterMostDecorator(cachingFetcher)
