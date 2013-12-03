@@ -45,6 +45,7 @@ import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
 import net.ripe.rpki.commons.crypto.crl.X509CrlTest
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsTest
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
+import net.ripe.rpki.commons.crypto.util.KeyPairFactoryTest.TEST_KEY_PAIR
 import net.ripe.rpki.validator.models.StoredRepositoryObject
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
@@ -56,6 +57,7 @@ import java.util
 import scala.Some
 import scala.collection.JavaConverters._
 import net.ripe.rpki.validator.support.ValidatorTestCase
+import java.math.BigInteger
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
@@ -83,9 +85,13 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
   val mftUri = issuingCertificate.getManifestUri
   val mftFileName = resolveFileName(mftUri)
 
-  test("Should store consistent set") {
-    val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
+  val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
 
+  before {
+    store.clear
+  }
+
+  test("Should store consistent set") {
     val entries = Map(
       mftUri -> mft,
       crlUri -> crl,
@@ -106,8 +112,6 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
   }
 
   test("Should fall back to old mft if new content is missing") {
-
-    val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
     store.put(List(StoredRepositoryObject(uri = mftUri, binary = mft.getEncoded),
                    StoredRepositoryObject(uri = crlUri, binary = crl.getEncoded),
                    StoredRepositoryObject(uri = roaUri, binary = roa.getEncoded)))
@@ -134,8 +138,6 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
   }
 
   test("Should fall back to old mft if new content has file not matching hash") {
-
-    val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
     store.put(List(StoredRepositoryObject(uri = mftUri, binary = mft.getEncoded),
       StoredRepositoryObject(uri = crlUri, binary = crl.getEncoded),
       StoredRepositoryObject(uri = roaUri, binary = roa.getEncoded)))
@@ -167,9 +169,6 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
   }
 
   test("Should store new mft and objects despite inconsistencies if cache is empty") {
-
-    val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
-    store.clear()
     store.getLatestByUrl(mftUri) should equal(None)
 
     val mftWrongHashBuilder = ManifestCmsTest.getRootManifestBuilder
@@ -193,7 +192,6 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
   }
 
   test("Should get objects by hash") {
-    val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
     store.put(List(StoredRepositoryObject(uri = mftUri, binary = mft.getEncoded),
       StoredRepositoryObject(uri = crlUri, binary = crl.getEncoded),
       StoredRepositoryObject(uri = roaUri, binary = roa.getEncoded)))
@@ -208,14 +206,11 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
   }
 
   test("Should get crl for mft from cache") {
-    val store = new RepositoryObjectStore(DataSources.InMemoryDataSource)
-    store.clear()
-
     store.put(List(StoredRepositoryObject(uri = mftUri, binary = mft.getEncoded),
       StoredRepositoryObject(uri = crlUri, binary = crl.getEncoded),
       StoredRepositoryObject(uri = roaUri, binary = roa.getEncoded)))
 
-    val crl2 = X509CrlTest.createCrl
+    val crl2 = X509CrlTest.getCrlBuilder().withNumber(BigInteger.valueOf(11)).build(TEST_KEY_PAIR.getPrivate());
     crl should not equal(crl2)
 
     val mft2Builder = ManifestCmsTest.getRootManifestBuilder
