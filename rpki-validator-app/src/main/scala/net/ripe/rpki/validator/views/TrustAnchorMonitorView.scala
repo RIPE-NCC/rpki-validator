@@ -126,7 +126,7 @@ $(document).ready(function() {
 
   def body = {
     <div>{ renderMessages(messages, identity) }</div>
-    <h2 class="center">{ checkToOkOrAlertBadge(overallHealthy) }</h2>
+    <h2 class="center"><span id="healthcheck-result">{ checkToOkOrAlertBadge(overallHealthy) }</span></h2>
     <div>
 
       <h3>Checks</h3>
