@@ -204,12 +204,15 @@ For the moment we only check that the rsync binary can be found and executed, bu
 add more checks in the future.
 
 In addition, each Trust Anchor has a dedicated monitoring page showing statistics, 
-validation warning and errors. Clicking one of the "Processed Items" links on the Trust 
-Anchors page will take you to a page with a unique monitoring link for this Trust Anchor.
+validation warnings and errors. Clicking one of the "Processed Items" links on the Trust 
+Anchors page will take you to an overview with all checks and warnings for that trust 
+anchor.
 
-If you want use a monitoring tool to get alerts about any issues, you can get the contents
-of this page using the unique link for a Trust Anchor and check for the for the span tag
-with the id "healthcheck-result". If the label reads "ALERT", your attention is required.
+You can set up your monitoring tool to check for the contents of this page. Using 
+regular expressions, check for the label in the span tag with the id "healthcheck-result":
+
+   <span id="healthcheck-result">.*OK.*</span>
+   <span id="healthcheck-result">.*ALERT.*</span>
 
 
 Known Issues
