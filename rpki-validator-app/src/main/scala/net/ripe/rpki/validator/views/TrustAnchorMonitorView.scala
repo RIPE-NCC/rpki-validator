@@ -81,9 +81,17 @@ class TrustAnchorMonitorView(ta: TrustAnchor, validatedObjectsOption: Option[Seq
     <span class={ clazz } style={ style }>{ text }</span>
   }
   
-  def checkToOkOrAlertBadge(isOkay: Boolean) = {
+  def checkToOverallHealthBadge(isOkay: Boolean) = {
+    checkToTextBadge(isOkay, passedText = "Overall health: OK - All checks were successful", failedText = "Overall health: ALERT - One or more checks failed")
+  }
+
+  def checkToYesOrAlertBadge(isOkay: Boolean) = {
+    checkToTextBadge(isOkay, passedText = "YES", failedText = "ALERT")
+  }
+
+  def checkToTextBadge(isOkay: Boolean, passedText: String = "OK", failedText: String = "ALERT") = {
     val level = if (isOkay) "success" else "important"
-    val text = if (isOkay) "OK" else "ALERT"
+    val text = if (isOkay) passedText else failedText
     badge(level, text)
   }
 
@@ -126,16 +134,16 @@ $(document).ready(function() {
 
   def body = {
     <div>{ renderMessages(messages, identity) }</div>
-    <h2 class="center"><span id="healthcheck-result">{ checkToOkOrAlertBadge(overallHealthy) }</span></h2>
-    <div>
+      <h2 class="center"><span id="healthcheck-result">{ checkToOverallHealthBadge(overallHealthy) }</span></h2>
+      <div>
 
-      <h3>Checks</h3>
-      <table id="errors" class="zebra-striped">
-        <tr><td>Could validate trust anchor using trust anchor locator</td><td> { checkToOkOrAlertBadge(!hasProblemValidatingTa) } </td></tr>
-        <tr><td>Unexplained object count drop since last validation run (10% drop combined with errors)</td><td> { checkToOkOrAlertBadge(!hasUnexpectedDrop) } </td></tr>
-        <tr><td>More than { MaximumErrorCount } errors seen</td><td> { checkToOkOrAlertBadge(!hasTooManyErrors) } </td></tr>
-        <tr><td>More than { MaximumRsyncErrors } rsync fetch failures seen</td><td> { checkToOkOrAlertBadge(!hasTooManyRsyncFetchFailures) } </td></tr>
-      </table>
+        <h3>Checks</h3>
+        <table id="errors" class="zebra-striped">
+          <tr><td>Trust anchor could be validated using trust anchor locator</td><td> { checkToYesOrAlertBadge(!hasProblemValidatingTa) } </td></tr>
+          <tr><td>Object count has not dropped more than 10% since the last validation</td><td> { checkToYesOrAlertBadge(!hasUnexpectedDrop) } </td></tr>
+          <tr><td>Fewer than { MaximumErrorCount } validation errors</td><td> { checkToYesOrAlertBadge(!hasTooManyErrors) } </td></tr>
+          <tr><td>Fewer than { MaximumRsyncErrors } rsync connection failures</td><td> { checkToYesOrAlertBadge(!hasTooManyRsyncFetchFailures) } </td></tr>
+        </table>
 
       <h3>Statistics for the last validation run</h3>
       <table id="details" class="zebra-striped">
