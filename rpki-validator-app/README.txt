@@ -227,6 +227,11 @@ Known Issues
 Version History
 ---------------
 
+2.14 - 9 December 2013
+= Fixed an issue where the wrong CRL could be used when a remote repository is being 
+  updated during validation
+= Several clarifications in the text
+
 2.13 - 22 November 2013
 = The application now uses a single configuration file to override all default settings.
 = The application will now try to find your Java installation if you have not specified
