@@ -208,7 +208,8 @@ validation warning and errors. Clicking one of the "Processed Items" links on th
 Anchors page will take you to a page with a unique monitoring link for this Trust Anchor.
 
 If you want use a monitoring tool to get alerts about any issues, you can get the contents
-of this page using the unique link for a Trust Anchor and grep for the string "ALERT".
+of this page using the unique link for a Trust Anchor and check for the for the span tag
+with the id "healthcheck-result". If the label reads "ALERT", your attention is required.
 
 
 Known Issues
@@ -230,6 +231,7 @@ Version History
 2.14 - 9 December 2013
 = Fixed an issue where the wrong CRL could be used when a remote repository is being 
   updated during validation
+= Improved monitoring code to allow for easier tracking of alerts
 = Several clarifications in the text
 
 2.13 - 22 November 2013
