@@ -60,6 +60,7 @@ span.object-counter {
     text-align: center;
     min-width: 3em;
     margin-left: 0.5em;
+    text-transform: none;
 }
 
 .popover .inner {
