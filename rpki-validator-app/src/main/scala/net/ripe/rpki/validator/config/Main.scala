@@ -251,7 +251,7 @@ class Main() { main =>
       protected def sessionData = rtrServer.rtrSessions.allClientData
 
       // Software Update checker
-      override def newVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version, () => scala.io.Source.fromURL(new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties"), "UTF-8").mkString)
+      override def newVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version, () => scala.io.Source.fromURL(new java.net.URL("https://lirportal.ripe.net/certification/content/static/validator/latest-version.properties"), "UTF-8").mkString)
 
       // UserPreferences
       override def userPreferences = main.userPreferences.single.get
