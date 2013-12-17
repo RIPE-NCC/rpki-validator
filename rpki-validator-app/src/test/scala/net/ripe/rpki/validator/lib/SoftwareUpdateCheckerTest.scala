@@ -133,12 +133,6 @@ class SoftwareUpdateCheckerTest extends ValidatorTestCase {
     newVersionDetails should equal(None)
   }
 
-  // Don't depend on network... but this is how we read the remote file:
-  //  test("should read file") {
-  //     val url = new java.net.URL("https://certification.ripe.net/content/static/validator/latest-version.properties")
-  //     val content = scala.io.Source.fromURL(url, "UTF-8").mkString
-  //  }
-
   private def getTestNewVersionDetailFetcher(propertiesString: String) = {
     new OnlineNewVersionDetailFetcher(currentVersion, () => propertiesString)
   }
