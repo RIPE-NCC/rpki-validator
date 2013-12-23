@@ -35,8 +35,7 @@ import java.net.URI
 import net.ripe.rpki.commons.validation.{ValidationString, ValidationStatus, ValidationCheck}
 import net.ripe.rpki.commons.crypto.UnknownCertificateRepositoryObject
 
-@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class ValidatedObjectsTest extends ValidatorTestCase with MockitoSugar {
+object ValidatedObjectsTest {
 
   def makeListOfValidObjects(number: Int) = for (nr <- 1 until number + 1) yield {
     ValidObject(
@@ -50,6 +49,14 @@ class ValidatedObjectsTest extends ValidatorTestCase with MockitoSugar {
       URI.create(s"rsync://some.host/repo/invalid-$nr.unk"),
       Set(new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_READ_FILE)))
   }
+}
+
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+class ValidatedObjectsTest extends ValidatorTestCase with MockitoSugar {
+
+  import ValidatedObjectsTest._
+
+
 
   test("Should add repository error when at least one error was found and there is a 10% or more drop in valid object count") {
 

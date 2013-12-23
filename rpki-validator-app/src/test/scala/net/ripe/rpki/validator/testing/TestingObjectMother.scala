@@ -66,6 +66,8 @@ object TestingObjectMother {
     new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
   }
 
+  val TA = TrustAnchor(locator = TAL, status = Idle(nextUpdate = new DateTime()))
+
   val ASN1_TO_ROA_PREFIX_V4_1: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V4_1.getPrefix, Some(ROA_PREFIX_V4_1.getMaximumLength), Some(TAL))
   val ASN1_TO_ROA_PREFIX_V4_2: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V4_2.getPrefix, None, Some(TAL))
   val ASN1_TO_ROA_PREFIX_V6_1: RtrPrefix = RtrPrefix(ASN1, ROA_PREFIX_V6_1.getPrefix, None, Some(TAL))

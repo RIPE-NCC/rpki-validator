@@ -39,7 +39,7 @@ import net.ripe.rpki.commons.validation.{ValidationString, ValidationStatus}
 class TrustAnchorMonitorView(ta: TrustAnchor, validatedObjectsOption: Option[Seq[ValidatedObject]], messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
 
   val MaximumErrorCount = 10
-  val MaximumErrorFraction = .25
+  val MaximumErrorFraction = .1
   val MaximumRsyncErrors = 10
 
   def tab = Tabs.TrustAnchorsTab
@@ -153,7 +153,7 @@ $(document).ready(function() {
           <tr><td>Trust anchor could be validated using trust anchor locator</td><td> { checkToYesOrAlertBadge(!hasProblemValidatingTa) } </td></tr>
           <tr><td>Object count has not dropped more than 10% since the last validation</td><td> { checkToYesOrAlertBadge(!hasUnexpectedDrop) } </td></tr>
           <tr><td>Fewer than { MaximumErrorCount } validation errors</td><td> { checkToYesOrAlertBadge(!hasTooManyErrors) } </td></tr>
-          <tr><td>Fewer than { (MaximumErrorFraction * 100).round }% of objects has error</td><td> { checkToYesOrAlertBadge(!hasTooHighErrorFraction) } </td></tr>
+          <tr><td>Less than { (MaximumErrorFraction * 100).round }% of objects have a validation error</td><td> { checkToYesOrAlertBadge(!hasTooHighErrorFraction) } </td></tr>
           <tr><td>Fewer than { MaximumRsyncErrors } rsync connection failures</td><td> { checkToYesOrAlertBadge(!hasTooManyRsyncFetchFailures) } </td></tr>
         </table>
 
