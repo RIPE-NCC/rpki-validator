@@ -36,7 +36,7 @@ import net.ripe.rpki.validator.models
 import models._
 import net.ripe.rpki.commons.validation.{ValidationString, ValidationStatus}
 
-class TrustAnchorMonitorView(ta: TrustAnchor, validatedObjectsOption: Option[Seq[ValidatedObject]], messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
+class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAnchorValidations, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
 
   val MaximumErrorCount = 10
   val MaximumErrorFraction = .1
@@ -45,42 +45,24 @@ class TrustAnchorMonitorView(ta: TrustAnchor, validatedObjectsOption: Option[Seq
   def tab = Tabs.TrustAnchorsTab
   def title = Text(s"Monitoring for ${ta.name}")
 
-  val size = validatedObjectsOption.getOrElse(Seq.empty).size
+  val validatedObjects = trustAnchorValidations.validatedObjects
+  val size = trustAnchorValidations.validatedObjects.size
 
-  def numberOfObjectsWithStatus(status: ValidationStatus) = validatedObjectsOption match {
-    case None => 0
-    case Some(validatedObjects) => validatedObjects.count(vo => vo.validationStatus.equals(status))
+  def numberOfObjectsWithStatus(status: ValidationStatus) = validatedObjects.count(vo => vo.validationStatus.equals(status))
+
+  val hasProblemValidatingTa = validatedObjects.exists(vo => vo.uri == ta.locator.getCertificateLocation && !vo.isValid)
+
+  val hasUnexpectedDrop = trustAnchorValidations.objectCountDropObserved.isDefined
+
+  val hasTooManyErrors = numberOfObjectsWithStatus(ValidationStatus.ERROR) >= MaximumErrorCount
+
+  val hasTooHighErrorFraction = {
+    val objectsInError = numberOfObjectsWithStatus(ValidationStatus.ERROR)
+    val totalObjects = validatedObjects.size
+    totalObjects != 0 && objectsInError.toFloat / totalObjects > MaximumErrorFraction
   }
 
-  val hasProblemValidatingTa = validatedObjectsOption match {
-    case Some(validatedObject) => validatedObject.exists(vo => vo.uri == ta.locator.getCertificateLocation && !vo.isValid)
-    case None => false
-  }
-
-  val hasUnexpectedDrop = validatedObjectsOption match {
-    case Some(validatedObjects) => validatedObjects.exists(vo => vo.checks.map(_.getKey).contains(ValidationString.VALIDATOR_REPOSITORY_OBJECT_DROP))
-    case None => false
-  }
-
-  val hasTooManyErrors = validatedObjectsOption match {
-    case Some(validatedObjects) => numberOfObjectsWithStatus(ValidationStatus.ERROR) >= MaximumErrorCount
-    case None => false
-  }
-
-  val hasTooHighErrorFraction = validatedObjectsOption match {
-    case Some(validatedObjects) =>  {
-      val objectsInError = numberOfObjectsWithStatus(ValidationStatus.ERROR)
-      val totalObjects = validatedObjects.size
-
-      totalObjects != 0 && objectsInError.toFloat / totalObjects > MaximumErrorFraction
-    }
-    case None => false
-  }
-
-  val hasTooManyRsyncFetchFailures = validatedObjectsOption match {
-    case Some(validatedObjects) => validatedObjects.flatMap(_.checks).count(_.getKey == ValidationString.VALIDATOR_RSYNC_COMMAND) >= MaximumRsyncErrors
-    case None => false
-  }
+  val hasTooManyRsyncFetchFailures = validatedObjects.flatMap(_.checks).count(_.getKey == ValidationString.VALIDATOR_RSYNC_COMMAND) >= MaximumRsyncErrors
 
   val hasWarningsOrErrors = numberOfObjectsWithStatus(ValidationStatus.WARNING) + numberOfObjectsWithStatus(ValidationStatus.ERROR) > 0
 

@@ -38,6 +38,7 @@ import net.ripe.rpki.validator.util._
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.validation._
+import org.joda.time.DateTime
 
 sealed trait ValidatedObject {
   val uri: URI
@@ -50,6 +51,11 @@ sealed trait ValidatedObject {
     else if (statuses.contains(ValidationStatus.WARNING)) ValidationStatus.WARNING
     else ValidationStatus.PASSED
   }
+
+  def hasCheckKey(key: String): Boolean = {
+    checks.map(_.getKey).contains(key)
+  }
+
 }
 case class InvalidObject(uri: URI, checks: Set[ValidationCheck]) extends ValidatedObject {
   override val isValid = false
@@ -58,31 +64,78 @@ case class ValidObject(uri: URI, checks: Set[ValidationCheck], repositoryObject:
   override val isValid = true
 }
 
-class ValidatedObjects(val all: Map[TrustAnchorLocator, Seq[ValidatedObject]]) {
+case class ObjectCountDrop(previousNumber: Int, firstObserved: DateTime = new DateTime())
 
-  def validationStatusCountByTal: Map[TrustAnchorLocator, Map[ValidationStatus, Int]] = for ((locator, validatedObjects) <- all) yield {
-    locator -> ValidatedObjects.statusCounts(validatedObjects)
+object TrustAnchorValidations {
+
+  val DropThresholdMaxErrors = 1
+  val DropThresholdMinObjectCountFactor: Double = 0.9
+
+  def crossedDropThreshold(previousNumber: Int, newValidatedObjects: Seq[ValidatedObject]): Boolean = {
+    previousNumber * DropThresholdMinObjectCountFactor >= newValidatedObjects.size &&
+    ValidatedObjects.statusCounts(newValidatedObjects).getOrElse(ValidationStatus.ERROR, 0) >= DropThresholdMaxErrors
+  }
+}
+
+case class TrustAnchorValidations(validatedObjects: Seq[ValidatedObject] = Seq.empty, objectCountDropObserved: Option[ObjectCountDrop] = None) {
+
+  import TrustAnchorValidations._
+
+  def processNewValidatedObjects(newValidatedObjects: Seq[ValidatedObject]) = {
+
+    def checkForObjectCountDrop(newValidatedObjects: Seq[ValidatedObject]): Option[ObjectCountDrop] = {
+      val previousNumber = validatedObjects.size
+      if (crossedDropThreshold(previousNumber, newValidatedObjects)) {
+        Some(ObjectCountDrop(previousNumber))
+      } else {
+        None
+      }
+    }
+
+    def checkForObjectDropRecovery(newValidatedObjects: Seq[ValidatedObject], existingDrop: ObjectCountDrop): Option[ObjectCountDrop] = {
+      if (crossedDropThreshold(existingDrop.previousNumber, newValidatedObjects)) {
+        Some(existingDrop)
+      } else {
+        None
+      }
+    }
+
+    if (validatedObjects.isEmpty) {
+      TrustAnchorValidations(newValidatedObjects)
+    } else {
+      objectCountDropObserved match {
+        case None => TrustAnchorValidations(newValidatedObjects, checkForObjectCountDrop(newValidatedObjects))
+        case Some(drop) => TrustAnchorValidations(newValidatedObjects, checkForObjectDropRecovery(newValidatedObjects, drop))
+      }
+    }
+
+  }
+}
+
+class ValidatedObjects(val all: Map[TrustAnchorLocator, TrustAnchorValidations]) {
+
+  def validationStatusCountByTal: Map[TrustAnchorLocator, Map[ValidationStatus, Int]] = for ((locator, taValidations) <- all) yield {
+    locator -> ValidatedObjects.statusCounts(taValidations.validatedObjects)
   }
 
   def getValidatedRtrPrefixes = {
     for {
-      (locator, validatedObjects) <- all
-      ValidObject(_, _, roa: RoaCms) <- validatedObjects
+      (locator, taValidations) <- all
+      ValidObject(_, _, roa: RoaCms) <- taValidations.validatedObjects
       roaPrefix <- roa.getPrefixes.asScala
     } yield {
       RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(locator))
     }
   }
 
-  def update(locator: TrustAnchorLocator, validatedObjects: Seq[ValidatedObject]) = {
+  def update(locator: TrustAnchorLocator, newValidatedObjects: Seq[ValidatedObject]) = {
 
-    val currentObjects: Seq[ValidatedObject] = all.get(locator) match {
-      case Some(oldValidatedObjects) => oldValidatedObjects
-      case None => Seq.empty
+    val taValidations: TrustAnchorValidations = all.get(locator) match {
+      case Some(existingTaValidations) => existingTaValidations.processNewValidatedObjects(newValidatedObjects)
+      case None => TrustAnchorValidations(validatedObjects = newValidatedObjects)
     }
 
-    val validatedObjectsWithTaHealth = ValidatedObjects.getValidatedObjectsWithRepositoryHealth(locator.getCertificateLocation, currentObjects , validatedObjects)
-    new ValidatedObjects(all.updated(locator, validatedObjectsWithTaHealth))
+    new ValidatedObjects(all.updated(locator, taValidations))
   }
 
   def removeTrustAnchor(locator: TrustAnchorLocator) = {
@@ -95,20 +148,22 @@ object ValidatedObjects {
   private val logger = Logger[this.type]
 
   def apply(trustAnchors: TrustAnchors): ValidatedObjects = {
-    new ValidatedObjects(trustAnchors.all.map(ta => ta.locator -> Seq.empty[ValidatedObject])(collection.breakOut))
+    new ValidatedObjects(trustAnchors.all.map(ta => ta.locator -> TrustAnchorValidations(validatedObjects = Seq.empty[ValidatedObject]))(collection.breakOut))
   }
 
-  def getValidatedObjectsWithRepositoryHealth(taUri: URI, currentValidatedObjects: Seq[ValidatedObject], newValidatedObjects: Seq[ValidatedObject]): Seq[ValidatedObject] = {
+  private def getValidatedObjectsWithRepositoryHealth(taUri: URI, currentValidatedObjects: Seq[ValidatedObject], newValidatedObjects: Seq[ValidatedObject]): Seq[ValidatedObject] = {
+
     if (currentValidatedObjects.size * 0.9 >= newValidatedObjects.size
-         && ValidatedObjects.statusCounts(newValidatedObjects).isDefinedAt(ValidationStatus.ERROR) ) {
+      && ValidatedObjects.statusCounts(newValidatedObjects).isDefinedAt(ValidationStatus.ERROR) ) {
 
       newValidatedObjects :+ InvalidObject(
-          taUri,
-          Set(new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_REPOSITORY_OBJECT_DROP, currentValidatedObjects.size.toString, newValidatedObjects.size.toString)))
+        taUri,
+        Set(new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_REPOSITORY_OBJECT_DROP, currentValidatedObjects.size.toString, newValidatedObjects.size.toString)))
     } else {
       newValidatedObjects
     }
   }
+
 
   def statusCounts(validatedObjects: Seq[ValidatedObject]): Map[ValidationStatus, Int] = {
     validatedObjects.groupBy(_.validationStatus).map(p => p._1 -> p._2.size)

@@ -34,6 +34,7 @@ import org.scalatest.mock.MockitoSugar
 import java.net.URI
 import net.ripe.rpki.commons.validation.{ValidationString, ValidationStatus, ValidationCheck}
 import net.ripe.rpki.commons.crypto.UnknownCertificateRepositoryObject
+import net.ripe.rpki.validator.testing.TestingObjectMother
 
 object ValidatedObjectsTest {
 
@@ -55,49 +56,104 @@ object ValidatedObjectsTest {
 class ValidatedObjectsTest extends ValidatorTestCase with MockitoSugar {
 
   import ValidatedObjectsTest._
+  import TestingObjectMother._
 
-
+  val TrustAnchors = new TrustAnchors(Seq(TA))
 
   test("Should add repository error when at least one error was found and there is a 10% or more drop in valid object count") {
 
-    val oldValidatedObjects = makeListOfValidObjects(10)
-    val newObjects = makeListOfValidObjects(8) ++ makeListOfInvalidObjects(1)
-    val taUri = URI.create("rsync://some/ta.cer")
+    val initialValidatedObjects = ValidatedObjects(TrustAnchors)
+    val validatedObjectsAfterFirstRun = initialValidatedObjects.update(TAL, makeListOfValidObjects(10))
+    val validatedObjectsAfterSecondRun = validatedObjectsAfterFirstRun.update(TAL, makeListOfValidObjects(8) ++ makeListOfInvalidObjects(1))
 
-    val objectsWithRepositoryHealth: Seq[ValidatedObject] = ValidatedObjects.getValidatedObjectsWithRepositoryHealth(taUri, oldValidatedObjects, newObjects)
+    validatedObjectsAfterFirstRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterFirstRun.all.get(TAL).get.objectCountDropObserved should be (None)
 
-    assert(objectsWithRepositoryHealth.contains(
-      new InvalidObject(
-        taUri,
-        Set(new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_REPOSITORY_OBJECT_DROP, "10", "9")))))
+    validatedObjectsAfterSecondRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterSecondRun.all.get(TAL).get.objectCountDropObserved should not be (None)
+    validatedObjectsAfterSecondRun.all.get(TAL).get.objectCountDropObserved.get.previousNumber should be (10)
   }
 
   test("Should NOT add repository error when at least one error was found and there is a less than 10% drop in valid object count") {
 
-    val oldValidatedObjects = makeListOfValidObjects(10)
-    val newObjects = makeListOfValidObjects(9) ++ makeListOfInvalidObjects(1)
-    val taUri = URI.create("rsync://some/ta.cer")
+    val initialValidatedObjects = ValidatedObjects(TrustAnchors)
+    val validatedObjectsAfterFirstRun = initialValidatedObjects.update(TAL, makeListOfValidObjects(10))
+    val validatedObjectsAfterSecondRun = validatedObjectsAfterFirstRun.update(TAL, makeListOfValidObjects(9) ++ makeListOfInvalidObjects(1))
 
-    val objectsWithRepositoryHealth: Seq[ValidatedObject] = ValidatedObjects.getValidatedObjectsWithRepositoryHealth(taUri, oldValidatedObjects, newObjects)
+    validatedObjectsAfterFirstRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterFirstRun.all.get(TAL).get.objectCountDropObserved should be (None)
 
-    assert(!objectsWithRepositoryHealth.contains(
-      new InvalidObject(
-        taUri,
-        Set(new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_REPOSITORY_OBJECT_DROP, "10", "10")))))
+    validatedObjectsAfterSecondRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterSecondRun.all.get(TAL).get.objectCountDropObserved should be (None)
   }
 
   test("Should NOT add repository error there is a drop in object count, but no errors were found") {
 
-    val oldValidatedObjects = makeListOfValidObjects(10)
-    val newObjects = makeListOfValidObjects(5)
-    val taUri = URI.create("rsync://some/ta.cer")
+    val initialValidatedObjects = ValidatedObjects(TrustAnchors)
+    val validatedObjectsAfterFirstRun = initialValidatedObjects.update(TAL, makeListOfValidObjects(10))
+    val validatedObjectsAfterSecondRun = validatedObjectsAfterFirstRun.update(TAL, makeListOfValidObjects(5))
 
-    val objectsWithRepositoryHealth: Seq[ValidatedObject] = ValidatedObjects.getValidatedObjectsWithRepositoryHealth(taUri, oldValidatedObjects, newObjects)
+    validatedObjectsAfterFirstRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterFirstRun.all.get(TAL).get.objectCountDropObserved should be (None)
 
-    assert(!objectsWithRepositoryHealth.contains(
-      new InvalidObject(
-        taUri,
-        Set(new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_REPOSITORY_OBJECT_DROP, "10", "5")))))
+    validatedObjectsAfterSecondRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterSecondRun.all.get(TAL).get.objectCountDropObserved should be (None)
+  }
+
+  test("Should carry over object drop error if drop seen last run and object count not recovered this run") {
+
+    val initialValidatedObjects = ValidatedObjects(TrustAnchors)
+    val validatedObjectsAfterFirstRun = initialValidatedObjects.update(TAL, makeListOfValidObjects(10))
+    val validatedObjectsAfterSecondRun = validatedObjectsAfterFirstRun.update(TAL, makeListOfValidObjects(8) ++ makeListOfInvalidObjects(1))
+    val validatedObjectsAfterThirdRun = validatedObjectsAfterSecondRun.update(TAL, makeListOfValidObjects(8) ++ makeListOfInvalidObjects(1))
+
+    validatedObjectsAfterFirstRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterFirstRun.all.get(TAL).get.objectCountDropObserved should be (None)
+
+    validatedObjectsAfterSecondRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterSecondRun.all.get(TAL).get.objectCountDropObserved should not be (None)
+    validatedObjectsAfterSecondRun.all.get(TAL).get.objectCountDropObserved.get.previousNumber should be (10)
+
+    validatedObjectsAfterThirdRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterThirdRun.all.get(TAL).get.objectCountDropObserved should not be (None)
+    validatedObjectsAfterThirdRun.all.get(TAL).get.objectCountDropObserved.get.previousNumber should be (10)
+  }
+
+  test("Should NOT carry over object drop error if drop seen last run, and no errors seen this run") {
+
+    val initialValidatedObjects = ValidatedObjects(TrustAnchors)
+    val validatedObjectsAfterFirstRun = initialValidatedObjects.update(TAL, makeListOfValidObjects(10))
+    val validatedObjectsAfterSecondRun = validatedObjectsAfterFirstRun.update(TAL, makeListOfValidObjects(8) ++ makeListOfInvalidObjects(1))
+    val validatedObjectsAfterThirdRun = validatedObjectsAfterSecondRun.update(TAL, makeListOfValidObjects(8))
+
+    validatedObjectsAfterFirstRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterFirstRun.all.get(TAL).get.objectCountDropObserved should be (None)
+
+    validatedObjectsAfterSecondRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterSecondRun.all.get(TAL).get.objectCountDropObserved should not be (None)
+    validatedObjectsAfterSecondRun.all.get(TAL).get.objectCountDropObserved.get.previousNumber should be (10)
+
+    validatedObjectsAfterThirdRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterThirdRun.all.get(TAL).get.objectCountDropObserved should be (None)
+  }
+
+  test("Should NOT carry over object drop error if drop seen last run, and object count recovered this run (errors may still exist)") {
+
+    val initialValidatedObjects = ValidatedObjects(TrustAnchors)
+    val validatedObjectsAfterFirstRun = initialValidatedObjects.update(TAL, makeListOfValidObjects(10))
+    val validatedObjectsAfterSecondRun = validatedObjectsAfterFirstRun.update(TAL, makeListOfValidObjects(8) ++ makeListOfInvalidObjects(1))
+    val validatedObjectsAfterThirdRun = validatedObjectsAfterSecondRun.update(TAL, makeListOfValidObjects(9) ++ makeListOfInvalidObjects(1))
+
+    validatedObjectsAfterFirstRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterFirstRun.all.get(TAL).get.objectCountDropObserved should be (None)
+
+    validatedObjectsAfterSecondRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterSecondRun.all.get(TAL).get.objectCountDropObserved should not be (None)
+    validatedObjectsAfterSecondRun.all.get(TAL).get.objectCountDropObserved.get.previousNumber should be (10)
+
+    validatedObjectsAfterThirdRun.all.get(TAL) should not be (None)
+    validatedObjectsAfterThirdRun.all.get(TAL).get.objectCountDropObserved should be (None)
+
   }
 
 }

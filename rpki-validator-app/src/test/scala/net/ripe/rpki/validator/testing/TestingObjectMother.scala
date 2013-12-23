@@ -102,7 +102,7 @@ object TestingObjectMother {
     val validatedRoa3 = ValidObject(roa3Uri, Set.empty[ValidationCheck], roa3)
 
     val roas = Seq(validatedRoa1, validatedRoa2, validatedRoa3)
-    new ValidatedObjects(Map(TAL -> roas))
+    new ValidatedObjects(Map(TAL -> TrustAnchorValidations(roas)))
   }
 
 

@@ -86,8 +86,8 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
 
   def getValidationResults = {
     val records = for {
-      (trustAnchorLocator, validatedObjects) <- validatedObjects.all.par
-      validatedObject <- validatedObjects.filterNot(_.validationStatus == ValidationStatus.PASSED)
+      (trustAnchorLocator, taValidation) <- validatedObjects.all.par
+      validatedObject <- taValidation.validatedObjects.filterNot(_.validationStatus == ValidationStatus.PASSED)
     } yield {
       ValidatedObjectResult(trustAnchorLocator.getCaName, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
     }
@@ -96,8 +96,8 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
 
   def getValidationDetails = {
     val records = for {
-      validatedObjects <- validatedObjects.all.values.par
-      validatedObject <- validatedObjects
+      taValidation <- validatedObjects.all.values.par
+      validatedObject <- taValidation.validatedObjects
       check <- validatedObject.checks
     } yield {
       ValidatedObjectDetail(validatedObject.uri, validatedObject.isValid, check)

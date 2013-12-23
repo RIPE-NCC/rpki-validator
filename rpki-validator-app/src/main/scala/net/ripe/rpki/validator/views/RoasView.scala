@@ -38,7 +38,7 @@ class RoasView(validatedObjects: ValidatedObjects, search: String) extends View 
   def tab = Tabs.RoasTab
   def title = Text("Validated ROAs")
   def body = {
-    val (loading, ready) = validatedObjects.all.partition(_._2.isEmpty)
+    val (loading, ready) = validatedObjects.all.partition(_._2.validatedObjects.isEmpty)
     <div class="alert-message block-message info" data-alert="alert">
     <a class="close" href="#">×</a>
       {

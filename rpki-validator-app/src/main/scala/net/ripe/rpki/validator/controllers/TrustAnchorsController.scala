@@ -55,7 +55,7 @@ trait TrustAnchorsController extends ApplicationController {
       case Success(trustAnchor) => {
         new views.TrustAnchorMonitorView(
           ta = trustAnchor,
-          validatedObjectsOption = validatedObjects.all.get(trustAnchor.locator),
+          trustAnchorValidations = validatedObjects.all.getOrElse(trustAnchor.locator, TrustAnchorValidations()),
           messages = feedbackMessages)
       }
       case Failure(feedbackMessage) =>
@@ -66,7 +66,7 @@ trait TrustAnchorsController extends ApplicationController {
   get(s"${Tabs.TrustAnchorMonitorTab.url}/validation-detail/:identifierHash") {
     val validatedObjectResultsForTa: IndexedSeq[ValidatedObjectResult] = validateParameter("identifierHash", required(trustAnchorByIdentifierHash)) match {
       case Success(trustAnchor) =>  {
-        val validatedObjectsForTa: Seq[ValidatedObject] = validatedObjects.all.getOrElse(trustAnchor.locator, Seq.empty)
+        val validatedObjectsForTa = validatedObjects.all.getOrElse(trustAnchor.locator, TrustAnchorValidations(Seq.empty)).validatedObjects
         val records = for {
           validatedObject: ValidatedObject <- validatedObjectsForTa if validatedObject.validationStatus != ValidationStatus.PASSED
         } yield {

@@ -31,31 +31,33 @@ package net.ripe.rpki.validator
 package views
 
 import net.ripe.rpki.validator.support.ValidatorTestCase
-import net.ripe.rpki.validator.models.{ValidatedObject, TrustAnchor}
+import net.ripe.rpki.validator.models._
 
 import org.scalatest.mock.MockitoSugar
 
-import models.ValidatedObjectsTest._
+
 import net.ripe.rpki.validator.testing.TestingObjectMother
 
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TrustAnchorMonitorViewTest extends ValidatorTestCase with MockitoSugar {
 
-  val ta = TestingObjectMother.TA
+  import models.ValidatedObjectsTest._
+  import TestingObjectMother._
 
   test("Should not raise alert for invalid object fraction when validated object count == 0") {
-    val validatedObjects = Seq.empty[ValidatedObject]
+    val taValidations = TrustAnchorValidations()
 
-    val subject = new TrustAnchorMonitorView(ta = ta, validatedObjectsOption = Some(validatedObjects))
+    val subject = new TrustAnchorMonitorView(ta = TA, trustAnchorValidations  = taValidations)
 
     subject.hasTooHighErrorFraction should be (false)
   }
 
   test("Should not raise alert for invalid object fraction when less then 10% errors") {
     val validatedObjects = makeListOfValidObjects(10) ++ makeListOfInvalidObjects(1)
+    val taValidations = TrustAnchorValidations(validatedObjects)
 
-    val subject = new TrustAnchorMonitorView(ta = ta, validatedObjectsOption = Some(validatedObjects))
+    val subject = new TrustAnchorMonitorView(ta = TA, trustAnchorValidations  = taValidations)
 
     subject.hasTooHighErrorFraction should be (false)
   }
@@ -63,15 +65,23 @@ class TrustAnchorMonitorViewTest extends ValidatorTestCase with MockitoSugar {
   test("Should raise alert for invalid object fraction when 10% or more errors") {
     val validatedObjects = makeListOfValidObjects(9) ++ makeListOfInvalidObjects(1)
 
-    val subject = new TrustAnchorMonitorView(ta = ta, validatedObjectsOption = Some(validatedObjects))
+    val taValidations = TrustAnchorValidations(validatedObjects)
+
+    val subject = new TrustAnchorMonitorView(ta = TA, trustAnchorValidations  = taValidations)
 
     subject.hasTooHighErrorFraction should be (true)
   }
 
-  test("Should not raise alert for invalid object fraction when no validated objects given") {
-    val subject = new TrustAnchorMonitorView(ta = ta, validatedObjectsOption = None)
+  test("Should raise alert when object drop seen") {
 
-    subject.hasTooHighErrorFraction should be (false)
+    val initialValidatedObjects = ValidatedObjects(new TrustAnchors(Seq(TA)))
+    val validatedObjectsAfterFirstRun = initialValidatedObjects.update(TAL, makeListOfValidObjects(10))
+    val validatedObjectsAfterSecondRun = validatedObjectsAfterFirstRun.update(TAL, makeListOfValidObjects(8) ++ makeListOfInvalidObjects(1))
+
+    val subject = new TrustAnchorMonitorView(ta = TA, trustAnchorValidations = validatedObjectsAfterSecondRun.all.get(TAL).get)
+
+    subject.hasUnexpectedDrop should be (true)
   }
+
 
 }
