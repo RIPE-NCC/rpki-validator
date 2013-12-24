@@ -145,25 +145,10 @@ class ValidatedObjects(val all: Map[TrustAnchorLocator, TrustAnchorValidations])
 }
 
 object ValidatedObjects {
-  private val logger = Logger[this.type]
 
   def apply(trustAnchors: TrustAnchors): ValidatedObjects = {
     new ValidatedObjects(trustAnchors.all.map(ta => ta.locator -> TrustAnchorValidations(validatedObjects = Seq.empty[ValidatedObject]))(collection.breakOut))
   }
-
-  private def getValidatedObjectsWithRepositoryHealth(taUri: URI, currentValidatedObjects: Seq[ValidatedObject], newValidatedObjects: Seq[ValidatedObject]): Seq[ValidatedObject] = {
-
-    if (currentValidatedObjects.size * 0.9 >= newValidatedObjects.size
-      && ValidatedObjects.statusCounts(newValidatedObjects).isDefinedAt(ValidationStatus.ERROR) ) {
-
-      newValidatedObjects :+ InvalidObject(
-        taUri,
-        Set(new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_REPOSITORY_OBJECT_DROP, currentValidatedObjects.size.toString, newValidatedObjects.size.toString)))
-    } else {
-      newValidatedObjects
-    }
-  }
-
 
   def statusCounts(validatedObjects: Seq[ValidatedObject]): Map[ValidationStatus, Int] = {
     validatedObjects.groupBy(_.validationStatus).map(p => p._1 -> p._2.size)
