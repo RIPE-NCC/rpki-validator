@@ -70,7 +70,7 @@ trait AuthenticationSupport extends ScentrySupport[User] with BasicAuthSupport[U
 
   override protected val scentryConfig = new ScentryConfig {}.asInstanceOf[ScentryConfiguration]
 
-  override protected def registerAuthStrategies = {
+  override protected def registerAuthStrategies() = {
     scentry.register("Basic", app => new AdminLoginStrategy(app, realm))
   }
 
