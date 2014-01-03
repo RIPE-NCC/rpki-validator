@@ -231,7 +231,7 @@ Known Issues
 Version History
 ---------------
 
-2.15 - 3 Januari 2014
+2.15 - 3 January 2014
 = More refinements to the trust anchor monitoring functionality to ensure alerts are 
   triggered accurately and lower the chance of a false positive
 = Added an alert if more than 10% of objects have a validation error
