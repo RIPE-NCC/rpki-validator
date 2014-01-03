@@ -231,17 +231,19 @@ Known Issues
 Version History
 ---------------
 
-2.15 - 24 December 2013
+2.15 - 3 Januari 2014
 = More refinements to the trust anchor monitoring functionality to ensure alerts are 
-  triggered accurately
+  triggered accurately and lower the chance of a false positive
+= Added an alert if more than 10% of objects have a validation error
+= Carrying over the alert for an unexplained drop in object count over subsequent 
+  validation runs until the object count is restored and/or no more errors are observed
 = No longer warns when manifest EE certificate validity times do not match the manifest 
   "this update" and "next update" times
 = Warn about stale manifests and CRLs for up to X days, as configured by the user 
   (default = 0), reject after
 = Reject manifests with expired EE certificates
-= Added an alert if more than 10% of objects have a validation error
-= Carrying over the alert for an unexplained drop in object count over subsequent 
-  validation runs until the object count is restored and/or no more errors are observed
+= A more detailed error message is displayed when a ROA is rejected because it refers to
+  resources the holder no longer has on their certificate
 
 2.14 - 9 December 2013
 = Fixed an issue where the wrong CRL could be used when a remote repository is being 
