@@ -59,7 +59,6 @@ import net.ripe.rpki.validator.models.IgnoreFilter
 import net.ripe.rpki.validator.api.RestApi
 import com.codahale.metrics.servlets.{HealthCheckServlet, MetricsServlet}
 import net.ripe.rpki.validator.config.health.HealthChecks
-import java.io.File
 
 object Main {
   private val sessionId: Pdu.SessionId = Pdu.randomSessionid()
@@ -129,9 +128,7 @@ class Main() { main =>
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 2.hours) { refreshRisDumps() }
 
   private def loadTrustAnchors(): TrustAnchors = {
-    import java.util.{Collection => jCollection}
     val tals = FileUtils.listFiles(ApplicationOptions.talDirLocation, Array("tal"), false)
-        .asInstanceOf[jCollection[File]]
     TrustAnchors.load(tals.asScala.toSeq)
   }
 
