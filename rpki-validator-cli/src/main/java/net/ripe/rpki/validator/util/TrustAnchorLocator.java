@@ -29,8 +29,8 @@
  */
 package net.ripe.rpki.validator.util;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 
@@ -61,7 +61,7 @@ public class TrustAnchorLocator {
 
     public static TrustAnchorLocator fromFile(File file) throws TrustAnchorExtractorException {
         try {
-            String contents = FileUtils.readFileToString(file, "UTF-8");
+            String contents = Files.toString(file, Charsets.UTF_8);
             if (contents.trim().startsWith("rsync://")) {
                 return readStandardTrustAnchorLocator(file, contents);
             } else {
@@ -80,7 +80,7 @@ public class TrustAnchorLocator {
      * @see http://tools.ietf.org/html/draft-ietf-sidr-ta-07
      */
     private static TrustAnchorLocator readStandardTrustAnchorLocator(File file, String contents) throws URISyntaxException {
-        String caName = FilenameUtils.getBaseName(file.getName());
+        String caName = Files.getNameWithoutExtension(file.getName());
         String[] lines = contents.trim().split("\\s*(\r\n|\n\r|\n|\r)\\s*");
         URI location = new URI(lines[0]);
         int i = 1;

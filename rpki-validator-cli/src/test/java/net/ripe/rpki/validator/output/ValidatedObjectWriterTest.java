@@ -29,12 +29,13 @@
  */
 package net.ripe.rpki.validator.output;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.validator.util.UriToFileMapper;
 import net.ripe.rpki.validator.util.UriToFileMapperTest;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -86,7 +87,7 @@ public class ValidatedObjectWriterTest {
         subject.afterFetchSuccess(TEST_OBJECT_URI, certificate, result);
 
         assertTrue("file created", TEST_OBJECT_FILE.exists());
-        assertEquals("123", FileUtils.readFileToString(TEST_OBJECT_FILE, Charsets.UTF_8));
+        assertEquals("123", Files.toString(TEST_OBJECT_FILE, Charsets.UTF_8));
     }
 
     @Test(expected=IllegalArgumentException.class)

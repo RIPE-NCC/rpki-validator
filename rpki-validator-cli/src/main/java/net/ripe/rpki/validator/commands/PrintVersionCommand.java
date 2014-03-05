@@ -29,7 +29,7 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import org.apache.commons.io.IOUtils;
+import com.google.common.io.Closer;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -41,16 +41,20 @@ public class PrintVersionCommand {
     private static final Logger LOG = Logger.getLogger(PrintVersionCommand.class);
 
     public void execute() {
-        InputStream input = null;
+        final Closer closer = Closer.create();
         try {
-            input = getClass().getResourceAsStream("/version.properties");
-            Properties versionProperties = new Properties();
-            versionProperties.load(input);
-            System.out.println("RIPE NCC Certificate Validation Tool version " + versionProperties.get("version")); //NOPMD - SystemPrintln
+            try {
+                final InputStream input = closer.register(getClass().getResourceAsStream("/version.properties"));
+                Properties versionProperties = new Properties();
+                versionProperties.load(input);
+                System.out.println("RIPE NCC Certificate Validation Tool version " + versionProperties.get("version")); //NOPMD - SystemPrintln
+            } catch (final Throwable t) {
+                throw closer.rethrow(t);
+            } finally {
+                closer.close();
+            }
         } catch (IOException e) {
             LOG.fatal(e);
-        } finally {
-            IOUtils.closeQuietly(input);
         }
     }
 }
