@@ -45,7 +45,6 @@ import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.rsync.Rsync
-import net.ripe.rpki.commons.util.Specifications
 import net.ripe.rpki.commons.validation.ValidationLocation
 import net.ripe.rpki.commons.validation.ValidationOptions
 import net.ripe.rpki.commons.validation.ValidationResult
