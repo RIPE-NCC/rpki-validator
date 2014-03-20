@@ -120,7 +120,8 @@ case class TrustAnchor(
   }
 }
 
-class TrustAnchors(val all: Seq[TrustAnchor]) {
+class TrustAnchors(anchors: Seq[TrustAnchor]) {
+  val all = anchors.toList
   def startProcessing(locator: TrustAnchorLocator, description: String) = {
     new TrustAnchors(all.map { ta =>
       if (ta.locator == locator) ta.copy(status = Running(description))
