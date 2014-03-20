@@ -30,6 +30,8 @@
 package net.ripe.rpki.validator.util;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Objects;
+import com.google.common.base.Strings;
 import com.google.common.io.Files;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
@@ -145,4 +147,11 @@ public class TrustAnchorLocator {
         return prefetchUris;
     }
 
+    @Override
+    public String toString() {
+        return Objects.toStringHelper(this)
+                .add("caName", getCaName())
+                .add("certificationLocation", getCertificateLocation())
+                .toString();
+    }
 }
