@@ -167,8 +167,9 @@ class Main() { main =>
         }
         try {
           process.runProcess() match {
-            case Success(validatedObjects) =>
-              updateMemoryImage { _.updateValidatedObjects(trustAnchorLocator, validatedObjects.values.toSeq) }
+            case Success(validatedObjectsByUri) =>
+              val validatedObjects = validatedObjectsByUri.values.toSeq
+              updateMemoryImage(_.updateValidatedObjects(trustAnchorLocator, validatedObjects))
             case Failure(_) =>
           }
         } finally {
