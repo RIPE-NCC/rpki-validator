@@ -172,7 +172,6 @@ class Main() { main =>
             case Failure(_) =>
           }
         } finally {
-          val now = DateTimeUtils.currentTimeMillis
           process.shutdown()
         }
       }
