@@ -147,7 +147,7 @@ object TrustAnchors extends Logging {
   def load(files: Seq[File]): TrustAnchors = {
     val now = new DateTime
     info("Loading trust anchors...")
-    val trustAnchors = for (file <- files) yield {
+    val trustAnchors = files.map { file =>
       val tal = TrustAnchorLocator.fromFile(file)
       new TrustAnchor(
         locator = tal,
