@@ -231,6 +231,9 @@ Known Issues
 Version History
 ---------------
 
+2.16 - 21 March 2014
+= Fixed memory leak
+
 2.15 - 3 January 2014
 = More refinements to the trust anchor monitoring functionality to ensure alerts are 
   triggered accurately and lower the chance of a false positive
