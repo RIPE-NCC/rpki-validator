@@ -52,7 +52,7 @@ import net.ripe.rpki.commons.validation.ValidationString
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateUtil
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
-import net.ripe.rpki.validator.config.MemoryImage
+import net.ripe.rpki.validator.config.{ApplicationOptions, MemoryImage}
 import net.ripe.rpki.validator.fetchers._
 import net.ripe.rpki.validator.lib.HashSupport
 
@@ -101,7 +101,7 @@ case class TrustAnchor(
 
     result match {
       case Success(validatedObjects) =>
-        val nextUpdate = now.plusHours(4)
+        val nextUpdate = now.plus(ApplicationOptions.validationInterval.toMillis)
         val trustAnchor = validatedObjects.get(locator.getCertificateLocation).collect {
           case ValidObject(_, _, certificate: X509ResourceCertificate) => certificate
         }

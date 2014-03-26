@@ -34,6 +34,7 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ApplicationOptionsTest extends ValidatorTestCase {
+  import scala.concurrent.duration._
 
   test("Should use 8080 as default http port") {
     ApplicationOptions.httpPort should equal(8080)
@@ -85,5 +86,9 @@ class ApplicationOptionsTest extends ValidatorTestCase {
 
   test("Should use log/rtr.log as default location for application log") {
     ApplicationOptions.rtrLogFileName should equal("log/rtr.log")
+  }
+
+  test("Should use 3 hours as the default interval for validation") {
+    ApplicationOptions.validationInterval should equal(3.hours)
   }
 }

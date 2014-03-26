@@ -30,16 +30,34 @@
 package net.ripe.rpki.validator.config
 
 import java.io.File
+import java.util.concurrent.TimeUnit
 import com.typesafe.config.{ConfigFactory, Config}
+import grizzled.slf4j.Logger
 
 object ApplicationOptions {
+  import scala.concurrent.duration._
 
+  private lazy val logger = Logger[this.type]
   private val config: Config = ConfigFactory.load()
+
+  // RIPE currently publishes every 10 minutes, and is the most frequent of the
+  // anchors.
+  private val minimumValidationInterval = 10.minutes
 
   def httpPort: Int = config.getInt("ui.http.port")
   def httpKioskEnabled: Boolean = config.getBoolean("ui.kiosk.enable")
   def httpKioskUser: String = config.getString("ui.kiosk.user")
   def httpKioskPass: String = config.getString("ui.kiosk.pass")
+
+  lazy val validationInterval: FiniteDuration = {
+    val interval = FiniteDuration(config.getDuration("validation.interval", TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
+    if (interval < minimumValidationInterval) {
+      logger.warn(s"Validation interval $interval is too short; using $minimumValidationInterval instead.")
+      minimumValidationInterval
+    } else {
+      interval
+    }
+  }
 
   def rtrPort: Int = config.getInt("rtr.port")
   def rtrCloseOnError: Boolean = config.getBoolean("rtr.close-on-error")
