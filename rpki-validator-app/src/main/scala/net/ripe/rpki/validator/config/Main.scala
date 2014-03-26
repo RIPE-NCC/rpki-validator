@@ -44,7 +44,6 @@ import scala.concurrent.stm._
 import scala.concurrent.Future
 import scala.math.Ordering.Implicits._
 import org.apache.http.impl.client.SystemDefaultHttpClient
-import org.joda.time.DateTimeUtils
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.apache.http.params.HttpConnectionParams
 import java.util.EnumSet
@@ -57,7 +56,7 @@ import net.ripe.rpki.validator.lib.UserPreferences
 import scalaz.Success
 import net.ripe.rpki.validator.models.IgnoreFilter
 import net.ripe.rpki.validator.api.RestApi
-import com.codahale.metrics.servlets.{HealthCheckServlet, MetricsServlet}
+import com.codahale.metrics.servlets.HealthCheckServlet
 import net.ripe.rpki.validator.config.health.HealthChecks
 
 object Main {
