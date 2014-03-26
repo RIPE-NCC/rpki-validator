@@ -79,7 +79,6 @@
             <outputDirectory/>
             <includes>
                 <include>README.txt</include>
-                <include>UPGRADE.txt</include>
             </includes>
         </fileSet>
         <fileSet>
