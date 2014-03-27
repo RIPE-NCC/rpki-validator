@@ -231,6 +231,9 @@ Known Issues
 Version History
 ---------------
 
+2.17 - 27 March 2014
+= Added the option to manually configure the update interval of the Trust Anchors
+
 2.16 - 21 March 2014
 = Fixed memory leak
 
