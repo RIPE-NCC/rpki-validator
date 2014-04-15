@@ -45,7 +45,7 @@
 
     <properties>
         <build.number>${project.version}</build.number>
-        <scala.version>2.10.1</scala.version>
+        <scala.version>2.10.4</scala.version>
         <scala.binary.version>2.10</scala.binary.version>
         <scalatra.version>2.2.0</scalatra.version>
         <rpki.commons.version>1.0.37</rpki.commons.version>
