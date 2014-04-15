@@ -32,7 +32,6 @@ package store
 
 import java.net.URI
 import java.sql.ResultSet
-import org.apache.commons.codec.binary.Base64
 import org.apache.commons.dbcp.BasicDataSource
 import org.joda.time.DateTime
 import org.springframework.dao.DuplicateKeyException
@@ -45,6 +44,7 @@ import javax.sql.DataSource
 import models.StoredRepositoryObject
 import org.joda.time.DateTimeZone
 import java.io.File
+import com.google.common.io.BaseEncoding
 
 /**
  * Used to store/retrieve consistent sets of rpki objects seen for certificate authorities
@@ -52,14 +52,15 @@ import java.io.File
 class RepositoryObjectStore(datasource: DataSource) {
 
   val template: JdbcTemplate = new JdbcTemplate(datasource)
+  val base64 = BaseEncoding.base64()
 
   def put(retrievedObject: StoredRepositoryObject): Unit = {
     val updateOrder: java.lang.Long = template.queryForLong("SELECT NEXTVAL('update_order_seq')")
     try {
       template.update("insert into retrieved_objects (hash, uri, encoded_object, expires, update_order) values (?, ?, ?, ?, ?)",
-        Base64.encodeBase64String(retrievedObject.hash.toArray),
+        base64.encode(retrievedObject.hash.toArray),
         retrievedObject.uri.toString,
-        Base64.encodeBase64String(retrievedObject.binaryObject.toArray),
+        base64.encode(retrievedObject.binaryObject.toArray),
         new java.sql.Timestamp(retrievedObject.expires.getMillis),
         updateOrder)
     } catch {
@@ -67,12 +68,12 @@ class RepositoryObjectStore(datasource: DataSource) {
         // Object already exists, update the last seen time only.
         template.update("update retrieved_objects set update_order = ? where hash = ?",
           updateOrder,
-          Base64.encodeBase64String(retrievedObject.hash.toArray))
+          base64.encode(retrievedObject.hash.toArray))
     }
   }
 
   def put(retrievedObjects: Seq[StoredRepositoryObject]): Unit = {
-    retrievedObjects.foreach(put(_))
+    retrievedObjects.foreach(put)
   }
 
   def purgeExpired(maxStaleDays: Int = 0): Unit = {
@@ -91,7 +92,7 @@ class RepositoryObjectStore(datasource: DataSource) {
   }
 
   def getByHash(hash: Array[Byte]) = {
-    val encodedHash = Base64.encodeBase64String(hash)
+    val encodedHash = base64.encode(hash)
     val selectString = "select * from retrieved_objects where hash = ?"
     val selectArgs = Array[Object](encodedHash)
     getOptionalResult(selectString, selectArgs)
@@ -108,9 +109,9 @@ class RepositoryObjectStore(datasource: DataSource) {
   private class StoredObjectMapper extends RowMapper[StoredRepositoryObject] {
     override def mapRow(rs: ResultSet, rowNum: Int) = {
       StoredRepositoryObject(
-        hash = ByteString(Base64.decodeBase64(rs.getString("hash"))),
+        hash = ByteString(base64.decode(rs.getString("hash"))),
         uri = URI.create(rs.getString("uri")),
-        binaryObject = ByteString(Base64.decodeBase64(rs.getString("encoded_object"))),
+        binaryObject = ByteString(base64.decode(rs.getString("encoded_object"))),
         expires = new DateTime(rs.getTimestamp("expires")).withZone(DateTimeZone.UTC))
     }
   }
