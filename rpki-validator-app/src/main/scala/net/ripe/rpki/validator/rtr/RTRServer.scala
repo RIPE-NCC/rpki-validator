@@ -53,8 +53,11 @@ object RTRServer {
   val allChannels: ChannelGroup = new DefaultChannelGroup("rtr-server")
 }
 
-class RTRServer(port: Int, closeOnError: Boolean, sendNotify: Boolean, getCurrentCacheSerial: () => Int,
-                getCurrentRtrPrefixes: () => Set[RtrPrefix], getCurrentSessionId: () => Pdu.SessionId)(implicit actorSystem: akka.actor.ActorSystem)
+class RTRServer(port: Int, closeOnError: Boolean, sendNotify: Boolean,
+                getCurrentCacheSerial: () => Int,
+                getCurrentRtrPrefixes: () => Set[RtrPrefix],
+                getCurrentSessionId: () => Pdu.SessionId,
+                hasTrustAnchorsEnabled: () => Boolean)(implicit actorSystem: akka.actor.ActorSystem)
   extends Logging {
 
   import TimeUnit._
@@ -62,7 +65,7 @@ class RTRServer(port: Int, closeOnError: Boolean, sendNotify: Boolean, getCurren
   var bootstrap: ServerBootstrap = _
   var timer: Timer = new HashedWheelTimer(5, SECONDS) // check for timer events every 5 secs
 
-  val rtrSessions = new RtrSessions[SocketAddress](getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentSessionId)
+  val rtrSessions = new RtrSessions[SocketAddress](getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentSessionId, hasTrustAnchorsEnabled)
 
   val serverHandler = new RTRServerHandler(closeOnError, rtrSessions)
 

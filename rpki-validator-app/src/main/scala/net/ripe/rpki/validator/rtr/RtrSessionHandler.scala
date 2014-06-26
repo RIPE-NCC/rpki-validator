@@ -39,7 +39,8 @@ import org.jboss.netty.handler.timeout.ReadTimeoutException
 class RtrSessionHandler[T] (remoteAddress: T,
                         getCurrentCacheSerial: () => Int,
                         getCurrentRtrPrefixes: () => Set[RtrPrefix],
-                        getCurrentSessionId: () => Pdu.SessionId) {
+                        getCurrentSessionId: () => Pdu.SessionId,
+                        hasTrustAnchorsEnabled: () => Boolean) {
 
   // assume we only get InetSocketAddress; other types will thow exception
   val sessionData = new RtrSessionData(remoteAddress.asInstanceOf[InetSocketAddress])
@@ -93,12 +94,10 @@ class RtrSessionHandler[T] (remoteAddress: T,
     }
   }
 
-
-
   private def processResetQuery: Seq[Pdu] = {
-    getCurrentCacheSerial.apply() match {
-      case 0 => List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
-      case _ =>
+    (getCurrentCacheSerial(), hasTrustAnchorsEnabled()) match {
+      case (0, true) => List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
+      case (serialNumber, _) =>
         var responsePdus: Vector[Pdu] = Vector.empty
         responsePdus = responsePdus :+ CacheResponsePdu(sessionId = getCurrentSessionId.apply())
 
@@ -117,13 +116,13 @@ class RtrSessionHandler[T] (remoteAddress: T,
             case _ => assert(false)
           }
         }
-        responsePdus :+ EndOfDataPdu(sessionId = getCurrentSessionId.apply(), serial = getCurrentCacheSerial.apply())
+        responsePdus :+ EndOfDataPdu(sessionId = getCurrentSessionId(), serial = serialNumber)
     }
   }
 
 
   private def processSerialQuery(sessionId: Short, serial: Long) = {
-    if (sessionId == getCurrentSessionId.apply() && serial == getCurrentCacheSerial.apply()) {
+    if (sessionId == getCurrentSessionId() && serial == getCurrentCacheSerial()) {
       List(CacheResponsePdu(sessionId = sessionId), EndOfDataPdu(sessionId = sessionId, serial = serial))
     } else {
       List(CacheResetPdu())

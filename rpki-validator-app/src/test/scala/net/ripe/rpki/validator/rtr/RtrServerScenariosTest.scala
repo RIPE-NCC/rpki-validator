@@ -81,7 +81,9 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
       sendNotify = true,
       getCurrentCacheSerial = { () => cache.single.get.version },
       getCurrentRtrPrefixes = { () => cache.single.get.getDistinctRtrPrefixes },
-      getCurrentSessionId = { () => sessionId })
+      getCurrentSessionId = { () => sessionId },
+      hasTrustAnchorsEnabled = { () => true }
+    )
     server.startServer()
   }
 

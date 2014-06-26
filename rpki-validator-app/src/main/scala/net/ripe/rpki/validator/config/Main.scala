@@ -60,7 +60,7 @@ import com.codahale.metrics.servlets.HealthCheckServlet
 import net.ripe.rpki.validator.config.health.HealthChecks
 
 object Main {
-  private val sessionId: Pdu.SessionId = Pdu.randomSessionid()
+  private val sessionId: Pdu.SessionId = Pdu.randomSessionid
 
   def main(args: Array[String]): Unit = {
     System.setProperty("VALIDATOR_LOG_FILE", ApplicationOptions.applicationLogFileName)
@@ -202,6 +202,9 @@ class Main() { main =>
       },
       getCurrentSessionId = {
         () => Main.sessionId
+      },
+      hasTrustAnchorsEnabled = {
+        () => memoryImage.single.get.trustAnchors.hasEnabledAnchors
       })
     rtrServer.startServer()
     rtrServer

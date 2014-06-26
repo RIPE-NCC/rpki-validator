@@ -142,6 +142,8 @@ class TrustAnchors(anchors: Seq[TrustAnchor]) {
       else ta
     })
   }
+
+  def hasEnabledAnchors = all.exists(_.enabled)
 }
 
 object TrustAnchors extends Logging {
