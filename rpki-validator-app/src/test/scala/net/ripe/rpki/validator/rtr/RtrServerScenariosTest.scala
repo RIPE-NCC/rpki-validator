@@ -63,6 +63,7 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
   var sessionId: Short = new Random().nextInt(65536).toShort
   var tal: TrustAnchorLocator = null
 
+  var hasTrustAnchors: Boolean = true
 
   override def beforeAll() = {
     implicit val actorSystem = akka.actor.ActorSystem()
@@ -82,13 +83,14 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
       getCurrentCacheSerial = { () => cache.single.get.version },
       getCurrentRtrPrefixes = { () => cache.single.get.getDistinctRtrPrefixes },
       getCurrentSessionId = { () => sessionId },
-      hasTrustAnchorsEnabled = { () => true }
+      hasTrustAnchorsEnabled = { () => hasTrustAnchors }
     )
     server.startServer()
   }
 
   before {
     client = new RTRClient(port)
+    hasTrustAnchors = true
   }
 
   override def afterAll() = {
@@ -97,9 +99,7 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
 
   after {
     cache.single.transform {
-      val trustAnchors: TrustAnchors = new TrustAnchors(Seq.empty)
-      val validatedObjects: ValidatedObjects = new ValidatedObjects(Map.empty)
-      db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects)
+      db => MemoryImage(Filters(), Whitelist(), new TrustAnchors(Seq.empty), new ValidatedObjects(Map.empty))
     }
     client.close()
   }
@@ -231,6 +231,21 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.NoDataAvailable)
     client should be ('connected)
+  }
+
+  test("Server should answer with data if no trust anchor exists/is enabled and there is not data") {
+    hasTrustAnchors = false
+    client.sendPdu(ResetQueryPdu())
+    val response = client.getResponse(expectedNumber = 2)
+    response.size should be(2)
+
+    response match {
+      case CacheResponsePdu(sId1) :: EndOfDataPdu(sId2, serial) :: nil =>
+        sId1 should be(sessionId)
+        sId2 should be(sessionId)
+        serial should be(0)
+      case _ => fail("Wrong response is received: " + response)
+    }
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
