@@ -99,7 +99,8 @@ class RtrSessionHandler[T] (remoteAddress: T,
       case (0, true) => List(ErrorPdu(ErrorPdu.NoDataAvailable, Array.empty, ""))
       case (serialNumber, _) =>
         var responsePdus: Vector[Pdu] = Vector.empty
-        responsePdus = responsePdus :+ CacheResponsePdu(sessionId = getCurrentSessionId.apply())
+        val currentSessionId = getCurrentSessionId()
+        responsePdus = responsePdus :+ CacheResponsePdu(sessionId = currentSessionId)
 
         getCurrentRtrPrefixes().foreach { rtrPrefix =>
 
@@ -116,7 +117,7 @@ class RtrSessionHandler[T] (remoteAddress: T,
             case _ => assert(false)
           }
         }
-        responsePdus :+ EndOfDataPdu(sessionId = getCurrentSessionId(), serial = serialNumber)
+        responsePdus :+ EndOfDataPdu(sessionId = currentSessionId, serial = serialNumber)
     }
   }
 
