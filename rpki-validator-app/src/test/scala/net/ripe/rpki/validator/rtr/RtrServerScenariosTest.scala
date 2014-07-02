@@ -63,6 +63,7 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
   var sessionId: Short = new Random().nextInt(65536).toShort
   var tal: TrustAnchorLocator = null
 
+  var hasTrustAnchors: Boolean = true
 
   override def beforeAll() = {
     implicit val actorSystem = akka.actor.ActorSystem()
@@ -81,12 +82,15 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
       sendNotify = true,
       getCurrentCacheSerial = { () => cache.single.get.version },
       getCurrentRtrPrefixes = { () => cache.single.get.getDistinctRtrPrefixes },
-      getCurrentSessionId = { () => sessionId })
+      getCurrentSessionId = { () => sessionId },
+      hasTrustAnchorsEnabled = { () => hasTrustAnchors }
+    )
     server.startServer()
   }
 
   before {
     client = new RTRClient(port)
+    hasTrustAnchors = true
   }
 
   override def afterAll() = {
@@ -95,9 +99,7 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
 
   after {
     cache.single.transform {
-      val trustAnchors: TrustAnchors = new TrustAnchors(Seq.empty)
-      val validatedObjects: ValidatedObjects = new ValidatedObjects(Map.empty)
-      db => MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects)
+      db => MemoryImage(Filters(), Whitelist(), new TrustAnchors(Seq.empty), new ValidatedObjects(Map.empty))
     }
     client.close()
   }
@@ -231,6 +233,21 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     client should be ('connected)
   }
 
+  test("Server should answer with data if no trust anchor exists/is enabled and there is not data") {
+    hasTrustAnchors = false
+    client.sendPdu(ResetQueryPdu())
+    val response = client.getResponse(expectedNumber = 2)
+    response.size should be(2)
+
+    response match {
+      case CacheResponsePdu(sId1) :: EndOfDataPdu(sId2, serial) :: nil =>
+        sId1 should be(sessionId)
+        sId2 should be(sessionId)
+        serial should be(0)
+      case _ => fail("Wrong response is received: " + response)
+    }
+  }
+
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
   test("Server should answer with Invalid Request Error Pdu when RTRClient sends nonsense") {
     client.sendPdu(new ErrorPdu(errorCode = ErrorPdu.NoDataAvailable, Array.empty, ""))
@@ -288,29 +305,4 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     errorPdu.errorCode should equal(ErrorPdu.CorruptData)
     client should not be ('connected)
   }
-
-////  // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
-//  test("Server should answer with CorruptData when PDU length more than max frame length") {
-//    // 16777217 is one over frame length: in hex 01 00 00 01
-//    println(Runtime.getRuntime().freeMemory());
-//    System.gc();
-//
-//    client.sendData(Array[Byte](0x0, 0x2, 0x0, 0x0, 0x1, 0x0, 0x0, 0x1) ++ Array.fill[Byte](RTRServer.MAXIMUM_FRAME_LENGTH + 1 - 8)(0))
-////    client.sendData(Array[Byte](0x0, 0x2, 0x0, 0x0, 0x1, 0x0, 0x0, 0x1))
-////    for (_ <- 1 to RTRServer.MAXIMUM_FRAME_LENGTH + 1 - 8) {
-////      client.sendData(Array[Byte](0x0))
-////    }
-//////    ++ Array.fill[Byte](RTRServer.MAXIMUM_FRAME_LENGTH + 1 - 8)(0))
-//
-//    var responsePdus = client.getResponse()
-//
-//    responsePdus.size should equal(1)
-//    var response = responsePdus.head
-//
-//    assert(response.isInstanceOf[ErrorPdu])
-//    val errorPdu = response.asInstanceOf[ErrorPdu]
-//    errorPdu.errorCode should equal(ErrorPdu.CorruptData)
-//    client should not be ('connected)
-//  }
-
 }

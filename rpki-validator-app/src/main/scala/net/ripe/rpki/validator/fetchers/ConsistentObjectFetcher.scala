@@ -127,7 +127,7 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetc
 
     fetchRemoteManifest(manifestUri, fetchResults) match {
       case None =>
-      case Some(mft) => {
+      case Some(mft) =>
         val mftStoredRepositoryObject = StoredRepositoryObject(uri = manifestUri, binary = mft.getEncoded)
 
         val retrievedObjects: Seq[StoredRepositoryObject] = mft.getFileNames.asScala.toSeq.flatMap { fileName =>
@@ -135,19 +135,18 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetc
           fetchResults.setLocation(new ValidationLocation(objectUri))
           try {
             val bytes = Option(remoteObjectFetcher.fetchContent(objectUri, mft.getFileContentSpecification(fileName), fetchResults))
-            bytes.map(bytes => StoredRepositoryObject(uri = objectUri, binary = bytes))
+            bytes.map(b => StoredRepositoryObject(uri = objectUri, binary = b))
           } catch {
             case e: RuntimeException =>
               fetchResults.error(ValidationString.OBJECTS_GENERAL_PARSING, objectUri.toString)
               None
           }
         }
-        
+
         // Store the manifest and all objects for use, if there are no failures
-        if (store.getLatestByUrl(manifestUri) == None || !fetchResults.hasFailures) {
+        if (store.getLatestByUrl(manifestUri).isEmpty || !fetchResults.hasFailures) {
           store.put(mftStoredRepositoryObject +: retrievedObjects)
         }
-      }
     }
 
     fetchResults

@@ -72,4 +72,7 @@ object ApplicationOptions {
   def applicationLogFileName = config.getString("logging.application.file")
   def rtrLogFileName = config.getString("logging.rtr.file")
   def accessLogFileName = config.getString("logging.access.file")
+
+  def enableLooseValidation = config.getBoolean("validation.loose")
+
 }

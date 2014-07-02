@@ -142,6 +142,8 @@ class TrustAnchors(anchors: Seq[TrustAnchor]) {
       else ta
     })
   }
+
+  def hasEnabledAnchors = all.exists(_.enabled)
 }
 
 object TrustAnchors extends Logging {
@@ -199,13 +201,14 @@ trait ValidationProcess {
   def shutdown(): Unit = {}
 }
 
-class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, workingDirectory: File) extends ValidationProcess {
+class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, workingDirectory: File, enableLooseValidation: Boolean = false) extends ValidationProcess {
 
   private val validationOptions = new ValidationOptions()
   private val RsyncDiskCacheBasePath = workingDirectory.toString + File.separator + "cache" + File.separator
   private val RepositoryObjectStore = DataSources.DurableDataSource(workingDirectory)
 
   validationOptions.setMaxStaleDays(maxStaleDays)
+  validationOptions.setLooseValidationEnabled(enableLooseValidation)
 
   override def extractTrustAnchorLocator() = {
     val uri = trustAnchorLocator.getCertificateLocation

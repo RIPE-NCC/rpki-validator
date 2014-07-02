@@ -53,7 +53,7 @@ sealed trait Pdu {
 
 object Pdu {
   type SessionId = Short
-  def randomSessionid() = Random.nextInt(65536).toShort
+  def randomSessionid = Random.nextInt(65536).toShort
 }
 
 case class BadData(errorCode: Int, content: Array[Byte])

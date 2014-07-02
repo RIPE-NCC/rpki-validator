@@ -34,18 +34,17 @@ import java.lang.Throwable
 import scala.collection.mutable
 
 
-class RtrSessions[T] (
-                       getCurrentCacheSerial: () => Int,
-                       getCurrentRtrPrefixes: () => Set[RtrPrefix],
-                       getCurrentSessionId: () => Pdu.SessionId) {
-
+class RtrSessions[T](getCurrentCacheSerial: () => Int,
+                     getCurrentRtrPrefixes: () => Set[RtrPrefix],
+                     getCurrentSessionId: () => Pdu.SessionId,
+                     hasTrustAnchorsEnabled: () => Boolean) {
 
   private val handlers = mutable.HashMap[T, RtrSessionHandler[T]]()
 
   def allClientData = handlers.values.map(_.sessionData)
 
   def connect(id: T) {
-    val handler = handlers.getOrElseUpdate(id, new RtrSessionHandler[T](id, getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentSessionId))
+    val handler = handlers.getOrElseUpdate(id, new RtrSessionHandler[T](id, getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentSessionId, hasTrustAnchorsEnabled))
     handler.connect()
   }
 
