@@ -231,10 +231,15 @@ Known Issues
 Version History
 ---------------
 
-2.17 - 27 March 2014
+2.17 - 3 July 2014
 = Added a configuration file option to manually set the update interval of the 
   Trust Anchors
-
+= If no Trust Anchors are enabled, the application will report "all have been 
+  validated" to connected routers, instead of "no data available"
+= Added an option to enable the "loose" validation algorithm in the config file
+  (draft-huston-rpki-validation-01)
+= New RIPE NCC logo awesomeness
+  
 2.16 - 21 March 2014
 = Fixed memory leak
 
