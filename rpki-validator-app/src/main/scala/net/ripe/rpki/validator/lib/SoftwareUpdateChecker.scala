@@ -94,10 +94,9 @@ class OnlineNewVersionDetailFetcher(currentVersion: String, getPropertiesString:
         None
       }
     } catch {
-      case e: Exception => {
+      case e: Exception =>
         error(e)
         None
-      }
     }
   }
   
@@ -105,7 +104,7 @@ class OnlineNewVersionDetailFetcher(currentVersion: String, getPropertiesString:
 
     var in: InputStream = null
     try {
-      val bytes = getPropertiesString.apply().getBytes("UTF-8")
+      val bytes = getPropertiesString().getBytes("UTF-8")
       in = new ByteArrayInputStream(bytes)
       
       val properties = new Properties()
