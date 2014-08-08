@@ -56,10 +56,11 @@ Usage
 -----
 
 = Decompress the downloaded package
-= Run the RPKI Validator script from the root folder to start, stop and check the status 
-  of the application
+= Run the RPKI Validator script from the root folder to start, run (in foreground), stop
+  and check the status of the application
 
        ./rpki-validator.sh start  [-c /path/to/my-configuration.conf]
+   or  ./rpki-validator.sh run    [-c /path/to/my-configuration.conf]
    or  ./rpki-validator.sh stop   [-c /path/to/my-configuration.conf]
    or  ./rpki-validator.sh status [-c /path/to/my-configuration.conf]
    

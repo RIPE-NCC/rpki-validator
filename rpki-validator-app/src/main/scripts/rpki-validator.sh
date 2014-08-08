@@ -53,6 +53,7 @@ function warn {
 function usage {
 cat << EOF
 Usage: $0 start  [-c /path/to/my-configuration.conf]
+   or  $0 run    [-c /path/to/my-configuration.conf]
    or  $0 stop   [-c /path/to/my-configuration.conf]
    or  $0 status [-c /path/to/my-configuration.conf]
 EOF
@@ -149,26 +150,31 @@ fi
 
 
 case ${FIRST_ARG} in
-    start)
+    start|run)
         if [ ${RUNNING} == "true" ]; then
             error_exit "${APP_NAME} is already running"
         fi
 
         info "Starting ${APP_NAME}..."
+        info "writing logs under log directory"
+        info "Web user interface is available on port ${HTTP_PORT_VALUE}"
+        info "Routers can connect on port ${RTR_PORT_VALUE}"
 
         CLASSPATH=:"$LIB_DIR/*"
         MEM_OPTIONS="-Xms$JVM_XMS -Xmx$JVM_XMX"
 
-        ${JAVA_CMD} ${JVM_OPTIONS} ${MEM_OPTIONS} ${JAVA_OPTS} \
-            "-Dapp.name=${APP_NAME} -Dconfig.file=$CONFIG_FILE " \
-            -classpath ${CLASSPATH} \
-            net.ripe.rpki.validator.config.Main &
+        [ ${FIRST_ARG} == "start" ] && BG='&'
+
+        eval '${JAVA_CMD} ${JVM_OPTIONS} ${MEM_OPTIONS} ${JAVA_OPTS} \
+                "-Dapp.name=${APP_NAME} -Dconfig.file=$CONFIG_FILE " \
+                -classpath ${CLASSPATH} \
+                net.ripe.rpki.validator.config.Main ${BG}'
+        RETCODE=$?
+
+        [ ${FIRST_ARG} == "run" ] && exit ${RETCODE}
 
         PID=$!
         echo $PID > $PID_FILE
-        info "writing logs under log directory"
-        info "Web user interface is available on port ${HTTP_PORT_VALUE}"
-        info "Routers can connect on port ${RTR_PORT_VALUE}"
         info "Writing PID ${PID} to ${PID_FILE}"
         ;;
     stop)
