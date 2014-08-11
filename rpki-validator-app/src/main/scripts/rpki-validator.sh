@@ -161,18 +161,15 @@ case ${FIRST_ARG} in
         CLASSPATH=:"$LIB_DIR/*"
         MEM_OPTIONS="-Xms$JVM_XMS -Xmx$JVM_XMX"
 
+        CMDLINE="${JAVA_CMD} ${JVM_OPTIONS} ${MEM_OPTIONS} ${JAVA_OPTS} \
+                 -Dapp.name=${APP_NAME} -Dconfig.file=${CONFIG_FILE} \
+                 -classpath ${CLASSPATH} net.ripe.rpki.validator.config.Main"
 
-        # Needed to be able to bring a job to the foreground. 
-        set -m
-
-        ${JAVA_CMD} ${JVM_OPTIONS} ${MEM_OPTIONS} ${JAVA_OPTS} \
-                "-Dapp.name=${APP_NAME} -Dconfig.file=$CONFIG_FILE " \
-                -classpath ${CLASSPATH} \
-                net.ripe.rpki.validator.config.Main &
-
-        if [ ${FIRST_ARG} == "run" ]; then
-          fg 1>>/dev/null # Bring the server job to the foreground 
-          exit $?
+        if [ ${FIRST_ARG} == "start" ]; then
+            ${CMDLINE} &
+        elif [ ${FIRST_ARG} == "run" ]; then
+            ${CMDLINE}
+            exit $?
         fi
 
         PID=$!
