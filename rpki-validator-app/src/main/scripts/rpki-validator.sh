@@ -163,15 +163,16 @@ case ${FIRST_ARG} in
         CLASSPATH=:"$LIB_DIR/*"
         MEM_OPTIONS="-Xms$JVM_XMS -Xmx$JVM_XMX"
 
-        [ ${FIRST_ARG} == "start" ] && BG='&'
+        CMDLINE="${JAVA_CMD} ${JVM_OPTIONS} ${MEM_OPTIONS} ${JAVA_OPTS} \
+                 -Dapp.name=${APP_NAME} -Dconfig.file=${CONFIG_FILE} \
+                 -classpath ${CLASSPATH} net.ripe.rpki.validator.config.Main"
 
-        eval '${JAVA_CMD} ${JVM_OPTIONS} ${MEM_OPTIONS} ${JAVA_OPTS} \
-                "-Dapp.name=${APP_NAME} -Dconfig.file=$CONFIG_FILE " \
-                -classpath ${CLASSPATH} \
-                net.ripe.rpki.validator.config.Main ${BG}'
-        RETCODE=$?
-
-        [ ${FIRST_ARG} == "run" ] && exit ${RETCODE}
+        if [ ${FIRST_ARG} == "start" ]; then
+            ${CMDLINE} &
+        elif [ ${FIRST_ARG} == "run" ]; then
+            ${CMDLINE}
+            exit $?
+        fi
 
         PID=$!
         echo $PID > $PID_FILE
