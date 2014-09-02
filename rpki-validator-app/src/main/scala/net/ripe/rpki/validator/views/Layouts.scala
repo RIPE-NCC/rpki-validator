@@ -49,7 +49,7 @@ object Layouts {
     <html lang="en">
       <head>
         <meta charset="utf-8"/>
-        <title>RPKI Validator - { view.title }</title>
+        <title>NZRS RPKI Validator - { view.title }</title>
         <link rel="stylesheet" href="/stylesheets/bootstrap/1.3.0/bootstrap.css"/>
         <link rel="stylesheet" href="/stylesheets/application.css"/>
         <script src="/javascript/datatables/1.8.2/jquery.js"/>
@@ -71,6 +71,9 @@ object Layouts {
       </head>
       <body>
         <div class="topbar">
+          <div class="container">
+            <img src="/images/nzrs-logo.png" height="40px"/>
+          </div>
           <div class="fill">
             <div class="container">
               <a class="brand" href="/">RPKI Validator</a>
@@ -118,7 +121,7 @@ object Layouts {
           </footer>
         </div>
         <div id="feedbackButton">
-          <a href="mailto:certification@ripe.net?subject=RPKI Validator Feedback"><img src="/images/feedback.png" width="41" height="111" alt="Feedback"/></a>
+          <a href="mailto:rpki@nzrs.net.nz?subject=RPKI Validator Feedback"><img src="/images/feedback.png" width="41" height="111" alt="Feedback"/></a>
         </div>
       </body>
     </html>
