@@ -32,7 +32,7 @@
         <!-- our stuff -->
         <dependency>
             <groupId>net.ripe.rpki</groupId>
-            <artifactId>rpki-commons</artifactId>
+            <artifactId>rpki-commons-rrdp</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

@@ -193,12 +193,12 @@ trait ValidationProcess {
   }
 
   def objectFetcherListeners: Seq[NotifyingCertificateRepositoryObjectFetcher.Listener] = Seq.empty
+  def finishProcessing(): Unit = {}
+  def shutdown(): Unit = {}
 
   def extractTrustAnchorLocator(): ValidatedObject
   def validateObjects(certificate: CertificateRepositoryObjectValidationContext): Map[URI, ValidatedObject]
-  def finishProcessing(): Unit = {}
 
-  def shutdown(): Unit = {}
 }
 
 class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, workingDirectory: File, enableLooseValidation: Boolean = false) extends ValidationProcess {
