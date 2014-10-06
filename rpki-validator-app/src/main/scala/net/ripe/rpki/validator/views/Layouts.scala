@@ -72,7 +72,7 @@ object Layouts {
       <body>
         <div class="topbar">
           <div class="container">
-            <img src="/images/nzrs-logo.png" height="40px"/>
+            <img src="/images/nzrs-logo.png" height="24"/>
           </div>
           <div class="fill">
             <div class="container">
@@ -98,7 +98,7 @@ object Layouts {
 
             newVersionNotify match {
               case NodeSeq.Empty => NodeSeq.Empty
-              case messages => 
+              case messages =>
               <div class="alert-message block-message"  data-alert="alert">
                   <a class="close" href="#">×</a>
                   { messages }
