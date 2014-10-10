@@ -31,11 +31,14 @@ package net.ripe.rpki.validator.rrdp
 
 import scala.Array.canBuildFrom
 import scala.xml.Node
+import scala.xml.XML
 
 import java.math.BigInteger
 import java.net.URI
 import java.nio.charset.Charset
 import java.util.UUID
+
+import org.joda.time.DateTime
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
@@ -45,8 +48,47 @@ import net.ripe.rpki.commons.validation.ValidationResult
 import org.apache.commons.lang.StringUtils
 import sun.misc.BASE64Decoder
 
-case class RrdpFetcher(notifyUri: URI) {
+sealed trait RrdpFetcherUpdateResult
+case class RrdpFetcherWithoutUpdates(fetcher: RrdpFetcher) extends RrdpFetcherUpdateResult
+case class RrdpFetcherWithUpdates(fetcher: RrdpFetcher, updates: List[PublicationProtocolMessage]) extends RrdpFetcherUpdateResult
+case object RrdpFetcherSessionLost extends RrdpFetcherUpdateResult
 
+case class RrdpFetcher(notifyUri: URI, sessionId: UUID, serial: BigInteger, lastUpdated: DateTime = DateTime.now) {
+
+  /**
+   * Will return one of the following results:
+   *   RrdpFetcherSessionLost      in case the sessionId has been modified, you should re-initialise a fetcher, and maybe purge your cache
+   *   RrdpFetcherWithoutUpdates   in case there are no updates
+   *   RrdpFetcherWithUpdates      in case there are updates, will use deltas if available, or latest snapshot and available deltas from that point
+   */
+  def update(): RrdpFetcherUpdateResult = {
+    val newNotification = Notification.fromXml(XML.load(notifyUri))
+
+    if (!newNotification.sessionId.equals(sessionId)) {
+      RrdpFetcherSessionLost
+    } else if (newNotification.serial.equals(serial)) {
+      RrdpFetcherWithoutUpdates(this)
+    } else {
+      newNotification.updatePath(serial) match {
+        case withDeltas: UpdatePathWithDeltas => {
+          val updates = withDeltas.deltaRefs.map(_.retrieve).flatMap(_.deltas).flatMap(_.messages)
+          val last = withDeltas.deltaRefs.last.to
+          RrdpFetcherWithUpdates(copy(serial = last), updates = updates)
+        }
+        case withSnapshot: UpdatePathWithSnapshot => {
+          val snapshot = withSnapshot.snaphotRef.retrieve
+          RrdpFetcherWithUpdates(copy(serial = snapshot.serial), updates = snapshot.publishes)
+        }
+      }
+    }
+  }
+}
+
+object RrdpFetcher {
+  def initialise(notifyUri: URI) = {
+    val notifcation = Notification.fromXml(XML.load(notifyUri))
+    RrdpFetcher(notifyUri, notifcation.sessionId, BigInteger.valueOf(-1L))
+  }
 }
 
 case class ReferenceHash(hash: String) {
@@ -67,30 +109,63 @@ object ReferenceHash {
 
 sealed trait DeltaProtocolMessage
 
-case class Notification(sessionId: UUID, serial: BigInteger, snapshots: List[SnapshotReference] = List.empty, deltas: List[DeltaReference] = List.empty) extends DeltaProtocolMessage
+case class Notification(sessionId: UUID, serial: BigInteger, snapshot: SnapshotReference, deltas: List[DeltaReference] = List.empty) extends DeltaProtocolMessage {
+
+  /**
+   * Returns a list of deltas that can be used to get up to the latest.
+   *
+   * If no continuous chain of deltas can be found, the snapshot is returned instead.
+   */
+  def updatePath(oldSerial: BigInteger): UpdatePath = {
+
+    deltas.filter(_.from == oldSerial).sortBy(_.to).reverse.headOption match {
+      case Some(delta) => {
+        if (delta.to == serial) {
+          UpdatePathWithDeltas(deltaRefs = List(delta))
+        } else {
+          updatePath(delta.to) match {
+            case withDeltas: UpdatePathWithDeltas => UpdatePathWithDeltas(deltaRefs = List(delta) ++ withDeltas.deltaRefs)
+            case withSnapshot: UpdatePathWithSnapshot => withSnapshot
+          }
+        }
+      }
+      case None => UpdatePathWithSnapshot(snapshot)
+    }
+  }
+}
+
 object Notification {
   def fromXml(xml: Node) = {
     val session = UUID.fromString((xml \ "@session_id").text)
     val serial = BigInteger.valueOf((xml \ "@serial").text.toLong)
-    val snapshots = (xml \ "snapshot" map { SnapshotReference.fromXml(_) }).toList
+    val snapshot = (xml \ "snapshot" map { SnapshotReference.fromXml(_) }).toList.head
     val deltas = (xml \ "delta" map { DeltaReference.fromXml(_) }).toList
 
-    Notification(session, serial, snapshots, deltas)
+    Notification(session, serial, snapshot, deltas)
   }
 }
 
-case class SnapshotReference(uri: URI, serial: BigInteger, hash: ReferenceHash)
+sealed trait UpdatePath
+case class UpdatePathWithSnapshot(snaphotRef: SnapshotReference) extends UpdatePath
+case class UpdatePathWithDeltas(deltaRefs: List[DeltaReference]) extends UpdatePath
+
+case class SnapshotReference(uri: URI, hash: ReferenceHash) {
+  def retrieve = Snapshot.fromXml(XML.load(uri)) // TODO: check serial and hash
+}
+
 object SnapshotReference {
   def fromXml(xml: Node) = {
     val uri = URI.create((xml \ "@uri").text)
-    val serial = BigInteger.valueOf((xml \ "@serial").text.toLong)
     val hash = ReferenceHash((xml \ "@hash").text)
 
-    SnapshotReference(uri, serial, hash)
+    SnapshotReference(uri, hash)
   }
 }
 
-case class DeltaReference(uri: URI, from: BigInteger, to: BigInteger, hash: ReferenceHash)
+case class DeltaReference(uri: URI, from: BigInteger, to: BigInteger, hash: ReferenceHash) {
+  def retrieve = Deltas.fromXml(XML.load(uri)) // TODO: check from, to and hash
+}
+
 object DeltaReference {
   def fromXml(xml: Node) = {
     val uri = URI.create((xml \ "@uri").text)
@@ -119,7 +194,7 @@ object Deltas {
     val session = UUID.fromString((xml \ "@session_id").text)
     val from = BigInteger.valueOf((xml \ "@from").text.toLong)
     val to = BigInteger.valueOf((xml \ "@to").text.toLong)
-    val deltas = (xml \ "delta" map { Delta.fromXml(_) }).toList
+    val deltas = ((xml \\ "deltas") \\ "delta").map(Delta.fromXml(_)).toList
 
     Deltas(session, from, to, deltas)
   }
