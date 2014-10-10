@@ -86,15 +86,14 @@ abstract class BgpPreviewTableData(validatedAnnouncements: IndexedSeq[BgpValidat
 
   override def filter(searchCriterium: Any): BgpValidatedAnnouncement => Boolean = {
     searchCriterium match {
-      case range: IpRange => { announcement => announcement.prefix.overlaps(range) }
-      case asn: Asn => { announcement => announcement.asn == asn }
-      case searchString: String => { announcement =>
+      case range: IpRange => _.prefix.overlaps(range)
+      case asn: Asn => _.asn == asn
+      case searchString: String => announcement =>
           searchString.isEmpty ||
             announcement.asn.toString.contains(searchString) ||
             announcement.prefix.toString.contains(searchString) ||
             announcement.validity.toString.equalsIgnoreCase(searchString) ||
             searchString.equalsIgnoreCase("invalid") && (announcement.validity.equals(InvalidAsn) || announcement.validity.equals(InvalidLength))
-      }
     }
   }
 

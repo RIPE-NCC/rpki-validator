@@ -57,17 +57,16 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetc
   /**
    * Gets the CRL for the current manifest for this context
    */
-  override def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): X509Crl =  {
+  override def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): X509Crl = {
     getCurrentManifestForContext(context, result) match {
       case None => null // NO! When we don't have a manifest we don't even look for the CRL
-      case Some(mft) => {
+      case Some(mft) =>
         val crlFileName = new File(uri.getPath).getName
         val crlSpecification = mft.getFileContentSpecification(crlFileName)
         storedObjectToCro(uri, store.getByHash(crlSpecification.getHash), result) match {
           case crl: X509Crl => crl
           case _ => null
         }
-      }
     }
   }
 
@@ -94,8 +93,8 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetc
   }
 
   override def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, specification: Specification[Array[Byte]], result: ValidationResult): CertificateRepositoryObject =  specification match {
-    case filecontentSpec: FileContentSpecification =>
-      storedObjectToCro(uri, store.getByHash(filecontentSpec.getHash), result)
+    case fileContentSpec: FileContentSpecification =>
+      storedObjectToCro(uri, store.getByHash(fileContentSpec.getHash), result)
     case _ =>
       remoteObjectFetcher.fetch(uri, specification, result)
   }
@@ -154,7 +153,7 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetc
 
   private def fetchRemoteManifest(manifestUri: URI, result: ValidationResult): Option[ManifestCms] = {
     val cro = remoteObjectFetcher.fetch(manifestUri, Specifications.alwaysTrue[Array[Byte]](), result)
-    result.rejectIfFalse(cro.isInstanceOf[ManifestCms], ValidationString.VALIDATOR_FETCHED_OBJECT_IS_MANIFEST);
+    result.rejectIfFalse(cro.isInstanceOf[ManifestCms], ValidationString.VALIDATOR_FETCHED_OBJECT_IS_MANIFEST)
 
     if (result.hasFailureForCurrentLocation) {
       None

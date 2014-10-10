@@ -43,7 +43,9 @@ case class BgpAnnouncement private (asn: Asn, interval: NumberResourceInterval) 
 object BgpAnnouncement {
   def apply(asn: Asn, prefix: IpRange) = new BgpAnnouncement(asn, NumberResourceInterval(prefix.getStart, prefix.getEnd))
 }
-case class BgpValidatedAnnouncement(announced: BgpAnnouncement, valids: Seq[RtrPrefix] = Seq.empty, invalidsAsn: Seq[RtrPrefix] = Seq.empty, invalidsLength: Seq[RtrPrefix] = Seq.empty) {
+case class BgpValidatedAnnouncement(announced: BgpAnnouncement, valids: Seq[RtrPrefix] = Seq.empty,
+                                    invalidsAsn: Seq[RtrPrefix] = Seq.empty,
+                                    invalidsLength: Seq[RtrPrefix] = Seq.empty) {
   require(!invalidsAsn.exists(_.asn == announced.asn), "invalidsAsn must not contain the announced ASN")
   require(!invalidsLength.exists(_.asn != announced.asn), "invalidsLength must only contain VRPs that refer to the same ASN")
 
@@ -60,9 +62,8 @@ case class BgpValidatedAnnouncement(announced: BgpAnnouncement, valids: Seq[RtrP
 object BgpAnnouncementValidator {
   val VISIBILITY_THRESHOLD = 5
 
-  def validate(announcement: BgpAnnouncement, prefixes: Seq[RtrPrefix]): BgpValidatedAnnouncement = {
+  def validate(announcement: BgpAnnouncement, prefixes: Seq[RtrPrefix]): BgpValidatedAnnouncement =
     validate(announcement, NumberResourceIntervalTree(prefixes: _*))
-  }
 
   def validate(announcement: BgpAnnouncement, prefixTree: NumberResourceIntervalTree[RtrPrefix]): BgpValidatedAnnouncement = {
     val matchingPrefixes = prefixTree.findExactAndAllLessSpecific(announcement.interval)
@@ -77,14 +78,13 @@ object BgpAnnouncementValidator {
       groupedByValidity.getOrElse(InvalidLength, Seq.empty))
   }
 
-  private def hasInvalidAsn(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
+  private def hasInvalidAsn(prefix: RtrPrefix, announced: BgpAnnouncement) =
     prefix.asn != announced.asn
-  }
 
-  private def hasInvalidPrefixLength(prefix: RtrPrefix, announced: BgpAnnouncement): Boolean = {
+  private def hasInvalidPrefixLength(prefix: RtrPrefix, announced: BgpAnnouncement) =
     prefix.maxPrefixLength.getOrElse(prefix.prefix.getPrefixLength) < announced.prefix.getPrefixLength
-  }
 }
+
 class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) extends Logging {
   import actorSystem.dispatcher
   import scala.concurrent.duration._
