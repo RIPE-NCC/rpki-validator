@@ -32,6 +32,7 @@ package net.ripe.rpki.validator.fetchers
 import net.ripe.rpki.validator.store.DataSources
 import net.ripe.rpki.validator.store.RepositoryObjectStore
 import net.ripe.rpki.commons.rsync.Rsync
+import net.ripe.rpki.commons.util.ConfigurationUtil;
 import net.ripe.rpki.validator.util.UriToFileMapper
 import java.io.File
 import java.net.URI
@@ -233,7 +234,8 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
 
 }
 
-class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RsyncRpkiRepositoryObjectFetcher(new Rsync, new UriToFileMapper(new File(System.getProperty("java.io.tmpdir")))) {
+class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) extends RsyncRpkiRepositoryObjectFetcher(
+  new Rsync, new UriToFileMapper(new File(ConfigurationUtil.getTempDirectory()))) {
 
   override def prefetch(uri: URI, result: ValidationResult) = {}
 
@@ -247,7 +249,7 @@ class TestRemoteObjectFetcher(entries: Map[URI, CertificateRepositoryObject]) ex
           null
         }
       case _ =>
-        result.rejectIfNull(null, VALIDATOR_READ_FILE, uri.toString);
+        result.rejectIfNull(null, VALIDATOR_READ_FILE, uri.toString)
         null
     }
   }

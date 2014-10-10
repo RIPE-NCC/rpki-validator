@@ -31,6 +31,7 @@ package net.ripe.rpki.validator.commands;
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.rsync.Rsync;
+import net.ripe.rpki.commons.util.ConfigurationUtil;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.rpki.validator.fetchers.CachingCertificateRepositoryObjectFetcher;
@@ -104,8 +105,8 @@ public class BottomUpCertificateRepositoryObjectValidator {
 
     private File getUniqueTempDir() {
 
-        File tmpDirBase = new File(System.getProperty("java.io.tmpdir"));
-        File uniqueDir = null;
+        File tmpDirBase = new File(ConfigurationUtil.getTempDirectory());
+        File uniqueDir;
         try {
             File createTempFile = File.createTempFile("val", null);
             String randomDirName = createTempFile.getName();

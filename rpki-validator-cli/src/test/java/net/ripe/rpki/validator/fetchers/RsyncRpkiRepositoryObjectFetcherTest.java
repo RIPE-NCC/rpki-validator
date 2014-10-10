@@ -31,6 +31,7 @@ package net.ripe.rpki.validator.fetchers;
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.rsync.Rsync;
+import net.ripe.rpki.commons.util.ConfigurationUtil;
 import net.ripe.rpki.commons.util.Specifications;
 import net.ripe.rpki.commons.validation.ValidationCheck;
 import net.ripe.rpki.commons.validation.ValidationLocation;
@@ -52,7 +53,7 @@ import static org.junit.Assert.*;
 
 public class RsyncRpkiRepositoryObjectFetcherTest {
 
-    private static final File TEST_TARGET_DIRECTORY = new File(System.getProperty("java.io.tmpdir", "/tmp"));
+    private static final File TEST_TARGET_DIRECTORY = new File(ConfigurationUtil.getTempDirectory());
 
     private static final URI TEST_REPOSITORY_URI = URI.create("RSYNC://localhost:9999/repo/ca%20repo/");
 
