@@ -98,7 +98,11 @@ case class ReferenceHash(hash: String) {
 
 object ReferenceHash {
   def fromBytes(bytes: Array[Byte]) = {
-    ReferenceHash(ManifestCms.hashContents(bytes).map("%02X" format _).mkString)
+    fromManifestHash(ManifestCms.hashContents(bytes))
+  }
+
+  def fromManifestHash(bytes: Array[Byte]) = {
+    ReferenceHash(bytes.map("%02X" format _).mkString)
   }
 
   def fromXml(xml: Node) = {
