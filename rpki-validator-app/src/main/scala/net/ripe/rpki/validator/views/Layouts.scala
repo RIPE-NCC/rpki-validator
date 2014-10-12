@@ -70,13 +70,20 @@ object Layouts {
         // --></script>
       </head>
       <body>
-        <div class="topbar">
-          <div class="container">
-            <img src="/images/nzrs-logo.png" height="24"/>
+        <div class="">
+          <div class="container nzrs-header">
+            <div class="nzrs-header-logo">
+              <a href="https://nzrs.net.nz/" title=".nz Registry Services" target="_blank">
+                <img src="/images/nzrs-logo.png" height="24"/>
+              </a>
+            </div>
+            <p>A subsidiary of Internet NZ</p>
+            <div class="nzrs-header-heading">
+              <a class="h1 brand" href="/">RPKI Validator</a>
+            </div>
           </div>
           <div class="fill">
             <div class="container">
-              <a class="brand" href="/">RPKI Validator</a>
               <ul class="nav">
                 {
                   for (tab <- Tabs.visibleTabs) yield {
