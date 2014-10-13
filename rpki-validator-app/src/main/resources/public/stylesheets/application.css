@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 body {
-	padding-top: 90px;
+	padding-top: 30px;
 }
 
 td.error {
@@ -232,4 +232,13 @@ span.object-counter {
 }
 .nzrs-navbar .active {
     font-weight: bold;
+}
+
+.nzrs-navbar li:before {
+    border-left: 1px solid #ff0079;
+    height: 18px;
+    width: 5px;
+    content: '';
+    top: 11px;
+    position: absolute;
 }
