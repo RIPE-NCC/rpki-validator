@@ -120,16 +120,12 @@ object Layouts {
             <h1>{ view.title }</h1>
           </div>
           { view.body }
-          <footer>
-            <div class="copyright">
-              <img src="/images/ncc-logo.png" align="middle"/>
-              &nbsp;
-
-              Copyright &copy;{ List(2009, (new DateTime).getYear).mkString("-") }
-              the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version&nbsp;{ ReleaseInfo.version }
-            </div>
-          </footer>
         </div>
+        <footer class="nzrs-footer">
+          <div class="copyright">
+            With thanks to RIPE NCC who are the authors and copyright owners of this tool
+          </div>
+        </footer>
         <div id="feedbackButton">
           <a href="mailto:rpki@nzrs.net.nz?subject=RPKI Validator Feedback"><img src="/images/feedback.png" width="41" height="111" alt="Feedback"/></a>
         </div>

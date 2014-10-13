@@ -219,9 +219,14 @@ span.object-counter {
     font: 12px Monaco, "Courier New", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", monospace;
 }
 
+@font-face {
+    font-family: "Gotham";
+    src: url(/fonts/gotham-medium.otf) format("opentype");
+}
+
 .h1 {
     color: #333;
-    /* font-family: 'gotham-medium'; */
+    font-family: 'Gotham', "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 29px;
 }
 .nzrs-navbar {
@@ -241,4 +246,8 @@ span.object-counter {
     content: '';
     top: 11px;
     position: absolute;
+}
+.nzrs-footer {
+    background-color: #2d3031;
+    font-family: 'Gotham', "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
