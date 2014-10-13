@@ -49,7 +49,7 @@ object Layouts {
     <html lang="en">
       <head>
         <meta charset="utf-8"/>
-        <title>RPKI Validator - { view.title }</title>
+        <title>NZRS RPKI Validator - { view.title }</title>
         <link rel="stylesheet" href="/stylesheets/bootstrap/1.3.0/bootstrap.css"/>
         <link rel="stylesheet" href="/stylesheets/application.css"/>
         <script src="/javascript/datatables/1.8.2/jquery.js"/>
@@ -70,10 +70,23 @@ object Layouts {
         // --></script>
       </head>
       <body>
-        <div class="topbar">
-          <div class="fill">
+        <div class="">
+          <div class="container nzrs-header">
+            <div class="row">
+              <div class="span4 nzrs-header-logo">
+                <a href="https://nzrs.net.nz/" title=".nz Registry Services" target="_blank">
+                  <img src="/images/nzrs-logo.png" height="24"/>
+                </a>
+                <p>A subsidiary of Internet NZ</p>
+              </div>
+
+              <div class="span4 nzrs-header-heading">
+                <a class="h1 brand" href="/">RPKI Validator</a>
+              </div>
+            </div>
+          </div>
+          <div class="fill nzrs-navbar">
             <div class="container">
-              <a class="brand" href="/">RPKI Validator</a>
               <ul class="nav">
                 {
                   for (tab <- Tabs.visibleTabs) yield {
@@ -95,7 +108,7 @@ object Layouts {
 
             newVersionNotify match {
               case NodeSeq.Empty => NodeSeq.Empty
-              case messages => 
+              case messages =>
               <div class="alert-message block-message"  data-alert="alert">
                   <a class="close" href="#">×</a>
                   { messages }
@@ -107,18 +120,14 @@ object Layouts {
             <h1>{ view.title }</h1>
           </div>
           { view.body }
-          <footer>
-            <div class="copyright">
-              <img src="/images/ncc-logo.png" align="middle"/>
-              &nbsp;
-
-              Copyright &copy;{ List(2009, (new DateTime).getYear).mkString("-") }
-              the Réseaux IP Européens Network Coordination Centre RIPE NCC. All rights restricted. Version&nbsp;{ ReleaseInfo.version }
-            </div>
-          </footer>
         </div>
+        <footer class="nzrs-footer">
+          <div class="copyright">
+            With thanks to RIPE NCC who are the authors and copyright owners of this tool
+          </div>
+        </footer>
         <div id="feedbackButton">
-          <a href="mailto:certification@ripe.net?subject=RPKI Validator Feedback"><img src="/images/feedback.png" width="41" height="111" alt="Feedback"/></a>
+          <a href="mailto:rpki@nzrs.net.nz?subject=RPKI Validator Feedback"><img src="/images/feedback.png" width="41" height="111" alt="Feedback"/></a>
         </div>
       </body>
     </html>
