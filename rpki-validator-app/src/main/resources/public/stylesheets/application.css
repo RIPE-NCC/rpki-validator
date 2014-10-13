@@ -218,3 +218,18 @@ span.object-counter {
 .monospace {
     font: 12px Monaco, "Courier New", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", monospace;
 }
+
+.h1 {
+    color: #333;
+    /* font-family: 'gotham-medium'; */
+    font-size: 29px;
+}
+.nzrs-navbar {
+    background-color: black;
+}
+.nzrs-navbar a {
+    color: white;
+}
+.nzrs-navbar .active {
+    font-weight: bold;
+}
