@@ -28,7 +28,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 body {
-	padding-top: 90px;
+	padding-top: 30px;
 }
 
 td.error {
@@ -170,7 +170,7 @@ span.object-counter {
   border-radius: 10px 10px 10px 10px;
 }
 .stepTitle a:focus {
-    outline: none; 
+    outline: none;
 }
 .stepTitle h3 {
   padding:10px;
@@ -178,7 +178,7 @@ span.object-counter {
 .stepTitle.selected {
   background-color: #DDF4FB;
   background-image: -moz-linear-gradient(#DDF4FB, #C6EDF9);
-    background-repeat: repeat-x;  
+    background-repeat: repeat-x;
 }
 .stepDescription {
   padding:10px;
@@ -207,7 +207,7 @@ span.object-counter {
   text-align:center;
   line-height:25px;
 }
-.copyright img { 
+.copyright img {
   margin-right:12px;
   margin-top:-4px;
 }
@@ -217,4 +217,38 @@ span.object-counter {
 
 .monospace {
     font: 12px Monaco, "Courier New", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", monospace;
+}
+
+@font-face {
+    font-family: "Gotham";
+    src: url(/fonts/gotham-medium.otf) format("opentype");
+}
+
+.h1 {
+    color: #333;
+    font-family: 'Gotham', "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 29px;
+}
+.nzrs-navbar {
+    background-color: black;
+}
+.nzrs-navbar a {
+    color: white;
+}
+.nzrs-navbar .active {
+    font-weight: bold;
+}
+
+.nzrs-navbar li:before {
+    border-left: 1px solid #ff0079;
+    height: 18px;
+    width: 5px;
+    content: '';
+    top: 11px;
+    position: absolute;
+}
+.nzrs-footer {
+    background-color: #2d3031;
+    font-family: 'Gotham', "Helvetica Neue", Helvetica, Arial, sans-serif;
+    min-height: 600px;
 }

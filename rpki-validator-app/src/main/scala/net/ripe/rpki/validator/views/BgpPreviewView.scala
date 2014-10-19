@@ -67,9 +67,9 @@ class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump], search: String) extends View 
     <table id="bgp-preview-table" class="zebra-striped" style="display: none;" data-search={ search }>
       <thead>
         <tr>
-          <th width="200px">ASN</th>
+          <th width="200">ASN</th>
           <th>Prefix</th>
-          <th width="200px">Validity</th>
+          <th width="200">Validity</th>
         </tr>
       </thead>
       <tbody>
