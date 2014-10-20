@@ -48,6 +48,7 @@ import scala.math.Ordering.Implicits._
 import org.apache.http.impl.client.{HttpClientBuilder, SystemDefaultHttpClient}
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.apache.http.params.HttpConnectionParams
+import java.net.InetSocketAddress
 import java.util.EnumSet
 import javax.servlet.DispatcherType
 import scala.Predef._
@@ -181,7 +182,7 @@ class Main() { main =>
   }
 
   private def runWebServer() {
-    val server = setup(new Server(ApplicationOptions.httpPort))
+    val server = setup(new Server(new InetSocketAddress("127.0.0.1", ApplicationOptions.httpPort)))
 
     sys.addShutdownHook({
       server.stop()
