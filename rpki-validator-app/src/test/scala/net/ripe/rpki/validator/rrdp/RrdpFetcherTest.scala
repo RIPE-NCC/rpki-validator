@@ -42,10 +42,10 @@ class RrdpFetcherTest extends ValidatorTestCase {
 
     val notificationXml = <notification xmlns="http://www.ripe.net/rpki/rrdp" version="1" session_id="c5a0c560-5f11-4507-9591-a00529dcb768" serial="4">
                             <snapshot serial="4" uri="http://localhost:8080/rpki-ca/rrdp/6BFED7D18B6C7937CCB860F756362507CE02AA0C7E65288F47B943EC5703D3E1.xml" hash="6BFED7D18B6C7937CCB860F756362507CE02AA0C7E65288F47B943EC5703D3E1"/>
-                            <delta from="3" to="4" uri="http://localhost:8080/rpki-ca/rrdp/D8D60AAA846E7D977152AD6D09DC90A2CA80659D8FE22C70F9A8AB94899310B3.xml" hash="D8D60AAA846E7D977152AD6D09DC90A2CA80659D8FE22C70F9A8AB94899310B3"/>
-                            <delta from="2" to="3" uri="http://localhost:8080/rpki-ca/rrdp/CBE8D991731F5183C35D47EF3E641D80E8154E4745CF04E2173C7E2F6BC91C2B.xml" hash="CBE8D991731F5183C35D47EF3E641D80E8154E4745CF04E2173C7E2F6BC91C2B"/>
-                            <delta from="1" to="2" uri="http://localhost:8080/rpki-ca/rrdp/5D77E78CE2FA1B7BA24805A74D5F234CE217CC566AD3ADFB697978BA587C2DA2.xml" hash="5D77E78CE2FA1B7BA24805A74D5F234CE217CC566AD3ADFB697978BA587C2DA2"/>
-                            <delta from="0" to="1" uri="http://localhost:8080/rpki-ca/rrdp/4D5A65B29D4C74D7C1A822160E0731E60DD522D9610D75293E1065976752FE0E.xml" hash="4D5A65B29D4C74D7C1A822160E0731E60DD522D9610D75293E1065976752FE0E"/>
+                            <delta serial="4" uri="http://localhost:8080/rpki-ca/rrdp/D8D60AAA846E7D977152AD6D09DC90A2CA80659D8FE22C70F9A8AB94899310B3.xml" hash="D8D60AAA846E7D977152AD6D09DC90A2CA80659D8FE22C70F9A8AB94899310B3"/>
+                            <delta serial="3" uri="http://localhost:8080/rpki-ca/rrdp/CBE8D991731F5183C35D47EF3E641D80E8154E4745CF04E2173C7E2F6BC91C2B.xml" hash="CBE8D991731F5183C35D47EF3E641D80E8154E4745CF04E2173C7E2F6BC91C2B"/>
+                            <delta serial="2" uri="http://localhost:8080/rpki-ca/rrdp/5D77E78CE2FA1B7BA24805A74D5F234CE217CC566AD3ADFB697978BA587C2DA2.xml" hash="5D77E78CE2FA1B7BA24805A74D5F234CE217CC566AD3ADFB697978BA587C2DA2"/>
+                            <delta serial="1" uri="http://localhost:8080/rpki-ca/rrdp/4D5A65B29D4C74D7C1A822160E0731E60DD522D9610D75293E1065976752FE0E.xml" hash="4D5A65B29D4C74D7C1A822160E0731E60DD522D9610D75293E1065976752FE0E"/>
                           </notification>
 
     val notification = Notification.fromXml(notificationXml)
@@ -90,23 +90,5 @@ class RrdpFetcherTest extends ValidatorTestCase {
 
     Deltas.fromXml(deltaXml)
   }
-
-//  Slow interop test, skipping for normal builds.. use this to parse the xml generate by Rob Austein
-//  test("Should read notify file") {
-//    //      val fetcher = RrdpFetcher.initialise(URI.create("http://localhost:8080/rpki-ca/notify/notify.xml"))
-//    val fetcher = RrdpFetcher.initialise(URI.create("http://akkht.hactrn.net/rrdp/updates.xml"))
-//
-//    fetcher.update match {
-//      case withUpdates: RrdpFetcherWithUpdates => {
-//        println(withUpdates.updates)
-//
-//        withUpdates.fetcher.update match {
-//          case noUpdates: RrdpFetcherWithoutUpdates => // ok
-//          case _ => fail("Expected no more updates")
-//        }
-//      }
-//      case _ => fail("expected fetcher with updates")
-//    }
-//  }
 
 }

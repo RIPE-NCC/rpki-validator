@@ -62,6 +62,7 @@ class TopDownValidationProcess(maxStaleDays: Int = 0, enableLooseValidation: Boo
     var newFetchers: List[RrdpFetcher] = List.empty
 
     val validationOptions = new ValidationOptions
+    validationOptions.setMaxStaleDays(365)
 
     /**
      * Checks if the RRDP notify URI for this certificate is known, and if not: adds it to the list and updates it to make sure our cache is recent
@@ -225,8 +226,8 @@ case class ValidX509Crl(uri: URI, crl: X509Crl, validationResult: ValidationResu
 case class ValidMft(uri: URI, mft: ManifestCms, validationResult: ValidationResult)
 case class ValidMftAndCrl(validMft: ValidMft, validCrl: ValidX509Crl) {
   def toValidObjects = {
-    Map (validMft.uri -> ValidObject(validMft.uri, validMft.validationResult.getAllValidationChecksForCurrentLocation().asScala.toSet, validMft.mft),
-         validCrl.uri -> ValidObject(validCrl.uri, validCrl.validationResult.getAllValidationChecksForCurrentLocation().asScala.toSet, validCrl.crl))
+    Map(validMft.uri -> ValidObject(validMft.uri, validMft.validationResult.getAllValidationChecksForCurrentLocation().asScala.toSet, validMft.mft),
+      validCrl.uri -> ValidObject(validCrl.uri, validCrl.validationResult.getAllValidationChecksForCurrentLocation().asScala.toSet, validCrl.crl))
   }
 }
 case class ValidCaCertificate(uri: URI, cert: X509ResourceCertificate)

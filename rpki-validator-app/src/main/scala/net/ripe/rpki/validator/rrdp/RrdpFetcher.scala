@@ -72,7 +72,7 @@ case class RrdpFetcher(notifyUri: URI, sessionId: UUID, serial: BigInteger, last
       newNotification.updatePath(serial) match {
         case withDeltas: UpdatePathWithDeltas => {
           val updates = withDeltas.deltaRefs.map(_.retrieve).flatMap(_.deltas).flatMap(_.messages)
-          val last = withDeltas.deltaRefs.last.to
+          val last = withDeltas.deltaRefs.last.serial
           RrdpFetcherWithUpdates(copy(serial = last), updates = updates)
         }
         case withSnapshot: UpdatePathWithSnapshot => {
@@ -121,20 +121,27 @@ case class Notification(sessionId: UUID, serial: BigInteger, snapshot: SnapshotR
    * If no continuous chain of deltas can be found, the snapshot is returned instead.
    */
   def updatePath(oldSerial: BigInteger): UpdatePath = {
+    
+    val nextSerial = oldSerial.add(BigInteger.ONE)
 
-    deltas.filter(_.from == oldSerial).sortBy(_.to).reverse.headOption match {
-      case Some(delta) => {
-        if (delta.to == serial) {
-          UpdatePathWithDeltas(deltaRefs = List(delta))
-        } else {
-          updatePath(delta.to) match {
-            case withDeltas: UpdatePathWithDeltas => UpdatePathWithDeltas(deltaRefs = List(delta) ++ withDeltas.deltaRefs)
-            case withSnapshot: UpdatePathWithSnapshot => withSnapshot
+    if (oldSerial.equals(BigInteger.valueOf(-1l))) {
+      UpdatePathWithSnapshot(snapshot)
+    } else {
+      deltas.find(_.serial == nextSerial) match {
+        case Some(delta) => {
+          if (delta.serial == serial) {
+            UpdatePathWithDeltas(deltaRefs = List(delta))
+          } else {
+            updatePath(nextSerial) match {
+              case withDeltas: UpdatePathWithDeltas => UpdatePathWithDeltas(deltaRefs = List(delta) ++ withDeltas.deltaRefs)
+              case withSnapshot: UpdatePathWithSnapshot => withSnapshot
+            }
           }
         }
+        case None => UpdatePathWithSnapshot(snapshot)
       }
-      case None => UpdatePathWithSnapshot(snapshot)
     }
+
   }
 }
 
@@ -166,18 +173,17 @@ object SnapshotReference {
   }
 }
 
-case class DeltaReference(uri: URI, from: BigInteger, to: BigInteger, hash: ReferenceHash) {
+case class DeltaReference(uri: URI, serial: BigInteger, hash: ReferenceHash) {
   def retrieve = Deltas.fromXml(XML.load(uri)) // TODO: check from, to and hash
 }
 
 object DeltaReference {
   def fromXml(xml: Node) = {
     val uri = URI.create((xml \ "@uri").text)
-    val from = BigInteger.valueOf((xml \ "@from").text.toLong)
-    val to = BigInteger.valueOf((xml \ "@to").text.toLong)
+    val serial = BigInteger.valueOf((xml \ "@serial").text.toLong)
     val hash = ReferenceHash((xml \ "@hash").text)
 
-    DeltaReference(uri, from, to, hash)
+    DeltaReference(uri, serial, hash)
   }
 }
 
