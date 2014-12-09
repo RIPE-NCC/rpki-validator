@@ -221,7 +221,7 @@ span.object-counter {
 
 @font-face {
     font-family: "Gotham";
-    src: url(/fonts/gotham-medium.otf) format("opentype");
+    src: url(/fonts/Gotham-Medium.otf) format("opentype");
 }
 
 .h1 {
@@ -252,3 +252,12 @@ span.object-counter {
     font-family: 'Gotham', "Helvetica Neue", Helvetica, Arial, sans-serif;
     min-height: 600px;
 }
+.nzrs-header-heading {
+    width: 960px;
+    height: 72px;
+    text-align: center;
+    position: absolute;
+    top: 16px; /* To give the sensation of vertically centered */
+    left: 0px;
+}
+/* END MARK */

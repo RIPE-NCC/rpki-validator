@@ -72,10 +72,10 @@ object Layouts {
       <body>
         <div class="">
           <div class="container nzrs-header">
-            <div class="row">
+            <div class="row" style="position: relative;">
               <div class="span4 nzrs-header-logo">
                 <a href="https://nzrs.net.nz/" title=".nz Registry Services" target="_blank">
-                  <img src="/images/nzrs-logo.png" height="24"/>
+                  <img src="/images/nzrs-logo.png" height="40"/>
                 </a>
                 <p>A subsidiary of Internet NZ</p>
               </div>
@@ -123,7 +123,7 @@ object Layouts {
         </div>
         <footer class="nzrs-footer">
           <div class="copyright">
-            With thanks to RIPE NCC who are the authors and copyright owners of this tool
+            With thanks to <a href="http://www.ripe.net/lir-services/resource-management/certification/tools-and-resources">RIPE NCC</a> who are the authors and copyright owners of this tool
           </div>
         </footer>
         <div id="feedbackButton">
