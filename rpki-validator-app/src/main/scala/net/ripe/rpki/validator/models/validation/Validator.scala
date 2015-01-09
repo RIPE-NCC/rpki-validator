@@ -39,7 +39,7 @@ sealed trait RepositoryObject {
 }
 
 case class Certificate(override val uri: String, certificate: X509ResourceCertificate) extends RepositoryObject
-case class Manifest(override val uri: String, manifest: ManifestCms) extends RepositoryObject
+case class ManifestObject(override val uri: String, manifest: ManifestCms) extends RepositoryObject
 
 
 class Validator[Storage <% {def save(r : RepositoryObject)}](storage: Storage) {
