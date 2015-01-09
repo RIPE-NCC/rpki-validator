@@ -41,7 +41,6 @@ import net.ripe.rpki.validator.models.validation.{Certificate, ManifestObject, R
 import org.apache.log4j.Logger
 
 import scala.collection.JavaConversions._
-import scala.language.postfixOps
 
 class RsyncFetcher {
 
@@ -82,6 +81,23 @@ class RsyncFetcher {
     }
   }
 
+
+  private[this] def withTempDir[T](f: File => T) = {
+    def deleteTree(f: File) {
+      if (f.isDirectory)
+        f.listFiles.foreach(deleteTree)
+      f.delete()
+    }
+
+    val destDir = tempDir
+    val result = try {
+      f(destDir)
+    } finally {
+      deleteTree(destDir)
+    }
+    result
+  }
+
   private[this] def tempDir: File = {
     val path = Files.createTempDirectory("rsync-tmp-")
     val dir = path.toFile
@@ -89,16 +105,14 @@ class RsyncFetcher {
     dir
   }
 
-  def fetchRepo(uri: URI) = {
-    val destDir: File = tempDir
-
-    {
-      val r = new Rsync(uri.toString, destDir.getAbsolutePath)
+  def fetchRepo(uri: URI) : Option[Seq[RepositoryObject]] = withTempDir {
+    tmpDir => {
+      val r = new Rsync(uri.toString, tmpDir.getAbsolutePath)
       r.addOptions(STANDARD_OPTIONS)
       r.addOptions(PREFETCH_OPTIONS)
       r
     }.execute match {
-      case 0 => Some(readObjects(destDir))
+      case 0 => Some(readObjects(tmpDir))
       case code => None
     }
   }
