@@ -68,10 +68,10 @@ sealed trait ProcessingStatus {
   def isRunning: Boolean = !isIdle
 }
 case class Idle(nextUpdate: DateTime, errorMessage: Option[String] = None) extends ProcessingStatus {
-  def isIdle = true
+  val isIdle = true
 }
 case class Running(description: String) extends ProcessingStatus {
-  def isIdle = false
+  val isIdle = false
 }
 
 case class TrustAnchorData(enabled: Boolean = true)

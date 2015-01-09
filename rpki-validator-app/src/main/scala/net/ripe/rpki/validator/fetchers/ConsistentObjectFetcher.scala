@@ -78,10 +78,7 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetc
   override def getManifest(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): ManifestCms = {
     val fetchResult = updateObjectCacheForManifest(uri)
     warnAboutFetchFailures(uri, result, fetchResult)
-    getCurrentManifestForContext(context, result) match {
-      case None => null
-      case Some(mft) => mft
-    }
+    getCurrentManifestForContext(context, result).orNull
   }
 
   private def getCurrentManifestForContext(context: CertificateRepositoryObjectValidationContext, result: ValidationResult): Option[ManifestCms] =  {
