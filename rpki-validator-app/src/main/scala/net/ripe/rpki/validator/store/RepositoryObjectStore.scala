@@ -32,6 +32,8 @@ package store
 
 import java.net.URI
 import java.sql.ResultSet
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.crl.X509Crl
 import org.apache.commons.dbcp.BasicDataSource
 import org.joda.time.DateTime
 import org.springframework.dao.DuplicateKeyException
@@ -85,13 +87,13 @@ class RepositoryObjectStore(datasource: DataSource) {
     template.update("truncate table retrieved_objects")
   }
 
-  def getLatestByUrl(url: URI) = {
+  def getLatestByUrl(url: URI): Option[StoredRepositoryObject] = {
     val selectString = "select * from retrieved_objects where uri = ? order by update_order desc limit 1"
     val selectArgs = Array[Object](url.toString)
     getOptionalResult(selectString, selectArgs)
   }
 
-  def getByHash(hash: Array[Byte]) = {
+  def getByHash(hash: Array[Byte]): Option[StoredRepositoryObject] = {
     val encodedHash = base64.encode(hash)
     val selectString = "select * from retrieved_objects where hash = ?"
     val selectArgs = Array[Object](encodedHash)
@@ -115,6 +117,10 @@ class RepositoryObjectStore(datasource: DataSource) {
         expires = new DateTime(rs.getTimestamp("expires")).withZone(DateTimeZone.UTC))
     }
   }
+
+  def getManifestForKI(keyIdentifier: Array[Byte]): Option[ManifestCms] = ???
+  def getCrlForKI(bytes: Array[Byte]): Seq[X509Crl] = ???
+
 
 }
 
