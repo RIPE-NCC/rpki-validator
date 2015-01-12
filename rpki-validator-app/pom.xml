@@ -33,6 +33,10 @@
         <dependency>
             <groupId>net.ripe.rpki</groupId>
             <artifactId>rpki-commons</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.ripe.rpki</groupId>
+            <artifactId>rpki-commons</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
