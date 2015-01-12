@@ -30,16 +30,19 @@
 package net.ripe.rpki.validator.models.validation
 
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 
 import scala.language.reflectiveCalls
 
 sealed trait RepositoryObject {
   def uri: String
+  def hash: Array[Byte]
 }
 
-case class Certificate(override val uri: String, certificate: X509ResourceCertificate) extends RepositoryObject
-case class ManifestObject(override val uri: String, manifest: ManifestCms) extends RepositoryObject
+case class Certificate(override val uri: String, override val hash: Array[Byte], certificate: X509ResourceCertificate) extends RepositoryObject
+case class ManifestObject(override val uri: String, override val hash: Array[Byte], manifest: ManifestCms) extends RepositoryObject
+case class Crl(override val uri: String, override val hash: Array[Byte], crl: X509Crl) extends RepositoryObject
 
 
 class Validator[Storage <% {def save(r : RepositoryObject)}](storage: Storage) {

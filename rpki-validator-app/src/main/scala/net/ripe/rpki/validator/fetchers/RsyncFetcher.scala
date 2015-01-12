@@ -30,24 +30,26 @@
 package net.ripe.rpki.validator
 package fetchers
 
-import java.io.File
+import java.io.{PrintWriter, File}
 import java.net.URI
 import java.nio.file.Files
 
 import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsParser}
-import net.ripe.rpki.commons.crypto.x509cert.{X509ResourceCertificate, X509ResourceCertificateParser}
+import net.ripe.rpki.commons.crypto.crl.X509Crl
+import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceCertificate, X509ResourceCertificateParser}
 import net.ripe.rpki.commons.rsync.Rsync
-import net.ripe.rpki.validator.models.validation.{Certificate, ManifestObject, RepositoryObject}
+import net.ripe.rpki.validator.models.validation.{Crl, Certificate, ManifestObject, RepositoryObject}
 import org.apache.log4j.Logger
+import org.bouncycastle.jce.provider.X509CRLParser
 
 import scala.collection.JavaConversions._
+import scala.reflect.io.Path
 
 class RsyncFetcher {
 
   private val logger: Logger = Logger.getLogger(classOf[RsyncFetcher])
 
-  private val STANDARD_OPTIONS = Seq("--update", "--times", "--copy-links")
-  private val PREFETCH_OPTIONS = Seq("--recursive", "--delete")
+  private val OPTIONS = Seq("--update", "--times", "--copy-links", "--recursive")
 
   private def walkTree[T](d: File)(f: File => Option[T]): Seq[T] = {
     if (d.isDirectory) {
@@ -60,27 +62,7 @@ class RsyncFetcher {
 
   def getManifestUrl(cms: ManifestCms) = ""
 
-  def readObjects(dir: File): Seq[RepositoryObject] = {
-    walkTree(dir) {
-      f =>
-        if (f.getName.endsWith(".cer")) {
-          val parser = new X509ResourceCertificateParser
-          parser.parse(f.getAbsolutePath, readFile(f))
-          val certificate = parser.getCertificate
-          Some(Certificate(getCertificateUrl(certificate), certificate))
-        } else if (f.getName.endsWith(".mft")) {
-          val parser = new ManifestCmsParser
-          parser.parse(f.getAbsolutePath, readFile(f))
-          val cms = parser.getManifestCms
-          Some(ManifestObject(getManifestUrl(cms), cms))
-        } else if (f.getName.endsWith(".crl")) {
-          // TODO Implement it
-          None
-        }
-        None
-    }
-  }
-
+  def getCrlUrl(crl: X509Crl) = ""
 
   private[this] def withTempDir[T](f: File => T) = {
     def deleteTree(f: File) {
@@ -89,7 +71,12 @@ class RsyncFetcher {
       f.delete()
     }
 
-    val destDir = tempDir
+    val destDir = {
+      val path = Files.createTempDirectory("rsync-tmp-")
+      val dir = path.toFile
+      if (!dir.exists) dir.mkdir
+      dir
+    }
     val result = try {
       f(destDir)
     } finally {
@@ -98,24 +85,48 @@ class RsyncFetcher {
     result
   }
 
-  private[this] def tempDir: File = {
-    val path = Files.createTempDirectory("rsync-tmp-")
-    val dir = path.toFile
-    if (!dir.exists) dir.mkdir
-    dir
+  def fetchRepo(uri: URI) = withTempDir {
+    tmpDir =>
+      logger.info(s"Downloading the repository $uri to ${tmpDir.getAbsolutePath}")
+      val r = new Rsync(uri.toString, tmpDir.getAbsolutePath)
+      r.addOptions(OPTIONS)
+      r.execute match {
+        case 0 => Right(readObjects(tmpDir))
+        case code => Left(r.getErrorLines.mkString("\n"))
+      }
   }
 
-  def fetchRepo(uri: URI) : Option[Seq[RepositoryObject]] = withTempDir {
-    tmpDir => {
-      val r = new Rsync(uri.toString, tmpDir.getAbsolutePath)
-      r.addOptions(STANDARD_OPTIONS)
-      r.addOptions(PREFETCH_OPTIONS)
-      r
-    }.execute match {
-      case 0 => Some(readObjects(tmpDir))
-      case code => None
+  def readObjects(dir: File): Seq[RepositoryObject] = {
+    val pw = new PrintWriter(new File("repo.log" ))
+    walkTree(dir) {
+      f =>
+        if (f.getName.endsWith(".cer")) {
+          val parser = new X509ResourceCertificateParser
+          parser.parse(f.getAbsolutePath, readFile(f))
+          val certificate = parser.getCertificate
+          val ski = certificate.getSubjectKeyIdentifier
+          val hash = ski.map { b => String.format("%02X", new java.lang.Integer(b & 0xff))}.mkString
+          pw.println(s"$f; $hash")
+          Some(Certificate(getCertificateUrl(certificate), ski, certificate))
+        } else if (f.getName.endsWith(".mft")) {
+          val parser = new ManifestCmsParser
+          parser.parse(f.getAbsolutePath, readFile(f))
+          val manifest = parser.getManifestCms
+          // TODO create getAki method
+          val aki = manifest.getCertificate.getSubjectKeyIdentifier
+          val hash = aki.map { b => String.format("%02X", new java.lang.Integer(b & 0xff))}.mkString
+          pw.println(s"$f; $hash")
+          Some(ManifestObject(getManifestUrl(manifest), aki, manifest))
+        } else if (f.getName.endsWith(".crl")) {
+          val crl = new X509Crl(readFile(f))
+          val aki = crl.getAuthorityKeyIdentifier
+          Some(Crl(getCrlUrl(crl), aki, crl))
+        } else
+          None
+
     }
   }
+
 
   private def readFile(f: File) = Files.readAllBytes(f.toPath)
 
