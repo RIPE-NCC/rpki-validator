@@ -38,7 +38,6 @@ import scala.math.Ordering.Implicits._
 import org.joda.time.DateTime
 import grizzled.slf4j.Logger
 import grizzled.slf4j.Logging
-import net.ripe.rpki.validator.commands.TopDownWalker
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import net.ripe.rpki.validator.util.UriToFileMapper
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
@@ -245,10 +244,9 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
       logger.info("Done prefetching for '" + prefetchUri + "'")
     }
 
-    val walker = new TopDownWalker(fetcher)
-    walker.addTrustAnchor(certificate)
-    walker.execute()
-
+    val walker = new TopDownWalker(certificate, cache, fetcher, validationOptions)
+    val validationResult: ValidationResult = walker.execute
+    // TODO convert validationResult to whatever we have to return here
     builder.result()
   }
 

@@ -4,7 +4,7 @@ import java.net.URI
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
-import net.ripe.rpki.commons.crypto.crl.X509CrlValidator
+import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509CrlValidator}
 import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
 import net.ripe.rpki.commons.validation.{ValidationOptions, ValidationString, ValidationLocation, ValidationResult}
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
@@ -13,7 +13,7 @@ import org.apache.commons.lang.Validate
 import scala.collection.JavaConverters._
 
 
-class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: RepositoryObjectStore, fetcher: Any, validationOptions: ValidationOptions) {
+class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: RepositoryObjectStore, fetcher: CrlLocator, validationOptions: ValidationOptions) {
   Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")
 
 
@@ -24,7 +24,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         val crlResult: ValidationResult = processCrl(repositoryUri)
         val manifestResult: ValidationResult = processManifest(repositoryUri)
         crlResult.addAll(manifestResult)
-      case None => new ValidationResult()// do nothing, suppose this could happen if CA has no children
+      case None => ValidationResult.withLocation("") // do nothing, suppose this could happen if CA has no children
     }
   }
 
@@ -43,6 +43,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 //        if (!validationResult.hasFailureForCurrentLocation) {
 //
 //        }
+        ValidationResult.withLocation("") // TODO
     }
   }
 
@@ -60,7 +61,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         case None => validationError(uri, ValidationString.VALIDATOR_OBJECT_PROCESSING_EXCEPTION, uri.resolve(entry.getKey).toString)
         case Some(repositoryObject) => validate(repositoryObject, uri)
       }
-    }).foldLeft(new ValidationResult())(
+    }).foldLeft(ValidationResult.withLocation(uri))(
         (collector, result) => collector.addAll(result)
       )
   }
@@ -73,7 +74,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   }
 
   def validationError(uri: URI, key: String, param: String) = {
-    new ValidationResult().rejectForLocation(new ValidationLocation(uri), key, param)
+    ValidationResult.withLocation(new ValidationLocation(uri)).error(key, param)
   }
 
 
