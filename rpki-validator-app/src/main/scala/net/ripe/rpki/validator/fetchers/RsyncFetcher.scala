@@ -27,8 +27,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package fetchers
+package net.ripe.rpki.validator.fetchers
 
 import java.io.{PrintWriter, File}
 import java.net.URI
@@ -47,17 +46,20 @@ import scala.collection.JavaConversions._
 import scala.reflect.io.Path
 import scala.util.Try
 
-class RsyncFetcher {
+trait Fetcher {
+  def fetchRepo[T, U](uri: URI, process: RepositoryObject => Unit)
+}
+
+class RsyncFetcher extends Fetcher {
 
   private val logger: Logger = Logger.getLogger(classOf[RsyncFetcher])
 
   private val OPTIONS = Seq("--update", "--times", "--copy-links", "--recursive")
 
-  private def walkTree[T](d: File)(f: File => Option[T]): Seq[T] = {
+  private def walkTree[T](d: File)(f: File => Unit): Unit = {
     if (d.isDirectory) {
-      val (dirs, files) = d.listFiles.partition(_.isDirectory)
-      files.map(f).collect { case Some(x) => x} ++ dirs.toSeq.map(walkTree(_)(f)).flatten
-    } else Seq[T]()
+      d.listFiles.foreach(walkTree(_)(f))
+    } else f(d)
   }
 
   private[this] def withTempDir[T](f: File => T) = {
@@ -81,18 +83,18 @@ class RsyncFetcher {
     result
   }
 
-  def fetchRepo(uri: URI) = withTempDir {
+  override def fetchRepo[T, U](uri: URI, process: RepositoryObject => Unit) = withTempDir {
     tmpDir =>
       logger.info(s"Downloading the repository $uri to ${tmpDir.getAbsolutePath}")
       val r = new Rsync(uri.toString, tmpDir.getAbsolutePath)
       r.addOptions(OPTIONS)
       r.execute match {
-        case 0 => Right(readObjects(tmpDir))
+        case 0 => Right(readObjects(tmpDir, process))
         case code => Left( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
       }
   }
 
-  def readObjects(dir: File): Seq[RepositoryObject] = {
+  def readObjects(dir: File, process: RepositoryObject => Unit) = {
     val pw = new PrintWriter(new File("repo.log"))
     walkTree(dir) {
       f =>
@@ -103,25 +105,26 @@ class RsyncFetcher {
             val certificate = parser.getCertificate
             val ski = getCertificateSki(certificate)
             pw.println(s"$f; ${hashToString(ski)}")
-            Some(Certificate(getCertificateUrl(certificate), ski, certificate))
+            process(CertificateObject(getCertificateUrl(certificate), ski, certificate))
           case "mft" =>
             val parser = new ManifestCmsParser
             parser.parse(f.getAbsolutePath, readFile(f))
             val manifest = parser.getManifestCms
             val aki = getManifestAki(manifest)
             pw.println(s"$f; ${hashToString(aki)}")
-            Some(ManifestObject(getManifestUrl(manifest), aki, manifest))
+            process(ManifestObject(getManifestUrl(manifest), aki, manifest))
           case "crl" =>
             val crl = new X509Crl(readFile(f))
             val aki = getCrlAki(crl)
             pw.println(s"$f; ${hashToString(aki)}")
-            Some(Crl(getCrlUrl(crl), aki, crl))
+            process(CrlObject(getCrlUrl(crl), aki, crl))
           case "roa" =>
             val roa = RoaCms.parseDerEncoded(readFile(f))
             val aki = getRoaAki(roa)
             pw.println(s"$f; ${hashToString(aki)}")
-            Some(Roa(getRoaUrl(roa), aki, roa))
-          case _ => None
+            process(RoaObject(getRoaUrl(roa), aki, roa))
+          case _ =>
+            logger.info(s"Found useless file $f")
         }
     }
   }
@@ -152,4 +155,8 @@ class RsyncFetcher {
 
   private def readFile(f: File) = Files.readAllBytes(f.toPath)
 
+}
+
+class HttpFetcher extends Fetcher {
+  override def fetchRepo[T, U](uri: URI, process: (RepositoryObject) => Unit): Unit = ???
 }

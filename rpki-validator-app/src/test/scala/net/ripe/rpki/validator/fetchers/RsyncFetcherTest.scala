@@ -6,14 +6,14 @@
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * - Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * - Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * - Neither the name of the RIPE NCC nor the names of its contributors may be
- * used to endorse or promote products derived from this software without
- * specific prior written permission.
+ *   - Redistributions of source code must retain the above copyright notice,
+ *     this list of conditions and the following disclaimer.
+ *   - Redistributions in binary form must reproduce the above copyright notice,
+ *     this list of conditions and the following disclaimer in the documentation
+ *     and/or other materials provided with the distribution.
+ *   - Neither the name of the RIPE NCC nor the names of its contributors may be
+ *     used to endorse or promote products derived from this software without
+ *     specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -31,11 +31,14 @@ package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
 
+import net.ripe.rpki.validator.models.validation.RepositoryObject
 import net.ripe.rpki.validator.support.ValidatorTestCase
+import org.junit.Ignore
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
 
-//@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+@Ignore
 class RsyncFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
 
   test("Should download repository") {
@@ -43,12 +46,16 @@ class RsyncFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockit
 
     System.gc()
     Thread.sleep(2000)
-    val heapSize = Runtime.getRuntime.totalMemory()
-    val objects = fetcher.fetchRepo(new URI("rsync://rpki.ripe.net/repository/"))
+    val heapSize = Runtime.getRuntime.totalMemory
+    var objects = List[RepositoryObject]()
+    fetcher.fetchRepo(new URI("rsync://rpki.ripe.net/repository/"), {
+      f => objects = f :: objects
+    })
+
     System.gc()
     Thread.sleep(2000)
-    val heapSize2 = Runtime.getRuntime.totalMemory()
-    println(objects.right.map(_.size))
+    val heapSize2 = Runtime.getRuntime.totalMemory
+    println(objects.size)
     println(s"heapSize = $heapSize, heapSize2 = $heapSize2, diff = ${heapSize2 - heapSize}")
   }
 

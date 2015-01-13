@@ -29,33 +29,62 @@
  */
 package net.ripe.rpki.validator.models.validation
 
+import java.net.URI
+
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
+import net.ripe.rpki.validator.fetchers.{HttpFetcher, RsyncFetcher, Fetcher}
 
 import scala.language.reflectiveCalls
 
 sealed trait RepositoryObject {
   def uri: String
+
   def hash: Array[Byte]
 }
 
-case class Certificate(override val uri: String, override val hash: Array[Byte], certificate: X509ResourceCertificate) extends RepositoryObject
+case class CertificateObject(override val uri: String, override val hash: Array[Byte], certificate: X509ResourceCertificate) extends RepositoryObject
+
 case class ManifestObject(override val uri: String, override val hash: Array[Byte], manifest: ManifestCms) extends RepositoryObject
-case class Crl(override val uri: String, override val hash: Array[Byte], crl: X509Crl) extends RepositoryObject
-case class Roa(override val uri: String, override val hash: Array[Byte], roa: RoaCms) extends RepositoryObject
+
+case class CrlObject(override val uri: String, override val hash: Array[Byte], crl: X509Crl) extends RepositoryObject
+
+case class RoaObject(override val uri: String, override val hash: Array[Byte], roa: RoaCms) extends RepositoryObject
 
 
-class Validator[Storage <% {def save(r : RepositoryObject)}](storage: Storage) {
+class Validator(repoUri: URI, storage: Storage) {
 
-  def fetchAll(certificate: Certificate): Seq[RepositoryObject] = {
-    Seq[RepositoryObject]()
+  val fetcher: Fetcher = repoUri.getScheme match {
+    case "rsync" => new RsyncFetcher
+    case "http" | "https" => new HttpFetcher
+    case _ => throw new Exception(s"No fetcher for the uri $repoUri")
   }
 
-  def validate(certificate: Certificate) = {
+  def fetchAll(certificate: CertificateObject) = {
+    fetcher.fetchRepo(repoUri, {
+      case c@CertificateObject(uri, hash, cert) => storage.storeCertificate(c)
+      case c@CrlObject(uri, hash, crl) => storage.storeCrl(c)
+      case m@ManifestObject(uri, hash, manifest) => storage.storeManifest(m)
+      case r@RoaObject(uri, hash, manifest) => storage.storeRoa(r)
+    })
+  }
+
+  def validate(certificate: CertificateObject) = {
     val prefetched = fetchAll(certificate)
-    prefetched.foreach(storage.save)
   }
+
+}
+
+trait Storage {
+
+  def storeCertificate(certificate: CertificateObject)
+
+  def storeManifest(manifest: ManifestObject)
+
+  def storeCrl(crl: CrlObject)
+
+  def storeRoa(Roa: RoaObject)
 
 }
