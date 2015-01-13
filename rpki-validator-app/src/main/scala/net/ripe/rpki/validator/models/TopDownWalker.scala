@@ -31,68 +31,90 @@ package net.ripe.rpki.validator.models
 
 import java.net.URI
 
-import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
-import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509CrlValidator}
+import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509Crl, X509CrlValidator}
 import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
-import net.ripe.rpki.commons.validation.{ValidationOptions, ValidationString, ValidationLocation, ValidationResult}
+import net.ripe.rpki.commons.validation.ValidationString.CRL_REQUIRED
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationOptions, ValidationResult, ValidationString}
 import net.ripe.rpki.validator.store.RepositoryObjectStore
 import org.apache.commons.lang.Validate
+
 import scala.collection.JavaConverters._
 
 
 class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: RepositoryObjectStore, fetcher: CrlLocator, validationOptions: ValidationOptions) {
+  
   Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")
+
+  lazy val crl: Option[X509Crl] = findCrl
+
+  def crlLocator = new CrlLocator {
+    override def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): X509Crl = crl.get
+  }
+
+  val validationResult: ValidationResult = ValidationResult.withLocation("")
 
 
   def execute: ValidationResult = {
     Option(certificateContext.getRepositoryURI) match {
       case Some(repositoryUri) =>
         prefetch(repositoryUri)
-        val crlResult: ValidationResult = processCrl(repositoryUri)
-        val manifestResult: ValidationResult = processManifest(repositoryUri)
-        crlResult.addAll(manifestResult)
-      case None => ValidationResult.withLocation("") // do nothing, suppose this could happen if CA has no children
+        validationResult.setLocation(new ValidationLocation(repositoryUri))
+
+      case None =>  //TODO do nothing, suppose this could happen if CA has no children?
     }
+
+    if (crl.isDefined) {
+      findManifest()
+    } else {
+      validationError(CRL_REQUIRED, "No valid CRL found with SKI=" + certificateContext.getSubjectKeyIdentifier)
+    }
+
+    validationResult
   }
 
   def prefetch(uri: URI) = ???
 
-  def processCrl(uri: URI): ValidationResult = {
+  def findCrl: Option[X509Crl] = {
     val keyIdentifier = certificateContext.getSubjectKeyIdentifier
-    store.getCrlForKI(keyIdentifier) match {
-      case Seq() => validationError(uri, ValidationString.VALIDATOR_OBJECT_PROCESSING_EXCEPTION, uri.toString)
-      case crlList =>
-//        crlList.sortWith( (crlA, crlB) => crlB.getNumber.compareTo(crlA.getNumber) > 0)
-//        val crlLocation: String = crl.getCrlUri.toString
-//        val validationResult = ValidationResult.withLocation(crlLocation)
-//        val validator: X509CrlValidator = new X509CrlValidator(validationOptions, validationResult, certificateContext.getCertificate)
-//        validator.validate(crlLocation, crl)
-//        if (!validationResult.hasFailureForCurrentLocation) {
-//
-//        }
-        ValidationResult.withLocation("") // TODO
+    findMostRecentValidCrl(store.getCrlForKI(keyIdentifier))
+  }
+
+  def findMostRecentValidCrl(crlList: Seq[X509Crl]): Option[X509Crl] = {
+    crlList.sortBy(_.getNumber).reverse.find(crl => {
+      val crlLocation = crl.getCrlUri.toString
+      val crlValidationResult = ValidationResult.withLocation(crlLocation)
+      val validator: X509CrlValidator = new X509CrlValidator(validationOptions, crlValidationResult, certificateContext.getCertificate)
+      validator.validate(crlLocation, crl)
+      validationResult.addAll(crlValidationResult)
+      ! crlValidationResult.hasFailureForCurrentLocation
+    })
+  }
+
+  def findManifest() {
+    val keyIdentifier = certificateContext.getSubjectKeyIdentifier
+    findMostRecentValidManifest(store.getManifestsForKI(keyIdentifier)) match {
+      case Some(manifest) => processManifestEntries(manifest)
+      case None =>
+        validationError(ValidationString.VALIDATOR_OBJECT_PROCESSING_EXCEPTION, "No manifests with SKI=" + certificateContext.getSubjectKeyIdentifier) //TODO better error code
     }
   }
 
-  def processManifest(uri: URI): ValidationResult = {
-    val keyIdentifier = certificateContext.getSubjectKeyIdentifier
-    store.getManifestForKI(keyIdentifier) match {
-      case Some(manifest) => processManifestEntries(manifest, uri)
-      case None => validationError(uri, ValidationString.VALIDATOR_OBJECT_PROCESSING_EXCEPTION, uri.toString)
-    }
+  def findMostRecentValidManifest(manifests: Seq[ManifestCms]): Option[ManifestCms] = {
+    manifests.sortBy(_.getNumber).reverse.find( manifest => {
+      val manifestValidationResult: ValidationResult = ValidationResult.withLocation("")
+      manifest.validate(certificateContext.getLocation.toString, certificateContext, crlLocator, validationOptions, manifestValidationResult)
+      validationResult.addAll(manifestValidationResult)
+      ! manifestValidationResult.hasFailures
+    })
   }
 
-  def processManifestEntries(manifest: ManifestCms, uri: URI): ValidationResult = {
+  def processManifestEntries(manifest: ManifestCms) {
+    // TODO who validates that the manifest has one and only one CRL entry?
     manifest.getFiles.entrySet().asScala.map(entry => {
-      store.getByHash(entry.getValue) match {
-        case None => validationError(uri, ValidationString.VALIDATOR_OBJECT_PROCESSING_EXCEPTION, uri.resolve(entry.getKey).toString)
-        case Some(repositoryObject) => validate(repositoryObject, uri)
-      }
-    }).foldLeft(ValidationResult.withLocation(uri))(
-        (collector, result) => collector.addAll(result)
-      )
+      // TODO validate that set of objects signed by certificateContext.getSubjectKeyIdentifier matches this set of entries
+    })
   }
 
   def validate(repositoryObject: StoredRepositoryObject, uri: URI): ValidationResult = {
@@ -103,8 +125,11 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   }
 
   def validationError(uri: URI, key: String, param: String) = {
-    ValidationResult.withLocation(new ValidationLocation(uri)).error(key, param)
+    validationResult.rejectForLocation(new ValidationLocation(uri), key, param)
   }
 
+  def validationError(key: String, param: String) = {
+    validationResult.error(key, param)
+  }
 
 }

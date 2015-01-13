@@ -117,7 +117,7 @@ class RepositoryObjectStore(datasource: DataSource) {
     }
   }
 
-  def getManifestForKI(keyIdentifier: Array[Byte]): Option[ManifestCms] = ???
+  def getManifestsForKI(keyIdentifier: Array[Byte]): Seq[ManifestCms] = ???
   def getCrlForKI(bytes: Array[Byte]): Seq[X509Crl] = ???
 
 
