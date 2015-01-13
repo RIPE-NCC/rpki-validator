@@ -27,13 +27,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package store
+package net.ripe.rpki.validator.store
 
 import java.net.URI
 import java.sql.ResultSet
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
+import net.ripe.rpki.validator.models.StoredRepositoryObject
 import org.apache.commons.dbcp.BasicDataSource
 import org.joda.time.DateTime
 import org.springframework.dao.DuplicateKeyException
@@ -43,7 +43,6 @@ import org.springframework.jdbc.core.JdbcTemplate
 import com.googlecode.flyway.core.Flyway
 import akka.util.ByteString
 import javax.sql.DataSource
-import models.StoredRepositoryObject
 import org.joda.time.DateTimeZone
 import java.io.File
 import com.google.common.io.BaseEncoding
