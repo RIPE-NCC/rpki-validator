@@ -35,15 +35,17 @@ import java.net.URI
 import java.nio.file.Files
 
 import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsParser}
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceCertificate, X509ResourceCertificateParser}
 import net.ripe.rpki.commons.rsync.Rsync
-import net.ripe.rpki.validator.models.validation.{Crl, Certificate, ManifestObject, RepositoryObject}
+import net.ripe.rpki.validator.models.validation._
 import org.apache.log4j.Logger
 import org.bouncycastle.jce.provider.X509CRLParser
 
 import scala.collection.JavaConversions._
 import scala.reflect.io.Path
+import scala.util.Try
 
 class RsyncFetcher {
 
@@ -57,12 +59,6 @@ class RsyncFetcher {
       files.map(f).collect { case Some(x) => x} ++ dirs.toSeq.map(walkTree(_)(f)).flatten
     } else Seq[T]()
   }
-
-  def getCertificateUrl(certificate: X509ResourceCertificate): String = ""
-
-  def getManifestUrl(cms: ManifestCms) = ""
-
-  def getCrlUrl(crl: X509Crl) = ""
 
   private[this] def withTempDir[T](f: File => T) = {
     def deleteTree(f: File) {
@@ -92,41 +88,67 @@ class RsyncFetcher {
       r.addOptions(OPTIONS)
       r.execute match {
         case 0 => Right(readObjects(tmpDir))
-        case code => Left(r.getErrorLines.mkString("\n"))
+        case code => Left( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
       }
   }
 
   def readObjects(dir: File): Seq[RepositoryObject] = {
-    val pw = new PrintWriter(new File("repo.log" ))
+    val pw = new PrintWriter(new File("repo.log"))
     walkTree(dir) {
       f =>
-        if (f.getName.endsWith(".cer")) {
-          val parser = new X509ResourceCertificateParser
-          parser.parse(f.getAbsolutePath, readFile(f))
-          val certificate = parser.getCertificate
-          val ski = certificate.getSubjectKeyIdentifier
-          val hash = ski.map { b => String.format("%02X", new java.lang.Integer(b & 0xff))}.mkString
-          pw.println(s"$f; $hash")
-          Some(Certificate(getCertificateUrl(certificate), ski, certificate))
-        } else if (f.getName.endsWith(".mft")) {
-          val parser = new ManifestCmsParser
-          parser.parse(f.getAbsolutePath, readFile(f))
-          val manifest = parser.getManifestCms
-          // TODO create getAki method
-          val aki = manifest.getCertificate.getSubjectKeyIdentifier
-          val hash = aki.map { b => String.format("%02X", new java.lang.Integer(b & 0xff))}.mkString
-          pw.println(s"$f; $hash")
-          Some(ManifestObject(getManifestUrl(manifest), aki, manifest))
-        } else if (f.getName.endsWith(".crl")) {
-          val crl = new X509Crl(readFile(f))
-          val aki = crl.getAuthorityKeyIdentifier
-          Some(Crl(getCrlUrl(crl), aki, crl))
-        } else
-          None
-
+        f.getName.takeRight(3) match {
+          case "cer" =>
+            val parser = new X509ResourceCertificateParser
+            parser.parse(f.getAbsolutePath, readFile(f))
+            val certificate = parser.getCertificate
+            val ski = getCertificateSki(certificate)
+            pw.println(s"$f; ${hashToString(ski)}")
+            Some(Certificate(getCertificateUrl(certificate), ski, certificate))
+          case "mft" =>
+            val parser = new ManifestCmsParser
+            parser.parse(f.getAbsolutePath, readFile(f))
+            val manifest = parser.getManifestCms
+            val aki = getManifestAki(manifest)
+            pw.println(s"$f; ${hashToString(aki)}")
+            Some(ManifestObject(getManifestUrl(manifest), aki, manifest))
+          case "crl" =>
+            val crl = new X509Crl(readFile(f))
+            val aki = getCrlAki(crl)
+            pw.println(s"$f; ${hashToString(aki)}")
+            Some(Crl(getCrlUrl(crl), aki, crl))
+          case "roa" =>
+            val roa = RoaCms.parseDerEncoded(readFile(f))
+            val aki = getRoaAki(roa)
+            pw.println(s"$f; ${hashToString(aki)}")
+            Some(Roa(getRoaUrl(roa), aki, roa))
+          case _ => None
+        }
     }
   }
 
+
+  def getRoaAki(roa: RoaCms): Array[Byte] = {
+    roa.getCertificate.getAuthorityKeyIdentifier
+  }
+
+  // TODO Implement
+  private def getCrlAki(crl: X509Crl) = crl.getAuthorityKeyIdentifier
+
+  private def getCertificateSki(certificate: X509ResourceCertificate) = certificate.getSubjectKeyIdentifier
+
+  private def getManifestAki(manifest: ManifestCms) = manifest.getCertificate.getAuthorityKeyIdentifier
+
+  //
+  def getCertificateUrl(certificate: X509ResourceCertificate): String = ""
+
+  def getManifestUrl(cms: ManifestCms) = ""
+
+  def getCrlUrl(crl: X509Crl) = ""
+
+  def getRoaUrl(roa: RoaCms) = ""
+
+
+  def hashToString(bytes: Array[Byte]) = bytes.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
 
   private def readFile(f: File) = Files.readAllBytes(f.toPath)
 
