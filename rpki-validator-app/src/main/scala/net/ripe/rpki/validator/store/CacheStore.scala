@@ -91,7 +91,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       crl.encoded)
   }
 
-  override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] = {
+  override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] =
     template.query("SELECT url, ski, encoded FROM certificates WHERE aki = ?", new RowMapper[CertificateObject] {
       override def mapRow(rs: ResultSet, i: Int) =
         CertificateObject(
@@ -100,7 +100,33 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
           ski = stringToBytes(rs.getString(2)),
           encoded = rs.getBytes(3))
     }, stringify(aki)).toSeq
-  }
+
+  def getCrls(aki: Array[Byte]): Seq[CrlObject] =
+    template.query("SELECT url, encoded FROM crls WHERE aki = ?", new RowMapper[CrlObject] {
+      override def mapRow(rs: ResultSet, i: Int) =
+        CrlObject(
+          url = rs.getString(1),
+          aki = aki,
+          encoded = rs.getBytes(2))
+    }, stringify(aki)).toSeq
+
+  def getRoas(aki: Array[Byte]): Seq[RoaObject] =
+    template.query("SELECT url, encoded FROM roas WHERE aki = ?", new RowMapper[RoaObject] {
+      override def mapRow(rs: ResultSet, i: Int) =
+        RoaObject(
+          url = rs.getString(1),
+          aki = aki,
+          encoded = rs.getBytes(2))
+    }, stringify(aki)).toSeq
+
+  def getManifests(aki: Array[Byte]): Seq[ManifestObject] =
+    template.query("SELECT url, encoded FROM manifests WHERE aki = ?", new RowMapper[ManifestObject] {
+      override def mapRow(rs: ResultSet, i: Int) =
+        ManifestObject(
+          url = rs.getString(1),
+          aki = aki,
+          encoded = rs.getBytes(2))
+    }, stringify(aki)).toSeq
 
   def clear() = {
     for (t <- Seq("certificates", "manifests", "crls", "roas"))
