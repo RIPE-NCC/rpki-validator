@@ -32,11 +32,12 @@ package net.ripe.rpki.validator.models.validation
 import java.math.BigInteger
 import java.net.URI
 
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCmsParser, ManifestCms}
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
+import net.ripe.rpki.commons.crypto.crl.X509Crl
+import net.ripe.rpki.commons.crypto.x509cert.{X509ResourceCertificateParser, X509ResourceCertificate}
 import net.ripe.rpki.validator.fetchers.{HttpFetcher, RsyncFetcher, Fetcher}
 import net.ripe.rpki.validator.store.Storage
-
-import scala.language.reflectiveCalls
 
 trait Hashing {
   // TODO Remove reference to ManifestCms
@@ -48,7 +49,7 @@ trait Hashing {
 }
 
 
-sealed trait RepositoryObject extends Hashing {
+sealed trait RepositoryObject[T] extends Hashing {
   def url: String
 
   def aki: Array[Byte]
@@ -56,24 +57,43 @@ sealed trait RepositoryObject extends Hashing {
   def encoded: Array[Byte]
 
   def hash: Array[Byte] = getHash(encoded)
+
+  def decoded: T
 }
 
 case class CertificateObject(override val url: String,
                              override val aki: Array[Byte],
                              override val encoded: Array[Byte],
-                             ski: Array[Byte]) extends RepositoryObject
+                             ski: Array[Byte]) extends RepositoryObject[X509ResourceCertificate] {
+  def decoded = {
+    val parser = new X509ResourceCertificateParser
+    parser.parse(url, encoded)
+    parser.getCertificate
+  }
+}
 
 case class ManifestObject(override val url: String,
                           override val aki: Array[Byte],
-                          override val encoded: Array[Byte]) extends RepositoryObject
+                          override val encoded: Array[Byte]) extends RepositoryObject[ManifestCms] {
+  def decoded = {
+    val parser = new ManifestCmsParser
+    parser.parse(url, encoded)
+    parser.getManifestCms
+  }
+}
 
 case class CrlObject(override val url: String,
                      override val aki: Array[Byte],
-                     override val encoded: Array[Byte]) extends RepositoryObject
+                     override val encoded: Array[Byte]) extends RepositoryObject[X509Crl] {
+
+  def decoded = new X509Crl(encoded)
+}
 
 case class RoaObject(override val url: String,
                      override val aki: Array[Byte],
-                     override val encoded: Array[Byte]) extends RepositoryObject
+                     override val encoded: Array[Byte]) extends RepositoryObject[RoaCms] {
+  def decoded = RoaCms.parseDerEncoded(encoded)
+}
 
 
 class Validator(repoUri: URI, storage: Storage) {
@@ -84,17 +104,13 @@ class Validator(repoUri: URI, storage: Storage) {
     case _ => throw new Exception(s"No fetcher for the uri $repoUri")
   }
 
-  def fetchAll(certificate: CertificateObject) = {
+  def fetchAll() = {
     fetcher.fetchRepo(repoUri, {
       case c: CertificateObject => storage.storeCertificate(c)
       case c: CrlObject => storage.storeCrl(c)
       case m: ManifestObject => storage.storeManifest(m)
       case r: RoaObject => storage.storeRoa(r)
     })
-  }
-
-  def validate(certificate: CertificateObject) = {
-    val prefetched = fetchAll(certificate)
   }
 
 }

@@ -47,7 +47,7 @@ import scala.reflect.io.Path
 import scala.util.Try
 
 trait Fetcher {
-  def fetchRepo(uri: URI, process: RepositoryObject => Unit)
+  def fetchRepo(uri: URI, process: RepositoryObject[_] => Unit)
 }
 
 class RsyncFetcher extends Fetcher {
@@ -83,7 +83,7 @@ class RsyncFetcher extends Fetcher {
     result
   }
 
-  override def fetchRepo(uri: URI, process: RepositoryObject => Unit) = withTempDir {
+  override def fetchRepo(uri: URI, process: RepositoryObject[_] => Unit) = withTempDir {
     tmpDir =>
       logger.info(s"Downloading the repository $uri to ${tmpDir.getAbsolutePath}")
       val r = new Rsync(uri.toString, tmpDir.getAbsolutePath)
@@ -95,7 +95,7 @@ class RsyncFetcher extends Fetcher {
   }
 
 
-  def readObjects(tmpRoot: File, repoUri: URI, process: RepositoryObject => Unit) = {
+  def readObjects(tmpRoot: File, repoUri: URI, process: RepositoryObject[_] => Unit) = {
 
     val replacement = {
       val s = repoUri.toString
@@ -147,5 +147,5 @@ class RsyncFetcher extends Fetcher {
 }
 
 class HttpFetcher extends Fetcher {
-  override def fetchRepo(uri: URI, process: (RepositoryObject) => Unit): Unit = ???
+  override def fetchRepo(uri: URI, process: RepositoryObject[_] => Unit): Unit = ???
 }
