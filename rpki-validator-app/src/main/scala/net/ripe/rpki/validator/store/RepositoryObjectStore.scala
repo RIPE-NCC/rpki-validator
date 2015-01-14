@@ -29,23 +29,19 @@
  */
 package net.ripe.rpki.validator.store
 
+import java.io.File
 import java.net.URI
 import java.sql.ResultSet
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
-import net.ripe.rpki.commons.crypto.crl.X509Crl
+import javax.sql.DataSource
+
+import akka.util.ByteString
+import com.google.common.io.BaseEncoding
+import com.googlecode.flyway.core.Flyway
 import net.ripe.rpki.validator.models.StoredRepositoryObject
 import org.apache.commons.dbcp.BasicDataSource
-import org.joda.time.DateTime
-import org.springframework.dao.DuplicateKeyException
-import org.springframework.dao.EmptyResultDataAccessException
-import org.springframework.jdbc.core.RowMapper
-import org.springframework.jdbc.core.JdbcTemplate
-import com.googlecode.flyway.core.Flyway
-import akka.util.ByteString
-import javax.sql.DataSource
-import org.joda.time.DateTimeZone
-import java.io.File
-import com.google.common.io.BaseEncoding
+import org.joda.time.{DateTime, DateTimeZone}
+import org.springframework.dao.{DuplicateKeyException, EmptyResultDataAccessException}
+import org.springframework.jdbc.core.{JdbcTemplate, RowMapper}
 
 /**
  * Used to store/retrieve consistent sets of rpki objects seen for certificate authorities
@@ -116,11 +112,6 @@ class RepositoryObjectStore(datasource: DataSource) {
         expires = new DateTime(rs.getTimestamp("expires")).withZone(DateTimeZone.UTC))
     }
   }
-
-  def getManifestsForKI(keyIdentifier: Array[Byte]): Seq[ManifestCms] = ???
-  def getCrlForKI(bytes: Array[Byte]): Seq[X509Crl] = ???
-
-
 }
 
 object DataSources {

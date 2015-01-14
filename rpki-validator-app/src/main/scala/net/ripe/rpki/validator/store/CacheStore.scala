@@ -48,6 +48,11 @@ trait Storage {
 
   def getCertificates(aki: Array[Byte]): Seq[CertificateObject]
 
+  def getCrls(aki: Array[Byte]): Seq[CrlObject]
+
+  def getRoas(aki: Array[Byte]): Seq[RoaObject]
+
+  def getManifests(aki: Array[Byte]): Seq[ManifestObject]
 }
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {

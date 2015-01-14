@@ -57,8 +57,7 @@ import net.ripe.rpki.validator.lib.HashSupport
 
 // Ignore unused warning for implicit def from net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.rpki.validator.lib.DateAndTime._
-import net.ripe.rpki.validator.store.DataSources
-import net.ripe.rpki.validator.store.RepositoryObjectStore
+import net.ripe.rpki.validator.store.{CacheStore, DataSources, RepositoryObjectStore}
 import scalaz._
 import org.apache.commons.io.FileUtils
 
@@ -244,7 +243,8 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
       logger.info("Done prefetching for '" + prefetchUri + "'")
     }
 
-    val walker = new TopDownWalker(certificate, cache, fetcher, validationOptions)
+    //TODO setup datasource
+    val walker = new TopDownWalker(certificate, new CacheStore(DataSources.InMemoryDataSource), new RsyncFetcher, validationOptions)
     val validationResult: ValidationResult = walker.execute
     // TODO convert validationResult to whatever we have to return here
     builder.result()
