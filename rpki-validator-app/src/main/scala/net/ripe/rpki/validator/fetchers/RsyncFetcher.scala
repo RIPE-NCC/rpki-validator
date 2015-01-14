@@ -47,7 +47,7 @@ import scala.reflect.io.Path
 import scala.util.Try
 
 trait Fetcher {
-  def fetchRepo[T, U](uri: URI, process: RepositoryObject => Unit)
+  def fetchRepo(uri: URI, process: RepositoryObject => Unit)
 }
 
 class RsyncFetcher extends Fetcher {
@@ -83,73 +83,62 @@ class RsyncFetcher extends Fetcher {
     result
   }
 
-  override def fetchRepo[T, U](uri: URI, process: RepositoryObject => Unit) = withTempDir {
+  override def fetchRepo(uri: URI, process: RepositoryObject => Unit) = withTempDir {
     tmpDir =>
       logger.info(s"Downloading the repository $uri to ${tmpDir.getAbsolutePath}")
       val r = new Rsync(uri.toString, tmpDir.getAbsolutePath)
       r.addOptions(OPTIONS)
       r.execute match {
-        case 0 => Right(readObjects(tmpDir, process))
+        case 0 => Right(readObjects(tmpDir, uri, process))
         case code => Left( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
       }
   }
 
-  def readObjects(dir: File, process: RepositoryObject => Unit) = {
+
+  def readObjects(tmpRoot: File, repoUri: URI, process: RepositoryObject => Unit) = {
+
+    val replacement = {
+      val s = repoUri.toString
+      if (s.endsWith("/")) s.dropRight(1) else s
+    }
+
+    def rsyncUrl(f: File) =
+      f.getAbsolutePath.replaceAll(tmpRoot.getAbsolutePath, replacement)
+
     val pw = new PrintWriter(new File("repo.log"))
-    walkTree(dir) {
+    walkTree(tmpRoot) {
       f =>
         f.getName.takeRight(3) match {
           case "cer" =>
             val parser = new X509ResourceCertificateParser
             parser.parse(f.getAbsolutePath, readFile(f))
             val certificate = parser.getCertificate
-            val ski = getCertificateSki(certificate)
-            pw.println(s"$f; ${hashToString(ski)}")
-            process(CertificateObject(getCertificateUrl(certificate), ski, certificate))
+            val ski = certificate.getSubjectKeyIdentifier
+            val aki = certificate.getAuthorityKeyIdentifier
+            pw.println(s"$f; ${hashToString(ski)}; ${rsyncUrl(f)}")
+            process(CertificateObject(rsyncUrl(f), aki, certificate.getEncoded, ski))
           case "mft" =>
             val parser = new ManifestCmsParser
             parser.parse(f.getAbsolutePath, readFile(f))
             val manifest = parser.getManifestCms
-            val aki = getManifestAki(manifest)
-            pw.println(s"$f; ${hashToString(aki)}")
-            process(ManifestObject(getManifestUrl(manifest), aki, manifest))
+            val aki = manifest.getCertificate.getAuthorityKeyIdentifier
+            pw.println(s"$f; ${hashToString(aki)} ${rsyncUrl(f)}")
+            process(ManifestObject(rsyncUrl(f), aki, manifest.getEncoded))
           case "crl" =>
             val crl = new X509Crl(readFile(f))
-            val aki = getCrlAki(crl)
-            pw.println(s"$f; ${hashToString(aki)}")
-            process(CrlObject(getCrlUrl(crl), aki, crl))
+            val aki = crl.getAuthorityKeyIdentifier
+            pw.println(s"$f; ${hashToString(aki)} ${rsyncUrl(f)}")
+            process(CrlObject(rsyncUrl(f), aki, crl.getEncoded))
           case "roa" =>
             val roa = RoaCms.parseDerEncoded(readFile(f))
-            val aki = getRoaAki(roa)
-            pw.println(s"$f; ${hashToString(aki)}")
-            process(RoaObject(getRoaUrl(roa), aki, roa))
+            val aki = roa.getCertificate.getAuthorityKeyIdentifier
+            pw.println(s"$f; ${hashToString(aki)} ${rsyncUrl(f)}")
+            process(RoaObject(rsyncUrl(f), aki, roa.getEncoded))
           case _ =>
             logger.info(s"Found useless file $f")
         }
     }
   }
-
-
-  def getRoaAki(roa: RoaCms): Array[Byte] = {
-    roa.getCertificate.getAuthorityKeyIdentifier
-  }
-
-  // TODO Implement
-  private def getCrlAki(crl: X509Crl) = crl.getAuthorityKeyIdentifier
-
-  private def getCertificateSki(certificate: X509ResourceCertificate) = certificate.getSubjectKeyIdentifier
-
-  private def getManifestAki(manifest: ManifestCms) = manifest.getCertificate.getAuthorityKeyIdentifier
-
-  //
-  def getCertificateUrl(certificate: X509ResourceCertificate): String = ""
-
-  def getManifestUrl(cms: ManifestCms) = ""
-
-  def getCrlUrl(crl: X509Crl) = ""
-
-  def getRoaUrl(roa: RoaCms) = ""
-
 
   def hashToString(bytes: Array[Byte]) = bytes.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
 
@@ -158,5 +147,5 @@ class RsyncFetcher extends Fetcher {
 }
 
 class HttpFetcher extends Fetcher {
-  override def fetchRepo[T, U](uri: URI, process: (RepositoryObject) => Unit): Unit = ???
+  override def fetchRepo(uri: URI, process: (RepositoryObject) => Unit): Unit = ???
 }

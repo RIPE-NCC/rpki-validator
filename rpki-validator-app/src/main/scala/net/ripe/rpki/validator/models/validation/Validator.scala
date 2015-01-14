@@ -29,29 +29,51 @@
  */
 package net.ripe.rpki.validator.models.validation
 
+import java.math.BigInteger
 import java.net.URI
 
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
-import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
-import net.ripe.rpki.commons.crypto.crl.X509Crl
-import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.validator.fetchers.{HttpFetcher, RsyncFetcher, Fetcher}
+import net.ripe.rpki.validator.store.Storage
 
 import scala.language.reflectiveCalls
 
-sealed trait RepositoryObject {
-  def uri: String
+trait Hashing {
+  // TODO Remove reference to ManifestCms
+  def getHash(bytes: Array[Byte]): Array[Byte] = ManifestCms.hashContents(bytes)
 
-  def hash: Array[Byte]
+  def stringify(bytes: Array[Byte]) = bytes.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
+
+  def stringToBytes(s: String) = new BigInteger(s, 16).toByteArray
 }
 
-case class CertificateObject(override val uri: String, override val hash: Array[Byte], certificate: X509ResourceCertificate) extends RepositoryObject
 
-case class ManifestObject(override val uri: String, override val hash: Array[Byte], manifest: ManifestCms) extends RepositoryObject
+sealed trait RepositoryObject extends Hashing {
+  def url: String
 
-case class CrlObject(override val uri: String, override val hash: Array[Byte], crl: X509Crl) extends RepositoryObject
+  def aki: Array[Byte]
 
-case class RoaObject(override val uri: String, override val hash: Array[Byte], roa: RoaCms) extends RepositoryObject
+  def encoded: Array[Byte]
+
+  def hash: Array[Byte] = getHash(encoded)
+}
+
+case class CertificateObject(override val url: String,
+                             override val aki: Array[Byte],
+                             override val encoded: Array[Byte],
+                             ski: Array[Byte]) extends RepositoryObject
+
+case class ManifestObject(override val url: String,
+                          override val aki: Array[Byte],
+                          override val encoded: Array[Byte]) extends RepositoryObject
+
+case class CrlObject(override val url: String,
+                     override val aki: Array[Byte],
+                     override val encoded: Array[Byte]) extends RepositoryObject
+
+case class RoaObject(override val url: String,
+                     override val aki: Array[Byte],
+                     override val encoded: Array[Byte]) extends RepositoryObject
 
 
 class Validator(repoUri: URI, storage: Storage) {
@@ -64,27 +86,15 @@ class Validator(repoUri: URI, storage: Storage) {
 
   def fetchAll(certificate: CertificateObject) = {
     fetcher.fetchRepo(repoUri, {
-      case c@CertificateObject(uri, hash, cert) => storage.storeCertificate(c)
-      case c@CrlObject(uri, hash, crl) => storage.storeCrl(c)
-      case m@ManifestObject(uri, hash, manifest) => storage.storeManifest(m)
-      case r@RoaObject(uri, hash, manifest) => storage.storeRoa(r)
+      case c: CertificateObject => storage.storeCertificate(c)
+      case c: CrlObject => storage.storeCrl(c)
+      case m: ManifestObject => storage.storeManifest(m)
+      case r: RoaObject => storage.storeRoa(r)
     })
   }
 
   def validate(certificate: CertificateObject) = {
     val prefetched = fetchAll(certificate)
   }
-
-}
-
-trait Storage {
-
-  def storeCertificate(certificate: CertificateObject)
-
-  def storeManifest(manifest: ManifestObject)
-
-  def storeCrl(crl: CrlObject)
-
-  def storeRoa(Roa: RoaObject)
 
 }
