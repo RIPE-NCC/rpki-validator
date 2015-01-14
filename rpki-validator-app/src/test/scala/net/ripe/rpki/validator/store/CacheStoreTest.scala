@@ -61,11 +61,16 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
       ski = Array[Byte](3.toByte))
 
     store.storeCertificate(certificate)
-    
-    val c = new JdbcTemplate(memoryDataSource).queryForInt("SELECT COUNT(*) FROM certificates")
-    c should be(1)
 
-//    store.getCertificates(aki).head should be(certificate)
+    val certificates: Seq[CertificateObject] = store.getCertificates(aki)
+    certificates should have length 1
+
+    val head = certificates.head
+    head.url should be(certificate.url)
+    head.aki should be(certificate.aki)
+    head.ski should be(certificate.ski)
+    head.encoded should be(certificate.encoded)
+    head.hash should be(certificate.hash)
   }
 
 }

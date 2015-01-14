@@ -55,13 +55,13 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   val template: JdbcTemplate = new JdbcTemplate(dataSource)
 
   override def storeCertificate(certificate: CertificateObject): Unit = {
-      template.update(
-        "insert into certificates(aki, ski, hash, url, encoded) values (?, ?, ?, ?, ?)",
-        stringify(certificate.aki),
-        stringify(certificate.ski),
-        stringify(certificate.hash),
-        certificate.url,
-        certificate.encoded)
+    template.update(
+      "insert into certificates(aki, ski, hash, url, encoded) values (?, ?, ?, ?, ?)",
+      stringify(certificate.aki),
+      stringify(certificate.ski),
+      stringify(certificate.hash),
+      certificate.url,
+      certificate.encoded)
   }
 
   override def storeRoa(roa: RoaObject): Unit = {
