@@ -68,6 +68,7 @@ object ApplicationOptions {
   def dataFileLocation = resolveFile(config.getString("locations.datadir"), "data.json")
   def talDirLocation = new File(config.getString("locations.taldir"))
   def workDirLocation = new File(config.getString("locations.workdir"))
+  def rsyncDirLocation = config.getString("locations.rsyncdir")
 
   def applicationLogFileName = config.getString("logging.application.file")
   def rtrLogFileName = config.getString("logging.rtr.file")

@@ -38,6 +38,7 @@ import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceCertificate, X509ResourceCertificateParser}
 import net.ripe.rpki.commons.rsync.Rsync
+import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.models.validation._
 import org.apache.log4j.Logger
 import org.bouncycastle.jce.provider.X509CRLParser
@@ -49,6 +50,8 @@ import scala.util.Try
 trait Fetcher {
   def fetchRepo(uri: URI, process: RepositoryObject[_] => Unit)
 }
+
+
 
 class RsyncFetcher extends Fetcher {
 
@@ -62,28 +65,23 @@ class RsyncFetcher extends Fetcher {
     } else f(d)
   }
 
-  private[this] def withTempDir[T](f: File => T) = {
-    def deleteTree(f: File) {
-      if (f.isDirectory)
-        f.listFiles.foreach(deleteTree)
-      f.delete()
+  private[this] def withRsyncDir[T](uri: URI)(f: File => T) = {
+
+    def uriToPath = {
+      val symbols = "/:.@-"
+      uri.toString.map(c => if (symbols.contains(c)) '_' else c)
     }
 
-    val destDir = {
-      val path = Files.createTempDirectory("rsync-tmp-")
-      val dir = path.toFile
-      if (!dir.exists) dir.mkdir
-      dir
+    def destDir = {
+      val rsyncPath = new File(ApplicationOptions.rsyncDirLocation + "/" + uriToPath)
+      if (!rsyncPath.exists) rsyncPath.mkdir
+      rsyncPath
     }
-    val result = try {
-      f(destDir)
-    } finally {
-      deleteTree(destDir)
-    }
-    result
+
+    f(destDir)
   }
 
-  override def fetchRepo(uri: URI, process: RepositoryObject[_] => Unit) = withTempDir {
+  override def fetchRepo(uri: URI, process: RepositoryObject[_] => Unit) = withRsyncDir(uri) {
     tmpDir =>
       logger.info(s"Downloading the repository $uri to ${tmpDir.getAbsolutePath}")
       val r = new Rsync(uri.toString, tmpDir.getAbsolutePath)

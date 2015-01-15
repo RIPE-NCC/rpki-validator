@@ -96,15 +96,15 @@ case class RoaObject(override val url: String,
 }
 
 
-class Validator(repoUri: URI, storage: Storage) {
+class RepoFetcher(storage: Storage) {
 
-  val fetcher: Fetcher = repoUri.getScheme match {
-    case "rsync" => new RsyncFetcher
-    case "http" | "https" => new HttpFetcher
-    case _ => throw new Exception(s"No fetcher for the uri $repoUri")
-  }
+  def fetch(repoUri: URI) = {
+    val fetcher = repoUri.getScheme match {
+      case "rsync" => new RsyncFetcher
+      case "http" | "https" => new HttpFetcher
+      case _ => throw new Exception(s"No fetcher for the uri $repoUri")
+    }
 
-  def fetchAll() = {
     fetcher.fetchRepo(repoUri, {
       case c: CertificateObject => storage.storeCertificate(c)
       case c: CrlObject => storage.storeCrl(c)
@@ -112,5 +112,4 @@ class Validator(repoUri: URI, storage: Storage) {
       case r: RoaObject => storage.storeRoa(r)
     })
   }
-
 }
