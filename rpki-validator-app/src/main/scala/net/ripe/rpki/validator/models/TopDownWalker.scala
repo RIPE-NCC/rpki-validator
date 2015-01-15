@@ -118,23 +118,42 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     })
   }
 
-
   private def processManifestEntries(manifest: ManifestObject, crl: CrlObject, roas: Seq[RoaObject], childrenCertificates: Seq[CertificateObject]) {
     val repositoryUri = certificateContext.getRepositoryURI
     val entries = manifest.decoded.getFiles.entrySet().asScala.toSeq
     val crlsOnManifest = entries.filter(_.getKey.toLowerCase.endsWith(".crl"))
     val validationLocation = new ValidationLocation(manifest.url)
+    checkManifestUrlOnCertMatchesLocationInRepo(manifest.url, certificateContext.getManifestURI.toString, validationLocation)
     crossCheckCrls(crl, crlsOnManifest, validationLocation)
-    entries.map(entry => {
-      val filename = entry.getKey
-      val fullName = repositoryUri.resolve(filename)
 
-    })
+
+//    entries.map(entry => {
+//      val filename = entry.getKey
+//      val fullName = repositoryUri.resolve(filename)
+//
+//    })
   }
 
-  def crossCheckCrls(crl: CrlObject, entries: Seq[Entry[String, Array[Byte]]], validationLocation: ValidationLocation) = {
-    if (entries.size == 0) {
+  def checkManifestUrlOnCertMatchesLocationInRepo(repoLocation: String, certificateLocation: String, validationLocation: ValidationLocation) = {
+    if(!repoLocation.equalsIgnoreCase(certificateLocation)) {
+      validationResult.warnForLocation(validationLocation, ValidationString.VALIDATOR_MANIFEST_LOCATION_MISMATCH, certificateLocation, repoLocation)
+    }
+  }
+
+
+
+  def crossCheckCrls(crl: CrlObject, crlEntries: Seq[Entry[String, Array[Byte]]], validationLocation: ValidationLocation) = {
+    if (crlEntries.size == 0) {
       validationResult.warnForLocation(validationLocation, ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, "*.crl")
+    } else if (crlEntries.size > 1) {
+      val crlFileNames = crlEntries.map(_.getKey).mkString(",")
+      validationResult.warnForLocation(validationLocation, ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Single CRL expected, found: $crlFileNames")
+    } else {
+      if (crl.hash != crlEntries.head.getValue) {
+        validationResult.warnForLocation(validationLocation, ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Hash code of ${crlEntries.head.getKey} doesn't match hashcode in manifest")
+      } else if (certificateContext.getRepositoryURI.resolve(crlEntries.head.getKey).toString != crl.url) {
+        validationResult.warnForLocation(validationLocation, ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"URL of CRL in manifest [${crlEntries.head.getKey}] doesn't match URL in repo [${crl.url}}]")
+      }
     }
   }
 
