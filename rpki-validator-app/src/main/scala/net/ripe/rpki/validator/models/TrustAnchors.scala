@@ -31,6 +31,8 @@ package net.ripe.rpki.validator.models
 
 import java.io.File
 import java.net.URI
+import net.ripe.rpki.validator.models.validation.RepoFetcher
+
 import scala.collection.JavaConverters._
 import scala.concurrent.stm.Ref
 import scala.concurrent.stm.atomic
@@ -243,8 +245,8 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
       logger.info("Done prefetching for '" + prefetchUri + "'")
     }
 
-    //TODO setup datasource
-    val walker = new TopDownWalker(certificate, new CacheStore(DataSources.InMemoryDataSource), new RsyncFetcher, validationOptions)
+    val store: CacheStore = new CacheStore(RepositoryObjectStore)
+    val walker = new TopDownWalker(certificate, store, new RepoFetcher(store), validationOptions)
     val validationResult: ValidationResult = walker.execute
     // TODO convert validationResult to whatever we have to return here
     builder.result()
