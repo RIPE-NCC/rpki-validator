@@ -1,9 +1,7 @@
 BEGIN;
 
 DROP TABLE IF EXISTS certificates;
-DROP TABLE IF EXISTS crls;
-DROP TABLE IF EXISTS manifests;
-DROP TABLE IF EXISTS roas;
+DROP TABLE IF EXISTS repo_objects;
 
 CREATE TABLE certificates (
   ski     CHARACTER VARYING(40)   NOT NULL,
@@ -13,31 +11,19 @@ CREATE TABLE certificates (
   encoded BYTEA                   NOT NULL
 );
 
-CREATE TABLE crls (
+-- All the other objects
+CREATE TABLE repo_objects (
   aki     CHARACTER VARYING(40)   NOT NULL,
   hash    CHARACTER VARYING(64)   NOT NULL,
   url     CHARACTER VARYING(2000) NOT NULL,
-  encoded BYTEA                   NOT NULL
-);
-
-CREATE TABLE manifests (
-  aki     CHARACTER VARYING(40)   NOT NULL,
-  hash    CHARACTER VARYING(64)   NOT NULL,
-  url     CHARACTER VARYING(2000) NOT NULL,
-  encoded BYTEA                   NOT NULL
-);
-
-CREATE TABLE roas (
-  aki     CHARACTER VARYING(40)   NOT NULL,
-  hash    CHARACTER VARYING(64)   NOT NULL,
-  url     CHARACTER VARYING(2000) NOT NULL,
-  encoded BYTEA                   NOT NULL
+  type    CHARACTER VARYING(10)   NOT NULL,
+  encoded BYTEA                   NOT NULL,
+  CHECK (type IN ('crl', 'manifest', 'roa'))
 );
 
 CREATE INDEX idx_certificates_aki ON certificates (aki);
 CREATE INDEX idx_certificates_ski ON certificates (ski);
-CREATE INDEX idx_crls_aki ON crls (aki);
-CREATE INDEX idx_manifests_aki ON manifests (aki);
-CREATE INDEX idx_roas_aki ON roas (aki);
+CREATE INDEX idx_repo_obj_aki ON repo_objects (aki);
+CREATE INDEX idx_repo_obj_aki_type ON repo_objects (aki, type);
 
 COMMIT;

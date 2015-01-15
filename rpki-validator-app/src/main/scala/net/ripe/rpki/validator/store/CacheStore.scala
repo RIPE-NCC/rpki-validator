@@ -33,6 +33,7 @@ import java.sql.ResultSet
 import javax.sql.DataSource
 
 import net.ripe.rpki.validator.models.validation._
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.jdbc.core.{RowMapper, JdbcTemplate}
 import scala.collection.JavaConversions._
 
@@ -57,85 +58,73 @@ trait Storage {
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
-  val template: JdbcTemplate = new JdbcTemplate(dataSource)
+  val template: NamedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource)
 
-  override def storeCertificate(certificate: CertificateObject): Unit = {
+  override def storeCertificate(certificate: CertificateObject) =
     template.update(
-      "insert into certificates(aki, ski, hash, url, encoded) values (?, ?, ?, ?, ?)",
-      stringify(certificate.aki),
-      stringify(certificate.ski),
-      stringify(certificate.hash),
-      certificate.url,
-      certificate.encoded)
-  }
+      "INSERT INTO certificates(aki, ski, hash, url, encoded) VALUES (:aki, :ski, :hash, :url, :encoded)",
+      Map("aki" -> stringify(certificate.aki),
+        "ski" -> stringify(certificate.ski),
+        "hash" -> stringify(certificate.hash),
+        "url" -> certificate.url,
+        "encoded" -> certificate.encoded))
 
-  override def storeRoa(roa: RoaObject): Unit = {
-    template.update(
-      "insert into roas(aki, hash, url, encoded) values (?, ?, ?, ?)",
-      stringify(roa.aki),
-      stringify(roa.hash),
-      roa.url,
-      roa.encoded)
-  }
+  override def storeRoa(roa: RoaObject) = storeRepoObject(roa, "roa")
 
-  override def storeManifest(manifest: ManifestObject): Unit = {
-    template.update(
-      "insert into manifests(aki, hash, url, encoded) values (?, ?, ?, ?)",
-      stringify(manifest.aki),
-      stringify(manifest.hash),
-      manifest.url,
-      manifest.encoded)
-  }
+  override def storeManifest(manifest: ManifestObject) = storeRepoObject(manifest, "manifest")
 
-  override def storeCrl(crl: CrlObject): Unit = {
+  override def storeCrl(crl: CrlObject) = storeRepoObject(crl, "crl")
+
+  private def storeRepoObject[T](obj: RepositoryObject[T], objType: String) = {
     template.update(
-      "insert into crls(aki, hash, url, encoded) values (?, ?, ?, ?)",
-      stringify(crl.aki),
-      stringify(crl.hash),
-      crl.url,
-      crl.encoded)
+      """INSERT INTO repo_objects(aki, hash, url, encoded, type)
+         SELECT :aki, :hash, :url, :encoded, :type
+         WHERE NOT EXISTS (
+           SELECT * FROM repo_objects ro
+           WHERE ro.hash = :hash AND ro.url = :url
+         )
+      """,
+      Map("aki" -> stringify(obj.aki),
+        "hash" -> stringify(obj.hash),
+        "url" -> obj.url,
+        "encoded" -> obj.encoded,
+        "type" -> objType))
   }
 
   override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] =
-    template.query("SELECT url, ski, encoded FROM certificates WHERE aki = ?", new RowMapper[CertificateObject] {
-      override def mapRow(rs: ResultSet, i: Int) =
-        CertificateObject(
-          url = rs.getString(1),
-          aki = aki,
-          ski = stringToBytes(rs.getString(2)),
-          encoded = rs.getBytes(3))
-    }, stringify(aki)).toSeq
+    template.query("SELECT url, ski, encoded FROM certificates WHERE aki = :aki",
+      Map("aki" -> stringify(aki)),
+      new RowMapper[CertificateObject] {
+        override def mapRow(rs: ResultSet, i: Int) =
+          CertificateObject(
+            url = rs.getString(1),
+            aki = aki,
+            ski = stringToBytes(rs.getString(2)),
+            encoded = rs.getBytes(3))
+      }).toSeq
 
-  def getCrls(aki: Array[Byte]): Seq[CrlObject] =
-    template.query("SELECT url, encoded FROM crls WHERE aki = ?", new RowMapper[CrlObject] {
-      override def mapRow(rs: ResultSet, i: Int) =
-        CrlObject(
-          url = rs.getString(1),
-          aki = aki,
-          encoded = rs.getBytes(2))
-    }, stringify(aki)).toSeq
+  def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, "crl") {
+    (url, aki, encoded) => CrlObject(url, aki, encoded)
+  }
 
-  def getRoas(aki: Array[Byte]): Seq[RoaObject] =
-    template.query("SELECT url, encoded FROM roas WHERE aki = ?", new RowMapper[RoaObject] {
-      override def mapRow(rs: ResultSet, i: Int) =
-        RoaObject(
-          url = rs.getString(1),
-          aki = aki,
-          encoded = rs.getBytes(2))
-    }, stringify(aki)).toSeq
+  def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, "manifest") {
+    (url, aki, encoded) => ManifestObject(url, aki, encoded)
+  }
 
-  def getManifests(aki: Array[Byte]): Seq[ManifestObject] =
-    template.query("SELECT url, encoded FROM manifests WHERE aki = ?", new RowMapper[ManifestObject] {
-      override def mapRow(rs: ResultSet, i: Int) =
-        ManifestObject(
-          url = rs.getString(1),
-          aki = aki,
-          encoded = rs.getBytes(2))
-    }, stringify(aki)).toSeq
+  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, "roa") {
+    (url, aki, encoded) => RoaObject(url, aki, encoded)
+  }
+
+  private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte], Array[Byte]) => T) =
+    template.query("SELECT url, encoded FROM repo_objects WHERE aki = :aki AND type = :type",
+      Map("aki" -> stringify(aki), "type" -> objType),
+      new RowMapper[T] {
+        override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), aki, rs.getBytes(2))
+      }).toSeq
 
   def clear() = {
-    for (t <- Seq("certificates", "manifests", "crls", "roas"))
-      template.update(s"TRUNCATE TABLE $t")
+    for (t <- Seq("certificates", "repo_objects"))
+      template.update(s"TRUNCATE TABLE $t", Map[String, Object]())
   }
 
 }
