@@ -32,15 +32,18 @@ package net.ripe.rpki.validator.models.validation
 import java.math.BigInteger
 import java.net.URI
 
-import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCmsParser, ManifestCms}
+import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsParser}
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
-import net.ripe.rpki.commons.crypto.x509cert.{X509ResourceCertificateParser, X509ResourceCertificate}
-import net.ripe.rpki.validator.fetchers.{HttpFetcher, RsyncFetcher, Fetcher}
+import net.ripe.rpki.commons.crypto.x509cert.{X509ResourceCertificate, X509ResourceCertificateParser}
+import net.ripe.rpki.commons.validation.ValidationResult
+import net.ripe.rpki.validator.fetchers.{HttpFetcher, RsyncFetcher}
 import net.ripe.rpki.validator.store.Storage
 
+import scala.collection.JavaConversions._
+
+
 trait Hashing {
-  // TODO Remove reference to ManifestCms
   def getHash(bytes: Array[Byte]): Array[Byte] = ManifestCms.hashContents(bytes)
 
   def stringify(bytes: Array[Byte]) = bytes.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
@@ -50,6 +53,9 @@ trait Hashing {
 
 
 sealed trait RepositoryObject[T] extends Hashing {
+
+  type Decoded = Either[String, T]
+
   def url: String
 
   def aki: Array[Byte]
@@ -59,40 +65,90 @@ sealed trait RepositoryObject[T] extends Hashing {
   def hash: Array[Byte] = getHash(encoded)
 
   def decoded: T
+
+  def tryDecode: Decoded
+
+  def tryDecode(f: => Decoded) = try f catch {
+    case e: Exception => Left(e.getMessage)
+  }
+
+  def formatFailures(r: ValidationResult) = r.getFailuresForAllLocations.map {
+    ch => s"[${ch.getKey}, status = ${ch.getStatus}, params = ${ch.getParams.mkString(" ")}]"
+  }.mkString("\n")
+
+}
+
+object CertificateObject {
+
+  private def makeParser(url: String, bytes: Array[Byte]) = {
+    val parser = new X509ResourceCertificateParser
+    parser.parse(url, bytes)
+    parser
+  }
+
+  def of(url: String, bytes: Array[Byte]): CertificateObject = {
+    val certificate = makeParser(url, bytes).getCertificate
+    CertificateObject(url, certificate.getAuthorityKeyIdentifier, bytes, certificate.getSubjectKeyIdentifier)
+  }
+
 }
 
 case class CertificateObject(override val url: String,
                              override val aki: Array[Byte],
                              override val encoded: Array[Byte],
                              ski: Array[Byte]) extends RepositoryObject[X509ResourceCertificate] {
-  def decoded = {
+  def tryDecode = tryDecode {
+    val parser = makeParser
+    if (parser.isSuccess)
+      Left(formatFailures(parser.getValidationResult))
+    else
+      Right(parser.getCertificate)
+  }
+
+  def decoded = makeParser.getCertificate
+
+  private def makeParser = {
     val parser = new X509ResourceCertificateParser
     parser.parse(url, encoded)
-    parser.getCertificate
+    parser
   }
 }
 
 case class ManifestObject(override val url: String,
                           override val aki: Array[Byte],
                           override val encoded: Array[Byte]) extends RepositoryObject[ManifestCms] {
-  def decoded = {
+
+  def tryDecode = tryDecode {
+    val parser: ManifestCmsParser = makeParser
+    if (parser.isSuccess)
+      Right(parser.getManifestCms)
+    else
+      Left(formatFailures(parser.getValidationResult))
+  }
+
+  def decoded = makeParser.getManifestCms
+
+  private def makeParser: ManifestCmsParser = {
     val parser = new ManifestCmsParser
     parser.parse(url, encoded)
-    parser.getManifestCms
+    parser
   }
 }
 
 case class CrlObject(override val url: String,
                      override val aki: Array[Byte],
                      override val encoded: Array[Byte]) extends RepositoryObject[X509Crl] {
-
   def decoded = new X509Crl(encoded)
+
+  def tryDecode = tryDecode(Right(decoded))
 }
 
 case class RoaObject(override val url: String,
                      override val aki: Array[Byte],
                      override val encoded: Array[Byte]) extends RepositoryObject[RoaCms] {
   def decoded = RoaCms.parseDerEncoded(encoded)
+
+  def tryDecode = tryDecode(Right(decoded))
 }
 
 

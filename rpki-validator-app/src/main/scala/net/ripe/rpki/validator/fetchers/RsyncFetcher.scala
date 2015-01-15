@@ -86,8 +86,7 @@ class RsyncFetcher extends Fetcher {
           case 0 => Right(readObjects(tmpDir, uri, process))
           case code => Left( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
         }
-      }
-      catch {
+      } catch {
         case e: Exception => Left( s"""Failed with exception, ${e.getMessage}""")
       }
   }

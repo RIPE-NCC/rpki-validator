@@ -55,7 +55,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   private lazy val crlOption: Option[CrlObject] = findCrl
 
   private def crlLocator = new CrlLocator {
-    override def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): X509Crl = crlOption.get.decoded
+    override def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): X509Crl =
+      crlOption.get.decoded
   }
 
   def execute: ValidationResult = {

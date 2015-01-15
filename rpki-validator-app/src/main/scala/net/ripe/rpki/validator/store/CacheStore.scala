@@ -34,7 +34,7 @@ import javax.sql.DataSource
 
 import net.ripe.rpki.validator.models.validation._
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
-import org.springframework.jdbc.core.{RowMapper, JdbcTemplate}
+import org.springframework.jdbc.core.RowMapper
 import scala.collection.JavaConversions._
 
 trait Storage {
