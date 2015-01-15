@@ -29,29 +29,24 @@
  */
 package net.ripe.rpki.validator.fetchers
 
-import java.io.{PrintWriter, File}
+import java.io.{File, PrintWriter}
 import java.net.URI
 import java.nio.file.Files
 
-import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsParser}
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsParser
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
-import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceCertificate, X509ResourceCertificateParser}
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateParser
 import net.ripe.rpki.commons.rsync.Rsync
 import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.models.validation._
 import org.apache.log4j.Logger
-import org.bouncycastle.jce.provider.X509CRLParser
 
 import scala.collection.JavaConversions._
-import scala.reflect.io.Path
-import scala.util.Try
 
 trait Fetcher {
   def fetchRepo(uri: URI, process: RepositoryObject[_] => Unit)
 }
-
-
 
 class RsyncFetcher extends Fetcher {
 
@@ -67,14 +62,14 @@ class RsyncFetcher extends Fetcher {
 
   private[this] def withRsyncDir[T](uri: URI)(f: File => T) = {
 
-    def uriToPath = {
-      val symbols = "/:.@-"
-      uri.toString.map(c => if (symbols.contains(c)) '_' else c)
-    }
+    val specialSymbols = "/:.@-"
+    def uriToPath = uri.toString.map(c => if (specialSymbols.contains(c)) '_' else c)
 
     def destDir = {
       val rsyncPath = new File(ApplicationOptions.rsyncDirLocation + "/" + uriToPath)
-      if (!rsyncPath.exists) rsyncPath.mkdir
+      if (!rsyncPath.exists) {
+        rsyncPath.mkdirs
+      }
       rsyncPath
     }
 
@@ -86,9 +81,14 @@ class RsyncFetcher extends Fetcher {
       logger.info(s"Downloading the repository $uri to ${tmpDir.getAbsolutePath}")
       val r = new Rsync(uri.toString, tmpDir.getAbsolutePath)
       r.addOptions(OPTIONS)
-      r.execute match {
-        case 0 => Right(readObjects(tmpDir, uri, process))
-        case code => Left( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
+      try {
+        r.execute match {
+          case 0 => Right(readObjects(tmpDir, uri, process))
+          case code => Left( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
+        }
+      }
+      catch {
+        case e: Exception => Left( s"""Failed with exception, ${e.getMessage}""")
       }
   }
 
