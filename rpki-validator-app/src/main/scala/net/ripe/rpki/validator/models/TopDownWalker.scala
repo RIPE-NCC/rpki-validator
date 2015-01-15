@@ -34,20 +34,20 @@ import java.util.Map.Entry
 
 import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509Crl, X509CrlValidator}
 import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
-import net.ripe.rpki.commons.validation.ValidationString.CRL_REQUIRED
+import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationOptions, ValidationResult, ValidationString}
-import net.ripe.rpki.validator.fetchers.Fetcher
+import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationOptions, ValidationResult}
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.Storage
 import org.apache.commons.lang.Validate
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 
 
 class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, fetcher: RepoFetcher, validationOptions: ValidationOptions) {
-  
+
+  private object Util extends Hashing
+
   Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")
 
   private val validationResult: ValidationResult = ValidationResult.withLocation("")
@@ -68,11 +68,15 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
 
     if (crlOption.isDefined) {
-      val manifest = findManifest
       val roas = findRoas
       val childrenCertificates = findChildrenCertificates
 
-      crossCheckWithManifest(manifest, crlOption.get, roas, childrenCertificates)
+      findManifest match {
+        case Some(manifest) =>
+          crossCheckWithManifest(manifest, crlOption.get, roas, childrenCertificates)
+        case None =>
+          validationError(VALIDATOR_CA_SHOULD_HAVE_MANIFEST, Util.stringify(certificateContext.getSubjectKeyIdentifier))
+      }
 
       childrenCertificates.foreach( cert => {
         val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(""), cert.decoded) //TODO get proper URI
@@ -123,7 +127,6 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     val entries = manifest.decoded.getFiles.entrySet().asScala.toSeq
     val crlsOnManifest = entries.filter(_.getKey.toLowerCase.endsWith(".crl"))
     val validationLocation = new ValidationLocation(manifest.url)
-    checkManifestUrlOnCertMatchesLocationInRepo(manifest.url, certificateContext.getManifestURI.toString, validationLocation)
     crossCheckCrls(crl, crlsOnManifest, validationLocation)
 
 
@@ -134,9 +137,12 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 //    })
   }
 
-  def checkManifestUrlOnCertMatchesLocationInRepo(repoLocation: String, certificateLocation: String, validationLocation: ValidationLocation) = {
-    if(!repoLocation.equalsIgnoreCase(certificateLocation)) {
-      validationResult.warnForLocation(validationLocation, ValidationString.VALIDATOR_MANIFEST_LOCATION_MISMATCH, certificateLocation, repoLocation)
+  def checkManifestUrlOnCertMatchesLocationInRepo(manifest: ManifestObject) = {
+    val manifestLocationInCertificate: String = certificateContext.getManifestURI.toString
+    val manifestLocationInRepository: String = manifest.url
+    if(! manifestLocationInRepository.equalsIgnoreCase(manifestLocationInCertificate)) {
+      validationResult.warnForLocation(new ValidationLocation(manifestLocationInRepository),
+        VALIDATOR_MANIFEST_LOCATION_MISMATCH, manifestLocationInCertificate, manifestLocationInRepository)
     }
   }
 
@@ -144,15 +150,15 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   def crossCheckCrls(crl: CrlObject, crlEntries: Seq[Entry[String, Array[Byte]]], validationLocation: ValidationLocation) = {
     if (crlEntries.size == 0) {
-      validationResult.warnForLocation(validationLocation, ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, "*.crl")
+      validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, "*.crl")
     } else if (crlEntries.size > 1) {
       val crlFileNames = crlEntries.map(_.getKey).mkString(",")
-      validationResult.warnForLocation(validationLocation, ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Single CRL expected, found: $crlFileNames")
+      validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Single CRL expected, found: $crlFileNames")
     } else {
       if (crl.hash != crlEntries.head.getValue) {
-        validationResult.warnForLocation(validationLocation, ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Hash code of ${crlEntries.head.getKey} doesn't match hashcode in manifest")
+        validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Hash code of ${crlEntries.head.getKey} doesn't match hashcode in manifest")
       } else if (certificateContext.getRepositoryURI.resolve(crlEntries.head.getKey).toString != crl.url) {
-        validationResult.warnForLocation(validationLocation, ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"URL of CRL in manifest [${crlEntries.head.getKey}] doesn't match URL in repo [${crl.url}}]")
+        validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"URL of CRL in manifest [${crlEntries.head.getKey}] doesn't match URL in repo [${crl.url}}]")
       }
     }
   }
@@ -171,13 +177,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     certs
   }
 
-  private def crossCheckWithManifest(manifest: Option[ManifestObject], crl: CrlObject, roas: Seq[RoaObject], childrenCertificates: Seq[CertificateObject]) {
-    if (manifest.isEmpty) {
-      //TODO better error code
-      validationError(ValidationString.VALIDATOR_OBJECT_PROCESSING_EXCEPTION, "No manifests with SKI=" + certificateContext.getSubjectKeyIdentifier)
-    } else {
-      processManifestEntries(manifest.get, crl, roas, childrenCertificates)
-    }
+  private def crossCheckWithManifest(manifest: ManifestObject, crl: CrlObject, roas: Seq[RoaObject], childrenCertificates: Seq[CertificateObject]) {
+        checkManifestUrlOnCertMatchesLocationInRepo(manifest)
+        processManifestEntries(manifest, crl, roas, childrenCertificates)
   }
 
 
