@@ -91,4 +91,8 @@ class ApplicationOptionsTest extends ValidatorTestCase {
   test("Should use 3 hours as the default interval for validation") {
     ApplicationOptions.validationInterval should equal(3.hours)
   }
+
+  test("Should use data/rsync as the default directory for rsync-based repositories") {
+    ApplicationOptions.rsyncDirLocation should equal("data/rsync")
+  }
 }
