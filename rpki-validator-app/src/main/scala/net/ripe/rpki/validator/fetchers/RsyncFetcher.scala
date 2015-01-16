@@ -45,7 +45,8 @@ import org.apache.log4j.Logger
 import scala.collection.JavaConversions._
 
 trait Fetcher {
-  def fetchRepo(uri: URI, process: RepositoryObject[_] => Unit)
+  type Callback = Either[BrokenObject, RepositoryObject[_]] => Unit
+  def fetchRepo(uri: URI, process: Callback)
 }
 
 class RsyncFetcher extends Fetcher {
@@ -76,7 +77,7 @@ class RsyncFetcher extends Fetcher {
     f(destDir)
   }
 
-  override def fetchRepo(uri: URI, process: RepositoryObject[_] => Unit) = withRsyncDir(uri) {
+  override def fetchRepo(uri: URI, process: Callback) = withRsyncDir(uri) {
     tmpDir =>
       logger.info(s"Downloading the repository $uri to ${tmpDir.getAbsolutePath}")
       val r = new Rsync(uri.toString, tmpDir.getAbsolutePath)
@@ -92,7 +93,7 @@ class RsyncFetcher extends Fetcher {
   }
 
 
-  def readObjects(tmpRoot: File, repoUri: URI, process: RepositoryObject[_] => Unit) = {
+  def readObjects(tmpRoot: File, repoUri: URI, process: Callback) = {
 
     val replacement = {
       val s = repoUri.toString
@@ -106,31 +107,10 @@ class RsyncFetcher extends Fetcher {
     walkTree(tmpRoot) {
       f =>
         f.getName.takeRight(3) match {
-          case "cer" =>
-            val parser = new X509ResourceCertificateParser
-            parser.parse(f.getAbsolutePath, readFile(f))
-            val certificate = parser.getCertificate
-            val ski = certificate.getSubjectKeyIdentifier
-            val aki = certificate.getAuthorityKeyIdentifier
-            pw.println(s"$f; ${hashToString(ski)}; ${rsyncUrl(f)}")
-            process(CertificateObject(rsyncUrl(f), aki, certificate.getEncoded, ski))
-          case "mft" =>
-            val parser = new ManifestCmsParser
-            parser.parse(f.getAbsolutePath, readFile(f))
-            val manifest = parser.getManifestCms
-            val aki = manifest.getCertificate.getAuthorityKeyIdentifier
-            pw.println(s"$f; ${hashToString(aki)} ${rsyncUrl(f)}")
-            process(ManifestObject(rsyncUrl(f), aki, manifest.getEncoded))
-          case "crl" =>
-            val crl = new X509Crl(readFile(f))
-            val aki = crl.getAuthorityKeyIdentifier
-            pw.println(s"$f; ${hashToString(aki)} ${rsyncUrl(f)}")
-            process(CrlObject(rsyncUrl(f), aki, crl.getEncoded))
-          case "roa" =>
-            val roa = RoaCms.parseDerEncoded(readFile(f))
-            val aki = roa.getCertificate.getAuthorityKeyIdentifier
-            pw.println(s"$f; ${hashToString(aki)} ${rsyncUrl(f)}")
-            process(RoaObject(rsyncUrl(f), aki, roa.getEncoded))
+          case "cer" => process(CertificateObject.tryParse(rsyncUrl(f), readFile(f)))
+          case "mft" => process(ManifestObject.tryParse(rsyncUrl(f), readFile(f)))
+          case "crl" => process(CrlObject.tryParse(rsyncUrl(f), readFile(f)))
+          case "roa" => process(RoaObject.tryParse(rsyncUrl(f), readFile(f)))
           case _ =>
             logger.info(s"Found useless file $f")
         }
@@ -144,5 +124,5 @@ class RsyncFetcher extends Fetcher {
 }
 
 class HttpFetcher extends Fetcher {
-  override def fetchRepo(uri: URI, process: RepositoryObject[_] => Unit): Unit = ???
+  override def fetchRepo(uri: URI, process: Callback): Unit = ???
 }

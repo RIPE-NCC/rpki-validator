@@ -53,11 +53,7 @@ trait Hashing {
   def equals(hashA: Array[Byte], hashB: Array[Byte]): Boolean = { hashA.deep == hashB.deep }
 }
 
-
 sealed trait RepositoryObject[T] extends Hashing {
-
-  type Decoded = Either[String, T]
-
   def url: String
 
   def aki: Array[Byte]
@@ -67,20 +63,23 @@ sealed trait RepositoryObject[T] extends Hashing {
   def hash: Array[Byte] = getHash(encoded)
 
   def decoded: T
+}
 
-  def tryDecode: Decoded
-
-  def tryDecode(f: => Decoded) = try f catch {
-    case e: Exception => Left(e.getMessage)
-  }
+trait Parsing {
 
   def formatFailures(r: ValidationResult) = r.getFailuresForAllLocations.map {
     ch => s"[${ch.getKey}, status = ${ch.getStatus}, params = ${ch.getParams.mkString(" ")}]"
   }.mkString("\n")
 
+  def tryParse1[T](url: String, bytes: Array[Byte])(f: => Either[BrokenObject, T]) = try f catch {
+    case e: Exception => Left(BrokenObject(url, bytes, e.getMessage))
+  }
 }
 
-object CertificateObject {
+case class BrokenObject(url: String, bytes: Array[Byte], errorMessage: String)
+
+
+object CertificateObject extends Parsing {
 
   private def makeParser(url: String, bytes: Array[Byte]) = {
     val parser = new X509ResourceCertificateParser
@@ -88,69 +87,80 @@ object CertificateObject {
     parser
   }
 
-  def of(url: String, bytes: Array[Byte]): CertificateObject = {
-    val certificate = makeParser(url, bytes).getCertificate
-    CertificateObject(url, certificate.getAuthorityKeyIdentifier, bytes, certificate.getSubjectKeyIdentifier)
+  def parse(url: String, bytes: Array[Byte]) = CertificateObject(url, makeParser(url, bytes).getCertificate)
+
+  def tryParse(url: String, bytes: Array[Byte]) = tryParse1(url, bytes) {
+    val parser = makeParser(url, bytes)
+    if (parser.isSuccess)
+      Left(BrokenObject(url, bytes, formatFailures(parser.getValidationResult)))
+    else
+      Right(CertificateObject(url, parser.getCertificate))
+  }
+}
+
+
+object ManifestObject extends Parsing {
+
+  private def makeParser(url: String, bytes: Array[Byte]) = {
+    val parser = new ManifestCmsParser
+    parser.parse(url, bytes)
+    parser
   }
 
+  def parse(url: String, bytes: Array[Byte]) = ManifestObject(url, makeParser(url, bytes).getManifestCms)
+
+  def tryParse(url: String, bytes: Array[Byte]): Either[BrokenObject, ManifestObject] = {
+    val parser = makeParser(url, bytes)
+    if (parser.isSuccess)
+      Left(BrokenObject(url, bytes, formatFailures(parser.getValidationResult)))
+    else
+      Right(ManifestObject(url, parser.getManifestCms))
+  }
+}
+
+object CrlObject extends Parsing {
+
+  def parse(url: String, bytes: Array[Byte]) = CrlObject(url, new X509Crl(bytes))
+
+  def tryParse(url: String, bytes: Array[Byte]) = tryParse1(url, bytes) {
+    Right(parse(url, bytes))
+  }
+}
+
+object RoaObject extends Parsing {
+
+  def parse(url: String, bytes: Array[Byte]) = RoaObject(url, RoaCms.parseDerEncoded(bytes))
+
+  def tryParse(url: String, bytes: Array[Byte]) = tryParse1(url, bytes) {
+    Right(parse(url, bytes))
+  }
 }
 
 case class CertificateObject(override val url: String,
-                             override val aki: Array[Byte],
-                             override val encoded: Array[Byte],
-                             ski: Array[Byte]) extends RepositoryObject[X509ResourceCertificate] {
-  def tryDecode = tryDecode {
-    val parser = makeParser
-    if (parser.isSuccess)
-      Left(formatFailures(parser.getValidationResult))
-    else
-      Right(parser.getCertificate)
-  }
+                             override val decoded: X509ResourceCertificate) extends RepositoryObject[X509ResourceCertificate] {
 
-  def decoded = makeParser.getCertificate
-
-  private def makeParser = {
-    val parser = new X509ResourceCertificateParser
-    parser.parse(url, encoded)
-    parser
-  }
+  def encoded = decoded.getEncoded
+  def aki = decoded.getAuthorityKeyIdentifier
+  def ski = decoded.getSubjectKeyIdentifier
 }
 
 case class ManifestObject(override val url: String,
-                          override val aki: Array[Byte],
-                          override val encoded: Array[Byte]) extends RepositoryObject[ManifestCms] {
-
-  def tryDecode = tryDecode {
-    val parser: ManifestCmsParser = makeParser
-    if (parser.isSuccess)
-      Right(parser.getManifestCms)
-    else
-      Left(formatFailures(parser.getValidationResult))
-  }
-
-  def decoded = makeParser.getManifestCms
-
-  private def makeParser: ManifestCmsParser = {
-    val parser = new ManifestCmsParser
-    parser.parse(url, encoded)
-    parser
-  }
+                          override val decoded: ManifestCms) extends RepositoryObject[ManifestCms] {
+  def encoded = decoded.getEncoded
+  def aki = decoded.getCertificate.getAuthorityKeyIdentifier
 }
 
 case class CrlObject(override val url: String,
-                     override val aki: Array[Byte],
-                     override val encoded: Array[Byte]) extends RepositoryObject[X509Crl] {
-  def decoded = new X509Crl(encoded)
-
-  def tryDecode = tryDecode(Right(decoded))
+                     override val decoded: X509Crl) extends RepositoryObject[X509Crl] {
+  def encoded = decoded.getEncoded
+  def aki = decoded.getAuthorityKeyIdentifier
 }
 
 case class RoaObject(override val url: String,
-                     override val aki: Array[Byte],
-                     override val encoded: Array[Byte]) extends RepositoryObject[RoaCms] {
-  def decoded = RoaCms.parseDerEncoded(encoded)
+                     override val decoded: RoaCms) extends RepositoryObject[RoaCms] {
 
-  def tryDecode = tryDecode(Right(decoded))
+  def aki = decoded.getCertificate.getAuthorityKeyIdentifier
+  def encoded = decoded.getEncoded
 }
 
 
@@ -164,10 +174,11 @@ class RepoFetcher(storage: Storage) {
     }
 
     fetcher.fetchRepo(repoUri, {
-      case c: CertificateObject => storage.storeCertificate(c)
-      case c: CrlObject => storage.storeCrl(c)
-      case m: ManifestObject => storage.storeManifest(m)
-      case r: RoaObject => storage.storeRoa(r)
+      case Right(c : CertificateObject) => storage.storeCertificate(c)
+      case Right(c : CrlObject) => storage.storeCrl(c)
+      case Right(c : ManifestObject) => storage.storeManifest(c)
+      case Right(c : RoaObject) => storage.storeRoa(c)
+      case Left(b : BrokenObject) => storage.storeBroken(b)
     })
   }
 }

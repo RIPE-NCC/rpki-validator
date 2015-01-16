@@ -47,6 +47,8 @@ trait Storage {
 
   def storeRoa(Roa: RoaObject)
 
+  def storeBroken(brokenObject: BrokenObject): Unit = ???
+
   def getCertificates(aki: Array[Byte]): Seq[CertificateObject]
 
   def getCrls(aki: Array[Byte]): Seq[CrlObject]
@@ -95,31 +97,24 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     template.query("SELECT url, ski, encoded FROM certificates WHERE aki = :aki",
       Map("aki" -> stringify(aki)),
       new RowMapper[CertificateObject] {
-        override def mapRow(rs: ResultSet, i: Int) =
-          CertificateObject(
-            url = rs.getString(1),
-            aki = aki,
-            ski = stringToBytes(rs.getString(2)),
-            encoded = rs.getBytes(3))
+        override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(3))
       }).toSeq
 
   def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, "crl") {
-    (url, aki, encoded) => CrlObject(url, aki, encoded)
+    (url, encoded) => CrlObject.parse(url, encoded)
   }
 
   def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, "manifest") {
-    (url, aki, encoded) => ManifestObject(url, aki, encoded)
+    (url, encoded) => ManifestObject.parse(url, encoded)
   }
 
-  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, "roa") {
-    (url, aki, encoded) => RoaObject(url, aki, encoded)
-  }
+  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, "roa") { RoaObject.parse }
 
-  private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte], Array[Byte]) => T) =
+  private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte]) => T) =
     template.query("SELECT url, encoded FROM repo_objects WHERE aki = :aki AND type = :type",
       Map("aki" -> stringify(aki), "type" -> objType),
       new RowMapper[T] {
-        override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), aki, rs.getBytes(2))
+        override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2))
       }).toSeq
 
   def clear() = {

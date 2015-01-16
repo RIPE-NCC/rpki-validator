@@ -33,6 +33,8 @@ import java.net.URI
 
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsTest
+import net.ripe.rpki.commons.crypto.crl.X509CrlTest
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
 import net.ripe.rpki.validator.models.validation.{RoaObject, ManifestObject, CrlObject, CertificateObject}
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.apache.commons.dbcp.BasicDataSource
@@ -47,21 +49,21 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
   val store = new CacheStore(memoryDataSource)
 
+  val testCrl = X509CrlTest.createCrl
+  val testManifest = ManifestCmsTest.getRootManifestCms
+  val testRoa = RoaCmsTest.getRoaCms
+  val testCertificate = X509ResourceCertificateTest.createSelfSignedCaResourceCertificate
+
   before {
     store.clear()
   }
 
   test("Store a certificate") {
-    val aki = Array[Byte](1.toByte)
-    val certificate = CertificateObject(
-      url = "rsync://bla",
-      aki = aki,
-      encoded = Array[Byte](2.toByte, 99.toByte),
-      ski = Array[Byte](3.toByte))
+    val certificate = CertificateObject(url = "rsync://bla", decoded = testCertificate)
 
     store.storeCertificate(certificate)
 
-    val certificates: Seq[CertificateObject] = store.getCertificates(aki)
+    val certificates: Seq[CertificateObject] = store.getCertificates(certificate.aki)
     certificates should have length 1
 
     val head = certificates.head
@@ -73,15 +75,11 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
   }
 
   test("Store a crl") {
-    val aki = Array[Byte](1.toByte)
-    val crl = CrlObject(
-      url = "rsync://bla",
-      aki = aki,
-      encoded = Array[Byte](2.toByte, 4.toByte))
+    val crl = CrlObject(url = "rsync://bla", decoded = testCrl)
 
     store.storeCrl(crl)
 
-    val crls: Seq[CrlObject] = store.getCrls(aki)
+    val crls: Seq[CrlObject] = store.getCrls(crl.aki)
     crls should have length 1
 
     val head = crls.head
@@ -93,15 +91,11 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
 
   test("Store a manifest") {
-    val aki = Array[Byte](1.toByte)
-    val manifest = ManifestObject(
-      url = "rsync://bla",
-      aki = aki,
-      encoded = Array[Byte](2.toByte, 4.toByte))
+    val manifest = ManifestObject(url = "rsync://bla", decoded = testManifest)
 
     store.storeManifest(manifest)
 
-    val manifests: Seq[ManifestObject] = store.getManifests(aki)
+    val manifests: Seq[ManifestObject] = store.getManifests(manifest.aki)
     manifests should have length 1
 
     val head = manifests.head
@@ -112,15 +106,11 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
   }
 
   test("Store a roa") {
-    val aki = Array[Byte](1.toByte)
-    val roa = RoaObject(
-      url = "rsync://bla",
-      aki = aki,
-      encoded = Array[Byte](2.toByte, 4.toByte))
+    val roa = RoaObject(url = "rsync://bla", decoded = testRoa)
 
     store.storeRoa(roa)
 
-    val roas: Seq[RoaObject] = store.getRoas(aki)
+    val roas: Seq[RoaObject] = store.getRoas(roa.aki)
     roas should have length 1
 
     val head = roas.head
