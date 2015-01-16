@@ -49,6 +49,8 @@ trait Hashing {
   def stringify(bytes: Array[Byte]) = bytes.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
 
   def stringToBytes(s: String) = new BigInteger(s, 16).toByteArray
+
+  def equals(hashA: Array[Byte], hashB: Array[Byte]): Boolean = { hashA.deep == hashB.deep }
 }
 
 

@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator.models
 
 import java.net.URI
-import java.util.Map.Entry
 
 import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509Crl, X509CrlValidator}
 import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
@@ -42,11 +41,12 @@ import net.ripe.rpki.validator.store.Storage
 import org.apache.commons.lang.Validate
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 
 class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, fetcher: RepoFetcher, validationOptions: ValidationOptions) {
 
-  private object Util extends Hashing
+  private object HashUtil extends Hashing
 
   Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")
 
@@ -76,7 +76,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         case Some(manifest) =>
           crossCheckWithManifest(manifest, crlOption.get, roas, childrenCertificates)
         case None =>
-          validationError(VALIDATOR_CA_SHOULD_HAVE_MANIFEST, Util.stringify(certificateContext.getSubjectKeyIdentifier))
+          validationError(VALIDATOR_CA_SHOULD_HAVE_MANIFEST, HashUtil.stringify(certificateContext.getSubjectKeyIdentifier))
       }
 
       childrenCertificates.foreach( cert => {
@@ -123,19 +123,53 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     })
   }
 
+  type FileAndHashEntries = Map[String, Array[Byte]]
+
   private def processManifestEntries(manifest: ManifestObject, crl: CrlObject, roas: Seq[RoaObject], childrenCertificates: Seq[CertificateObject]) {
     val repositoryUri = certificateContext.getRepositoryURI
-    val entries = manifest.decoded.getFiles.entrySet().asScala.toSeq
-    val crlsOnManifest = entries.filter(_.getKey.toLowerCase.endsWith(".crl"))
     val validationLocation = new ValidationLocation(manifest.url)
+    val manifestEntries: FileAndHashEntries = manifest.decoded.getFiles.entrySet().asScala.map { entry =>
+      repositoryUri.resolve(entry.getKey).toString -> entry.getValue
+    }.toMap
+    
+    val crlsOnManifest = manifestEntries.filterKeys(_.toLowerCase.endsWith(".crl"))
     crossCheckCrls(crl, crlsOnManifest, validationLocation)
 
+    crossCheckCertificates(validationLocation, manifestEntries, childrenCertificates)
 
 //    entries.map(entry => {
 //      val filename = entry.getKey
 //      val fullName = repositoryUri.resolve(filename)
 //
 //    })
+  }
+
+//  def checkIfFoundInRepo(entries: java.util.Map.Entry[String, Array[Byte]], childrenCertificates: Seq[CertificateObject]) {
+//
+//  }
+
+  def crossCheckCertificates(validationLocation: ValidationLocation, manifestCertEntries: FileAndHashEntries, foundCertificates: Seq[CertificateObject]) {
+    
+    val foundCertificatesEntries = foundCertificates.map(c => c.url -> c.hash).toMap
+    
+    val notFoundInRepo = manifestCertEntries.keySet -- foundCertificatesEntries.keySet
+    val notOnManifest = foundCertificatesEntries.keySet -- manifestCertEntries.keySet
+    val objectsWithMatchingUri = manifestCertEntries.keySet intersect foundCertificatesEntries.keySet
+
+    notFoundInRepo.foreach { location =>
+      validationResult.warnForLocation(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, location)
+    }
+
+    notOnManifest.foreach { location =>
+      validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, location)
+    }
+
+    objectsWithMatchingUri.filterNot { location =>
+      HashUtil.equals(manifestCertEntries(location), foundCertificatesEntries(location))
+    } foreach { location =>
+      validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE,
+        s"Hash code of object at $location (${foundCertificatesEntries(location)}) does not match the one specified in the manifest (${manifestCertEntries(location)})")
+    }
   }
 
   def checkManifestUrlOnCertMatchesLocationInRepo(manifest: ManifestObject) = {
@@ -147,19 +181,19 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
-
-
-  def crossCheckCrls(crl: CrlObject, crlEntries: Seq[Entry[String, Array[Byte]]], validationLocation: ValidationLocation) = {
-    if (crlEntries.size == 0) {
+  def crossCheckCrls(crl: CrlObject, manifestCrlEntries: FileAndHashEntries, validationLocation: ValidationLocation) = {
+    if (manifestCrlEntries.size == 0) {
       validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, "*.crl")
-    } else if (crlEntries.size > 1) {
-      val crlFileNames = crlEntries.map(_.getKey).mkString(",")
+    } else if (manifestCrlEntries.size > 1) {
+      val crlFileNames = manifestCrlEntries.keys.mkString(",")
       validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Single CRL expected, found: $crlFileNames")
     } else {
-      if (crl.hash != crlEntries.head.getValue) {
-        validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Hash code of ${crlEntries.head.getKey} doesn't match hashcode in manifest")
-      } else if (certificateContext.getRepositoryURI.resolve(crlEntries.head.getKey).toString != crl.url) {
-        validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"URL of CRL in manifest [${crlEntries.head.getKey}] doesn't match URL in repo [${crl.url}}]")
+      val locationOnMft = certificateContext.getRepositoryURI.resolve(manifestCrlEntries.keys.head).toString
+      val hashOnMft = manifestCrlEntries.values.head
+      if (locationOnMft != crl.url) {
+        validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"URI of CRL in manifest ($locationOnMft) doesn't match URL in repo ($crl.url)")
+      } else if (!HashUtil.equals(crl.hash, hashOnMft)) {
+        validationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Hash code of $locationOnMft doesn't match hash code in manifest")
       }
     }
   }
