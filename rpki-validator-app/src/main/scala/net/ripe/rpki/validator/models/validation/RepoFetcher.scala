@@ -76,8 +76,9 @@ trait Parsing {
   }
 }
 
-case class BrokenObject(url: String, bytes: Array[Byte], errorMessage: String)
-
+case class BrokenObject(url: String, bytes: Array[Byte], errorMessage: String) extends Hashing {
+  def hash: Array[Byte] = getHash(bytes)
+}
 
 object CertificateObject extends Parsing {
 

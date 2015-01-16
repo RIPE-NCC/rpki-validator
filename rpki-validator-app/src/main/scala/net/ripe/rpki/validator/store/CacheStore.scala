@@ -36,6 +36,7 @@ import net.ripe.rpki.validator.models.validation._
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import scala.collection.JavaConversions._
+import scala.util.Try
 
 trait Storage {
 
@@ -47,7 +48,7 @@ trait Storage {
 
   def storeRoa(Roa: RoaObject)
 
-  def storeBroken(brokenObject: BrokenObject): Unit = ???
+  def storeBroken(brokenObject: BrokenObject)
 
   def getCertificates(aki: Array[Byte]): Seq[CertificateObject]
 
@@ -56,6 +57,10 @@ trait Storage {
   def getRoas(aki: Array[Byte]): Seq[RoaObject]
 
   def getManifests(aki: Array[Byte]): Seq[ManifestObject]
+
+  def getBroken(url: String): Option[BrokenObject]
+
+  def getBroken: Seq[BrokenObject]
 }
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
@@ -101,6 +106,21 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         "type" -> objType))
   }
 
+  override def storeBroken(broken: BrokenObject) = {
+    template.update(
+      """INSERT INTO broken_objects(hash, url, encoded, message)
+         SELECT :hash, :url, :encoded, :message
+         WHERE NOT EXISTS (
+           SELECT * FROM broken_objects ro
+           WHERE ro.url = :url
+         )
+      """,
+      Map("hash" -> stringify(broken.hash),
+        "url" -> broken.url,
+        "encoded" -> broken.bytes,
+        "message" -> broken.errorMessage))
+  }
+
   override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] =
     template.query("SELECT url, ski, encoded FROM certificates WHERE aki = :aki",
       Map("aki" -> stringify(aki)),
@@ -108,15 +128,26 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(3))
       }).toSeq
 
-  def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, "crl") {
-    (url, encoded) => CrlObject.parse(url, encoded)
-  }
+  def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, "crl")(CrlObject.parse)
 
-  def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, "manifest") {
-    (url, encoded) => ManifestObject.parse(url, encoded)
-  }
+  def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, "manifest")(ManifestObject.parse)
 
-  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, "roa") { RoaObject.parse }
+  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, "roa")(RoaObject.parse)
+
+  override def getBroken(url: String) = Try {
+    template.queryForObject(
+      "SELECT encoded, message FROM broken_objects WHERE url = :url",
+      Map("url" -> url),
+      new RowMapper[BrokenObject] {
+        override def mapRow(rs: ResultSet, i: Int) = BrokenObject(url, rs.getBytes(1), rs.getString(2))
+      })
+  }.toOption
+
+  override def getBroken = template.query(
+    "SELECT url, encoded, message FROM broken_objects", Map[String, Object](),
+    new RowMapper[BrokenObject] {
+      override def mapRow(rs: ResultSet, i: Int) = BrokenObject(rs.getString(1), rs.getBytes(2), rs.getString(3))
+    }).toSeq
 
   private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte]) => T) =
     template.query("SELECT url, encoded FROM repo_objects WHERE aki = :aki AND type = :type",

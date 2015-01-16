@@ -33,7 +33,7 @@ import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsTest
 import net.ripe.rpki.commons.crypto.crl.X509CrlTest
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
-import net.ripe.rpki.validator.models.validation.{CertificateObject, CrlObject, ManifestObject, RoaObject}
+import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.scalatest.BeforeAndAfter
 
@@ -131,6 +131,20 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
     store.storeCertificate(certificate)
 
     store.getCertificates(certificate.aki) should have length 1
+  }
+
+  test("Store twice and fetch a broken object") {
+    val roa = RoaObject(url = "rsync://bla", decoded = testRoa)
+    val broken = BrokenObject(url = "rsync://bla", bytes = Array[Byte](1.toByte, 2.toByte), errorMessage = "Couldn't parse that")
+
+    store.storeBroken(broken)
+    store.storeBroken(broken)
+
+    store.getBroken should have length 1
+    val b = store.getBroken("rsync://bla")
+    b.get.url should be(broken.url)
+    b.get.hash should be(broken.hash)
+    b.get.errorMessage should be(broken.errorMessage)
   }
 
 }

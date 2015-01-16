@@ -20,7 +20,15 @@ CREATE TABLE repo_objects (
   type    CHARACTER VARYING(10)   NOT NULL,
   encoded BYTEA                   NOT NULL,
   PRIMARY KEY (hash, url),
-  CHECK (type IN ('crl', 'manifest', 'roa', 'broken'))
+  CHECK (type IN ('crl', 'manifest', 'roa'))
+);
+
+CREATE TABLE broken_objects (
+  hash    CHARACTER VARYING(64)   NOT NULL,
+  url     CHARACTER VARYING(2000) NOT NULL,
+  encoded BYTEA                   NOT NULL,
+  message CHARACTER VARYING(2000) NOT NULL,
+  PRIMARY KEY (url)
 );
 
 CREATE INDEX idx_certificates_aki ON certificates (aki);
