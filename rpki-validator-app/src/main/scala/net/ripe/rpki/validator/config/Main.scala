@@ -30,7 +30,9 @@
 package net.ripe.rpki.validator
 package config
 
+import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.HttpGet
+import org.apache.http.config.ConnectionConfig
 
 import scala.collection.JavaConverters._
 import org.apache.commons.io.FileUtils
@@ -45,7 +47,7 @@ import bgp.preview._
 import scala.concurrent.stm._
 import scala.concurrent.Future
 import scala.math.Ordering.Implicits._
-import org.apache.http.impl.client.{HttpClientBuilder, SystemDefaultHttpClient}
+import org.apache.http.impl.client.{CloseableHttpClient, HttpClientBuilder, SystemDefaultHttpClient}
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.apache.http.params.HttpConnectionParams
 import java.util.EnumSet
@@ -95,10 +97,15 @@ class Main() { main =>
 
   val userPreferences = Ref(data.userPreferences)
 
-  val httpClient = new SystemDefaultHttpClient()
-  val httpParams = httpClient.getParams
-  HttpConnectionParams.setConnectionTimeout(httpParams, 2 * 60 * 1000)
-  HttpConnectionParams.setSoTimeout(httpParams, 2 * 60 * 1000)
+  private val httpRequestConfig = RequestConfig.custom()
+    .setConnectTimeout(2 * 60 * 1000)
+    .setSocketTimeout(2 * 60 * 1000)
+    .build()
+
+  private val httpClient: CloseableHttpClient = HttpClientBuilder.create()
+    .useSystemProperties()
+    .setDefaultRequestConfig(httpRequestConfig)
+    .build()
 
   val bgpRisDumpDownloader = new BgpRisDumpDownloader(httpClient)
 
