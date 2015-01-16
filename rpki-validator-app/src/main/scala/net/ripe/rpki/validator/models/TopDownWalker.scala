@@ -125,30 +125,20 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   type FileAndHashEntries = Map[String, Array[Byte]]
 
-  private def processManifestEntries(manifest: ManifestObject, crl: CrlObject, roas: Seq[RoaObject], childrenCertificates: Seq[CertificateObject]) {
+  private def processManifestEntries(manifest: ManifestObject, crl: CrlObject, roas: Seq[RepositoryObject[_]], childrenCertificates: Seq[RepositoryObject[_]]) {
     val repositoryUri = certificateContext.getRepositoryURI
     val validationLocation = new ValidationLocation(manifest.url)
     val manifestEntries: FileAndHashEntries = manifest.decoded.getFiles.entrySet().asScala.map { entry =>
       repositoryUri.resolve(entry.getKey).toString -> entry.getValue
     }.toMap
     
-    val crlsOnManifest = manifestEntries.filterKeys(_.toLowerCase.endsWith(".crl"))
+    val (crlsOnManifest, entriesExceptCrls) = manifestEntries.partition(_._1.toLowerCase.endsWith(".crl"))
     crossCheckCrls(crl, crlsOnManifest, validationLocation)
 
-    crossCheckCertificates(validationLocation, manifestEntries, childrenCertificates)
-
-//    entries.map(entry => {
-//      val filename = entry.getKey
-//      val fullName = repositoryUri.resolve(filename)
-//
-//    })
+    crossCheckRepoObjects(validationLocation, entriesExceptCrls, childrenCertificates ++ roas)
   }
 
-//  def checkIfFoundInRepo(entries: java.util.Map.Entry[String, Array[Byte]], childrenCertificates: Seq[CertificateObject]) {
-//
-//  }
-
-  def crossCheckCertificates(validationLocation: ValidationLocation, manifestCertEntries: FileAndHashEntries, foundCertificates: Seq[CertificateObject]) {
+  def crossCheckRepoObjects(validationLocation: ValidationLocation, manifestCertEntries: FileAndHashEntries, foundCertificates: Seq[RepositoryObject[_]]) {
     
     val foundCertificatesEntries = foundCertificates.map(c => c.url -> c.hash).toMap
     
