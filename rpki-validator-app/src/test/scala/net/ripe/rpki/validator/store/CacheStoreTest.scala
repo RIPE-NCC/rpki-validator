@@ -29,18 +29,13 @@
  */
 package net.ripe.rpki.validator.store
 
-import java.net.URI
-
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsTest
 import net.ripe.rpki.commons.crypto.crl.X509CrlTest
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
-import net.ripe.rpki.validator.models.validation.{RoaObject, ManifestObject, CrlObject, CertificateObject}
+import net.ripe.rpki.validator.models.validation.{CertificateObject, CrlObject, ManifestObject, RoaObject}
 import net.ripe.rpki.validator.support.ValidatorTestCase
-import org.apache.commons.dbcp.BasicDataSource
-import org.joda.time.{DateTime, DateTimeUtils}
 import org.scalatest.BeforeAndAfter
-import org.springframework.jdbc.core.JdbcTemplate
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
@@ -120,5 +115,22 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
     head.hash should be(roa.hash)
   }
 
+  test("Do not store the same object twice") {
+    val roa = RoaObject(url = "rsync://bla", decoded = testRoa)
+
+    store.storeRoa(roa)
+    store.storeRoa(roa)
+
+    store.getRoas(roa.aki) should have length 1
+  }
+
+  test("Do not store the same certificate twice") {
+    val certificate = CertificateObject(url = "rsync://bla", decoded = testCertificate)
+
+    store.storeCertificate(certificate)
+    store.storeCertificate(certificate)
+
+    store.getCertificates(certificate.aki) should have length 1
+  }
 
 }

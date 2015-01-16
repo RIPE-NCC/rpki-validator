@@ -8,7 +8,8 @@ CREATE TABLE certificates (
   aki     CHARACTER VARYING(40)   NOT NULL,
   hash    CHARACTER VARYING(64)   NOT NULL,
   url     CHARACTER VARYING(2000) NOT NULL,
-  encoded BYTEA                   NOT NULL
+  encoded BYTEA                   NOT NULL,
+  PRIMARY KEY (hash, url)
 );
 
 -- All the other objects
@@ -18,7 +19,8 @@ CREATE TABLE repo_objects (
   url     CHARACTER VARYING(2000) NOT NULL,
   type    CHARACTER VARYING(10)   NOT NULL,
   encoded BYTEA                   NOT NULL,
-  CHECK (type IN ('crl', 'manifest', 'roa'))
+  PRIMARY KEY (hash, url),
+  CHECK (type IN ('crl', 'manifest', 'roa', 'broken'))
 );
 
 CREATE INDEX idx_certificates_aki ON certificates (aki);

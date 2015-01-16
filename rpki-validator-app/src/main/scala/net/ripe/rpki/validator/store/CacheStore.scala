@@ -64,7 +64,14 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   override def storeCertificate(certificate: CertificateObject) =
     template.update(
-      "INSERT INTO certificates(aki, ski, hash, url, encoded) VALUES (:aki, :ski, :hash, :url, :encoded)",
+      """INSERT INTO certificates(aki, ski, hash, url, encoded)
+         SELECT :aki, :ski, :hash, :url, :encoded
+         WHERE NOT EXISTS (
+           SELECT * FROM certificates c
+           WHERE c.url = :url
+           AND  c.hash = :hash
+         )
+      """,
       Map("aki" -> stringify(certificate.aki),
         "ski" -> stringify(certificate.ski),
         "hash" -> stringify(certificate.hash),
@@ -83,7 +90,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
          SELECT :aki, :hash, :url, :encoded, :type
          WHERE NOT EXISTS (
            SELECT * FROM repo_objects ro
-           WHERE ro.hash = :hash AND ro.url = :url
+           WHERE ro.hash = :hash
+           AND ro.url = :url
          )
       """,
       Map("aki" -> stringify(obj.aki),
