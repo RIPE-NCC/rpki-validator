@@ -229,27 +229,24 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   }
 
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    val builder = Map.newBuilder[URI, ValidatedObject]
-    val fetcher = createFetcher(new RoaCollector(trustAnchorLocator, builder) +: objectFetcherListeners: _*)
-
-    // purge cache
-    val cache = new RepositoryObjectStore(RepositoryObjectStore)
-    cache.purgeExpired(maxStaleDays)
-
-    trustAnchorLocator.getPrefetchUris.asScala.foreach { prefetchUri =>
-
-      logger.info("Prefetching '" + prefetchUri + "'")
-      val validationResult = ValidationResult.withLocation(prefetchUri)
-
-      fetcher.prefetch(prefetchUri, validationResult)
-      logger.info("Done prefetching for '" + prefetchUri + "'")
-    }
+//    val fetcher = createFetcher(new RoaCollector(builder) +: objectFetcherListeners: _*)
+//
+//    // purge cache
+//    val cache = new RepositoryObjectStore(RepositoryObjectStore)
+//    cache.purgeExpired(maxStaleDays)
+//
+//    trustAnchorLocator.getPrefetchUris.asScala.foreach { prefetchUri =>
+//
+//      logger.info("Prefetching '" + prefetchUri + "'")
+//      val validationResult = ValidationResult.withLocation(prefetchUri)
+//
+//      fetcher.prefetch(prefetchUri, validationResult)
+//      logger.info("Done prefetching for '" + prefetchUri + "'")
+//    }
 
     val store: CacheStore = new CacheStore(RepositoryObjectStore)
     val walker = new TopDownWalker(certificate, store, new RepoFetcher(store), validationOptions)
-    val validationResult: ValidationResult = walker.execute
-    // TODO convert validationResult to whatever we have to return here
-    builder.result()
+    walker.execute
   }
 
   def wipeRsyncDiskCache() {
@@ -277,7 +274,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     new ConsistentObjectFetcher(rsyncFetcher, new RepositoryObjectStore(RepositoryObjectStore))
   }
 
-  private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[(URI, ValidatedObject), _]) extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
+  private class RoaCollector(objects: collection.mutable.Builder[(URI, ValidatedObject), _]) extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
     override def afterFetchFailure(uri: URI, result: ValidationResult) {
       objects += uri -> new InvalidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
     }
