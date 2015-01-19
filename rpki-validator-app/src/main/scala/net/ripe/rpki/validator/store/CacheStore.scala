@@ -157,7 +157,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       }).toSeq
 
   def clear() = {
-    for (t <- Seq("certificates", "repo_objects"))
+    for (t <- Seq("certificates", "repo_objects", "broken_objects"))
       template.update(s"TRUNCATE TABLE $t", Map[String, Object]())
   }
 
