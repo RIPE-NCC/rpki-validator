@@ -245,7 +245,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
 //    }
 
     val store: CacheStore = new CacheStore(RepositoryObjectStore)
-    val walker = new TopDownWalker(certificate, store, new RepoFetcher(store), validationOptions)
+    val walker = new TopDownWalker(certificate, store, new RepoFetcher(store), validationOptions)(scala.collection.mutable.Set())
     walker.execute
   }
 

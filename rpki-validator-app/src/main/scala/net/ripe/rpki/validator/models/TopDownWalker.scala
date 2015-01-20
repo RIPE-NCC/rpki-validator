@@ -31,6 +31,7 @@ package net.ripe.rpki.validator.models
 
 import java.net.URI
 
+import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509Crl}
 import net.ripe.rpki.commons.validation.ValidationString._
@@ -42,12 +43,13 @@ import org.apache.commons.lang.Validate
 
 import scala.collection.JavaConverters._
 
-
-class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, fetcher: RepoFetcher, validationOptions: ValidationOptions) {
-
-  Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")
+class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, fetcher: RepoFetcher, validationOptions: ValidationOptions)(seen: scala.collection.mutable.Set[String])
+  extends Logging {
 
   private object HashUtil extends Hashing
+
+  Validate.isTrue(seen.add(HashUtil.stringify(certificateContext.getSubjectKeyIdentifier)))
+  Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")
 
   private val certContextValidationLocation = new ValidationLocation(certificateContext.getLocation)
   private val certContextValidationResult: ValidationResult = ValidationResult.withLocation(certContextValidationLocation)
@@ -55,6 +57,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   private var crlLocator: CrlLocator = _
 
   def execute: Map[URI, ValidatedObject] = {
+    logger.info(s"Validating ${certificateContext.getLocation}")
     Option(certificateContext.getRepositoryURI) match {
       case Some(repositoryUri) =>
         prefetch(repositoryUri)
@@ -89,14 +92,24 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
         validatedObjects ++= roas.map(createValidObject)
 
-        validatedObjects ++= childrenCertificates.flatMap( cert => {
-          val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
-          val nextLevelWalker = new TopDownWalker(newValidationContext, store, fetcher, validationOptions)
-          nextLevelWalker.execute
-        })
+        validatedObjects ++= childrenCertificates.flatMap(stepDown)
     }
 
     validatedObjects.result()
+  }
+
+  private def stepDown: (CertificateObject) => Map[URI, ValidatedObject] = {
+    cert => {
+      val ski: String = HashUtil.stringify(cert.decoded.getSubjectKeyIdentifier)
+      if (seen.contains(ski)) {
+        logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [${HashUtil.stringify(certificateContext.getSubjectKeyIdentifier)}] to ${cert.url} [$ski]")
+        Map()
+      } else {
+        val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
+        val nextLevelWalker = new TopDownWalker(newValidationContext, store, fetcher, validationOptions)(seen)
+        nextLevelWalker.execute
+      }
+    }
   }
 
   private def createValidObjectForThisCert = {
