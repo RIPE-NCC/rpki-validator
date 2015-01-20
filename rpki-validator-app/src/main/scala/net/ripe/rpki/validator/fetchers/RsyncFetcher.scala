@@ -62,10 +62,7 @@ class RsyncFetcher extends Fetcher {
   }
 
   private[this] def withRsyncDir[T](uri: URI)(f: File => T) = {
-
-    val specialSymbols = "/:.@-"
-    def uriToPath = uri.toString.map(c => if (specialSymbols.contains(c)) '_' else c)
-
+    def uriToPath = uri.toString.replaceAll("rsync://", "")
     def destDir = {
       val rsyncPath = new File(ApplicationOptions.rsyncDirLocation + "/" + uriToPath)
       if (!rsyncPath.exists) {
