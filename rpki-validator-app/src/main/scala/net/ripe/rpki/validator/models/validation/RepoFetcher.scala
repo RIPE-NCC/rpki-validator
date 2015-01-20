@@ -184,32 +184,32 @@ class RepoFetcher(storage: Storage) {
       _.mkString("/")
     }
 
-  private val checkRsyncPool = { (uri: URI, f: Unit => Unit) =>
+  private def checkRsyncPool(uri: URI)(f: => Seq[String]) = {
     val u = uri.toString.replaceAll("rsync://", "")
     if (!chunked(u).exists(rsyncUrlPool.contains)) {
       val result = f
       rsyncUrlPool += u
       result
-    }
+    } else Seq()
   }
 
-  private val checkHttpPool = { (uri: URI, f: Unit => Unit) =>
+  private def checkHttpPool(uri: URI)(f: => Seq[String]) = {
     val u = uri.toString
     if (!httpUrlPool.contains(u)) {
       val result = f
       rsyncUrlPool += u
       result
-    }
+    } else Seq()
   }
 
-  def fetch(repoUri: URI) = {
+  def fetch(repoUri: URI): Seq[String] = {
     val (fetcher, fetchOnlyOnce) = repoUri.getScheme match {
-      case "rsync" => (new RsyncFetcher, checkRsyncPool)
-      case "http" | "https" => (new HttpFetcher, checkRsyncPool)
+      case "rsync" => (new RsyncFetcher, checkRsyncPool(_))
+      case "http" | "https" => (new HttpFetcher, checkHttpPool(_))
       case _ => throw new Exception(s"No fetcher for the uri $repoUri")
     }
 
-    fetchOnlyOnce(repoUri, { _ =>
+    fetchOnlyOnce(repoUri) {
       fetcher.fetchRepo(repoUri) {
         case Right(c: CertificateObject) => storage.storeCertificate(c)
         case Right(c: CrlObject) => storage.storeCrl(c)
@@ -217,6 +217,6 @@ class RepoFetcher(storage: Storage) {
         case Right(c: RoaObject) => storage.storeRoa(c)
         case Left(b: BrokenObject) => storage.storeBroken(b)
       }
-    })
+    }
   }
 }
