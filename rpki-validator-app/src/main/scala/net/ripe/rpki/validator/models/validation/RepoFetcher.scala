@@ -167,19 +167,54 @@ case class RoaObject(override val url: String,
 
 class RepoFetcher(storage: Storage) {
 
+  var rsyncUrlPool = Set[String]()
+  val httpUrlPool = Set[String]()
+
+  /**
+   * It's the mapping of the form "localhost:8888/a/b/c =>
+   *   [localhost:8888, localhost:8888/a, localhost:8888/a/b, localhost:8888/a/b/c]
+   */
+  private def chunked(uri: String) =
+    uri.split("/").toSeq.foldLeft((Seq[Seq[String]](), Seq[String]())) {
+      (accum, ch) => {
+        val newLatest = accum._2 :+ ch
+        (accum._1 :+ newLatest, newLatest)
+      }
+    }._1.map {
+      _.mkString("/")
+    }
+
+  private val checkRsyncPool = { (uri: URI, f: Unit => Unit) =>
+    val u = uri.toString.replaceAll("rsync://", "")
+    if (!chunked(u).exists(rsyncUrlPool.contains)) {
+      f
+      rsyncUrlPool += u
+    }
+  }
+
+  private val checkHttpPool = { (uri: URI, f: Unit => Unit) =>
+    val u = uri.toString
+    if (!httpUrlPool.contains(u)) {
+      f
+      rsyncUrlPool += u
+    }
+  }
+
   def fetch(repoUri: URI) = {
-    val fetcher = repoUri.getScheme match {
-      case "rsync" => new RsyncFetcher
-      case "http" | "https" => new HttpFetcher
+    val (fetcher, fetchOnlyOnce) = repoUri.getScheme match {
+      case "rsync" => (new RsyncFetcher, checkRsyncPool)
+      case "http" | "https" => (new HttpFetcher, checkRsyncPool)
       case _ => throw new Exception(s"No fetcher for the uri $repoUri")
     }
 
-    fetcher.fetchRepo(repoUri, {
-      case Right(c : CertificateObject) => storage.storeCertificate(c)
-      case Right(c : CrlObject) => storage.storeCrl(c)
-      case Right(c : ManifestObject) => storage.storeManifest(c)
-      case Right(c : RoaObject) => storage.storeRoa(c)
-      case Left(b : BrokenObject) => storage.storeBroken(b)
+    fetchOnlyOnce(repoUri, { _ =>
+      fetcher.fetchRepo(repoUri) {
+        case Right(c: CertificateObject) => storage.storeCertificate(c)
+        case Right(c: CrlObject) => storage.storeCrl(c)
+        case Right(c: ManifestObject) => storage.storeManifest(c)
+        case Right(c: RoaObject) => storage.storeRoa(c)
+        case Left(b: BrokenObject) => storage.storeBroken(b)
+      }
     })
   }
 }
