@@ -47,7 +47,9 @@ class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
     fetcher.fetch(new URI("rsync://repo1/x"))
     fetcher.fetch(new URI("rsync://repo2/y"))
 
-    new File(ApplicationOptions.rsyncDirLocation + "/rsync___repo1_x").exists should be(true)
-    new File(ApplicationOptions.rsyncDirLocation + "/rsync___repo2_y").exists should be(true)
+    new File(ApplicationOptions.rsyncDirLocation + "/repo1/x").exists should be(true)
+    new File(ApplicationOptions.rsyncDirLocation + "/repo2/y").exists should be(true)
   }
+
+
 }
