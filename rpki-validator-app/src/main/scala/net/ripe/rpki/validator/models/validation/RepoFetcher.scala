@@ -71,7 +71,7 @@ trait Parsing {
     ch => s"[${ch.getKey}, status = ${ch.getStatus}, params = ${ch.getParams.mkString(" ")}]"
   }.mkString("\n")
 
-  def tryParse1[T](url: String, bytes: Array[Byte])(f: => Either[BrokenObject, T]) = try f catch {
+  def parseOrReturnBroken[T](url: String, bytes: Array[Byte])(f: => Either[BrokenObject, T]) = try f catch {
     case e: Exception => Left(BrokenObject(url, bytes, e.getMessage))
   }
 }
@@ -90,12 +90,12 @@ object CertificateObject extends Parsing {
 
   def parse(url: String, bytes: Array[Byte]) = CertificateObject(url, makeParser(url, bytes).getCertificate)
 
-  def tryParse(url: String, bytes: Array[Byte]) = tryParse1(url, bytes) {
+  def tryParse(url: String, bytes: Array[Byte]) = parseOrReturnBroken(url, bytes) {
     val parser = makeParser(url, bytes)
     if (parser.isSuccess)
-      Left(BrokenObject(url, bytes, formatFailures(parser.getValidationResult)))
-    else
       Right(CertificateObject(url, parser.getCertificate))
+    else
+      Left(BrokenObject(url, bytes, formatFailures(parser.getValidationResult)))
   }
 }
 
@@ -110,12 +110,12 @@ object ManifestObject extends Parsing {
 
   def parse(url: String, bytes: Array[Byte]) = ManifestObject(url, makeParser(url, bytes).getManifestCms)
 
-  def tryParse(url: String, bytes: Array[Byte]): Either[BrokenObject, ManifestObject] = {
+  def tryParse(url: String, bytes: Array[Byte]) = {
     val parser = makeParser(url, bytes)
     if (parser.isSuccess)
-      Left(BrokenObject(url, bytes, formatFailures(parser.getValidationResult)))
-    else
       Right(ManifestObject(url, parser.getManifestCms))
+    else
+      Left(BrokenObject(url, bytes, formatFailures(parser.getValidationResult)))
   }
 }
 
@@ -123,7 +123,7 @@ object CrlObject extends Parsing {
 
   def parse(url: String, bytes: Array[Byte]) = CrlObject(url, new X509Crl(bytes))
 
-  def tryParse(url: String, bytes: Array[Byte]) = tryParse1(url, bytes) {
+  def tryParse(url: String, bytes: Array[Byte]) = parseOrReturnBroken(url, bytes) {
     Right(parse(url, bytes))
   }
 }
@@ -132,7 +132,7 @@ object RoaObject extends Parsing {
 
   def parse(url: String, bytes: Array[Byte]) = RoaObject(url, RoaCms.parseDerEncoded(bytes))
 
-  def tryParse(url: String, bytes: Array[Byte]) = tryParse1(url, bytes) {
+  def tryParse(url: String, bytes: Array[Byte]) = parseOrReturnBroken(url, bytes) {
     Right(parse(url, bytes))
   }
 }
