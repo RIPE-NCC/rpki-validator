@@ -91,8 +91,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   private def storeRepoObject[T](obj: RepositoryObject[T], objType: String) = {
     template.update(
-      """INSERT INTO repo_objects(aki, hash, url, encoded, type)
-         SELECT :aki, :hash, :url, :encoded, :type
+      """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
+         SELECT :aki, :hash, :url, :encoded, :object_type
          WHERE NOT EXISTS (
            SELECT * FROM repo_objects ro
            WHERE ro.hash = :hash
@@ -103,7 +103,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         "hash" -> stringify(obj.hash),
         "url" -> obj.url,
         "encoded" -> obj.encoded,
-        "type" -> objType))
+        "object_type" -> objType))
   }
 
   override def storeBroken(broken: BrokenObject) = {
@@ -150,8 +150,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }).toSeq
 
   private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte]) => T) =
-    template.query("SELECT url, encoded FROM repo_objects WHERE aki = :aki AND type = :type",
-      Map("aki" -> stringify(aki), "type" -> objType),
+    template.query("SELECT url, encoded FROM repo_objects WHERE aki = :aki AND object_type = :object_type",
+      Map("aki" -> stringify(aki), "object_type" -> objType),
       new RowMapper[T] {
         override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2))
       }).toSeq
