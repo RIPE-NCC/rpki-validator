@@ -51,7 +51,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   private val certContextValidationLocation = new ValidationLocation(certificateContext.getLocation)
   private val certContextValidationResult: ValidationResult = ValidationResult.withLocation(certContextValidationLocation)
-  private val validObjects = Map.newBuilder[URI, ValidatedObject]
+  private val validatedObjects = Map.newBuilder[URI, ValidatedObject]
   private var crlLocator: CrlLocator = _
 
   def execute: Map[URI, ValidatedObject] = {
@@ -66,6 +66,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     findCrl match {
       case None =>
         certContextValidationResult.rejectForLocation(certContextValidationLocation, CRL_REQUIRED, "No valid CRL found with SKI=" + certificateContext.getSubjectKeyIdentifier)
+        validatedObjects += certificateContext.getLocation -> InvalidObject(certificateContext.getLocation, certContextValidationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
 
       case Some(crl) =>
         crlLocator = new CrlLocator {
@@ -73,29 +74,29 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
             crl.decoded
         }
 
-        validObjects += createValidObjectForThisCert
-        validObjects += createValidObject(crl)
+        validatedObjects += createValidObjectForThisCert
+        validatedObjects += createValidObject(crl)
         val roas = findRoas
         val childrenCertificates = findChildrenCertificates
 
         findManifest match {
           case Some(manifest) =>
             crossCheckWithManifest(manifest, crl, roas, childrenCertificates)
-            validObjects += createValidObject(manifest)
+            validatedObjects += createValidObject(manifest)
           case None =>
             certContextValidationResult.warnForLocation(certContextValidationLocation, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, HashUtil.stringify(certificateContext.getSubjectKeyIdentifier))
         }
 
-        validObjects ++= roas.map(createValidObject)
+        validatedObjects ++= roas.map(createValidObject)
 
-        validObjects ++= childrenCertificates.flatMap( cert => {
+        validatedObjects ++= childrenCertificates.flatMap( cert => {
           val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
           val nextLevelWalker = new TopDownWalker(newValidationContext, store, fetcher, validationOptions)
           nextLevelWalker.execute
         })
     }
 
-    validObjects.result()
+    validatedObjects.result()
   }
 
   private def createValidObjectForThisCert = {
