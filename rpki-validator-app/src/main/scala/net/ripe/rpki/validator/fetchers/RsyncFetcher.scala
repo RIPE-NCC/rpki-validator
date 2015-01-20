@@ -46,8 +46,9 @@ import scala.collection.JavaConversions._
 
 trait Fetcher {
   type Callback = Either[BrokenObject, RepositoryObject[_]] => Unit
-  def fetchRepo(uri: URI, process: Callback)
+  def fetchRepo(uri: URI)(process: Callback)
 }
+
 
 class RsyncFetcher extends Fetcher {
 
@@ -74,24 +75,28 @@ class RsyncFetcher extends Fetcher {
     f(destDir)
   }
 
-  override def fetchRepo(uri: URI, process: Callback) = withRsyncDir(uri) {
-    tmpDir =>
-      logger.info(s"Downloading the repository $uri to ${tmpDir.getAbsolutePath}")
-      val r = new Rsync(uri.toString, tmpDir.getAbsolutePath)
-      r.addOptions(OPTIONS)
-      try {
-        r.execute match {
-          case 0 => Right(readObjects(tmpDir, uri, process))
-          case code => Left( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
-        }
-      } catch {
-        case e: Exception => Left( s"""Failed with exception, ${e.getMessage}""")
+  def rsyncMethod(uri: URI, destDir: File) = {
+    val r = new Rsync(uri.toString, destDir.getAbsolutePath)
+    r.addOptions(OPTIONS)
+    try {
+      r.execute match {
+        case 0 => Right(0)
+        case code => Left( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
       }
+    } catch {
+      case e: Exception => Left( s"""Failed with exception, ${e.getMessage}""")
+    }
   }
 
+  override def fetchRepo(uri: URI)(process: Callback) = fetchRepo(uri, rsyncMethod)(process)
+
+  def fetchRepo(uri: URI, method: (URI, File) => Either[String, Int])(process: Callback) = withRsyncDir(uri) {
+    destDir =>
+      logger.info(s"Downloading the repository $uri to ${destDir.getAbsolutePath}")
+      method(uri, destDir).right.map(_ => readObjects(destDir, uri, process))
+  }
 
   def readObjects(tmpRoot: File, repoUri: URI, process: Callback) = {
-
     val replacement = {
       val s = repoUri.toString
       if (s.endsWith("/")) s.dropRight(1) else s
@@ -109,7 +114,7 @@ class RsyncFetcher extends Fetcher {
           case "crl" => process(CrlObject.tryParse(rsyncUrl(f), readFile(f)))
           case "roa" => process(RoaObject.tryParse(rsyncUrl(f), readFile(f)))
           case _ =>
-            logger.info(s"Found useless file $f")
+            logger.info(s"Found unknown file $f")
         }
     }
   }
@@ -121,5 +126,5 @@ class RsyncFetcher extends Fetcher {
 }
 
 class HttpFetcher extends Fetcher {
-  override def fetchRepo(uri: URI, process: Callback): Unit = ???
+  override def fetchRepo(uri: URI)(process: Callback): Unit = ???
 }
