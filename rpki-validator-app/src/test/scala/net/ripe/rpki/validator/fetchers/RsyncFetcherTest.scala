@@ -31,7 +31,7 @@ package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
 
-import net.ripe.rpki.validator.models.validation.RepositoryObject
+import net.ripe.rpki.validator.models.validation.{BrokenObject, RepositoryObject}
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.junit.Ignore
 import org.scalatest.BeforeAndAfter
@@ -47,10 +47,11 @@ class RsyncFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockit
     System.gc()
     Thread.sleep(2000)
     val heapSize = Runtime.getRuntime.totalMemory
-    var objects = List[RepositoryObject[_]]()
-    fetcher.fetchRepo(new URI("rsync://rpki.ripe.net/repository/"), {
-      f =>
-    })
+    var objects = List[Either[BrokenObject, RepositoryObject[_]]]()
+
+    fetcher.fetchRepo(new URI("rsync://rpki.ripe.net/repository/"), { (uri, dir) => Seq()}) {
+      f => objects = f :: objects
+    }
 
     System.gc()
     Thread.sleep(2000)

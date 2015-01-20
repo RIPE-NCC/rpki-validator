@@ -46,7 +46,7 @@ import scala.collection.JavaConversions._
 
 trait Fetcher {
   type Callback = Either[BrokenObject, RepositoryObject[_]] => Unit
-  def fetchRepo(uri: URI)(process: Callback)
+  def fetchRepo(uri: URI)(process: Callback): Seq[String]
 }
 
 
@@ -56,10 +56,13 @@ class RsyncFetcher extends Fetcher {
 
   private val OPTIONS = Seq("--update", "--times", "--copy-links", "--recursive")
 
-  private def walkTree[T](d: File)(f: File => Unit): Unit = {
+  private def walkTree[T](d: File)(f: File => Option[T]): Seq[T] = {
     if (d.isDirectory) {
-      d.listFiles.foreach(walkTree(_)(f))
-    } else f(d)
+      d.listFiles.map(walkTree(_)(f)).toSeq.flatten
+    } else f(d) match {
+      case Some(x) => Seq(x)
+      case None => Seq()
+    }
   }
 
   private[this] def withRsyncDir[T](uri: URI)(f: File => T) = {
@@ -80,23 +83,23 @@ class RsyncFetcher extends Fetcher {
     r.addOptions(OPTIONS)
     try {
       r.execute match {
-        case 0 => Right(0)
-        case code => Left( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
+        case 0 => Seq()
+        case code => Seq( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
       }
     } catch {
-      case e: Exception => Left( s"""Failed with exception, ${e.getMessage}""")
+      case e: Exception => Seq( s"""Failed with exception, ${e.getMessage}""")
     }
   }
 
-  override def fetchRepo(uri: URI)(process: Callback) = fetchRepo(uri, rsyncMethod)(process)
+  override def fetchRepo(uri: URI)(process: Callback): Seq[String] = fetchRepo(uri, rsyncMethod)(process)
 
-  def fetchRepo(uri: URI, method: (URI, File) => Either[String, Int])(process: Callback) = withRsyncDir(uri) {
+  def fetchRepo(uri: URI, method: (URI, File) => Seq[String])(process: Callback): Seq[String] = withRsyncDir(uri) {
     destDir =>
       logger.info(s"Downloading the repository $uri to ${destDir.getAbsolutePath}")
-      method(uri, destDir).right.map(_ => readObjects(destDir, uri, process))
+      method(uri, destDir) ++ readObjects(destDir, uri, process)
   }
 
-  def readObjects(tmpRoot: File, repoUri: URI, process: Callback) = {
+  def readObjects(tmpRoot: File, repoUri: URI, process: Callback): Seq[String] = {
     val replacement = {
       val s = repoUri.toString
       if (s.endsWith("/")) s.dropRight(1) else s
@@ -105,17 +108,19 @@ class RsyncFetcher extends Fetcher {
     def rsyncUrl(f: File) =
       f.getAbsolutePath.replaceAll(tmpRoot.getAbsolutePath, replacement)
 
-    val pw = new PrintWriter(new File("repo.log"))
     walkTree(tmpRoot) {
       f =>
-        f.getName.takeRight(3) match {
+        val extension = f.getName.takeRight(3).toLowerCase
+        var error: Option[String] = None
+        val obj = extension match {
           case "cer" => process(CertificateObject.tryParse(rsyncUrl(f), readFile(f)))
           case "mft" => process(ManifestObject.tryParse(rsyncUrl(f), readFile(f)))
           case "crl" => process(CrlObject.tryParse(rsyncUrl(f), readFile(f)))
           case "roa" => process(RoaObject.tryParse(rsyncUrl(f), readFile(f)))
-          case _ =>
-            logger.info(s"Found unknown file $f")
+          case "gbr" => error = Some("We don't support GBR records yet")
+          case _ => error = Some(s"Found unknown file $f")
         }
+        error
     }
   }
 
@@ -126,5 +131,5 @@ class RsyncFetcher extends Fetcher {
 }
 
 class HttpFetcher extends Fetcher {
-  override def fetchRepo(uri: URI)(process: Callback): Unit = ???
+  override def fetchRepo(uri: URI)(process: Callback): Seq[String] = ???
 }

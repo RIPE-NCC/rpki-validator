@@ -187,16 +187,18 @@ class RepoFetcher(storage: Storage) {
   private val checkRsyncPool = { (uri: URI, f: Unit => Unit) =>
     val u = uri.toString.replaceAll("rsync://", "")
     if (!chunked(u).exists(rsyncUrlPool.contains)) {
-      f
+      val result = f
       rsyncUrlPool += u
+      result
     }
   }
 
   private val checkHttpPool = { (uri: URI, f: Unit => Unit) =>
     val u = uri.toString
     if (!httpUrlPool.contains(u)) {
-      f
+      val result = f
       rsyncUrlPool += u
+      result
     }
   }
 
