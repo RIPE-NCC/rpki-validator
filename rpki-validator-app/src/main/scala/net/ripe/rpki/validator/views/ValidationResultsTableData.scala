@@ -66,5 +66,5 @@ abstract class ValidationResultsTableData(records: IndexedSeq[ValidatedObjectRes
 }
 
 case class ValidatedObjectResult(trustAnchorName: String, uri: URI, validationStatus: ValidationStatus, checks: Set[ValidationCheck]) {
-  lazy val messages = checks.map(ValidationMessage.getMessage(_)).mkString("\n")
+  lazy val messages = checks.map(ValidationMessage.getMessage(_)).mkString("<br/>\n")
 }
