@@ -204,8 +204,8 @@ class RepoFetcher(storage: Storage) {
 
   def fetch(repoUri: URI): Seq[String] = {
     val (fetcher, fetchOnlyOnce) = repoUri.getScheme match {
-      case "rsync" => (new RsyncFetcher, checkRsyncPool(_))
-      case "http" | "https" => (new HttpFetcher, checkHttpPool(_))
+      case "rsync" => (new RsyncFetcher, checkRsyncPool _)
+      case "http" | "https" => (new HttpFetcher, checkHttpPool _)
       case _ => throw new Exception(s"No fetcher for the uri $repoUri")
     }
 
