@@ -167,8 +167,8 @@ case class RoaObject(override val url: String,
 
 class RepoFetcher(storage: Storage) {
 
-  var rsyncUrlPool = Set[String]()
-  val httpUrlPool = Set[String]()
+  val rsyncUrlPool = scala.collection.mutable.Set[String]()
+  val httpUrlPool = scala.collection.mutable.Set[String]()
 
   /**
    * It's the mapping of the form "localhost:8888/a/b/c =>
@@ -181,14 +181,14 @@ class RepoFetcher(storage: Storage) {
         (accum._1 :+ newLatest, newLatest)
       }
     }._1.map {
-      _.mkString("/")
+      _.mkString("","/","/")
     }
 
   private def checkRsyncPool(uri: URI)(f: => Seq[String]) = {
     val u = uri.toString.replaceAll("rsync://", "")
     if (!chunked(u).exists(rsyncUrlPool.contains)) {
       val result = f
-      rsyncUrlPool += u
+      rsyncUrlPool.add(u)
       result
     } else Seq()
   }
@@ -197,7 +197,7 @@ class RepoFetcher(storage: Storage) {
     val u = uri.toString
     if (!httpUrlPool.contains(u)) {
       val result = f
-      rsyncUrlPool += u
+      httpUrlPool.add(u)
       result
     } else Seq()
   }
