@@ -29,6 +29,7 @@
  */
 package net.ripe.rpki.validator.store
 
+import java.io.File
 import java.sql.ResultSet
 import javax.sql.DataSource
 
@@ -36,6 +37,7 @@ import net.ripe.rpki.validator.models.validation._
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 import scala.util.Try
 
 trait Storage {
@@ -160,5 +162,21 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     for (t <- Seq("certificates", "repo_objects", "broken_objects"))
       template.update(s"TRUNCATE TABLE $t", Map[String, Object]())
   }
-
 }
+
+object DurableCaches {
+
+  private val caches = mutable.Map[String, CacheStore]()
+
+  def store(path: File) = {
+    synchronized {
+      val absolutePath = path.getAbsolutePath
+      caches.get(absolutePath).fold({
+        val c = new CacheStore(DataSources.DurableDataSource(path))
+        caches += absolutePath -> c
+        c
+      })(identity)
+    }
+  }
+}
+
