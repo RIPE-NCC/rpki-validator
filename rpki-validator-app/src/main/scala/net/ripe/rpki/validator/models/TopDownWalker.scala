@@ -33,7 +33,9 @@ import java.net.URI
 
 import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509Crl}
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.commons.validation.{ValidationCheck, ValidationLocation, ValidationOptions, ValidationResult}
@@ -79,8 +81,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
         validatedObjects += createValidObjectForThisCert
         validatedObjects += createValidObject(crl)
-        val roas = findRoas
-        val childrenCertificates = findChildrenCertificates
+        val roas = findAndValidateObjects(store.getRoas)
+        val childrenCertificates = findAndValidateObjects(store.getCertificates)
 
         findManifest match {
           case Some(manifest) =>
@@ -98,7 +100,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     validatedObjects.result()
   }
 
-  private def stepDown: (CertificateObject) => Map[URI, ValidatedObject] = {
+  private def stepDown: (RepositoryObject[X509ResourceCertificate]) => Map[URI, ValidatedObject] = {
     cert => {
       val ski: String = HashUtil.stringify(cert.decoded.getSubjectKeyIdentifier)
       if (seen.contains(ski)) {
@@ -163,18 +165,18 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }.toMap
     
     val (crlsOnManifest, entriesExceptCrls) = manifestEntries.partition(_._1.toLowerCase.endsWith(".crl"))
-    crossCheckCrls(crl, crlsOnManifest, validationLocation)
 
+    crossCheckCrls(crl, crlsOnManifest, validationLocation)
     crossCheckRepoObjects(validationLocation, entriesExceptCrls, childrenCertificates ++ roas)
   }
 
-  def crossCheckRepoObjects(validationLocation: ValidationLocation, manifestCertEntries: FileAndHashEntries, foundCertificates: Seq[RepositoryObject[_]]) {
+  def crossCheckRepoObjects(validationLocation: ValidationLocation, manifestEntries: FileAndHashEntries, foundObjects: Seq[RepositoryObject[_]]) {
     
-    val foundCertificatesEntries = foundCertificates.map(c => c.url -> c.hash).toMap
+    val foundObjectsEntries = foundObjects.map(c => c.url -> c.hash).toMap
     
-    val notFoundInRepo = manifestCertEntries.keySet -- foundCertificatesEntries.keySet
-    val notOnManifest = foundCertificatesEntries.keySet -- manifestCertEntries.keySet
-    val objectsWithMatchingUri = manifestCertEntries.keySet intersect foundCertificatesEntries.keySet
+    val notFoundInRepo = manifestEntries.keySet -- foundObjectsEntries.keySet
+    val notOnManifest = foundObjectsEntries.keySet -- manifestEntries.keySet
+    val objectsWithMatchingUri = manifestEntries.keySet intersect foundObjectsEntries.keySet
 
     notFoundInRepo.foreach { location =>
       certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, location)
@@ -185,10 +187,10 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
 
     objectsWithMatchingUri.filterNot { location =>
-      HashUtil.equals(manifestCertEntries(location), foundCertificatesEntries(location))
+      HashUtil.equals(manifestEntries(location), foundObjectsEntries(location))
     } foreach { location =>
       certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE,
-        s"Hash code of object at $location (${foundCertificatesEntries(location)}) does not match the one specified in the manifest (${manifestCertEntries(location)})")
+        s"Hash code of object at $location (${foundObjectsEntries(location)}) does not match the one specified in the manifest (${manifestEntries(location)})")
     }
   }
 
@@ -218,21 +220,14 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
-  private def findRoas = {
+  private def findAndValidateObjects[T <: CertificateRepositoryObject](find: Array[Byte] => Seq[RepositoryObject[T]]) = {
     val location: String = certificateContext.getLocation.toString
-    val roas = store.getRoas(certificateContext.getSubjectKeyIdentifier)
-    roas.foreach(_.decoded.validate(location, certificateContext, crlLocator, validationOptions, certContextValidationResult))
-    roas
+    val objects = find(certificateContext.getSubjectKeyIdentifier)
+    objects.foreach(_.decoded.validate(location, certificateContext, crlLocator, validationOptions, certContextValidationResult))
+    objects
   }
 
-  private def findChildrenCertificates = {
-    val location: String = certificateContext.getLocation.toString
-    val certs = store.getCertificates(certificateContext.getSubjectKeyIdentifier)
-    certs.foreach(_.decoded.validate(location, certificateContext, crlLocator, validationOptions, certContextValidationResult))
-    certs
-  }
-
-  private def crossCheckWithManifest(manifest: ManifestObject, crl: CrlObject, roas: Seq[RoaObject], childrenCertificates: Seq[CertificateObject]) {
+  private def crossCheckWithManifest(manifest: ManifestObject, crl: CrlObject, roas: Seq[RepositoryObject[RoaCms]], childrenCertificates: Seq[RepositoryObject[X509ResourceCertificate]]) {
     checkManifestUrlOnCertMatchesLocationInRepo(manifest)
     processManifestEntries(manifest, crl, roas, childrenCertificates)
   }
