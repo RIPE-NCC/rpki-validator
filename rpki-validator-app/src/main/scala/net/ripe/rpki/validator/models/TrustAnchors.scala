@@ -56,7 +56,6 @@ import scalaz.{Failure, Success, Validation}
 import net.ripe.rpki.validator.lib.DateAndTime._
 
 import net.ripe.rpki.validator.store.{DurableCaches, CacheStore, DataSources, RepositoryObjectStore}
-import scalaz._
 import org.apache.commons.io.FileUtils
 
 
@@ -220,7 +219,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val errors = fetcher.fetch(uri)
     errors.foreach(validationResult.error(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, _))
 
-    val certificate = store.getCertificate(trustAnchorLocator.getCertificateLocation.toString)
+    val certificate = store.getCertificate(uri.toString)
     certificate.foreach(cert => validationResult.rejectIfFalse(keyInfoMatches(cert), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH))
 
     if (validationResult.hasFailureForCurrentLocation)
@@ -245,7 +244,6 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
       FileUtils.cleanDirectory(diskCache)
     }
   }
-
 }
 
 trait TrackValidationProcess extends ValidationProcess {
