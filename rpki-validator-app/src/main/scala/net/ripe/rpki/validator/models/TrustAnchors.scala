@@ -198,7 +198,10 @@ trait ValidationProcess {
   def shutdown(): Unit = {}
 }
 
-class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, workingDirectory: File, enableLooseValidation: Boolean = false)
+class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int,
+                                   storageDirectory: File,
+                                   fetcherConfig: FetcherConfig,
+                                   enableLooseValidation: Boolean = false)
   extends ValidationProcess {
 
   private val validationOptions = new ValidationOptions()
@@ -206,8 +209,8 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   validationOptions.setMaxStaleDays(maxStaleDays)
   validationOptions.setLooseValidationEnabled(enableLooseValidation)
 
-  val store = DurableCaches.store(workingDirectory)
-  val fetcher = new RepoFetcher(store)
+  val store = DurableCaches.store(storageDirectory)
+  val fetcher = new RepoFetcher(store, fetcherConfig)
 
   override def extractTrustAnchorLocator(): ValidatedObject = {
     val uri = trustAnchorLocator.getCertificateLocation

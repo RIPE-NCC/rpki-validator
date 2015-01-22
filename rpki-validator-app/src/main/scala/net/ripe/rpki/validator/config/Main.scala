@@ -30,6 +30,7 @@
 package net.ripe.rpki.validator
 package config
 
+import net.ripe.rpki.validator.fetchers.FetcherConfig
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.config.ConnectionConfig
@@ -170,7 +171,11 @@ class Main() { main =>
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays,  ApplicationOptions.workDirLocation, ApplicationOptions.enableLooseValidation) with TrackValidationProcess with ValidationProcessLogger {
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays,
+          ApplicationOptions.workDirLocation,
+          FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation),
+          ApplicationOptions.enableLooseValidation
+        ) with TrackValidationProcess with ValidationProcessLogger {
           override val memoryImage = main.memoryImage
         }
         try {

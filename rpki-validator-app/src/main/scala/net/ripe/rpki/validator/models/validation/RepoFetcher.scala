@@ -37,7 +37,7 @@ import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.{X509ResourceCertificate, X509ResourceCertificateParser}
 import net.ripe.rpki.commons.validation.ValidationResult
-import net.ripe.rpki.validator.fetchers.{HttpFetcher, RsyncFetcher}
+import net.ripe.rpki.validator.fetchers.{FetcherConfig, HttpFetcher, RsyncFetcher}
 import net.ripe.rpki.validator.store.Storage
 
 import scala.collection.JavaConversions._
@@ -171,7 +171,7 @@ case class RoaObject(override val url: String,
 }
 
 
-class RepoFetcher(storage: Storage) {
+class RepoFetcher(storage: Storage, config: FetcherConfig) {
 
   val rsyncUrlPool = scala.collection.mutable.Set[String]()
   val httpUrlPool = scala.collection.mutable.Set[String]()
@@ -210,8 +210,8 @@ class RepoFetcher(storage: Storage) {
 
   def fetch(repoUri: URI): Seq[String] = {
     val (fetcher, fetchOnlyOnce) = repoUri.getScheme match {
-      case "rsync" => (new RsyncFetcher, checkRsyncPool _)
-      case "http" | "https" => (new HttpFetcher, checkHttpPool _)
+      case "rsync" => (new RsyncFetcher(config), checkRsyncPool _)
+      case "http" | "https" => (new HttpFetcher(config), checkHttpPool _)
       case _ => throw new Exception(s"No fetcher for the uri $repoUri")
     }
 

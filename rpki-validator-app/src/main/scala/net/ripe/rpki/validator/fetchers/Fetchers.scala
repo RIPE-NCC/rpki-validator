@@ -44,17 +44,18 @@ import org.apache.log4j.Logger
 
 import scala.collection.JavaConversions._
 
+case class FetcherConfig(rsyncDir: String)
+
 trait Fetcher {
   type Callback = Either[BrokenObject, RepositoryObject[_]] => Unit
   def fetchRepo(uri: URI)(process: Callback): Seq[String]
 }
 
-
-class RsyncFetcher extends Fetcher {
+class RsyncFetcher(config: FetcherConfig) extends Fetcher {
 
   private val logger: Logger = Logger.getLogger(classOf[RsyncFetcher])
 
-  private val OPTIONS = Seq("--update", "--times", "--copy-links", "--recursive")
+  private val OPTIONS = Seq("--update", "--times", "--copy-links", "--recursive", "--delete")
 
   private def walkTree[T](d: File)(f: File => Option[T]): Seq[T] = {
     if (d.isDirectory) {
@@ -68,7 +69,7 @@ class RsyncFetcher extends Fetcher {
   private[this] def withRsyncDir[T](uri: URI)(f: File => T) = {
     def uriToPath = uri.toString.replaceAll("rsync://", "")
     def destDir = {
-      val rsyncPath = new File(ApplicationOptions.rsyncDirLocation + "/" + uriToPath)
+      val rsyncPath = new File(config.rsyncDir + "/" + uriToPath)
       if (!rsyncPath.exists) {
         rsyncPath.mkdirs
       }
@@ -127,12 +128,9 @@ class RsyncFetcher extends Fetcher {
     }
   }
 
-  def hashToString(bytes: Array[Byte]) = bytes.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
-
   private def readFile(f: File) = Files.readAllBytes(f.toPath)
-
 }
 
-class HttpFetcher extends Fetcher {
+class HttpFetcher(config: FetcherConfig) extends Fetcher {
   override def fetchRepo(uri: URI)(process: Callback): Seq[String] = ???
 }

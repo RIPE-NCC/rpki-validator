@@ -31,6 +31,7 @@ package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
 
+import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.models.validation.{BrokenObject, RepositoryObject}
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.junit.Ignore
@@ -42,7 +43,7 @@ import org.scalatest.mock.MockitoSugar
 class RsyncFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
 
   test("Should download repository") {
-    val fetcher = new RsyncFetcher
+    val fetcher = new RsyncFetcher(FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation))
 
     System.gc()
     Thread.sleep(2000)
