@@ -128,10 +128,10 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   override def getCertificate(url: String): Option[CertificateObject] =
     try {
       Option(
-        template.queryForObject("SELECT url, ski, encoded FROM certificates WHERE url = :url",
+        template.queryForObject("SELECT url, encoded FROM certificates WHERE url = :url",
           Map("url" -> url),
           new RowMapper[CertificateObject] {
-            override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(3))
+            override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(2))
           }
         )
       )

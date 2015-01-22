@@ -46,9 +46,15 @@ import scala.collection.JavaConversions._
 trait Hashing {
   def getHash(bytes: Array[Byte]): Array[Byte] = ManifestCms.hashContents(bytes)
 
-  def stringify(bytes: Array[Byte]) = bytes.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
+  def stringify(bytes: Array[Byte]) = Option(bytes).map {
+    _.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
+  }.getOrElse("")
 
-  def stringToBytes(s: String) = new BigInteger(s, 16).toByteArray
+  def stringToBytes(s: String) =
+    if (s == null || s.isEmpty)
+      Array[Byte]()
+    else
+      new BigInteger(s, 16).toByteArray
 
   def equals(hashA: Array[Byte], hashB: Array[Byte]): Boolean = { hashA.deep == hashB.deep }
 }

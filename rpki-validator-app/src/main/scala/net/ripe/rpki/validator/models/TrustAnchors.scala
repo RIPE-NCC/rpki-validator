@@ -55,6 +55,11 @@ import scalaz.{Failure, Success, Validation}
 // Ignore unused warning for implicit def from net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.rpki.validator.lib.DateAndTime._
 
+import net.ripe.rpki.validator.store.{DurableCaches, CacheStore, DataSources, RepositoryObjectStore}
+import scalaz._
+import org.apache.commons.io.FileUtils
+
+
 sealed trait ProcessingStatus {
   def isIdle: Boolean
   def isRunning: Boolean = !isIdle
@@ -197,13 +202,12 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   extends ValidationProcess {
 
   private val validationOptions = new ValidationOptions()
-  private val RepositoryObjectStore = DataSources.DurableDataSource(workingDirectory)
 
   validationOptions.setMaxStaleDays(maxStaleDays)
   validationOptions.setLooseValidationEnabled(enableLooseValidation)
 
-  val store: CacheStore = new CacheStore(RepositoryObjectStore)
-  val fetcher: RepoFetcher = new RepoFetcher(store)
+  val store = DurableCaches.store(workingDirectory)
+  val fetcher = new RepoFetcher(store)
 
   override def extractTrustAnchorLocator(): ValidatedObject = {
     val uri = trustAnchorLocator.getCertificateLocation
@@ -213,7 +217,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val errors = fetcher.fetch(uri)
     errors.foreach(validationResult.error(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, _))
 
-    val certificate = store.getCertificate(trustAnchorLocator.getPublicKeyInfo)
+    val certificate = store.getCertificate(trustAnchorLocator.getCertificateLocation.toString)
     certificate.foreach(cert => validationResult.rejectIfFalse(keyInfoMatches(cert), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH))
 
     if (validationResult.hasFailureForCurrentLocation)
@@ -222,16 +226,23 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
       ValidObject(uri, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet, certificate.get.decoded)
   }
 
-
-  private def keyInfoMatches(certificate: CertificateObject): Boolean = {
-    trustAnchorLocator.getPublicKeyInfo == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.decoded.getCertificate)
-  }
-
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
     trustAnchorLocator.getPrefetchUris.asScala.foreach(fetcher.fetch)
     val walker = new TopDownWalker(certificate, store, fetcher, validationOptions)(scala.collection.mutable.Set())
     walker.execute
   }
+
+  private def keyInfoMatches(certificate: CertificateObject): Boolean = {
+    trustAnchorLocator.getPublicKeyInfo == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.decoded.getCertificate)
+  }
+
+  def wipeRsyncDiskCache() {
+    val diskCache = new File(ApplicationOptions.rsyncDirLocation)
+    if (diskCache.isDirectory) {
+      FileUtils.cleanDirectory(diskCache)
+    }
+  }
+
 }
 
 trait TrackValidationProcess extends ValidationProcess {

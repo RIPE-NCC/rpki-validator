@@ -106,7 +106,10 @@ class RsyncFetcher extends Fetcher {
     }
 
     def rsyncUrl(f: File) =
-      f.getAbsolutePath.replaceAll(tmpRoot.getAbsolutePath, replacement)
+      if (replacement.endsWith(f.getName))
+        replacement
+      else
+        f.getAbsolutePath.replaceAll(tmpRoot.getAbsolutePath, replacement)
 
     walkTree(tmpRoot) {
       f =>
