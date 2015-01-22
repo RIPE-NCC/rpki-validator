@@ -50,9 +50,11 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   private object HashUtil extends Hashing
 
-  Validate.isTrue(seen.add(HashUtil.stringify(certificateContext.getSubjectKeyIdentifier)))
+  val certificateSkiHex: String = HashUtil.stringify(certificateContext.getSubjectKeyIdentifier)
+  
+  Validate.isTrue(seen.add(certificateSkiHex))
   Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")
-
+  
   private val certContextValidationLocation = new ValidationLocation(certificateContext.getLocation)
   private val certContextValidationResult: ValidationResult = ValidationResult.withLocation(certContextValidationLocation)
   private val validatedObjects = Map.newBuilder[URI, ValidatedObject]
@@ -89,7 +91,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
             crossCheckWithManifest(manifest, crl, roas, childrenCertificates)
             validatedObjects += createValidObject(manifest)
           case None =>
-            certContextValidationResult.warnForLocation(certContextValidationLocation, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, HashUtil.stringify(certificateContext.getSubjectKeyIdentifier))
+            certContextValidationResult.warnForLocation(certContextValidationLocation, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex)
         }
 
         validatedObjects ++= roas.map(createValidObject)
@@ -104,7 +106,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     cert => {
       val ski: String = HashUtil.stringify(cert.decoded.getSubjectKeyIdentifier)
       if (seen.contains(ski)) {
-        logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [${HashUtil.stringify(certificateContext.getSubjectKeyIdentifier)}] to ${cert.url} [$ski]")
+        logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [${certificateSkiHex}] to ${cert.url} [$ski]")
         Map()
       } else {
         val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
@@ -170,7 +172,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     crossCheckRepoObjects(validationLocation, entriesExceptCrls, childrenCertificates ++ roas)
   }
 
-  def crossCheckRepoObjects(validationLocation: ValidationLocation, manifestEntries: FileAndHashEntries, foundObjects: Seq[RepositoryObject[_]]) {
+  private[models] def crossCheckRepoObjects(validationLocation: ValidationLocation, manifestEntries: FileAndHashEntries, foundObjects: Seq[RepositoryObject[_]]) {
     
     val foundObjectsEntries = foundObjects.map(c => c.url -> c.hash).toMap
     
@@ -179,7 +181,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     val objectsWithMatchingUri = manifestEntries.keySet intersect foundObjectsEntries.keySet
 
     notFoundInRepo.foreach { location =>
-      certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, location)
+      certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_FILE_NOT_FOUND_BY_AKI, location, certificateSkiHex)
     }
 
     notOnManifest.foreach { location =>
@@ -213,7 +215,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       val locationOnMft = certificateContext.getRepositoryURI.resolve(manifestCrlEntries.keys.head).toString
       val hashOnMft = manifestCrlEntries.values.head
       if (locationOnMft != crl.url) {
-        certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"URI of CRL in manifest ($locationOnMft) doesn't match URL in repo ($crl.url)")
+        certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_CRL_URI_MISMATCH, locationOnMft, crl.url.toString)
       } else if (!HashUtil.equals(crl.hash, hashOnMft)) {
         certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Hash code of $locationOnMft doesn't match hash code in manifest")
       }
