@@ -34,6 +34,7 @@ import java.sql.ResultSet
 import javax.sql.DataSource
 
 import net.ripe.rpki.validator.models.validation._
+import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import scala.collection.JavaConversions._
@@ -52,6 +53,7 @@ trait Storage {
 
   def storeBroken(brokenObject: BrokenObject)
 
+  def getCertificate(uri: String): Option[CertificateObject]
   def getCertificates(aki: Array[Byte]): Seq[CertificateObject]
 
   def getCrls(aki: Array[Byte]): Seq[CrlObject]
@@ -122,6 +124,20 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         "encoded" -> broken.bytes,
         "message" -> broken.errorMessage))
   }
+
+  override def getCertificate(url: String): Option[CertificateObject] =
+    try {
+      Option(
+        template.queryForObject("SELECT url, ski, encoded FROM certificates WHERE url = :url",
+          Map("url" -> url),
+          new RowMapper[CertificateObject] {
+            override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(3))
+          }
+        )
+      )
+    } catch {
+      case e: EmptyResultDataAccessException => None
+    }
 
   override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] =
     template.query("SELECT url, ski, encoded FROM certificates WHERE aki = :aki",
