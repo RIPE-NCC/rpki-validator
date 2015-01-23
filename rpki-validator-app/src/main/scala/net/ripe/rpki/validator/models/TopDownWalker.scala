@@ -81,20 +81,20 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
             crl.decoded
         }
 
-        validatedObjects += createValidObject(crl)
+        validatedObjects += createValidatedObjectEntry(crl)
         val roas = findAndValidateObjects(store.getRoas)
         val childrenCertificates = findAndValidateObjects(store.getCertificates)
 
         findManifest match {
           case Some(manifest) =>
             crossCheckWithManifest(manifest, crl, roas, childrenCertificates)
-            validatedObjects += createValidObject(manifest)
+            validatedObjects += createValidatedObjectEntry(manifest)
           case None =>
             certContextValidationResult.warnForLocation(certContextValidationLocation, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex)
         }
 
-        validatedObjects ++= roas.map(createValidObject)
-        validatedObjects ++= childrenCertificates.map(createValidObject)
+        validatedObjects ++= roas.map(createValidatedObjectEntry)
+        validatedObjects ++= childrenCertificates.map(createValidatedObjectEntry)
 
         validatedObjects ++= childrenCertificates.flatMap(stepDown)
     }
@@ -106,7 +106,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     cert => {
       val ski: String = HashUtil.stringify(cert.decoded.getSubjectKeyIdentifier)
       if (seen.contains(ski)) {
-        logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [${certificateSkiHex}] to ${cert.url} [$ski]")
+        logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
         Map()
       } else {
         val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
@@ -116,15 +116,20 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
-  private def createValidObjectForThisCert = {
-    val validObject = new ValidObject(certificateContext.getLocation, certContextValidationResult.getAllValidationChecksForLocation(certContextValidationLocation).asScala.toSet, certificateContext.getCertificate)
-    certificateContext.getLocation -> validObject
+  private def createValidatedObjectEntry[T <: CertificateRepositoryObject](repositoryObject: RepositoryObject[T]): (URI, ValidatedObject) = {
+    val objectUri: URI = new URI(repositoryObject.url)
+    objectUri -> createValidatedObject(repositoryObject, objectUri)
   }
 
-  private def createValidObject[T <: CertificateRepositoryObject](repositoryObject: RepositoryObject[T]): (URI, ValidObject) = {
-    val crlUri: URI = new URI(repositoryObject.url)
-    val validationResultsForLocation: Set[ValidationCheck] = certContextValidationResult.getAllValidationChecksForLocation(new ValidationLocation(crlUri)).asScala.toSet
-    crlUri -> new ValidObject(crlUri, validationResultsForLocation, repositoryObject.decoded)
+  private def createValidatedObject[T <: CertificateRepositoryObject](repositoryObject: RepositoryObject[T], objectUri: URI): ValidatedObject = {
+    val validationResults: Set[ValidationCheck] = certContextValidationResult.getAllValidationChecksForLocation(new ValidationLocation(objectUri)).asScala.toSet
+    val valid = validationResults.forall(_.isOk)
+    if (valid) {
+      ValidObject(objectUri, validationResults, repositoryObject.decoded)
+    }
+    else {
+      InvalidObject(objectUri, validationResults)
+    }
   }
 
   private def prefetch(uri: URI) = fetcher.fetch(uri)
@@ -151,7 +156,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   private def findMostRecentValidManifest(manifests: Seq[ManifestObject]): Option[ManifestObject] = {
     manifests.sortBy(_.decoded.getNumber).reverse.find( manifest => {
       val manifestValidationResult: ValidationResult = ValidationResult.withLocation(manifest.url)
-      manifest.decoded.validate(certificateContext.getLocation.toString, certificateContext, crlLocator, validationOptions, manifestValidationResult)
+      manifest.decoded.validate(manifest.url, certificateContext, crlLocator, validationOptions, manifestValidationResult)
       certContextValidationResult.addAll(manifestValidationResult)
       ! manifestValidationResult.hasFailures
     })
@@ -225,7 +230,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   private def findAndValidateObjects[T <: CertificateRepositoryObject](find: Array[Byte] => Seq[RepositoryObject[T]]) = {
     val location: String = certificateContext.getLocation.toString
     val objects = find(certificateContext.getSubjectKeyIdentifier)
-    objects.foreach(_.decoded.validate(location, certificateContext, crlLocator, validationOptions, certContextValidationResult))
+    objects.foreach(o => o.decoded.validate(o.url, certificateContext, crlLocator, validationOptions, certContextValidationResult))
     objects
   }
 
