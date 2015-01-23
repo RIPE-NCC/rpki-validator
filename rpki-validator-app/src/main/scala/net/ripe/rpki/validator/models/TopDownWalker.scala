@@ -81,7 +81,6 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
             crl.decoded
         }
 
-        validatedObjects += createValidObjectForThisCert
         validatedObjects += createValidObject(crl)
         val roas = findAndValidateObjects(store.getRoas)
         val childrenCertificates = findAndValidateObjects(store.getCertificates)
@@ -95,6 +94,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         }
 
         validatedObjects ++= roas.map(createValidObject)
+        validatedObjects ++= childrenCertificates.map(createValidObject)
 
         validatedObjects ++= childrenCertificates.flatMap(stepDown)
     }
