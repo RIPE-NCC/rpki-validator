@@ -74,7 +74,7 @@ object Main {
   }
 }
 
-class Main() { main =>
+class Main extends Http { main =>
   import scala.concurrent.duration._
 
   val logger = Logger[this.type]
@@ -98,17 +98,7 @@ class Main() { main =>
 
   val userPreferences = Ref(data.userPreferences)
 
-  private val httpRequestConfig = RequestConfig.custom()
-    .setConnectTimeout(2 * 60 * 1000)
-    .setSocketTimeout(2 * 60 * 1000)
-    .build()
-
-  private val httpClient: CloseableHttpClient = HttpClientBuilder.create()
-    .useSystemProperties()
-    .setDefaultRequestConfig(httpRequestConfig)
-    .build()
-
-  val bgpRisDumpDownloader = new BgpRisDumpDownloader(httpClient)
+  val bgpRisDumpDownloader = new BgpRisDumpDownloader(http)
 
   val memoryImage = Ref(
     MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors), roas))
@@ -269,7 +259,7 @@ class Main() { main =>
       override def newVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version,
         () => {
           val get = new HttpGet("https://lirportal.ripe.net/certification/content/static/validator/latest-version.properties")
-          val response = httpClient.execute(get)
+          val response = http.execute(get)
           scala.io.Source.fromInputStream(response.getEntity.getContent).mkString
         })
 

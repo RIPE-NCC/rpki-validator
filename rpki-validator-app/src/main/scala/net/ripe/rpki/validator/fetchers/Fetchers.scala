@@ -38,11 +38,14 @@ import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateParser
 import net.ripe.rpki.commons.rsync.Rsync
-import net.ripe.rpki.validator.config.ApplicationOptions
+import net.ripe.rpki.validator.config.{Http, ApplicationOptions}
 import net.ripe.rpki.validator.models.validation._
+import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.apache.log4j.Logger
 
 import scala.collection.JavaConversions._
+import scala.util.Try
+import scala.xml.{NodeSeq, Elem}
 
 case class FetcherConfig(rsyncDir: String)
 
@@ -131,6 +134,72 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
   private def readFile(f: File) = Files.readAllBytes(f.toPath)
 }
 
-class HttpFetcher(config: FetcherConfig) extends Fetcher {
-  override def fetchRepo(uri: URI)(process: Callback): Seq[String] = ???
+class HttpFetcher(config: FetcherConfig) extends Fetcher with Http {
+
+  case class PublishUnit(uri: String, hash: String, base64: String)
+  case class WithdrawUnit(uri: String, hash: String)
+
+  case class Snapshot(publish: Seq[PublishUnit])
+  case class Delta(publish: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
+
+  case class SnapshotData(snapshot: Snapshot, deltas: Seq[Delta] = Seq())
+
+  override def fetchRepo(notificationUri: URI)(process: Callback): Seq[String] = {
+
+    getXml(notificationUri).right.flatMap { xml =>
+
+      validateSnapshotRef {
+        (xml \ "snapshot").map(x => ((x \ "@uri").text, (x \ "@hash").text))
+      }.right.map { snapshot =>
+//        val deltas = (xml \ "delta").map(x => ((x \ "@serial").text.toInt, (x \ "@uri").text, (x \ "@hash").text))
+//        deltas.sortBy(_._1).map {
+//          delta => fetchDelta(delta._2)
+//        }
+        snapshot
+      }
+    }
+
+    Seq()
+
+  }
+
+  def validateSnapshotRef(xml: Seq[(String, String)]): Either[String, Snapshot] = xml match {
+    case s :: Nil => fetchSnapshot(s._1)
+    case _ => Left("There should one and only one 'snapshot' element'")
+  }
+
+  def getXml(notificationUri: URI): Either[String, Elem] = {
+    try {
+      val response = http.execute(new HttpGet(notificationUri))
+      val xml = scala.xml.XML.load(response.getEntity.getContent)
+      Right(xml)
+    } catch {
+      case e: Exception => Left(e.getMessage)
+    }
+  }
+
+  def getXml(uri: String): Either[String, Elem] = getXml(new URI(uri))
+
+  private def fetchSnapshot(snapshotUrl: String): Either[String, Snapshot] = {
+    getXml(snapshotUrl).right.flatMap { xml =>
+      val publishes = (xml \ "publish").map(x => PublishUnit((x \ "@uri").text, (x \ "@hash").text, x.text))
+      if (publishes.exists {
+        p => Option(p.uri).exists(_.isEmpty) &&
+          Option(p.hash).exists(_.isEmpty) &&
+          Option(p.base64).exists(_.isEmpty)
+      }) {
+        // TODO Make it better
+        Left("Mandatory attributes are absent")
+      }
+      else
+        Right(Snapshot(publishes))
+    }
+  }
+
+  private def fetchDelta(deltaUrl: String) : Either[String, Seq[PublishUnit]] = {
+    val response = http.execute(new HttpGet(deltaUrl))
+    val xml = scala.xml.XML.load(response.getEntity.getContent)
+    Left("")
+  }
+
 }
