@@ -63,16 +63,13 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   def execute: Map[URI, ValidatedObject] = {
     logger.info(s"Validating ${certificateContext.getLocation}")
     Option(certificateContext.getRepositoryURI) match {
-      case Some(repositoryUri) =>
-        prefetch(repositoryUri)
-        certContextValidationResult.setLocation(new ValidationLocation(repositoryUri))
-
+      case Some(repositoryUri) => prefetch(repositoryUri)
       case None =>  //TODO do nothing, suppose this could happen if CA has no children?
     }
 
     findCrl match {
       case None =>
-        certContextValidationResult.rejectForLocation(certContextValidationLocation, CRL_REQUIRED, "No valid CRL found with SKI=" + certificateContext.getSubjectKeyIdentifier)
+        certContextValidationResult.rejectForLocation(certContextValidationLocation, CRL_REQUIRED, s"No valid CRL found with AKI=$certificateSkiHex")
         validatedObjects += certificateContext.getLocation -> InvalidObject(certificateContext.getLocation, certContextValidationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
 
       case Some(crl) =>
@@ -231,7 +228,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     val location: String = certificateContext.getLocation.toString
     val objects = find(certificateContext.getSubjectKeyIdentifier)
     objects.foreach(o => o.decoded.validate(o.url, certificateContext, crlLocator, validationOptions, certContextValidationResult))
-    objects
+    objects.filterNot(_.decoded.isPastValidityTime)
   }
 
   private def crossCheckWithManifest(manifest: ManifestObject, crl: CrlObject, roas: Seq[RepositoryObject[RoaCms]], childrenCertificates: Seq[RepositoryObject[X509ResourceCertificate]]) {
