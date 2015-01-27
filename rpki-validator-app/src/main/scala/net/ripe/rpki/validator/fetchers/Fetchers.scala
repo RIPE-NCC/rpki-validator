@@ -33,6 +33,7 @@ import java.io.{File, PrintWriter}
 import java.net.URI
 import java.nio.file.Files
 
+import com.google.common.io.BaseEncoding
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsParser
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
@@ -148,10 +149,13 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
   case class DeltaDef(serial: BigInt, url: String, hash: String)
 
-  case class Delta(deltaDef: DeltaDef, publish: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
+  case class Delta(deltaDef: DeltaDef, publishes: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
 
-  case class Snapshot(snapshotDef: SnapshotDef, publish: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
+  case class Snapshot(snapshotDef: SnapshotDef, publishes: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
 
+  case class Error(url: URI, message: String)
+
+  private val base64 = BaseEncoding.base64()
 
   override def fetchRepo(notificationUri: URI)(process: Callback): Seq[String] = {
 
@@ -161,19 +165,20 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
       try {
         Right(NotificationDef((xml \ "@session_id").text, BigInt((xml \ "@serial").text)))
       } catch {
-        case e: NumberFormatException => Left("Couldn't parse serial number")
-        case e: Throwable => Left(s"Error: ${e.getMessage}")
+        case e: NumberFormatException => Left(Error(notificationUri, "Couldn't parse serial number"))
+        case e: Throwable => Left(Error(notificationUri, s"Error: ${e.getMessage}"))
       }
     }
 
     val snapshotDef = notificationXml.right.flatMap { xml =>
-      validateSnapshotRef((xml \ "snapshot").map(x => ((x \ "@uri").text, (x \ "@hash").text)))
+      (xml \ "snapshot").map(x => ((x \ "@uri").text, (x \ "@hash").text)) match {
+        case Seq(s) => Right(SnapshotDef(s._1, s._2))
+        case _ => Left(Error(notificationUri, "There should one and only one 'snapshot' element'"))
+      }
     }
 
-    val snapshotContent = snapshotDef.right.flatMap { sd =>
-      fetchSnapshot(sd.url, sd)
-    }
-    
+    val sc: Either[Error, Snapshot] = snapshotDef.right.flatMap { sd => fetchSnapshot(new URI(sd.url), sd) }
+
     val requiredDeltas = notificationXml.right.map { xml =>
       val deltas = (xml \ "delta").map(x => DeltaDef(BigInt((x \ "@serial").text), (x \ "@uri").text, (x \ "@hash").text))
       notificationDef.right.map { nd =>
@@ -182,50 +187,72 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
       }
     }.joinRight
 
-    val deltaContents: Either[String, Seq[Either[String, Delta]]] = requiredDeltas.right.map {
-      deltas => deltas.map { d => fetchDelta(d.url, d) }
+    val deltaContents: Either[Error, Seq[Either[Error, Delta]]] = requiredDeltas.right.map {
+      deltas => deltas.map { d => fetchDelta(new URI(d.url), d) }
     }
 
+    // process snapshot content
+    sc.right.foreach { s =>
+      s.publishes.foreach { parsePublishUnit(_, process) }
+    }
 
+    // process deltas content
+    deltaContents.right.foreach { dcs : Seq[Either[Error, Delta]] =>
+      dcs.foreach { e : Either[Error, Delta] =>
+        e.right.foreach { d : Delta =>
+          d.publishes.foreach(parsePublishUnit(_, process))
+        }
+      }
+    }
+
+    // gather errors
+    
     Seq()
 
   }
 
-  def validateSnapshotRef(snapshotDefs: Seq[(String, String)]): Either[String, SnapshotDef] = snapshotDefs match {
-    case Seq(s) => Right(SnapshotDef(s._1, s._2))
-    case _ => Left("There should one and only one 'snapshot' element'")
+  private def parsePublishUnit(p: PublishUnit, process: Callback) = {
+    val extension = p.uri.takeRight(3).toLowerCase
+    var error: Option[String] = None
+    val obj = extension match {
+      case "cer" => process(CertificateObject.tryParse(p.uri, base64.decode(p.base64)))
+      case "mft" => process(ManifestObject.tryParse(p.uri, base64.decode(p.base64)))
+      case "crl" => process(CrlObject.tryParse(p.uri, base64.decode(p.base64)))
+      case "roa" => process(RoaObject.tryParse(p.uri, base64.decode(p.base64)))
+      case "gbr" => error = Some("We don't support GBR records yet")
+      case _ => error = Some(s"Found unknown URI type ${p.uri}")
+    }
   }
 
-  def getXml(notificationUri: URI): Either[String, Elem] = {
+  def getXml(notificationUri: URI): Either[Error, Elem] = {
     try {
       val response = http.execute(new HttpGet(notificationUri))
       Right(scala.xml.XML.load(response.getEntity.getContent))
     } catch {
-      case e: Exception => Left(e.getMessage)
+      case e: Exception => Left(Error(notificationUri, e.getMessage))
     }
   }
 
-  def getXml(uri: String): Either[String, Elem] = getXml(new URI(uri))
+  private def fetchSnapshot(snapshotUrl: URI, snapshotDef: SnapshotDef): Either[Error, Snapshot] =
+    getPublishUnits(snapshotUrl, Snapshot(snapshotDef, _))
 
-  private def fetchSnapshot(snapshotUrl: String, snapshotDef: SnapshotDef): Either[String, Snapshot] =
-    getXml(snapshotUrl).right.flatMap { xml => getPublishUnits(xml, Snapshot(snapshotDef, _)) }
+  private def fetchDelta(deltaUrl: URI, deltaDef: DeltaDef): Either[Error, Delta] =
+    getPublishUnits(deltaUrl, Delta(deltaDef, _))
 
-  private def fetchDelta(deltaUrl: String, deltaDef: DeltaDef): Either[String, Delta] = {
-    getXml(deltaUrl).right.flatMap { xml => getPublishUnits(xml, Delta(deltaDef, _)) }
-  }
-
-  private def getPublishUnits[T](xml: Elem, f: Seq[PublishUnit] => T): Either[String, T] = {
-    val publishes = (xml \ "publish").map(x => PublishUnit((x \ "@uri").text, (x \ "@hash").text, x.text))
-    if (publishes.exists {
-      p => Option(p.uri).exists(_.isEmpty) &&
-        Option(p.hash).exists(_.isEmpty) &&
-        Option(p.base64).exists(_.isEmpty)
-    }) {
-      // TODO Make it better
-      Left("Mandatory attributes are absent")
+  private def getPublishUnits[T](url: URI, f: Seq[PublishUnit] => T): Either[Error, T] = {
+    getXml(url).right.flatMap { xml =>
+      val publishes = (xml \ "publish").map(x => PublishUnit((x \ "@uri").text, (x \ "@hash").text, x.text))
+      if (publishes.exists {
+        p => Option(p.uri).exists(_.isEmpty) &&
+          Option(p.hash).exists(_.isEmpty) &&
+          Option(p.base64).exists(_.isEmpty)
+      }) {
+        // TODO Make it better
+        Left(Error(url, "Mandatory attributes are absent"))
+      }
+      else
+        Right(f(publishes))
     }
-    else
-      Right(f(publishes))
   }
 
 }
