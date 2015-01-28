@@ -43,6 +43,7 @@ import net.ripe.rpki.validator.config.{Http, ApplicationOptions}
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.HttpFetcherStore
 import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
+import org.apache.http.impl.client.CloseableHttpClient
 import org.apache.log4j.Logger
 
 import scala.collection.JavaConversions._
@@ -50,7 +51,7 @@ import scala.collection.immutable
 import scala.util.Try
 import scala.xml.{NodeSeq, Elem}
 
-case class FetcherConfig(rsyncDir: String)
+case class FetcherConfig(rsyncDir: String = "")
 
 trait Fetcher {
   type Callback = Either[BrokenObject, RepositoryObject[_]] => Unit
@@ -177,7 +178,7 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
       }
     }
 
-    val sc: Either[Error, Snapshot] = snapshotDef.right.flatMap { sd => fetchSnapshot(new URI(sd.url), sd) }
+    val snapshotContent: Either[Error, Snapshot] = snapshotDef.right.flatMap { sd => fetchSnapshot(new URI(sd.url), sd) }
 
     val requiredDeltas = notificationXml.right.map { xml =>
       val deltas = (xml \ "delta").map(x => DeltaDef(BigInt((x \ "@serial").text), (x \ "@uri").text, (x \ "@hash").text))
@@ -192,41 +193,54 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
     }
 
     // process snapshot content
-    sc.right.foreach { s =>
-      s.publishes.foreach { parsePublishUnit(_, process) }
+    val x = snapshotContent.right.map { s =>
+      s.publishes.map { parsePublishUnit(_, process) }
     }
 
     // process deltas content
-    deltaContents.right.foreach { dcs : Seq[Either[Error, Delta]] =>
-      dcs.foreach { e : Either[Error, Delta] =>
-        e.right.foreach { d : Delta =>
-          d.publishes.foreach(parsePublishUnit(_, process))
+    val map: Either[Error, Seq[Either[Error, Seq[Option[String]]]]] = deltaContents.right.map { dcs: Seq[Either[Error, Delta]] =>
+      dcs.map { e: Either[Error, Delta] =>
+        e.right.map { d: Delta =>
+          d.publishes.map(parsePublishUnit(_, process))
         }
       }
     }
 
+    map
+
     // gather errors
-    
+
     Seq()
 
   }
 
-  private def parsePublishUnit(p: PublishUnit, process: Callback) = {
+  private def parsePublishUnit(p: PublishUnit, process: Callback): Option[String] = {
     val extension = p.uri.takeRight(3).toLowerCase
     var error: Option[String] = None
+
+    def decodeBase64 = try {
+      base64.decode(p.base64.filterNot(Character.isWhitespace))
+    } catch {
+      case e: Throwable =>
+        error = Some(e.getMessage)
+        Array[Byte]()
+    }
+
     val obj = extension match {
-      case "cer" => process(CertificateObject.tryParse(p.uri, base64.decode(p.base64)))
-      case "mft" => process(ManifestObject.tryParse(p.uri, base64.decode(p.base64)))
-      case "crl" => process(CrlObject.tryParse(p.uri, base64.decode(p.base64)))
-      case "roa" => process(RoaObject.tryParse(p.uri, base64.decode(p.base64)))
+      case "cer" => process(CertificateObject.tryParse(p.uri, decodeBase64))
+      case "mft" => process(ManifestObject.tryParse(p.uri, decodeBase64))
+      case "crl" => process(CrlObject.tryParse(p.uri, decodeBase64))
+      case "roa" => process(RoaObject.tryParse(p.uri, decodeBase64))
       case "gbr" => error = Some("We don't support GBR records yet")
       case _ => error = Some(s"Found unknown URI type ${p.uri}")
     }
+    error
   }
 
   def getXml(notificationUri: URI): Either[Error, Elem] = {
     try {
-      val response = http.execute(new HttpGet(notificationUri))
+      val http1: CloseableHttpClient = http
+      val response = http1.execute(new HttpGet(notificationUri))
       Right(scala.xml.XML.load(response.getEntity.getContent))
     } catch {
       case e: Exception => Left(Error(notificationUri, e.getMessage))

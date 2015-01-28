@@ -35,17 +35,26 @@ import org.scalatest.BeforeAndAfter
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class HttpFetcherStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
-  var store: HttpFetcherStore = _
+  val store = new HttpFetcherStore(DataSources.InMemoryDataSource)
 
   before {
-    store = new HttpFetcherStore(DataSources.InMemoryDataSource)
+    store.clear()
   }
 
-  test("Store a serial") {
+  test("Store a serial and get it back") {
     val url = "http://bla.bla"
     val sessionId = "aec41310-67e1-429b-9d1b-df30961e9932"
     val serial = BigInt(100)
-    println(serial)
+    store.storeSerial(url, sessionId, serial)
+
+    val s = store.getSerial(url, sessionId)
+    s should be(Some(serial))
+  }
+
+  test("Store a really big serial number and get it back") {
+    val url = "http://bla.bla"
+    val sessionId = "aec41310-67e1-429b-9d1b-df30961e9932"
+    val serial = BigInt(Long.MaxValue) * 10
     store.storeSerial(url, sessionId, serial)
 
     val s = store.getSerial(url, sessionId)

@@ -40,6 +40,11 @@ import scala.util.Try
 
 class HttpFetcherStore(dataSource: DataSource) {
 
+  def clear() = {
+    for (t <- Seq("latest_http_snapshot"))
+      template.update(s"TRUNCATE TABLE $t", Map[String, Object]())
+  }
+
   def storeSerial(url: String, sessionId: String, serial: BigInt) = {
     template.update(
       """INSERT INTO latest_http_snapshot(url, session_id, serial_number)
