@@ -92,7 +92,24 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     (objects, errors)
   }
 
-  test("Should download repository") {
+  test("Should download repository when we only have snapshot and no local state") {
+    val fetcher = createMockedFetcher(Map(
+      "http://repo.net/repo/notification.xml" -> readFile("mock-http-responses/notification1.xml"),
+      "http://repo.net/repo/snapshot.xml" -> readFile("mock-http-responses/snapshot1.xml")
+    ))
+
+    val (objects, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
+
+    errors should have size 0
+    objects should have size 1
+
+    val c: CertificateObject = objects.head.right.get.asInstanceOf[CertificateObject]
+    c.url should be("rsync://bandito.ripe.net/repo/671570f06499fbd2d6ab76c4f22566fe49d5de60.cer")
+    c.decoded.getResources should be(IpResourceSet.parse("192.168.0.0/16"))
+  }
+
+
+  test("Should download repository 1") {
     val fetcher = createMockedFetcher(Map(
       "http://repo.net/repo/notification.xml" -> readFile("mock-http-responses/notification1.xml"),
       "http://repo.net/repo/snapshot.xml" -> readFile("mock-http-responses/snapshot1.xml")

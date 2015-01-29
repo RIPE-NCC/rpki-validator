@@ -11,7 +11,7 @@
  *   - Redistributions in binary form must reproduce the above copyright notice,
  *     this list of conditions and the following disclaimer in the documentation
  *     and/or other materials provided with the distribution.
- *   - Neither the name of the RIPE NCC nor the names of its contributors may be
+ *   - NEither the name of the RIPE NCC nor the names of its contributors may be
  *     used to endorse or promote products derived from this software without
  *     specific prior written permission.
  *
@@ -48,6 +48,7 @@ import org.apache.log4j.Logger
 
 import scala.collection.JavaConversions._
 import scala.collection.immutable
+import scala.math.BigInt
 import scala.util.Try
 import scala.xml.{NodeSeq, Elem}
 
@@ -140,6 +141,9 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
 
 class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetcher with Http {
 
+  import scalaz._
+  import Scalaz._
+
   case class PublishUnit(uri: String, hash: String, base64: String)
 
   case class WithdrawUnit(uri: String, hash: String)
@@ -160,9 +164,9 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
   override def fetchRepo(notificationUri: URI)(process: Callback): Seq[String] = {
 
-    val notificationXml = getXml(notificationUri)
+    val notificationXml : Either[Error, Elem] = getXml(notificationUri)
 
-    val notificationDef = notificationXml.right.flatMap { xml =>
+    val notificationDef: Either[Error, NotificationDef] = notificationXml >>= { xml =>
       try {
         Right(NotificationDef((xml \ "@session_id").text, BigInt((xml \ "@serial").text)))
       } catch {
@@ -171,42 +175,50 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
       }
     }
 
-    val snapshotDef = notificationXml.right.flatMap { xml =>
+    val snapshotDef: Either[Error, SnapshotDef] = notificationXml >>= { xml =>
       (xml \ "snapshot").map(x => ((x \ "@uri").text, (x \ "@hash").text)) match {
         case Seq(s) => Right(SnapshotDef(s._1, s._2))
         case _ => Left(Error(notificationUri, "There should one and only one 'snapshot' element'"))
       }
     }
 
-    val snapshotContent: Either[Error, Snapshot] = snapshotDef.right.flatMap { sd => fetchSnapshot(new URI(sd.url), sd) }
+    /*
+       localSerial   serial       action
+          None        N        get snapshot only
+          M           N        find deltas from (M+1, ..,N) -> if some of them are absent, get snapshot
+          -           -                                     -> apply deltas
+     */
+    val publishes: Either[Error, (Seq[PublishUnit], Seq[WithdrawUnit])] = notificationDef >>= { nd : NotificationDef =>
+      store.getSerial(notificationUri.toString, nd.sessionId) match {
 
-    val requiredDeltas = notificationXml.right.map { xml =>
-      val deltas = (xml \ "delta").map(x => DeltaDef(BigInt((x \ "@serial").text), (x \ "@uri").text, (x \ "@hash").text))
-      notificationDef.right.map { nd =>
-        val lastSerial = store.getSerial(notificationUri.toString, nd.sessionId).getOrElse(BigInt(0L))
-        deltas.filter(_.serial > lastSerial).sortBy(_.serial)
+        // TODO 0 is weird number, figure out what to do
+        case None => //| Some(BigInt) =>
+          snapshotDef >>= { sd => fetchSnapshot(new URI(sd.url), sd)} >>= { snapshot => Right((snapshot.publishes, Seq[WithdrawUnit]()))}
+
+        case Some(lastLocalSerial) =>
+          val requiredDeltas: Either[Error, immutable.Seq[DeltaDef]] = notificationXml.right.map { xml =>
+            (xml \ "delta").map(x => DeltaDef(BigInt((x \ "@serial").text), (x \ "@uri").text, (x \ "@hash").text))
+          }
+          val x = requiredDeltas >>= { deltaDefs =>
+            val reqDeltas = deltaDefs.filter(_.serial > lastLocalSerial).sortBy(_.serial)
+            if (reqDeltas.head.serial > lastLocalSerial) {
+
+            }
+            nd.serial
+            Right(reqDeltas)
+          }
+
+          // temporary stuff
+          snapshotDef >>= { sd => fetchSnapshot(new URI(sd.url), sd)} >>= { snapshot => Right((snapshot.publishes, Seq()))}
       }
-    }.joinRight
-
-    val deltaContents: Either[Error, Seq[Either[Error, Delta]]] = requiredDeltas.right.map {
-      deltas => deltas.map { d => fetchDelta(new URI(d.url), d) }
     }
 
-    // process snapshot content
-    val x = snapshotContent.right.map { s =>
-      s.publishes.map { parsePublishUnit(_, process) }
+
+    publishes.right.foreach { x =>
+      val (publishUnits, withdrawUnits) = x
+      publishUnits.foreach(parsePublishUnit(_, process))
     }
 
-    // process deltas content
-    val map: Either[Error, Seq[Either[Error, Seq[Option[String]]]]] = deltaContents.right.map { dcs: Seq[Either[Error, Delta]] =>
-      dcs.map { e: Either[Error, Delta] =>
-        e.right.map { d: Delta =>
-          d.publishes.map(parsePublishUnit(_, process))
-        }
-      }
-    }
-
-    map
 
     // gather errors
 
@@ -239,8 +251,7 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
   def getXml(notificationUri: URI): Either[Error, Elem] = {
     try {
-      val http1: CloseableHttpClient = http
-      val response = http1.execute(new HttpGet(notificationUri))
+      val response = http.execute(new HttpGet(notificationUri))
       Right(scala.xml.XML.load(response.getEntity.getContent))
     } catch {
       case e: Exception => Left(Error(notificationUri, e.getMessage))
@@ -254,7 +265,7 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
     getPublishUnits(deltaUrl, Delta(deltaDef, _))
 
   private def getPublishUnits[T](url: URI, f: Seq[PublishUnit] => T): Either[Error, T] = {
-    getXml(url).right.flatMap { xml =>
+    getXml(url) >>= { xml =>
       val publishes = (xml \ "publish").map(x => PublishUnit((x \ "@uri").text, (x \ "@hash").text, x.text))
       if (publishes.exists {
         p => Option(p.uri).exists(_.isEmpty) &&
