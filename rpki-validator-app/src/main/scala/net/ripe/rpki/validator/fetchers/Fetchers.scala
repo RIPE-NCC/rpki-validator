@@ -152,7 +152,7 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
   case class SnapshotDef(url: String, hash: String)
 
-  case class DeltaDef(serial: BigInt, url: String, hash: String)
+  case class DeltaDef(serial: BigInt, url: URI, hash: String)
 
   case class Delta(deltaDef: DeltaDef, publishes: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
 
@@ -188,31 +188,55 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
           M           N        find deltas from (M+1, ..,N) -> if some of them are absent, get snapshot
           -           -                                     -> apply deltas
      */
-    val publishes: Either[Error, (Seq[PublishUnit], Seq[WithdrawUnit])] = notificationDef >>= { nd : NotificationDef =>
+    type Units = (Seq[PublishUnit], Seq[WithdrawUnit])
+
+    val publishes: Either[Error, Units] = notificationDef >>= { nd : NotificationDef =>
+
+      def returnSnapshot = snapshotDef >>= { sd => fetchSnapshot(new URI(sd.url), sd)} >>= { snapshot => Right((snapshot.publishes, Seq()))}
+
       store.getSerial(notificationUri.toString, nd.sessionId) match {
 
         // TODO 0 is weird number, figure out what to do
         case None => //| Some(BigInt) =>
-          snapshotDef >>= { sd => fetchSnapshot(new URI(sd.url), sd)} >>= { snapshot => Right((snapshot.publishes, Seq[WithdrawUnit]()))}
+          returnSnapshot
 
         case Some(lastLocalSerial) =>
-          val requiredDeltas: Either[Error, immutable.Seq[DeltaDef]] = notificationXml.right.map { xml =>
-            (xml \ "delta").map(x => DeltaDef(BigInt((x \ "@serial").text), (x \ "@uri").text, (x \ "@hash").text))
-          }
-          val x = requiredDeltas >>= { deltaDefs =>
-            val reqDeltas = deltaDefs.filter(_.serial > lastLocalSerial).sortBy(_.serial)
-            if (reqDeltas.head.serial > lastLocalSerial) {
-
+          val requiredDeltas: Either[Error, immutable.Seq[DeltaDef]] = notificationXml >>= { xml =>
+            try {
+              Right((xml \ "delta").map(d => DeltaDef(BigInt((d \ "@serial").text), new URI((d \ "@uri").text), (d \ "@hash").text)))
+            } catch {
+              case e: Exception => Left(Error(notificationUri, "Couldn't parse delta definitions"))
             }
-            nd.serial
-            Right(reqDeltas)
           }
-
-          // temporary stuff
-          snapshotDef >>= { sd => fetchSnapshot(new URI(sd.url), sd)} >>= { snapshot => Right((snapshot.publishes, Seq()))}
+          requiredDeltas >>= { deltaDefs =>
+            val reqDeltas = deltaDefs.filter(_.serial > lastLocalSerial).sortBy(_.serial)
+            val deltaWithMaxSerial = reqDeltas.maxBy(_.serial)
+            if (deltaWithMaxSerial.serial != nd.serial) {
+              Left(Error(deltaWithMaxSerial.url, "Latest delta serial is not the same as in the notification file"))
+            } else {
+              if (reqDeltas.head.serial > lastLocalSerial) {
+                // there are no old enough deltas
+                returnSnapshot
+              } else {
+                // get publish units from the deltas starting
+                // from the local version to the latest
+                reqDeltas.map { dDef =>
+                  fetchDelta(dDef.url, dDef) >>= {
+                    d => Right((d.publishes, d.withdraw))
+                  }
+                }.foldLeft[Either[Error, Seq[Units]]] { Right(Seq[Units]()) } { (result, deltaUnits) =>
+                    result >>= { r =>
+                      deltaUnits >>= { dd => Right(r :+ dd)}
+                    }
+                } >>= { seqOfPairs =>
+                    val pairOfSeqs = (seqOfPairs.map(_._1).flatten, seqOfPairs.map(_._2).flatten)
+                    Right(pairOfSeqs)
+                }
+              }
+            }
+          }
       }
     }
-
 
     publishes.right.foreach { x =>
       val (publishUnits, withdrawUnits) = x
