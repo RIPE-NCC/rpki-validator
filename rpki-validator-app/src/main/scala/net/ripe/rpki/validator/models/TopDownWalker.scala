@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator.models
 
 import java.net.URI
-import java.util
 
 import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
@@ -60,6 +59,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   private val certContextValidationResult: ValidationResult = ValidationResult.withLocation(certContextValidationLocation)
   private val validatedObjects = Map.newBuilder[URI, ValidatedObject]
   private var crlLocator: CrlLocator = _
+  private val objectsToIgnore: scala.collection.mutable.Set[URI] = scala.collection.mutable.Set[URI]()
 
   def execute: Map[URI, ValidatedObject] = {
     logger.info(s"Validating ${certificateContext.getLocation}")
@@ -98,7 +98,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         validatedObjects ++= childrenCertificates.flatMap(stepDown)
     }
 
-    validatedObjects.result()
+    val result: Map[URI, ValidatedObject] = validatedObjects.result()
+    result.filterKeys(!objectsToIgnore.contains(_))
   }
 
   private def stepDown: (RepositoryObject[X509ResourceCertificate]) => Map[URI, ValidatedObject] = {
@@ -180,6 +181,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     notOnManifest.foreach { location =>
       val repositoryObject = foundObjectsEntries.get(location).get
       if (repositoryObject.decoded.isPastValidityTime || repositoryObject.decoded.isRevoked) {
+        objectsToIgnore += new URI(repositoryObject.url)
         //TODO store.remove(repositoryObject)
         //TODO remove repositoryObject from returned ValidatedObjects
       } else {
