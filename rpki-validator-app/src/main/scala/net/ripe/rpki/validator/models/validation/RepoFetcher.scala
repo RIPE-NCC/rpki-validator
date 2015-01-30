@@ -211,6 +211,7 @@ class RepoFetcher(storage: Storage, config: FetcherConfig) {
   def fetch(repoUri: URI): Seq[String] = {
     val (fetcher, fetchOnlyOnce) = repoUri.getScheme match {
       case "rsync" => (new RsyncFetcher(config), checkRsyncPool _)
+      // TODO Replace null with real HttpFetcherStore
       case "http" | "https" => (new HttpFetcher(config, null), checkHttpPool _)
       case _ => throw new Exception(s"No fetcher for the uri $repoUri")
     }
@@ -222,6 +223,9 @@ class RepoFetcher(storage: Storage, config: FetcherConfig) {
         case Right(c: ManifestObject) => storage.storeManifest(c)
         case Right(c: RoaObject) => storage.storeRoa(c)
         case Left(b: BrokenObject) => storage.storeBroken(b)
+      } {
+        (uri, hash) =>
+          storage.delete(uri.toString, hash)
       }
     }
   }

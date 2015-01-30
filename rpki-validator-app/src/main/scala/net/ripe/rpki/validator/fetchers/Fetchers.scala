@@ -11,7 +11,7 @@
  *   - Redistributions in binary form must reproduce the above copyright notice,
  *     this list of conditions and the following disclaimer in the documentation
  *     and/or other materials provided with the distribution.
- *   - Neither the name of the RIPE NCC nor the names of its contributors may be
+ *   - NEither the name of the RIPE NCC nor the names of its contributors may be
  *     used to endorse or promote products derived from this software without
  *     specific prior written permission.
  *
@@ -29,32 +29,27 @@
  */
 package net.ripe.rpki.validator.fetchers
 
-import java.io.{File, PrintWriter}
+import java.io.File
 import java.net.URI
 import java.nio.file.Files
 
 import com.google.common.io.BaseEncoding
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsParser
-import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
-import net.ripe.rpki.commons.crypto.crl.X509Crl
-import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateParser
 import net.ripe.rpki.commons.rsync.Rsync
-import net.ripe.rpki.validator.config.{Http, ApplicationOptions}
+import net.ripe.rpki.validator.config.Http
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.HttpFetcherStore
-import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
+import org.apache.http.client.methods.HttpGet
 import org.apache.log4j.Logger
 
 import scala.collection.JavaConversions._
-import scala.collection.immutable
-import scala.util.Try
-import scala.xml.{NodeSeq, Elem}
+import scala.math.BigInt
+import scala.xml.Elem
 
-case class FetcherConfig(rsyncDir: String)
+case class FetcherConfig(rsyncDir: String = "")
 
 trait Fetcher {
   type Callback = Either[BrokenObject, RepositoryObject[_]] => Unit
-  def fetchRepo(uri: URI)(process: Callback): Seq[String]
+  def fetchRepo(uri: URI)(process: Callback)(processWithdraws: (URI, String) => Unit): Seq[String]
 }
 
 class RsyncFetcher(config: FetcherConfig) extends Fetcher {
@@ -98,7 +93,8 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
     }
   }
 
-  override def fetchRepo(uri: URI)(process: Callback): Seq[String] = fetchRepo(uri, rsyncMethod)(process)
+  override def fetchRepo(uri: URI)(process: Callback)(withdraw: (URI, String) => Unit = ((_, _) => ())): Seq[String] =
+    fetchRepo(uri, rsyncMethod)(process)
 
   def fetchRepo(uri: URI, method: (URI, File) => Seq[String])(process: Callback): Seq[String] = withRsyncDir(uri) {
     destDir =>
@@ -139,6 +135,11 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
 
 class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetcher with Http {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+  import scala.concurrent._
+  import scala.concurrent.duration._
+  import scalaz.Scalaz._
+
   case class PublishUnit(uri: String, hash: String, base64: String)
 
   case class WithdrawUnit(uri: String, hash: String)
@@ -147,7 +148,7 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
   case class SnapshotDef(url: String, hash: String)
 
-  case class DeltaDef(serial: BigInt, url: String, hash: String)
+  case class DeltaDef(serial: BigInt, url: URI, hash: String)
 
   case class Delta(deltaDef: DeltaDef, publishes: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
 
@@ -157,11 +158,14 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
   private val base64 = BaseEncoding.base64()
 
-  override def fetchRepo(notificationUri: URI)(process: Callback): Seq[String] = {
+  override def fetchRepo(notificationUri: URI)(process: Callback)(withdraw: (URI, String) => Unit = (_, _) => ()): Seq[String] =
+    fetchRepoImpl(notificationUri)(process)(withdraw).map(p => s"url: ${p._1}, error: ${p._2}")
+
+  def fetchRepoImpl(notificationUri: URI)(process: Callback)(processWithdraws: (URI, String) => Unit): Seq[(URI, String)] = {
 
     val notificationXml = getXml(notificationUri)
 
-    val notificationDef = notificationXml.right.flatMap { xml =>
+    val notificationDef = notificationXml >>= { xml =>
       try {
         Right(NotificationDef((xml \ "@session_id").text, BigInt((xml \ "@serial").text)))
       } catch {
@@ -170,57 +174,136 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
       }
     }
 
-    val snapshotDef = notificationXml.right.flatMap { xml =>
+    val snapshotDef = notificationXml >>= { xml =>
       (xml \ "snapshot").map(x => ((x \ "@uri").text, (x \ "@hash").text)) match {
         case Seq(s) => Right(SnapshotDef(s._1, s._2))
         case _ => Left(Error(notificationUri, "There should one and only one 'snapshot' element'"))
       }
     }
 
-    val sc: Either[Error, Snapshot] = snapshotDef.right.flatMap { sd => fetchSnapshot(new URI(sd.url), sd) }
+    type Units = (Seq[PublishUnit], Seq[WithdrawUnit])
 
-    val requiredDeltas = notificationXml.right.map { xml =>
-      val deltas = (xml \ "delta").map(x => DeltaDef(BigInt((x \ "@serial").text), (x \ "@uri").text, (x \ "@hash").text))
-      notificationDef.right.map { nd =>
-        val lastSerial = store.getSerial(notificationUri.toString, nd.sessionId).getOrElse(BigInt(0L))
-        deltas.filter(_.serial > lastSerial).sortBy(_.serial)
+    def returnSnapshot(lastLocalSerial: Option[BigInt]) = snapshotDef >>= { sd =>
+      fetchSnapshot(new URI(sd.url), sd)
+    } >>= { snapshot =>
+      Right((snapshot.publishes, Seq(), lastLocalSerial))
+    }
+
+    val repositoryChanges = notificationDef >>= { notificationDef =>
+
+      store.getSerial(notificationUri, notificationDef.sessionId) match {
+
+        // the first time we go to this repository
+        case None =>
+          returnSnapshot(None)
+
+        // TODO 0 is a weird number, figure out what to do
+        case serial@Some(x) if x == BigInt(0) =>
+          returnSnapshot(serial)
+
+        // our local serial is already the latest one
+        case serial@Some(lastLocalSerial) if lastLocalSerial == notificationDef.serial =>
+          Right((Seq(), Seq(), serial))
+
+        // something weird is happening, bail out
+        case serial@Some(lastLocalSerial) if lastLocalSerial > notificationDef.serial =>
+          Left(Error(notificationUri, s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}"))
+
+        case serial@Some(lastLocalSerial) =>
+          notificationXml >>=
+            parseDeltaDefs(notificationUri) >>=
+            validateDeltaDefs(lastLocalSerial, notificationDef.serial) >>= { requiredDeltas =>
+
+              if (requiredDeltas.head.serial > lastLocalSerial + 1) {
+                returnSnapshot(serial)
+              } else {
+                val futures = requiredDeltas.map { dDef =>
+                  future {
+                    fetchDelta(dDef.url, dDef) >>= { d =>
+                      Right((d.publishes, d.withdraw))
+                    }
+                  }
+                }
+
+                // wait for all the futures and bind their fetching results consecutively
+                Await.result(Future.sequence(futures), 5.minutes).
+                  foldLeft[Either[Error, Seq[Units]]] {
+                  Right(Seq[Units]())
+                } { (result, deltaUnits) =>
+                  result >>= { r =>
+                    deltaUnits >>= { dd => Right(r :+ dd)}
+                  }
+                } >>= { seqOfPairs =>
+                  val pubs = seqOfPairs.map(_._1).flatten
+                  val withs = seqOfPairs.map(_._2).flatten
+                  Right((pubs, withs, serial))
+                }
+              }
+          }
       }
-    }.joinRight
-
-    val deltaContents: Either[Error, Seq[Either[Error, Delta]]] = requiredDeltas.right.map {
-      deltas => deltas.map { d => fetchDelta(new URI(d.url), d) }
     }
 
-    // process snapshot content
-    sc.right.foreach { s =>
-      s.publishes.foreach { parsePublishUnit(_, process) }
-    }
-
-    // process deltas content
-    deltaContents.right.foreach { dcs : Seq[Either[Error, Delta]] =>
-      dcs.foreach { e : Either[Error, Delta] =>
-        e.right.foreach { d : Delta =>
-          d.publishes.foreach(parsePublishUnit(_, process))
+    repositoryChanges.right.foreach { x =>
+      val (publishUnits, withdrawUnits, lastLocalSerial) = x
+      publishUnits.foreach(parsePublishUnit(_, process))
+      withdrawUnits.foreach(parseWithdrawUnit(_, processWithdraws))
+      notificationDef.right.foreach { nd =>
+        if (Some(nd.serial) != lastLocalSerial) {
+          store.storeSerial(notificationUri, nd.sessionId, nd.serial)
         }
       }
     }
 
-    // gather errors
-    
-    Seq()
-
+    repositoryChanges.left.toSeq.map(e => (e.url, e.message))
   }
 
-  private def parsePublishUnit(p: PublishUnit, process: Callback) = {
+  def parseDeltaDefs(notificationUri: URI)(xml: Elem) =
+    try {
+      Right((xml \ "delta").map(d => DeltaDef(BigInt((d \ "@serial").text), new URI((d \ "@uri").text), (d \ "@hash").text)))
+    } catch {
+      case e: Exception => Left(Error(notificationUri, s"Couldn't parse delta definitions: ${e.getMessage}"))
+    }
+
+  private def validateDeltaDefs(lastLocalSerial: BigInt, notificationSerial: BigInt)(deltaDefs: Seq[DeltaDef]) = {
+    val requiredDeltas = deltaDefs.filter(_.serial > lastLocalSerial).sortBy(_.serial)
+    val deltaWithMaxSerial = requiredDeltas.maxBy(_.serial)
+    if (deltaWithMaxSerial.serial != notificationSerial) {
+      Left(Error(deltaWithMaxSerial.url, "Latest delta serial is not the same as the one in notification file"))
+    } else {
+      // TODO check if they form a contiguous sequence
+      Right(deltaDefs)
+    }
+  }
+
+  private def parsePublishUnit(p: PublishUnit, process: Callback): Option[String] = {
     val extension = p.uri.takeRight(3).toLowerCase
     var error: Option[String] = None
+
+    def decodeBase64 = try {
+      base64.decode(p.base64.filterNot(Character.isWhitespace))
+    } catch {
+      case e: Throwable =>
+        error = Some(e.getMessage)
+        Array[Byte]()
+    }
+
     val obj = extension match {
-      case "cer" => process(CertificateObject.tryParse(p.uri, base64.decode(p.base64)))
-      case "mft" => process(ManifestObject.tryParse(p.uri, base64.decode(p.base64)))
-      case "crl" => process(CrlObject.tryParse(p.uri, base64.decode(p.base64)))
-      case "roa" => process(RoaObject.tryParse(p.uri, base64.decode(p.base64)))
+      case "cer" => process(CertificateObject.tryParse(p.uri, decodeBase64))
+      case "mft" => process(ManifestObject.tryParse(p.uri, decodeBase64))
+      case "crl" => process(CrlObject.tryParse(p.uri, decodeBase64))
+      case "roa" => process(RoaObject.tryParse(p.uri, decodeBase64))
       case "gbr" => error = Some("We don't support GBR records yet")
       case _ => error = Some(s"Found unknown URI type ${p.uri}")
+    }
+    error
+  }
+
+  private def parseWithdrawUnit(p: WithdrawUnit, withdraw: (URI, String) => Unit): Option[String] = {
+    try {
+      withdraw(new URI(p.uri), p.hash)
+      None
+    } catch {
+      case e: Exception => Some(s"Found unknown URI type ${p.uri}")
     }
   }
 
@@ -234,13 +317,23 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
   }
 
   private def fetchSnapshot(snapshotUrl: URI, snapshotDef: SnapshotDef): Either[Error, Snapshot] =
-    getPublishUnits(snapshotUrl, Snapshot(snapshotDef, _))
+    getXml(snapshotUrl) >>= { xml =>
+      getPublishUnits(snapshotUrl, xml) >>= { pu =>
+        Right(Snapshot(snapshotDef, pu))
+      }
+    }
+
 
   private def fetchDelta(deltaUrl: URI, deltaDef: DeltaDef): Either[Error, Delta] =
-    getPublishUnits(deltaUrl, Delta(deltaDef, _))
+    getXml(deltaUrl) >>= { xml =>
+      getPublishUnits(deltaUrl, xml) >>= { pu =>
+        getWithdrawUnits(deltaUrl, xml) >>= { wu =>
+          Right(Delta(deltaDef, pu, wu))
+        }
+      }
+    }
 
-  private def getPublishUnits[T](url: URI, f: Seq[PublishUnit] => T): Either[Error, T] = {
-    getXml(url).right.flatMap { xml =>
+  private def getPublishUnits[T](url: URI, xml: Elem) : Either[Error, Seq[PublishUnit]] = {
       val publishes = (xml \ "publish").map(x => PublishUnit((x \ "@uri").text, (x \ "@hash").text, x.text))
       if (publishes.exists {
         p => Option(p.uri).exists(_.isEmpty) &&
@@ -251,8 +344,20 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
         Left(Error(url, "Mandatory attributes are absent"))
       }
       else
-        Right(f(publishes))
+        Right(publishes)
     }
+
+  private def getWithdrawUnits[T](url: URI, xml: Elem) : Either[Error, Seq[WithdrawUnit]] = {
+    val withdraws = (xml \ "withdraw").map(x => WithdrawUnit((x \ "@uri").text, (x \ "@hash").text))
+    if (withdraws.exists {
+      p => Option(p.uri).exists(_.isEmpty) &&
+        Option(p.hash).exists(_.isEmpty)
+    }) {
+      // TODO Make it better
+      Left(Error(url, "Mandatory attributes are absent"))
+    }
+    else
+      Right(withdraws)
   }
 
 }
