@@ -34,7 +34,7 @@ import java.net.URI
 
 import net.ripe.ipresource.IpResourceSet
 import net.ripe.rpki.validator.config.Http
-import net.ripe.rpki.validator.models.validation.{CertificateObject, BrokenObject, RepositoryObject}
+import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.{DataSources, HttpFetcherStore}
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.apache.http.HttpEntity
@@ -163,6 +163,14 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     errors should have size 0
     objects should have size 2
     withdraws should have size 1
+
+    val mft: ManifestObject = objects.head.right.get.asInstanceOf[ManifestObject]
+    mft.url should be("rsync://bandito.ripe.net/repo/3a87a4b1-6e22-4a63-ad0f-06f83ad3ca16/default/671570f06499fbd2d6ab76c4f22566fe49d5de60.mft")
+    mft.decoded.getFiles.keySet().iterator().next() should be("671570f06499fbd2d6ab76c4f22566fe49d5de60.crl")
+
+    val crl = objects.tail.head.right.get.asInstanceOf[CrlObject]
+    crl.url should be("rsync://bandito.ripe.net/repo/3a87a4b1-6e22-4a63-ad0f-06f83ad3ca16/default/671570f06499fbd2d6ab76c4f22566fe49d5de60.crl")
+    crl.decoded.getCrl.getIssuerDN.toString should be("CN=671570f06499fbd2d6ab76c4f22566fe49d5de60")
 
     val serial = store.getSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
     serial should be(Some(BigInt(2)))
