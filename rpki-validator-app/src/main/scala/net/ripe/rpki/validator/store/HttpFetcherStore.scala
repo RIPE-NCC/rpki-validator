@@ -31,6 +31,7 @@ package net.ripe.rpki.validator.store
 
 import java.sql.ResultSet
 import javax.sql.DataSource
+import java.net.URI
 import scala.collection.JavaConversions._
 
 import org.springframework.jdbc.core.RowMapper
@@ -45,28 +46,39 @@ class HttpFetcherStore(dataSource: DataSource) {
       template.update(s"TRUNCATE TABLE $t", Map[String, Object]())
   }
 
-  def storeSerial(url: String, sessionId: String, serial: BigInt) = {
-    template.update(
-      """INSERT INTO latest_http_snapshot(url, session_id, serial_number)
-         SELECT :url, :session_id, :serial_number
-         WHERE NOT EXISTS (
-           SELECT * FROM latest_http_snapshot s
-           WHERE s.url = :url
-         )
+  def storeSerial(url: URI, sessionId: String, serial: BigInt) = {
+    val count = template.update(
+      """UPDATE latest_http_snapshot SET serial_number = :serial_number
+         WHERE url = :url
+         AND session_id = :session_id
       """,
-      Map("url" -> url,
+      Map("url" -> url.toString,
         "session_id" -> sessionId,
         "serial_number" -> serial.toString))
+
+    if (count == 0) {
+      template.update(
+        """INSERT INTO latest_http_snapshot(url, session_id, serial_number)
+           SELECT :url, :session_id, :serial_number
+           WHERE NOT EXISTS (
+             SELECT * FROM latest_http_snapshot s
+             WHERE s.url = :url
+           )
+      """,
+        Map("url" -> url.toString,
+          "session_id" -> sessionId,
+          "serial_number" -> serial.toString))
+      }
   }
 
 
   val template: NamedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource)
 
-  def getSerial(url: String, sessionId: String): Option[BigInt] = {
+  def getSerial(url: URI, sessionId: String): Option[BigInt] = {
     Try {
       template.queryForObject(
         "SELECT serial_number FROM latest_http_snapshot WHERE url = :url AND session_id = :session_id",
-        Map("url" -> url, "session_id" -> sessionId),
+        Map("url" -> url.toString, "session_id" -> sessionId),
         new RowMapper[BigInt]() {
           override def mapRow(rs: ResultSet, i: Int) = new BigInt(rs.getBigDecimal(1).toBigInteger)
         }

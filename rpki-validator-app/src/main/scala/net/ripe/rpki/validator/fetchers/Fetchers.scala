@@ -29,28 +29,21 @@
  */
 package net.ripe.rpki.validator.fetchers
 
-import java.io.{File, PrintWriter}
+import java.io.File
 import java.net.URI
 import java.nio.file.Files
 
 import com.google.common.io.BaseEncoding
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsParser
-import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
-import net.ripe.rpki.commons.crypto.crl.X509Crl
-import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateParser
 import net.ripe.rpki.commons.rsync.Rsync
-import net.ripe.rpki.validator.config.{Http, ApplicationOptions}
+import net.ripe.rpki.validator.config.Http
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.HttpFetcherStore
-import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
-import org.apache.http.impl.client.CloseableHttpClient
+import org.apache.http.client.methods.HttpGet
 import org.apache.log4j.Logger
 
 import scala.collection.JavaConversions._
-import scala.collection.immutable
 import scala.math.BigInt
-import scala.util.Try
-import scala.xml.{NodeSeq, Elem}
+import scala.xml.Elem
 
 case class FetcherConfig(rsyncDir: String = "")
 
@@ -141,8 +134,11 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
 
 class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetcher with Http {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+  import scala.concurrent._
+  import scala.concurrent.duration._
+  import scalaz.Scalaz._
   import scalaz._
-  import Scalaz._
 
   case class PublishUnit(uri: String, hash: String, base64: String)
 
@@ -162,11 +158,14 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
   private val base64 = BaseEncoding.base64()
 
-  override def fetchRepo(notificationUri: URI)(process: Callback): Seq[String] = {
+  override def fetchRepo(notificationUri: URI)(process: Callback): Seq[String] =
+    fetchRepoImpl(notificationUri)(process).map(p => s"url: ${p._1}, error: ${p._2}")
 
-    val notificationXml : Either[Error, Elem] = getXml(notificationUri)
+  def fetchRepoImpl(notificationUri: URI)(process: Callback): Seq[(URI, String)] = {
 
-    val notificationDef: Either[Error, NotificationDef] = notificationXml >>= { xml =>
+    val notificationXml = getXml(notificationUri)
+
+    val notificationDef = notificationXml >>= { xml =>
       try {
         Right(NotificationDef((xml \ "@session_id").text, BigInt((xml \ "@serial").text)))
       } catch {
@@ -175,79 +174,104 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
       }
     }
 
-    val snapshotDef: Either[Error, SnapshotDef] = notificationXml >>= { xml =>
+    val snapshotDef = notificationXml >>= { xml =>
       (xml \ "snapshot").map(x => ((x \ "@uri").text, (x \ "@hash").text)) match {
         case Seq(s) => Right(SnapshotDef(s._1, s._2))
         case _ => Left(Error(notificationUri, "There should one and only one 'snapshot' element'"))
       }
     }
 
-    /*
-       localSerial   serial       action
-          None        N        get snapshot only
-          M           N        find deltas from (M+1, ..,N) -> if some of them are absent, get snapshot
-          -           -                                     -> apply deltas
-     */
     type Units = (Seq[PublishUnit], Seq[WithdrawUnit])
 
-    val publishes: Either[Error, Units] = notificationDef >>= { nd : NotificationDef =>
+    def returnSnapshot(lastLocalSerial: Option[BigInt]) = snapshotDef >>= { sd =>
+      fetchSnapshot(new URI(sd.url), sd)
+    } >>= { snapshot =>
+      Right((snapshot.publishes, Seq(), lastLocalSerial))
+    }
 
-      def returnSnapshot = snapshotDef >>= { sd => fetchSnapshot(new URI(sd.url), sd)} >>= { snapshot => Right((snapshot.publishes, Seq()))}
+    val repositoryChanges = notificationDef >>= { notificationDef =>
 
-      store.getSerial(notificationUri.toString, nd.sessionId) match {
+      store.getSerial(notificationUri, notificationDef.sessionId) match {
 
-        // TODO 0 is weird number, figure out what to do
-        case None => //| Some(BigInt) =>
-          returnSnapshot
+        // the first time we go to this repository
+        case None =>
+          returnSnapshot(None)
 
-        case Some(lastLocalSerial) =>
-          val requiredDeltas: Either[Error, immutable.Seq[DeltaDef]] = notificationXml >>= { xml =>
-            try {
-              Right((xml \ "delta").map(d => DeltaDef(BigInt((d \ "@serial").text), new URI((d \ "@uri").text), (d \ "@hash").text)))
-            } catch {
-              case e: Exception => Left(Error(notificationUri, "Couldn't parse delta definitions"))
-            }
-          }
-          requiredDeltas >>= { deltaDefs =>
-            val reqDeltas = deltaDefs.filter(_.serial > lastLocalSerial).sortBy(_.serial)
-            val deltaWithMaxSerial = reqDeltas.maxBy(_.serial)
-            if (deltaWithMaxSerial.serial != nd.serial) {
-              Left(Error(deltaWithMaxSerial.url, "Latest delta serial is not the same as in the notification file"))
-            } else {
-              if (reqDeltas.head.serial > lastLocalSerial) {
-                // there are no old enough deltas
-                returnSnapshot
+        // TODO 0 is a weird number, figure out what to do
+        case s@Some(x) if x == BigInt(0) =>
+          returnSnapshot(s)
+
+        // our local serial is already the latest one
+        case s@Some(lastLocalSerial) if lastLocalSerial == notificationDef.serial =>
+          Right((Seq(), Seq(), s))
+
+        // something weird is happening, bail out
+        case s@Some(lastLocalSerial) if lastLocalSerial > notificationDef.serial =>
+          Left(Error(notificationUri, s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}"))
+
+        case s@Some(lastLocalSerial) =>
+          notificationXml >>=
+            parseDeltaDefs(notificationUri) >>=
+            validateDeltaDefs(lastLocalSerial, notificationDef.serial) >>= { requiredDeltas =>
+
+              if (requiredDeltas.head.serial > lastLocalSerial) {
+                returnSnapshot(s)
               } else {
-                // get publish units from the deltas starting
-                // from the local version to the latest
-                reqDeltas.map { dDef =>
-                  fetchDelta(dDef.url, dDef) >>= {
-                    d => Right((d.publishes, d.withdraw))
-                  }
-                }.foldLeft[Either[Error, Seq[Units]]] { Right(Seq[Units]()) } { (result, deltaUnits) =>
-                    result >>= { r =>
-                      deltaUnits >>= { dd => Right(r :+ dd)}
+                val futures = requiredDeltas.map { dDef =>
+                  future {
+                    fetchDelta(dDef.url, dDef) >>= { d =>
+                      Right((d.publishes, d.withdraw))
                     }
+                  }
+                }
+
+                // wait for all the futures and bind their fetching results consecutively
+                Await.result(Future.sequence(futures), 5.minutes).
+                  foldLeft[Either[Error, Seq[Units]]] {
+                  Right(Seq[Units]())
+                } { (result, deltaUnits) =>
+                  result >>= { r =>
+                    deltaUnits >>= { dd => Right(r :+ dd)}
+                  }
                 } >>= { seqOfPairs =>
-                    val pairOfSeqs = (seqOfPairs.map(_._1).flatten, seqOfPairs.map(_._2).flatten)
-                    Right(pairOfSeqs)
+                  val pubs = seqOfPairs.map(_._1).flatten
+                  val withs = seqOfPairs.map(_._2).flatten
+                  Right((pubs, withs, s))
                 }
               }
-            }
           }
       }
     }
 
-    publishes.right.foreach { x =>
-      val (publishUnits, withdrawUnits) = x
+    repositoryChanges.right.foreach { x =>
+      val (publishUnits, withdrawUnits, lastLocalSerial) = x
       publishUnits.foreach(parsePublishUnit(_, process))
+      notificationDef.right.foreach { nd =>
+        if (Some(nd.serial) != lastLocalSerial) {
+          store.storeSerial(notificationUri, nd.sessionId, nd.serial)
+        }
+      }
     }
 
+    repositoryChanges.left.toSeq.map(e => (e.url, e.message))
+  }
 
-    // gather errors
+  def parseDeltaDefs(notificationUri: URI)(xml: Elem) =
+    try {
+      Right((xml \ "delta").map(d => DeltaDef(BigInt((d \ "@serial").text), new URI((d \ "@uri").text), (d \ "@hash").text)))
+    } catch {
+      case e: Exception => Left(Error(notificationUri, s"Couldn't parse delta definitions: ${e.getMessage}"))
+    }
 
-    Seq()
-
+  private def validateDeltaDefs(lastLocalSerial: BigInt, notificationSerial: BigInt)(deltaDefs: Seq[DeltaDef]) = {
+    val requiredDeltas = deltaDefs.filter(_.serial > lastLocalSerial).sortBy(_.serial)
+    val deltaWithMaxSerial = requiredDeltas.maxBy(_.serial)
+    if (deltaWithMaxSerial.serial != notificationSerial) {
+      Left(Error(deltaWithMaxSerial.url, "Latest delta serial is not the same as the one in notification file"))
+    } else {
+      // TODO check if they form a contiguous sequence
+      Right(deltaDefs)
+    }
   }
 
   private def parsePublishUnit(p: PublishUnit, process: Callback): Option[String] = {

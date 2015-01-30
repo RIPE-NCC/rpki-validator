@@ -29,6 +29,8 @@
  */
 package net.ripe.rpki.validator.store
 
+import java.net.URI
+
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.scalatest.BeforeAndAfter
 
@@ -42,7 +44,7 @@ class HttpFetcherStoreTest extends ValidatorTestCase with BeforeAndAfter {
   }
 
   test("Store a serial and get it back") {
-    val url = "http://bla.bla"
+    val url = new URI("http://bla.bla")
     val sessionId = "aec41310-67e1-429b-9d1b-df30961e9932"
     val serial = BigInt(100)
     store.storeSerial(url, sessionId, serial)
@@ -52,13 +54,26 @@ class HttpFetcherStoreTest extends ValidatorTestCase with BeforeAndAfter {
   }
 
   test("Store a really big serial number and get it back") {
-    val url = "http://bla.bla"
+    val url = new URI("http://bla.bla")
     val sessionId = "aec41310-67e1-429b-9d1b-df30961e9932"
     val serial = BigInt(Long.MaxValue) * 10
     store.storeSerial(url, sessionId, serial)
 
     val s = store.getSerial(url, sessionId)
     s should be(Some(serial))
+  }
+
+  test("Store a serial, updates it and get back the latest one") {
+    val url = new URI("http://bla.bla")
+    val sessionId = "aec41310-67e1-429b-9d1b-df30961e9932"
+    val serial1 = BigInt(100)
+    val serial2 = BigInt(101)
+
+    store.storeSerial(url, sessionId, serial1)
+    store.getSerial(url, sessionId) should be(Some(serial1))
+
+    store.storeSerial(url, sessionId, serial2)
+    store.getSerial(url, sessionId) should be(Some(serial2))
   }
 
 }
