@@ -223,6 +223,9 @@ class RepoFetcher(storage: Storage, config: FetcherConfig) {
         case Right(c: ManifestObject) => storage.storeManifest(c)
         case Right(c: RoaObject) => storage.storeRoa(c)
         case Left(b: BrokenObject) => storage.storeBroken(b)
+      } {
+        (uri, hash) =>
+          storage.delete(uri.toString, hash)
       }
     }
   }

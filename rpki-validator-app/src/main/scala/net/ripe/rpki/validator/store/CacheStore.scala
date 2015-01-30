@@ -65,6 +65,8 @@ trait Storage {
   def getBroken(url: String): Option[BrokenObject]
 
   def getBroken: Seq[BrokenObject]
+
+  def delete(url: String, hash: String)
 }
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
@@ -177,6 +179,28 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   def clear() = {
     for (t <- Seq("certificates", "repo_objects", "broken_objects"))
       template.update(s"TRUNCATE TABLE $t", Map[String, Object]())
+  }
+
+  override def delete(url: String, hash: String) = {
+    val extension = url.takeRight(3).toLowerCase
+
+    val table = extension match {
+      case "cer" => Some("certificates")
+      case "mft" | "crl" | "roa" => Some("repo_objects")
+      case _ => None
+    }
+
+    table.foreach { t =>
+      template.update(
+        """DELETE FROM :table WHERE
+         WHERE url = :url
+         AND hash = :hash
+       )
+        """,
+        Map("hash" -> hash,
+          "url" -> url,
+          "table" -> t))
+    }
   }
 }
 

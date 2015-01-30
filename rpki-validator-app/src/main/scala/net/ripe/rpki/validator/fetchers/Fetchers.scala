@@ -49,7 +49,7 @@ case class FetcherConfig(rsyncDir: String = "")
 
 trait Fetcher {
   type Callback = Either[BrokenObject, RepositoryObject[_]] => Unit
-  def fetchRepo(uri: URI)(process: Callback): Seq[String]
+  def fetchRepo(uri: URI)(process: Callback)(processWithdraws: (URI, String) => Unit): Seq[String]
 }
 
 class RsyncFetcher(config: FetcherConfig) extends Fetcher {
@@ -93,7 +93,8 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
     }
   }
 
-  override def fetchRepo(uri: URI)(process: Callback): Seq[String] = fetchRepo(uri, rsyncMethod)(process)
+  override def fetchRepo(uri: URI)(process: Callback)(withdraw: (URI, String) => Unit = ((_, _) => ())): Seq[String] =
+    fetchRepo(uri, rsyncMethod)(process)
 
   def fetchRepo(uri: URI, method: (URI, File) => Seq[String])(process: Callback): Seq[String] = withRsyncDir(uri) {
     destDir =>
@@ -138,7 +139,6 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
   import scala.concurrent._
   import scala.concurrent.duration._
   import scalaz.Scalaz._
-  import scalaz._
 
   case class PublishUnit(uri: String, hash: String, base64: String)
 
@@ -158,10 +158,10 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
   private val base64 = BaseEncoding.base64()
 
-  override def fetchRepo(notificationUri: URI)(process: Callback): Seq[String] =
-    fetchRepoImpl(notificationUri)(process).map(p => s"url: ${p._1}, error: ${p._2}")
+  override def fetchRepo(notificationUri: URI)(process: Callback)(withdraw: (URI, String) => Unit = (_, _) => ()): Seq[String] =
+    fetchRepoImpl(notificationUri)(process)(withdraw).map(p => s"url: ${p._1}, error: ${p._2}")
 
-  def fetchRepoImpl(notificationUri: URI)(process: Callback): Seq[(URI, String)] = {
+  def fetchRepoImpl(notificationUri: URI)(process: Callback)(processWithdraws: (URI, String) => Unit): Seq[(URI, String)] = {
 
     val notificationXml = getXml(notificationUri)
 
@@ -198,24 +198,24 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
           returnSnapshot(None)
 
         // TODO 0 is a weird number, figure out what to do
-        case s@Some(x) if x == BigInt(0) =>
-          returnSnapshot(s)
+        case serial@Some(x) if x == BigInt(0) =>
+          returnSnapshot(serial)
 
         // our local serial is already the latest one
-        case s@Some(lastLocalSerial) if lastLocalSerial == notificationDef.serial =>
-          Right((Seq(), Seq(), s))
+        case serial@Some(lastLocalSerial) if lastLocalSerial == notificationDef.serial =>
+          Right((Seq(), Seq(), serial))
 
         // something weird is happening, bail out
-        case s@Some(lastLocalSerial) if lastLocalSerial > notificationDef.serial =>
+        case serial@Some(lastLocalSerial) if lastLocalSerial > notificationDef.serial =>
           Left(Error(notificationUri, s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}"))
 
-        case s@Some(lastLocalSerial) =>
+        case serial@Some(lastLocalSerial) =>
           notificationXml >>=
             parseDeltaDefs(notificationUri) >>=
             validateDeltaDefs(lastLocalSerial, notificationDef.serial) >>= { requiredDeltas =>
 
-              if (requiredDeltas.head.serial > lastLocalSerial) {
-                returnSnapshot(s)
+              if (requiredDeltas.head.serial > lastLocalSerial + 1) {
+                returnSnapshot(serial)
               } else {
                 val futures = requiredDeltas.map { dDef =>
                   future {
@@ -236,7 +236,7 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
                 } >>= { seqOfPairs =>
                   val pubs = seqOfPairs.map(_._1).flatten
                   val withs = seqOfPairs.map(_._2).flatten
-                  Right((pubs, withs, s))
+                  Right((pubs, withs, serial))
                 }
               }
           }
@@ -246,6 +246,7 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
     repositoryChanges.right.foreach { x =>
       val (publishUnits, withdrawUnits, lastLocalSerial) = x
       publishUnits.foreach(parsePublishUnit(_, process))
+      withdrawUnits.foreach(parseWithdrawUnit(_, processWithdraws))
       notificationDef.right.foreach { nd =>
         if (Some(nd.serial) != lastLocalSerial) {
           store.storeSerial(notificationUri, nd.sessionId, nd.serial)
@@ -297,6 +298,15 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
     error
   }
 
+  private def parseWithdrawUnit(p: WithdrawUnit, withdraw: (URI, String) => Unit): Option[String] = {
+    try {
+      withdraw(new URI(p.uri), p.hash)
+      None
+    } catch {
+      case e: Exception => Some(s"Found unknown URI type ${p.uri}")
+    }
+  }
+
   def getXml(notificationUri: URI): Either[Error, Elem] = {
     try {
       val response = http.execute(new HttpGet(notificationUri))
@@ -307,13 +317,23 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
   }
 
   private def fetchSnapshot(snapshotUrl: URI, snapshotDef: SnapshotDef): Either[Error, Snapshot] =
-    getPublishUnits(snapshotUrl, Snapshot(snapshotDef, _))
+    getXml(snapshotUrl) >>= { xml =>
+      getPublishUnits(snapshotUrl, xml) >>= { pu =>
+        Right(Snapshot(snapshotDef, pu))
+      }
+    }
+
 
   private def fetchDelta(deltaUrl: URI, deltaDef: DeltaDef): Either[Error, Delta] =
-    getPublishUnits(deltaUrl, Delta(deltaDef, _))
+    getXml(deltaUrl) >>= { xml =>
+      getPublishUnits(deltaUrl, xml) >>= { pu =>
+        getWithdrawUnits(deltaUrl, xml) >>= { wu =>
+          Right(Delta(deltaDef, pu, wu))
+        }
+      }
+    }
 
-  private def getPublishUnits[T](url: URI, f: Seq[PublishUnit] => T): Either[Error, T] = {
-    getXml(url) >>= { xml =>
+  private def getPublishUnits[T](url: URI, xml: Elem) : Either[Error, Seq[PublishUnit]] = {
       val publishes = (xml \ "publish").map(x => PublishUnit((x \ "@uri").text, (x \ "@hash").text, x.text))
       if (publishes.exists {
         p => Option(p.uri).exists(_.isEmpty) &&
@@ -324,8 +344,20 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
         Left(Error(url, "Mandatory attributes are absent"))
       }
       else
-        Right(f(publishes))
+        Right(publishes)
     }
+
+  private def getWithdrawUnits[T](url: URI, xml: Elem) : Either[Error, Seq[WithdrawUnit]] = {
+    val withdraws = (xml \ "withdraw").map(x => WithdrawUnit((x \ "@uri").text, (x \ "@hash").text))
+    if (withdraws.exists {
+      p => Option(p.uri).exists(_.isEmpty) &&
+        Option(p.hash).exists(_.isEmpty)
+    }) {
+      // TODO Make it better
+      Left(Error(url, "Mandatory attributes are absent"))
+    }
+    else
+      Right(withdraws)
   }
 
 }

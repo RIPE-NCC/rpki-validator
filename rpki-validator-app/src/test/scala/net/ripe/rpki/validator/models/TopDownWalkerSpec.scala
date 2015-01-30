@@ -98,6 +98,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfter { //PropSp
     override def storeCrl(crl: CrlObject): Unit = ???
     override def storeManifest(manifest: ManifestObject): Unit = ???
     override def getCertificate(uri: String): Option[CertificateObject] = ???
+    override def delete(url: String, hash: String): Unit = ???
   }
 
   val fetcher = new net.ripe.rpki.validator.models.validation.RepoFetcher(storage, FetcherConfig("")) {

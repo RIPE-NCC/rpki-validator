@@ -84,12 +84,15 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     }
   }
 
-  def fetchRepo(fetcher: HttpFetcher, rootUrl: String): (List[FetcherReturnType], Seq[String]) = {
+  def fetchRepo(fetcher: HttpFetcher, rootUrl: String) = {
     var objects = List[FetcherReturnType]()
+    var withdraws = List[(URI, String)]()
     val errors: Seq[String] = fetcher.fetchRepo(new URI(rootUrl)) {
       f => objects = f :: objects
+    } {
+      (u, h) => withdraws = (u, h) :: withdraws
     }
-    (objects, errors)
+    (objects.reverse, withdraws.reverse, errors)
   }
 
   test("Should download repository when we only have snapshot and no local state") {
@@ -98,7 +101,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
       "http://repo.net/repo/snapshot.xml" -> readFile("mock-http-responses/snapshot1.xml")
     ))
 
-    val (objects, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
+    val (objects, withdraws, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
 
     errors should have size 0
     objects should have size 1
@@ -119,7 +122,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
       "http://repo.net/repo/snapshot.xml" -> readFile("mock-http-responses/snapshot1.xml")
     ))
 
-    val (objects, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
+    val (objects, withdraws, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
 
     errors should have size 0
     objects should have size 0
@@ -127,7 +130,6 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     val serial = store.getSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
     serial should be(Some(BigInt(1)))
   }
-
 
   test("Should not download repository where local serial number is larger than the remote one") {
     store.storeSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28", BigInt(2))
@@ -137,11 +139,30 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
       "http://repo.net/repo/snapshot.xml" -> readFile("mock-http-responses/snapshot1.xml")
     ))
 
-    val (objects, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
+    val (objects, withdraws, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
 
     errors should have size 1
     errors.head should be("url: http://repo.net/repo/notification.xml, error: Local serial 2 is larger then repository serial 1")
     objects should have size 0
+
+    val serial = store.getSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
+    serial should be(Some(BigInt(2)))
+  }
+
+  test("Should not download snapshot and download and apply one delta") {
+
+    store.storeSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28", BigInt(1))
+
+    val fetcher = createMockedFetcher(Map(
+      "http://repo.net/repo/notification.xml" -> readFile("mock-http-responses/notification2.xml"),
+      "http://repo.net/repo/delta2_1.xml" -> readFile("mock-http-responses/delta2_1.xml")
+    ))
+
+    val (objects, withdraws, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
+
+    errors should have size 0
+    objects should have size 2
+    withdraws should have size 1
 
     val serial = store.getSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
     serial should be(Some(BigInt(2)))
