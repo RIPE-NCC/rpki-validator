@@ -47,30 +47,79 @@ import scala.xml.Elem
 
 case class FetcherConfig(rsyncDir: String = "")
 
+trait FetcherListener {
+  def processObject(repoObj: RepositoryObject[_])
+  def processBroken(brokenObj: BrokenObject)
+  def withdraw(url: URI, hash: String)
+}
+
+object Fetcher {
+  case class Error(url: URI, message: String)
+}
+
 trait Fetcher {
-  type Callback = Either[BrokenObject, RepositoryObject[_]] => Unit
-  def fetchRepo(uri: URI)(process: Callback)(processWithdraws: (URI, String) => Unit): Seq[String]
+
+  import Fetcher._
+
+  type MaybeRepoObject = Either[BrokenObject, RepositoryObject[_]]
+  type Callback = MaybeRepoObject => MaybeRepoObject
+  def fetchRepo(url: URI, process: FetcherListener): Seq[Error]
+
+  def processObject(rsyncUrl: URI, f: Array[Byte], fetcherListener: FetcherListener) = {
+    val extension = rsyncUrl.toString.takeRight(3).toLowerCase
+    val repoObject = extension match {
+      case "cer" =>
+        CertificateObject.tryParse(rsyncUrl.toString, f).left.map {
+          bo =>
+            fetcherListener.processBroken(bo)
+            Error(rsyncUrl, "Could parse object")
+        }
+      case "mft" => ManifestObject.tryParse(rsyncUrl.toString, f).left.map {
+        bo =>
+          fetcherListener.processBroken(bo)
+          Error(rsyncUrl, "Could parse object")
+      }
+      case "crl" => CrlObject.tryParse(rsyncUrl.toString, f).left.map {
+        bo =>
+          fetcherListener.processBroken(bo)
+          Error(rsyncUrl, "Could parse object")
+      }
+      case "roa" => RoaObject.tryParse(rsyncUrl.toString, f).left.map {
+        bo =>
+          fetcherListener.processBroken(bo)
+          Error(rsyncUrl, "Could parse object")
+      }
+      case "gbr" =>
+        Left(Error(rsyncUrl, "We don't support GBR records yet"))
+      case _ =>
+        Left(Error(rsyncUrl, "Found unknown file $f"))
+    }
+    repoObject.right.foreach {
+      ro => fetcherListener.processObject(ro)
+    }
+    repoObject
+  }
+
 }
 
 class RsyncFetcher(config: FetcherConfig) extends Fetcher {
+
+  import Fetcher._
 
   private val logger: Logger = Logger.getLogger(classOf[RsyncFetcher])
 
   private val OPTIONS = Seq("--update", "--times", "--copy-links", "--recursive", "--delete")
 
-  private def walkTree[T](d: File)(f: File => Option[T]): Seq[T] = {
+  private def walkTree[T1, T2](d: File)(f: File => Either[T1, T2]): Seq[T1] = {
     if (d.isDirectory) {
       d.listFiles.map(walkTree(_)(f)).toSeq.flatten
-    } else f(d) match {
-      case Some(x) => Seq(x)
-      case None => Seq()
-    }
+    } else f(d).fold(Seq(_), { _ => Seq() })
   }
 
-  private[this] def withRsyncDir[T](uri: URI)(f: File => T) = {
-    def uriToPath = uri.toString.replaceAll("rsync://", "")
+  private[this] def withRsyncDir[T](url: URI)(f: File => T) = {
+    def urlToPath = url.toString.replaceAll("rsync://", "")
     def destDir = {
-      val rsyncPath = new File(config.rsyncDir + "/" + uriToPath)
+      val rsyncPath = new File(config.rsyncDir + "/" + urlToPath)
       if (!rsyncPath.exists) {
         rsyncPath.mkdirs
       }
@@ -80,53 +129,43 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
     f(destDir)
   }
 
-  def rsyncMethod(uri: URI, destDir: File) = {
-    val r = new Rsync(uri.toString, destDir.getAbsolutePath)
+  def rsyncMethod(url: URI, destDir: File): Option[Error] = {
+    val r = new Rsync(url.toString, destDir.getAbsolutePath)
     r.addOptions(OPTIONS)
     try {
       r.execute match {
-        case 0 => Seq()
-        case code => Seq( s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}""")
+        case 0 => None
+        case code => Some(Error(url, s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}"""))
       }
     } catch {
-      case e: Exception => Seq( s"""Failed with exception, ${e.getMessage}""")
+      case e: Exception => Some(Error(url, s"""Failed with exception, ${e.getMessage}"""))
     }
   }
 
-  override def fetchRepo(uri: URI)(process: Callback)(withdraw: (URI, String) => Unit = ((_, _) => ())): Seq[String] =
-    fetchRepo(uri, rsyncMethod)(process)
+  override def fetchRepo(url: URI, fetcherListener: FetcherListener): Seq[Error] =
+    fetchRepo(url, rsyncMethod, fetcherListener)
 
-  def fetchRepo(uri: URI, method: (URI, File) => Seq[String])(process: Callback): Seq[String] = withRsyncDir(uri) {
+  def fetchRepo(url: URI, method: (URI, File) => Option[Error], fetcherListener: FetcherListener): Seq[Error] = withRsyncDir(url) {
     destDir =>
-      logger.info(s"Downloading the repository $uri to ${destDir.getAbsolutePath}")
-      method(uri, destDir) ++ readObjects(destDir, uri, process)
+      logger.info(s"Downloading the repository $url to ${destDir.getAbsolutePath}")
+      method(url, destDir).toSeq ++ readObjects(destDir, url, fetcherListener)
   }
 
-  def readObjects(tmpRoot: File, repoUri: URI, process: Callback): Seq[String] = {
+  def readObjects(tmpRoot: File, repoUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
     val replacement = {
-      val s = repoUri.toString
+      val s = repoUrl.toString
       if (s.endsWith("/")) s.dropRight(1) else s
     }
 
     def rsyncUrl(f: File) =
-      if (replacement.endsWith(f.getName))
+      new URI(if (replacement.endsWith(f.getName))
         replacement
       else
-        f.getAbsolutePath.replaceAll(tmpRoot.getAbsolutePath, replacement)
+        f.getAbsolutePath.replaceAll(tmpRoot.getAbsolutePath, replacement))
 
     walkTree(tmpRoot) {
       f =>
-        val extension = f.getName.takeRight(3).toLowerCase
-        var error: Option[String] = None
-        val obj = extension match {
-          case "cer" => process(CertificateObject.tryParse(rsyncUrl(f), readFile(f)))
-          case "mft" => process(ManifestObject.tryParse(rsyncUrl(f), readFile(f)))
-          case "crl" => process(CrlObject.tryParse(rsyncUrl(f), readFile(f)))
-          case "roa" => process(RoaObject.tryParse(rsyncUrl(f), readFile(f)))
-          case "gbr" => error = Some("We don't support GBR records yet")
-          case _ => error = Some(s"Found unknown file $f")
-        }
-        error
+        processObject(rsyncUrl(f), readFile(f), fetcherListener)
     }
   }
 
@@ -139,10 +178,11 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
   import scala.concurrent._
   import scala.concurrent.duration._
   import scalaz.Scalaz._
+  import Fetcher._
 
-  case class PublishUnit(uri: String, hash: String, base64: String)
+  case class PublishUnit(url: URI, hash: String, base64: String)
 
-  case class WithdrawUnit(uri: String, hash: String)
+  case class WithdrawUnit(url: URI, hash: String)
 
   case class NotificationDef(sessionId: String, serial: BigInt)
 
@@ -154,32 +194,13 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
   case class Snapshot(snapshotDef: SnapshotDef, publishes: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
 
-  case class Error(url: URI, message: String)
-
   private val base64 = BaseEncoding.base64()
 
-  override def fetchRepo(notificationUri: URI)(process: Callback)(withdraw: (URI, String) => Unit = (_, _) => ()): Seq[String] =
-    fetchRepoImpl(notificationUri)(process)(withdraw).map(p => s"url: ${p._1}, error: ${p._2}")
+  override def fetchRepo(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
 
-  def fetchRepoImpl(notificationUri: URI)(process: Callback)(processWithdraws: (URI, String) => Unit): Seq[(URI, String)] = {
-
-    val notificationXml = getXml(notificationUri)
-
-    val notificationDef = notificationXml >>= { xml =>
-      try {
-        Right(NotificationDef((xml \ "@session_id").text, BigInt((xml \ "@serial").text)))
-      } catch {
-        case e: NumberFormatException => Left(Error(notificationUri, "Couldn't parse serial number"))
-        case e: Throwable => Left(Error(notificationUri, s"Error: ${e.getMessage}"))
-      }
-    }
-
-    val snapshotDef = notificationXml >>= { xml =>
-      (xml \ "snapshot").map(x => ((x \ "@uri").text, (x \ "@hash").text)) match {
-        case Seq(s) => Right(SnapshotDef(s._1, s._2))
-        case _ => Left(Error(notificationUri, "There should one and only one 'snapshot' element'"))
-      }
-    }
+    val notificationXml = getXml(notificationUrl)
+    val notificationDef = notificationXml >>= fetchNotification(notificationUrl)
+    val snapshotDef = notificationXml >>= parseSnapshotDef(notificationUrl)
 
     type Units = (Seq[PublishUnit], Seq[WithdrawUnit])
 
@@ -191,15 +212,14 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
     val repositoryChanges = notificationDef >>= { notificationDef =>
 
-      store.getSerial(notificationUri, notificationDef.sessionId) match {
+      store.getSerial(notificationUrl, notificationDef.sessionId) match {
 
         // the first time we go to this repository
         case None =>
           returnSnapshot(None)
 
-        // TODO 0 is a weird number, figure out what to do
         case serial@Some(x) if x == BigInt(0) =>
-          returnSnapshot(serial)
+          Left(Error(notificationUrl, s"Serial must be a positLocal number"))
 
         // our local serial is already the latest one
         case serial@Some(lastLocalSerial) if lastLocalSerial == notificationDef.serial =>
@@ -207,61 +227,75 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
         // something weird is happening, bail out
         case serial@Some(lastLocalSerial) if lastLocalSerial > notificationDef.serial =>
-          Left(Error(notificationUri, s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}"))
+          Left(Error(notificationUrl, s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}"))
 
         case serial@Some(lastLocalSerial) =>
           notificationXml >>=
-            parseDeltaDefs(notificationUri) >>=
+            parseDeltaDefs(notificationUrl) >>=
             validateDeltaDefs(lastLocalSerial, notificationDef.serial) >>= { requiredDeltas =>
 
-              if (requiredDeltas.head.serial > lastLocalSerial + 1) {
-                returnSnapshot(serial)
-              } else {
-                val futures = requiredDeltas.map { dDef =>
-                  future {
-                    fetchDelta(dDef.url, dDef) >>= { d =>
-                      Right((d.publishes, d.withdraw))
-                    }
+            if (requiredDeltas.head.serial > lastLocalSerial + 1) {
+              returnSnapshot(serial)
+            } else {
+              val futures = requiredDeltas.map { dDef =>
+                future {
+                  fetchDelta(dDef.url, dDef) >>= { d =>
+                    Right((d.publishes, d.withdraw))
                   }
-                }
-
-                // wait for all the futures and bind their fetching results consecutively
-                Await.result(Future.sequence(futures), 5.minutes).
-                  foldLeft[Either[Error, Seq[Units]]] {
-                  Right(Seq[Units]())
-                } { (result, deltaUnits) =>
-                  result >>= { r =>
-                    deltaUnits >>= { dd => Right(r :+ dd)}
-                  }
-                } >>= { seqOfPairs =>
-                  val pubs = seqOfPairs.map(_._1).flatten
-                  val withs = seqOfPairs.map(_._2).flatten
-                  Right((pubs, withs, serial))
                 }
               }
+
+              // wait for all the futures and bind their fetching results consecutively
+              Await.result(Future.sequence(futures), 5.minutes).
+                foldLeft[Either[Error, Seq[Units]]] {
+                Right(Seq[Units]())
+              } { (result, deltaUnits) =>
+                result >>= { r =>
+                  deltaUnits >>= { dd => Right(r :+ dd)}
+                }
+              } >>= { seqOfPairs =>
+                val pubs = seqOfPairs.map(_._1).flatten
+                val withs = seqOfPairs.map(_._2).flatten
+                Right((pubs, withs, serial))
+              }
+            }
           }
       }
     }
 
     repositoryChanges.right.foreach { x =>
       val (publishUnits, withdrawUnits, lastLocalSerial) = x
-      publishUnits.foreach(parsePublishUnit(_, process))
-      withdrawUnits.foreach(parseWithdrawUnit(_, processWithdraws))
+      val p = publishUnits.map(parsePublishUnit(_, fetcherListener))
+      val w = withdrawUnits.map(parseWithdrawUnit(_, fetcherListener))
       notificationDef.right.foreach { nd =>
         if (Some(nd.serial) != lastLocalSerial) {
-          store.storeSerial(notificationUri, nd.sessionId, nd.serial)
+          store.storeSerial(notificationUrl, nd.sessionId, nd.serial)
         }
       }
     }
 
-    repositoryChanges.left.toSeq.map(e => (e.url, e.message))
+    repositoryChanges.left.toSeq
   }
 
-  def parseDeltaDefs(notificationUri: URI)(xml: Elem) =
+  private def parseSnapshotDef(notificationUrl: URI)(xml: Elem) =
+    (xml \ "snapshot").map(x => ((x \ "@uri").text, (x \ "@hash").text)) match {
+      case Seq(s) => Right(SnapshotDef(s._1, s._2))
+      case _ => Left(Error(notificationUrl, "There should one and only one 'snapshot' element'"))
+    }
+
+  private def fetchNotification(notificationUrl: URI)(xml: Elem) =
+    try {
+      Right(NotificationDef((xml \ "@session_id").text, BigInt((xml \ "@serial").text)))
+    } catch {
+      case e: NumberFormatException => Left(Error(notificationUrl, "Couldn't parse serial number"))
+      case e: Throwable => Left(Error(notificationUrl, s"Error: ${e.getMessage}"))
+    }
+
+  private def parseDeltaDefs(notificationUrl: URI)(xml: Elem) =
     try {
       Right((xml \ "delta").map(d => DeltaDef(BigInt((d \ "@serial").text), new URI((d \ "@uri").text), (d \ "@hash").text)))
     } catch {
-      case e: Exception => Left(Error(notificationUri, s"Couldn't parse delta definitions: ${e.getMessage}"))
+      case e: Exception => Left(Error(notificationUrl, s"Couldn't parse delta definitions: ${e.getMessage}"))
     }
 
   private def validateDeltaDefs(lastLocalSerial: BigInt, notificationSerial: BigInt)(deltaDefs: Seq[DeltaDef]) = {
@@ -275,44 +309,31 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
     }
   }
 
-  private def parsePublishUnit(p: PublishUnit, process: Callback): Option[String] = {
-    val extension = p.uri.takeRight(3).toLowerCase
-    var error: Option[String] = None
-
+  private def parsePublishUnit(p: PublishUnit, fetcherListener: FetcherListener) = {
     def decodeBase64 = try {
-      base64.decode(p.base64.filterNot(Character.isWhitespace))
+      Right(base64.decode(p.base64.filterNot(Character.isWhitespace)))
     } catch {
-      case e: Throwable =>
-        error = Some(e.getMessage)
-        Array[Byte]()
+      case e: Exception => Left(Error(p.url, e.getMessage))
     }
-
-    val obj = extension match {
-      case "cer" => process(CertificateObject.tryParse(p.uri, decodeBase64))
-      case "mft" => process(ManifestObject.tryParse(p.uri, decodeBase64))
-      case "crl" => process(CrlObject.tryParse(p.uri, decodeBase64))
-      case "roa" => process(RoaObject.tryParse(p.uri, decodeBase64))
-      case "gbr" => error = Some("We don't support GBR records yet")
-      case _ => error = Some(s"Found unknown URI type ${p.uri}")
-    }
-    error
-  }
-
-  private def parseWithdrawUnit(p: WithdrawUnit, withdraw: (URI, String) => Unit): Option[String] = {
-    try {
-      withdraw(new URI(p.uri), p.hash)
-      None
-    } catch {
-      case e: Exception => Some(s"Found unknown URI type ${p.uri}")
+    decodeBase64 >>= { bytes =>
+      Right(processObject(p.url, bytes, fetcherListener))
     }
   }
 
-  def getXml(notificationUri: URI): Either[Error, Elem] = {
+  private def parseWithdrawUnit(p: WithdrawUnit, fetcherListener: FetcherListener) = {
     try {
-      val response = http.execute(new HttpGet(notificationUri))
+      Right(fetcherListener.withdraw(p.url, p.hash))
+    } catch {
+      case e: Exception => Left(Error(p.url, e.getMessage))
+    }
+  }
+
+  def getXml(notificationUrl: URI): Either[Error, Elem] = {
+    try {
+      val response = http.execute(new HttpGet(notificationUrl.toString))
       Right(scala.xml.XML.load(response.getEntity.getContent))
     } catch {
-      case e: Exception => Left(Error(notificationUri, e.getMessage))
+      case e: Exception => Left(Error(notificationUrl, e.getMessage))
     }
   }
 
@@ -334,23 +355,23 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
     }
 
   private def getPublishUnits[T](url: URI, xml: Elem) : Either[Error, Seq[PublishUnit]] = {
-      val publishes = (xml \ "publish").map(x => PublishUnit((x \ "@uri").text, (x \ "@hash").text, x.text))
-      if (publishes.exists {
-        p => Option(p.uri).exists(_.isEmpty) &&
-          Option(p.hash).exists(_.isEmpty) &&
-          Option(p.base64).exists(_.isEmpty)
-      }) {
-        // TODO Make it better
-        Left(Error(url, "Mandatory attributes are absent"))
-      }
-      else
-        Right(publishes)
+    val publishes = (xml \ "publish").map(x => PublishUnit(new URI((x \ "@uri").text), (x \ "@hash").text, x.text))
+    if (publishes.exists {
+      p => Option(p.url).exists(_.toString.isEmpty) &&
+        Option(p.hash).exists(_.isEmpty) &&
+        Option(p.base64).exists(_.isEmpty)
+    }) {
+      // TODO Make it better
+      Left(Error(url, "Mandatory attributes are absent"))
     }
+    else
+      Right(publishes)
+  }
 
   private def getWithdrawUnits[T](url: URI, xml: Elem) : Either[Error, Seq[WithdrawUnit]] = {
-    val withdraws = (xml \ "withdraw").map(x => WithdrawUnit((x \ "@uri").text, (x \ "@hash").text))
+    val withdraws = (xml \ "withdraw").map(x => WithdrawUnit(new URI((x \ "@uri").text), (x \ "@hash").text))
     if (withdraws.exists {
-      p => Option(p.uri).exists(_.isEmpty) &&
+      p => Option(p.url).exists(_.toString.isEmpty) &&
         Option(p.hash).exists(_.isEmpty)
     }) {
       // TODO Make it better

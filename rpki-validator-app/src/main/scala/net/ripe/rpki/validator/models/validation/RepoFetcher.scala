@@ -37,7 +37,7 @@ import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.{X509ResourceCertificate, X509ResourceCertificateParser}
 import net.ripe.rpki.commons.validation.ValidationResult
-import net.ripe.rpki.validator.fetchers.{FetcherConfig, HttpFetcher, RsyncFetcher}
+import net.ripe.rpki.validator.fetchers._
 import net.ripe.rpki.validator.store.Storage
 
 import scala.collection.JavaConversions._
@@ -190,7 +190,7 @@ class RepoFetcher(storage: Storage, config: FetcherConfig) {
       _.mkString("","/","/")
     }
 
-  private def checkRsyncPool(uri: URI)(f: => Seq[String]) = {
+  private def checkRsyncPool(uri: URI)(f: => Seq[Fetcher.Error]) = {
     val u = uri.toString.replaceAll("rsync://", "")
     if (!chunked(u).exists(rsyncUrlPool.contains)) {
       val result = f
@@ -199,7 +199,7 @@ class RepoFetcher(storage: Storage, config: FetcherConfig) {
     } else Seq()
   }
 
-  private def checkHttpPool(uri: URI)(f: => Seq[String]) = {
+  private def checkHttpPool(uri: URI)(f: => Seq[Fetcher.Error]) = {
     val u = uri.toString
     if (!httpUrlPool.contains(u)) {
       val result = f
@@ -208,7 +208,7 @@ class RepoFetcher(storage: Storage, config: FetcherConfig) {
     } else Seq()
   }
 
-  def fetch(repoUri: URI): Seq[String] = {
+  def fetch(repoUri: URI): Seq[Fetcher.Error] = {
     val (fetcher, fetchOnlyOnce) = repoUri.getScheme match {
       case "rsync" => (new RsyncFetcher(config), checkRsyncPool _)
       // TODO Replace null with real HttpFetcherStore
@@ -217,16 +217,24 @@ class RepoFetcher(storage: Storage, config: FetcherConfig) {
     }
 
     fetchOnlyOnce(repoUri) {
-      fetcher.fetchRepo(repoUri) {
-        case Right(c: CertificateObject) => storage.storeCertificate(c)
-        case Right(c: CrlObject) => storage.storeCrl(c)
-        case Right(c: ManifestObject) => storage.storeManifest(c)
-        case Right(c: RoaObject) => storage.storeRoa(c)
-        case Left(b: BrokenObject) => storage.storeBroken(b)
-      } {
-        (uri, hash) =>
-          storage.delete(uri.toString, hash)
-      }
+      fetcher.fetchRepo(repoUri, new FetcherListener {
+        override def processObject(repoObj: RepositoryObject[_]) = {
+          repoObj match {
+            case c: CertificateObject => storage.storeCertificate(c)
+            case c: CrlObject => storage.storeCrl(c)
+            case c: ManifestObject => storage.storeManifest(c)
+            case c: RoaObject => storage.storeRoa(c)
+          }
+        }
+
+        override def withdraw(url: URI, hash: String): Unit = {
+          // TODO Implement the actual withdraw
+        }
+
+        override def processBroken(brokenObj: BrokenObject): Unit = {
+          storage.storeBroken(brokenObj)
+        }
+      })
     }
   }
 }

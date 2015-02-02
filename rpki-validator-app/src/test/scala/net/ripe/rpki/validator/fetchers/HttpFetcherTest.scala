@@ -84,13 +84,20 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
   }
 
   def fetchRepo(fetcher: HttpFetcher, rootUrl: String) = {
-    var objects = List[FetcherReturnType]()
+    var objects = List[RepositoryObject[_]]()
     var withdraws = List[(URI, String)]()
-    val errors: Seq[String] = fetcher.fetchRepo(new URI(rootUrl)) {
-      f => objects = f :: objects
-    } {
-      (u, h) => withdraws = (u, h) :: withdraws
-    }
+
+    val errors: Seq[Fetcher.Error] = fetcher.fetchRepo(new URI(rootUrl), new FetcherListener {
+      override def processObject(repoObj: RepositoryObject[_]) = {
+        objects = repoObj :: objects
+      }
+
+      override def withdraw(url: URI, hash: String): Unit = {
+        withdraws = (url, hash) :: withdraws
+      }
+
+      override def processBroken(brokenObj: BrokenObject): Unit = {}
+    })
     (objects.reverse, withdraws.reverse, errors)
   }
 
@@ -106,7 +113,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     objects should have size 1
     withdraws should have size 0
 
-    val c: CertificateObject = objects.head.right.get.asInstanceOf[CertificateObject]
+    val c: CertificateObject = objects.head.asInstanceOf[CertificateObject]
     c.url should be("rsync://bandito.ripe.net/repo/671570f06499fbd2d6ab76c4f22566fe49d5de60.cer")
     c.decoded.getResources should be(IpResourceSet.parse("192.168.0.0/16"))
 
@@ -146,7 +153,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     objects should have size 0
     withdraws should have size 0
 
-    errors.head should be("url: http://repo.net/repo/notification.xml, error: Local serial 2 is larger then repository serial 1")
+    errors.head should be(Fetcher.Error(new URI("http://repo.net/repo/notification.xml"), "Local serial 2 is larger then repository serial 1"))
 
     val serial = store.getSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
     serial should be(Some(BigInt(2)))
@@ -167,13 +174,16 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     objects should have size 2
     withdraws should have size 1
 
-    val mft: ManifestObject = objects.head.right.get.asInstanceOf[ManifestObject]
+    val mft: ManifestObject = objects.head.asInstanceOf[ManifestObject]
     mft.url should be("rsync://bandito.ripe.net/repo/3a87a4b1-6e22-4a63-ad0f-06f83ad3ca16/default/671570f06499fbd2d6ab76c4f22566fe49d5de60.mft")
     mft.decoded.getFiles.keySet().iterator().next() should be("671570f06499fbd2d6ab76c4f22566fe49d5de60.crl")
 
-    val crl = objects.tail.head.right.get.asInstanceOf[CrlObject]
+    val crl = objects.tail.head.asInstanceOf[CrlObject]
     crl.url should be("rsync://bandito.ripe.net/repo/3a87a4b1-6e22-4a63-ad0f-06f83ad3ca16/default/671570f06499fbd2d6ab76c4f22566fe49d5de60.crl")
     crl.decoded.getCrl.getIssuerDN.toString should be("CN=671570f06499fbd2d6ab76c4f22566fe49d5de60")
+
+    withdraws.head should be((new URI("rsync://bandito.ripe.net/repo/3a87a4b1-6e22-4a63-ad0f-06f83ad3ca16/default/example.roa"),
+      "2B551A6C10CCA04C174B0CEB3B64652A5534D1385BEAA40A55A68CB06055E6BB"))
 
     val serial = store.getSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
     serial should be(Some(BigInt(2)))
@@ -195,7 +205,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     objects should have size 1
     withdraws should have size 0
 
-    val c: CertificateObject = objects.head.right.get.asInstanceOf[CertificateObject]
+    val c: CertificateObject = objects.head.asInstanceOf[CertificateObject]
     c.url should be("rsync://bandito.ripe.net/repo/671570f06499fbd2d6ab76c4f22566fe49d5de60.cer")
     c.decoded.getResources should be(IpResourceSet.parse("192.168.0.0/16"))
 

@@ -43,7 +43,7 @@ import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateInformationAccessDescriptor, X509ResourceCertificate, X509ResourceCertificateBuilder}
 import net.ripe.rpki.commons.validation.ValidationOptions
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.rpki.validator.fetchers.FetcherConfig
+import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.Storage
 import net.ripe.rpki.validator.support.ValidatorTestCase
@@ -108,6 +108,10 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
     val result = subject.execute
     result.get(expiredCertificateLocation).exists(_.hasCheckKey(ValidationString.NOT_VALID_AFTER)) should be(true)
+
+    val fetcher = new net.ripe.rpki.validator.models.validation.RepoFetcher(storage, FetcherConfig("")) {
+      override def fetch(repoUri: URI): Seq[Fetcher.Error] = Seq()
+    }
   }
 
   test("should ignore revoked certificates that are not on the manifest") {
@@ -252,7 +256,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
   def createFetcher(storage: Storage): RepoFetcher = {
     new RepoFetcher(storage, FetcherConfig("")) {
-      override def fetch(repoUri: URI): Seq[String] = Seq()
+      override def fetch(repoUri: URI): Seq[Fetcher.Error] = Seq()
     }
   }
 

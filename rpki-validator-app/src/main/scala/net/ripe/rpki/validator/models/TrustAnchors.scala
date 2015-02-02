@@ -217,7 +217,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val validationResult = ValidationResult.withLocation(uri)
 
     val errors = fetcher.fetch(uri)
-    errors.foreach(validationResult.error(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, _))
+    errors.foreach(e => validationResult.error(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, e.toString))
 
     val certificate = store.getCertificate(uri.toString)
     certificate.foreach(cert => validationResult.rejectIfFalse(keyInfoMatches(cert), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH))

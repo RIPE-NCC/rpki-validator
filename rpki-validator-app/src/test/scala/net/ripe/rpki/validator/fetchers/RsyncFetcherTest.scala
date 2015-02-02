@@ -48,12 +48,15 @@ class RsyncFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockit
     System.gc()
     Thread.sleep(2000)
     val heapSize = Runtime.getRuntime.totalMemory
-    var objects = List[Either[BrokenObject, RepositoryObject[_]]]()
+    var objects = List[RepositoryObject[_]]()
 
-    fetcher.fetchRepo(new URI("rsync://rpki.ripe.net/repository/"), { (uri, dir) => Seq()}) {
-      f => objects = f :: objects
-    }
-
+    fetcher.fetchRepo(new URI("rsync://rpki.ripe.net/repository/"), new FetcherListener {
+      override def processObject(repoObj: RepositoryObject[_]) = {
+        objects = repoObj :: objects
+      }
+      override def processBroken(brokenObj: BrokenObject): Unit = {}
+      override def withdraw(url: URI, hash: String): Unit = {}
+    })
     System.gc()
     Thread.sleep(2000)
     val heapSize2 = Runtime.getRuntime.totalMemory
