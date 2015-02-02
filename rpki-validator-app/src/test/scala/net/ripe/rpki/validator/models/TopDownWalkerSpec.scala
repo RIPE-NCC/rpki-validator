@@ -51,6 +51,8 @@ import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.DateTime
 import org.scalatest._
 
+import net.ripe.rpki.commons.validation.ValidationString;
+
 import scala.collection.mutable._
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
@@ -76,17 +78,17 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     storage  = createStorage
     taContext = createTaContext
 
-    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
-    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
-
     val childCertificateCrl = getCrl(CERTIFICATE_NAME, CERTIFICATE_KEY_PAIR)
     storage.storeCrl(CrlObject(REPO_LOCATION + "childCertificateCrl.cer", childCertificateCrl))
 
   }
 
   test("should ignore expired certificates that are not on the manifest") {
-    val expiredCertificateLocation = createExpiredResourceCertificate("expired.cer")
-    createMftWithEntry(new URI("other_uri"))
+    val (expiredCertificateLocation, _) = createExpiredResourceCertificate("expired.cer")
+    createMftWithEntry()
+
+    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
+    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
 
     val subject = new TopDownWalker(taContext, storage, createFetcher(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
 
@@ -96,15 +98,44 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
   test("should warn about expired certificates that are on the manifest") {
 
-    val expiredCertificateLocation = createExpiredResourceCertificate("expired.cer")
+    val (expiredCertificateLocation, _) = createExpiredResourceCertificate("expired.cer")
     createMftWithEntry(expiredCertificateLocation)
+
+    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
+    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
 
     val subject = new TopDownWalker(taContext, storage, createFetcher(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
 
     val result = subject.execute
-    result.get(expiredCertificateLocation) should be('defined)
-    result.get(expiredCertificateLocation).get.hasCheckKey("cert.not.valid.after") should be(true)
+    result.get(expiredCertificateLocation).exists(_.hasCheckKey(ValidationString.NOT_VALID_AFTER)) should be(true)
   }
+
+  test("should ignore revoked certificates that are not on the manifest") {
+
+    val (certificateLocation, certificate) = createValidResourceCertificate("expired.cer")
+    createMftWithEntry()
+
+    createCrlWithEntry(certificate)
+
+    val subject = new TopDownWalker(taContext, storage, createFetcher(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+    result.get(certificateLocation)  should be('empty)
+  }
+
+  test("should not warn about revoked certificates not on the manifest") {
+
+    val (_, certificate) = createValidResourceCertificate("expired.cer")
+    createMftWithEntry()
+
+    createCrlWithEntry(certificate)
+
+    val subject = new TopDownWalker(taContext, storage, createFetcher(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+    result.get(ROOT_MANIFEST_LOCATION).filter(_.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE)) should be('empty)
+  }
+
 
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
@@ -134,6 +165,11 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     uri.toString.split('/').last
   }
 
+  def createCrlWithEntry(certificate: X509ResourceCertificate) {
+    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR, certificate.getSerialNumber)
+    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
+  }
+
   private def createMftWithEntry(uri: URI*): ManifestCms = {
 
     val thisUpdateTime = new DateTime().minusMinutes(1)
@@ -142,8 +178,10 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     val builder: ManifestCmsBuilder = new ManifestCmsBuilder
     builder.withCertificate(createManifestEECertificate).withManifestNumber(BigInteger.valueOf(68))
     builder.withThisUpdateTime(thisUpdateTime).withNextUpdateTime(nextUpdateTime)
+
     uri.foreach(u => builder.addFile(extractFileName(u), (0 to 31).map(_.toByte).toArray))
-    builder.addFile("BaR", (1 to 32).map(_.toByte).toArray)
+    builder.addFile(extractFileName(ROOT_CRL_LOCATION), (1 to 32).map(_.toByte).toArray)
+
     builder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER)
 
     val manifest = builder.build(ROOT_KEY_PAIR.getPrivate)
@@ -163,9 +201,17 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     builder.build
   }
 
-  def createExpiredResourceCertificate(name: String): URI = {
+  def createExpiredResourceCertificate(name: String) = {
+    createResourceCertificate(name, new ValidityPeriod(new DateTime().minusYears(2), new DateTime().minusYears(1)))
+  }
+
+  def createValidResourceCertificate(name: String) = {
+    createResourceCertificate(name, new ValidityPeriod(new DateTime().minusYears(2), new DateTime().plusYears(1)))
+  }
+
+  def createResourceCertificate(name: String, validityPeriod: ValidityPeriod): (URI, X509ResourceCertificate) = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
-    builder.withValidityPeriod(new ValidityPeriod(new DateTime().minusYears(2), new DateTime().minusYears(1)))
+    builder.withValidityPeriod(validityPeriod)
     builder.withResources(ROOT_RESOURCE_SET)
     builder.withIssuerDN(ROOT_CERTIFICATE_NAME)
     builder.withSubjectDN(CERTIFICATE_NAME)
@@ -179,21 +225,27 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
       new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_MANIFEST, ROOT_MANIFEST_LOCATION)
     )
 
-    val expiredCertificate = builder.build
+    val certificate = builder.build
 
-    val expiredCertificateLocation = new URI(REPO_LOCATION + name)
-    storage.storeCertificate(CertificateObject(expiredCertificateLocation.toString, expiredCertificate))
+    val certificateLocation = new URI(REPO_LOCATION + name)
+    storage.storeCertificate(CertificateObject(certificateLocation.toString, certificate))
 
-    expiredCertificateLocation
+    (certificateLocation, certificate)
   }
 
-  private def getCrl(certificateName: X500Principal, keyPair: KeyPair): X509Crl = {
+
+
+  private def getCrl(certificateName: X500Principal, keyPair: KeyPair, revokedSerials: BigInteger*): X509Crl = {
     val builder: X509CrlBuilder = new X509CrlBuilder
     builder.withIssuerDN(certificateName)
     builder.withThisUpdateTime(new DateTime)
     builder.withNextUpdateTime(new DateTime().plusHours(8))
     builder.withNumber(BigInteger.TEN)
     builder.withAuthorityKeyIdentifier(keyPair.getPublic)
+
+    revokedSerials.foreach {
+      i => builder.addEntry(i, DateTime.now().minusDays(1))
+    }
 
     builder.build(keyPair.getPrivate)
   }

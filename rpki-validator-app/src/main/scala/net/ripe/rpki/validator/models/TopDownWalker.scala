@@ -218,7 +218,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       if (locationOnMft != crl.url) {
         certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_CRL_URI_MISMATCH, locationOnMft, crl.url.toString)
       } else if (!HashUtil.equals(crl.hash, hashOnMft)) {
-        certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Hash code of $locationOnMft doesn't match hash code in manifest")
+        certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_HASH_MISMATCH, locationOnMft, certificateSkiHex)
       }
     }
   }
