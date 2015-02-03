@@ -45,13 +45,13 @@ import net.ripe.rpki.commons.validation.ValidationOptions
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
 import net.ripe.rpki.validator.models.validation._
-import net.ripe.rpki.validator.store.Storage
+import net.ripe.rpki.validator.store.{HttpFetcherStore, DataSources, CacheStore, Storage}
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.DateTime
 import org.scalatest._
 
-import net.ripe.rpki.commons.validation.ValidationString;
+import net.ripe.rpki.commons.validation.ValidationString
 
 import scala.collection.mutable._
 
@@ -75,7 +75,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   private var taContext: CertificateRepositoryObjectValidationContext = _
 
   override def beforeEach() {
-    storage  = createStorage
+    storage  =  new CacheStore(DataSources.InMemoryDataSource)
     taContext = createTaContext
 
     val childCertificateCrl = getCrl(CERTIFICATE_NAME, CERTIFICATE_KEY_PAIR)
@@ -109,7 +109,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     val result = subject.execute
     result.get(expiredCertificateLocation).exists(_.hasCheckKey(ValidationString.NOT_VALID_AFTER)) should be(true)
 
-    val fetcher = new net.ripe.rpki.validator.models.validation.RepoFetcher(storage, FetcherConfig("")) {
+    val fetcher = new RepoFetcher(storage, HttpFetcherStore.inMemory, FetcherConfig("")) {
       override def fetch(repoUri: URI): Seq[Fetcher.Error] = Seq()
     }
   }
@@ -255,7 +255,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   }
 
   def createFetcher(storage: Storage): RepoFetcher = {
-    new RepoFetcher(storage, FetcherConfig("")) {
+    new RepoFetcher(storage, HttpFetcherStore.inMemory, FetcherConfig("")) {
       override def fetch(repoUri: URI): Seq[Fetcher.Error] = Seq()
     }
   }
@@ -264,61 +264,5 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     val ta = getRootResourceCertificate
     val taContext = new CertificateRepositoryObjectValidationContext(URI.create("rsync://host/ta"), ta)
     taContext
-  }
-
-  def createStorage: Storage = {
-    new Storage with Hashing {
-      var crls: scala.collection.mutable.Map[String, CrlObject] = Map()
-      var certificates: scala.collection.mutable.Map[String, CertificateObject] = Map()
-      var manifests: scala.collection.mutable.Map[String, ManifestObject] = Map()
-
-      override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] = {
-        certificates.get(stringify(aki)) match {
-          case Some(x) => Seq(x)
-          case None => Seq()
-        }
-      }
-
-      override def storeCertificate(certificate: CertificateObject): Unit = {
-        certificates += (stringify(certificate.decoded.getAuthorityKeyIdentifier) -> certificate)
-      }
-
-      override def getManifests(aki: Array[Byte]): Seq[ManifestObject] = {
-        manifests.get(stringify(aki)) match {
-          case Some(x) => Seq(x)
-          case None => Seq()
-        }
-      }
-
-      override def storeManifest(manifest: ManifestObject): Unit = {
-        manifests += (stringify(manifest.aki) -> manifest)
-      }
-
-      override def getCrls(aki: Array[Byte]): Seq[CrlObject] = {
-        crls.get(stringify(aki)) match {
-          case Some(x) => Seq(x)
-          case None => Seq()
-        }
-      }
-
-      override def storeCrl(crl: CrlObject): Unit = {
-        crls += (stringify(crl.decoded.getAuthorityKeyIdentifier) -> crl)
-      }
-
-      override def storeBroken(brokenObject: BrokenObject): Unit = ???
-
-      override def storeRoa(Roa: RoaObject): Unit = ???
-
-      override def getRoas(aki: Array[Byte]): Seq[RoaObject] = Seq()
-
-      override def getBroken(url: String): Option[BrokenObject] = ???
-
-      override def getBroken: Seq[BrokenObject] = ???
-
-      override def getCertificate(uri: String): Option[CertificateObject] = ???
-
-      override def delete(url: String, hash: String) = ???
-
-    }
   }
 }
