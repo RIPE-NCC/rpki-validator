@@ -44,7 +44,7 @@ class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
   val storage = new CacheStore(DataSources.InMemoryDataSource)
 
   test("Should create different directories for different repo URLs") {
-    val fetcher = new RepoFetcher(storage, FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation))
+    val fetcher = RepoFetcher.inMemory(FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation))
     fetcher.fetch(new URI("rsync://repo1/x/z"))
     fetcher.fetch(new URI("rsync://repo2/y"))
 
