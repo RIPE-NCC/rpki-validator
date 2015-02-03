@@ -70,10 +70,10 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
     val notificationDef = notificationXml >>= fetchNotification(notificationUrl)
     val snapshotDef = notificationXml >>= parseSnapshotDef(notificationUrl)
 
-    type Units = (Seq[PublishUnit], Seq[WithdrawUnit])
+    type ChangeSet = (Seq[PublishUnit], Seq[WithdrawUnit])
 
     def returnSnapshot(lastLocalSerial: Option[BigInt]) = snapshotDef >>= { sd =>
-      fetchSnapshot(new URI(sd.url), sd)
+      getSnapshot(new URI(sd.url), sd)
     } >>= { snapshot =>
       Right((snapshot.publishes, Seq(), lastLocalSerial))
     }
@@ -100,14 +100,19 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
         case serial@Some(lastLocalSerial) =>
           notificationXml >>=
             parseDeltaDefs(notificationUrl) >>=
-            validateDeltaDefs(lastLocalSerial, notificationDef.serial) >>= { requiredDeltas =>
+            validateDeltaDefs(notificationUrl, lastLocalSerial, notificationDef.serial) >>= { requiredDeltas =>
 
-            if (requiredDeltas.head.serial > lastLocalSerial + 1) {
+            if (requiredDeltas.isEmpty) {
+              if (lastLocalSerial < notificationDef.serial)
+                returnSnapshot(serial)
+              else
+                Right((Seq(), Seq(), serial))
+            } else if (requiredDeltas.head.serial > lastLocalSerial + 1) {
               returnSnapshot(serial)
             } else {
               val futures = requiredDeltas.map { dDef =>
                 future {
-                  fetchDelta(dDef.url, dDef) >>= { d =>
+                  getDelta(dDef.url, dDef) >>= { d =>
                     Right((d.publishes, d.withdraw))
                   }
                 }
@@ -115,8 +120,8 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
 
               // wait for all the futures and bind their fetching results consecutively
               Await.result(Future.sequence(futures), 5.minutes).
-                foldLeft[Either[Error, Seq[Units]]] {
-                Right(Seq[Units]())
+                foldLeft[Either[Error, Seq[ChangeSet]]] {
+                Right(Seq[ChangeSet]())
               } { (result, deltaUnits) =>
                 result >>= { r =>
                   deltaUnits >>= { dd => Right(r :+ dd)}
@@ -168,14 +173,18 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
       case e: Exception => Left(Error(notificationUrl, s"Couldn't parse delta definitions: ${e.getMessage}"))
     }
 
-  private def validateDeltaDefs(lastLocalSerial: BigInt, notificationSerial: BigInt)(deltaDefs: Seq[DeltaDef]) = {
+  private def validateDeltaDefs(uri: URI, lastLocalSerial: BigInt, notificationSerial: BigInt)(deltaDefs: Seq[DeltaDef]) = {
     val requiredDeltas = deltaDefs.filter(_.serial > lastLocalSerial).sortBy(_.serial)
-    val deltaWithMaxSerial = requiredDeltas.maxBy(_.serial)
-    if (deltaWithMaxSerial.serial != notificationSerial) {
-      Left(Error(deltaWithMaxSerial.url, "Latest delta serial is not the same as the one in notification file"))
-    } else {
-      // TODO check if they form a contiguous sequence
+    if (requiredDeltas.isEmpty)
       Right(deltaDefs)
+    else {
+      val deltaWithMaxSerial = requiredDeltas.last
+      if (deltaWithMaxSerial.serial != notificationSerial) {
+        Left(Error(deltaWithMaxSerial.url, "Latest delta serial is not the same as the one in notification file"))
+      } else {
+        // TODO check if they form a contiguous sequence
+        Right(deltaDefs)
+      }
     }
   }
 
@@ -197,7 +206,7 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
       scala.xml.XML.load(response.getEntity.getContent)
     }
 
-  private def fetchSnapshot(snapshotUrl: URI, snapshotDef: SnapshotDef): Either[Error, Snapshot] =
+  private def getSnapshot(snapshotUrl: URI, snapshotDef: SnapshotDef): Either[Error, Snapshot] =
     getXml(snapshotUrl) >>= { xml =>
       getPublishUnits(snapshotUrl, xml) >>= { pu =>
         Right(Snapshot(snapshotDef, pu))
@@ -205,7 +214,7 @@ class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetche
     }
 
 
-  private def fetchDelta(deltaUrl: URI, deltaDef: DeltaDef): Either[Error, Delta] =
+  private def getDelta(deltaUrl: URI, deltaDef: DeltaDef): Either[Error, Delta] =
     getXml(deltaUrl) >>= { xml =>
       getPublishUnits(deltaUrl, xml) >>= { pu =>
         getWithdrawUnits(deltaUrl, xml) >>= { wu =>

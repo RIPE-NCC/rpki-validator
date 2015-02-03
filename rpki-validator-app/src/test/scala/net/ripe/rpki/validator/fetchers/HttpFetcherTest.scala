@@ -63,7 +63,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     scala.io.Source.fromInputStream(is).mkString
   }
 
-  def createMockedFetcher(urls: Map[String, String]) = {
+  def createMockedFetcher(urls: String => String) = {
     new HttpFetcher(FetcherConfig(), store) with Http {
       override def http = {
         val httpMock = mock[CloseableHttpClient]
@@ -189,7 +189,6 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     serial should be(Some(BigInt(2)))
   }
 
-
   test("Should download snapshot when there are not enough deltas") {
 
     store.storeSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28", BigInt(1))
@@ -211,6 +210,44 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
 
     val serial = store.getSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
     serial should be(Some(BigInt(3)))
+  }
+
+  test("Should not change local serial number in case of errors (invalid XML in notification file)") {
+    store.storeSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28", BigInt(1))
+
+    val fetcher = createMockedFetcher(Map(
+      "http://repo.net/repo/notification.xml" -> readFile("mock-http-responses/test4/broken_notification1.xml")
+    ))
+
+    val (objects, withdraws, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
+
+    objects should have size 0
+    withdraws should have size 0
+    errors should have size 1
+    errors.head should be (Fetcher.Error(new URI("http://repo.net/repo/notification.xml"),
+      "The element type \"notification\" must be terminated by the matching end-tag \"</notification>\"."))
+
+    val serial = store.getSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
+    serial should be(Some(BigInt(1)))
+  }
+
+  test("Should not change local serial number in case of errors (could not download snapshot)") {
+    store.storeSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28", BigInt(1))
+
+    val fetcher = createMockedFetcher({
+      case "http://repo.net/repo/notification.xml" => readFile("mock-http-responses/test4/notification1.xml")
+      case "http://repo.net/repo/snapshot.xml" => throw new Exception("Couldn't download snapshot")
+    })
+
+    val (objects, withdraws, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
+
+    objects should have size 0
+    withdraws should have size 0
+    errors should have size 1
+    errors.head should be (Fetcher.Error(new URI("http://repo.net/repo/snapshot.xml"), "Couldn't download snapshot"))
+
+    val serial = store.getSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
+    serial should be(Some(BigInt(1)))
   }
 
 }
