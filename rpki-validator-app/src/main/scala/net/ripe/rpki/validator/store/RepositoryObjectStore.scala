@@ -115,17 +115,20 @@ class RepositoryObjectStore(datasource: DataSource) {
 }
 
 object DataSources {
-  /**
-   * Store data on disk.
-   */
-  def DurableDataSource(dataDirBasePath: File) = {
+
+  private object DSSingletons extends Singletons[String, DataSource]({ dataDirBasePath =>
     val result = new BasicDataSource
     result.setUrl("jdbc:h2:" + dataDirBasePath + File.separator + "rpki-object-cache")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
     migrate(result)
     result
-  }
+  })
+
+  /**
+   * Store data on disk.
+   */
+  def DurableDataSource(dataDirBasePath: File) = DSSingletons(dataDirBasePath.getAbsolutePath)
 
   /**
    * For unit testing

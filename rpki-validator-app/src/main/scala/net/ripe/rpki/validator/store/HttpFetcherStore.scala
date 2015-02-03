@@ -32,6 +32,7 @@ package net.ripe.rpki.validator.store
 import java.sql.ResultSet
 import javax.sql.DataSource
 import java.net.URI
+import java.io.File
 import scala.collection.JavaConversions._
 
 import org.springframework.jdbc.core.RowMapper
@@ -40,6 +41,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import scala.util.Try
 
 class HttpFetcherStore(dataSource: DataSource) {
+
+  val template: NamedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource)
 
   def clear() = {
     for (t <- Seq("latest_http_snapshot"))
@@ -71,9 +74,6 @@ class HttpFetcherStore(dataSource: DataSource) {
       }
   }
 
-
-  val template: NamedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource)
-
   def getSerial(url: URI, sessionId: String): Option[BigInt] = {
     Try {
       template.queryForObject(
@@ -85,5 +85,11 @@ class HttpFetcherStore(dataSource: DataSource) {
       )
     }.toOption
   }
+}
 
+object HttpFetcherStore extends Singletons[String, HttpFetcherStore]({
+  path =>
+    new HttpFetcherStore(DataSources.DurableDataSource(new File(path)))
+}) {
+  def inMemory: HttpFetcherStore = new HttpFetcherStore(DataSources.InMemoryDataSource)
 }

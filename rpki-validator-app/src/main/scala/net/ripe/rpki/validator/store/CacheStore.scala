@@ -38,36 +38,8 @@ import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import scala.collection.JavaConversions._
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.util.Try
-
-trait Storage {
-
-  def storeCertificate(certificate: CertificateObject)
-
-  def storeManifest(manifest: ManifestObject)
-
-  def storeCrl(crl: CrlObject)
-
-  def storeRoa(Roa: RoaObject)
-
-  def storeBroken(brokenObject: BrokenObject)
-
-  def getCertificate(uri: String): Option[CertificateObject]
-  def getCertificates(aki: Array[Byte]): Seq[CertificateObject]
-
-  def getCrls(aki: Array[Byte]): Seq[CrlObject]
-
-  def getRoas(aki: Array[Byte]): Seq[RoaObject]
-
-  def getManifests(aki: Array[Byte]): Seq[ManifestObject]
-
-  def getBroken(url: String): Option[BrokenObject]
-
-  def getBroken: Seq[BrokenObject]
-
-  def delete(url: String, hash: String)
-}
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
@@ -204,19 +176,9 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   }
 }
 
-object DurableCaches {
-
-  private val caches = mutable.Map[String, CacheStore]()
-
-  def store(path: File) = {
-    synchronized {
-      val absolutePath = path.getAbsolutePath
-      caches.get(absolutePath).fold({
-        val c = new CacheStore(DataSources.DurableDataSource(path))
-        caches += absolutePath -> c
-        c
-      })(identity)
-    }
-  }
+object DurableCaches extends Singletons[String, CacheStore]({
+  path =>
+    new CacheStore(DataSources.DurableDataSource(new File(path)))
+}) {
+  def apply(d: File) : CacheStore = this.apply(d.getAbsolutePath)
 }
-
