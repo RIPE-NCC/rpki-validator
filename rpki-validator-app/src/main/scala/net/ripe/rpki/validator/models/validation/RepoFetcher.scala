@@ -29,6 +29,7 @@
  */
 package net.ripe.rpki.validator.models.validation
 
+import java.io.File
 import java.math.BigInteger
 import java.net.URI
 
@@ -38,7 +39,7 @@ import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.{X509ResourceCertificate, X509ResourceCertificateParser}
 import net.ripe.rpki.commons.validation.ValidationResult
 import net.ripe.rpki.validator.fetchers._
-import net.ripe.rpki.validator.store.Storage
+import net.ripe.rpki.validator.store._
 
 import scala.collection.JavaConversions._
 
@@ -171,7 +172,7 @@ case class RoaObject(override val url: String,
 }
 
 
-class RepoFetcher(storage: Storage, config: FetcherConfig) {
+class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: FetcherConfig) {
 
   val rsyncUrlPool = scala.collection.mutable.Set[String]()
   val httpUrlPool = scala.collection.mutable.Set[String]()
@@ -236,5 +237,16 @@ class RepoFetcher(storage: Storage, config: FetcherConfig) {
         }
       })
     }
+  }
+}
+
+object RepoFetcher {
+  def apply(storageDirectory: File, config: FetcherConfig) = {
+    val path = storageDirectory.getAbsolutePath
+    new RepoFetcher(DurableCaches(path), HttpFetcherStore(path), config)
+  }
+  def inMemory(config: FetcherConfig) = {
+    val dataSource = DataSources.InMemoryDataSource
+    new RepoFetcher(new CacheStore(dataSource), new HttpFetcherStore(dataSource), config)
   }
 }
