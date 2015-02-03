@@ -45,7 +45,7 @@ import org.apache.commons.lang.Validate
 
 import scala.collection.JavaConverters._
 
-class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, fetcher: RepoFetcher, validationOptions: ValidationOptions)(seen: scala.collection.mutable.Set[String])
+class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, repoService: RepoService, validationOptions: ValidationOptions)(seen: scala.collection.mutable.Set[String])
   extends Logging {
 
   private object HashUtil extends Hashing
@@ -110,7 +110,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         Map()
       } else {
         val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
-        val nextLevelWalker = new TopDownWalker(newValidationContext, store, fetcher, validationOptions)(seen)
+        val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions)(seen)
         nextLevelWalker.execute
       }
     }
@@ -132,7 +132,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
-  private def prefetch(uri: URI) = fetcher.fetch(uri)
+  private def prefetch(uri: URI) = repoService.visit(uri)
 
   private def findCrl: Option[CrlObject] = {
     val keyIdentifier = certificateContext.getSubjectKeyIdentifier

@@ -29,53 +29,27 @@
  */
 package net.ripe.rpki.validator.store
 
-import net.ripe.rpki.validator.models.validation._
+import java.net.URI
 
-import scala.collection.immutable
+import net.ripe.rpki.validator.models.RepoService
+import net.ripe.rpki.validator.models.validation.RepoFetcher
+import net.ripe.rpki.validator.support.ValidatorTestCase
+import org.mockito.Mockito
+import org.scalatest.BeforeAndAfter
+import org.scalatest.mock.MockitoSugar
 
-trait Storage {
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with MockitoSugar  {
 
-  def storeCertificate(certificate: CertificateObject)
+  val fetcher = mock[RepoFetcher]
+  val repoService = new RepoService(fetcher)
 
-  def storeManifest(manifest: ManifestObject)
+  test("should fetch if URI was never visited") {
+    val uri: URI = new URI("http://foo.bar")
 
-  def storeCrl(crl: CrlObject)
+    repoService.visit(uri)
 
-  def storeRoa(Roa: RoaObject)
-
-  def storeBroken(brokenObject: BrokenObject)
-
-  def getCertificate(uri: String): Option[CertificateObject]
-  def getCertificates(aki: Array[Byte]): Seq[CertificateObject]
-
-  def getCrls(aki: Array[Byte]): Seq[CrlObject]
-
-  def getRoas(aki: Array[Byte]): Seq[RoaObject]
-
-  def getManifests(aki: Array[Byte]): Seq[ManifestObject]
-
-  def getBroken(url: String): Option[BrokenObject]
-
-  def getBroken: Seq[BrokenObject]
-
-  def delete(url: String, hash: String)
-
-  def clear()
-}
-
-/**
- * Generic template for storage singletons.
- */
-class Singletons[K,V](create : K => V) {
-  private var caches = immutable.Map[K,V]()
-  def apply(k: K) : V = {
-    synchronized {
-      val maybeCache = caches.get(k)
-      maybeCache.fold({
-        val c = create(k)
-        caches = caches + (k -> c)
-        c
-      })(identity)
-    }
+    Mockito.verify(fetcher).fetch(uri)
   }
+
 }

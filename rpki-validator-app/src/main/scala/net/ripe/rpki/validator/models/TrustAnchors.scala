@@ -209,14 +209,14 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   validationOptions.setLooseValidationEnabled(enableLooseValidation)
 
   val store = DurableCaches(storageDirectory)
-  val fetcher = RepoFetcher(storageDirectory, fetcherConfig)
+  val repoService = new RepoService(RepoFetcher(storageDirectory, fetcherConfig))
 
   override def extractTrustAnchorLocator(): ValidatedObject = {
     val uri = trustAnchorLocator.getCertificateLocation
 
     val validationResult = ValidationResult.withLocation(uri)
 
-    val errors = fetcher.fetch(uri)
+    val errors = repoService.visit(uri)
     errors.foreach(e => validationResult.error(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, e.toString))
 
     val certificate = store.getCertificate(uri.toString)
@@ -229,8 +229,8 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   }
 
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    trustAnchorLocator.getPrefetchUris.asScala.foreach(fetcher.fetch)
-    val walker = new TopDownWalker(certificate, store, fetcher, validationOptions)(scala.collection.mutable.Set())
+    trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visit)
+    val walker = new TopDownWalker(certificate, store, repoService, validationOptions)(scala.collection.mutable.Set())
     walker.execute
   }
 

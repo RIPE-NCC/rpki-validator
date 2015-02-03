@@ -213,7 +213,7 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
     val (fetcher, fetchOnlyOnce) = repoUri.getScheme match {
       case "rsync" => (new RsyncFetcher(config), checkRsyncPool _)
       // TODO Replace null with real HttpFetcherStore
-      case "http" | "https" => (new HttpFetcher(config, null), checkHttpPool _)
+      case "http" | "https" => (new HttpFetcher(config, httpStore), checkHttpPool _)
       case _ => throw new Exception(s"No fetcher for the uri $repoUri")
     }
 

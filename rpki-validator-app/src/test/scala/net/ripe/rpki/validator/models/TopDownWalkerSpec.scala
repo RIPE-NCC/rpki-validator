@@ -41,25 +41,23 @@ import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
 import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateInformationAccessDescriptor, X509ResourceCertificate, X509ResourceCertificateBuilder}
-import net.ripe.rpki.commons.validation.ValidationOptions
+import net.ripe.rpki.commons.validation.{ValidationOptions, ValidationString}
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
 import net.ripe.rpki.validator.models.validation._
-import net.ripe.rpki.validator.store.{HttpFetcherStore, DataSources, CacheStore, Storage}
+import net.ripe.rpki.validator.store.{CacheStore, DataSources, HttpFetcherStore, Storage}
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.DateTime
 import org.scalatest._
-
-import net.ripe.rpki.commons.validation.ValidationString
 
 import scala.collection.mutable._
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
-  private val REPO_LOCATION: URI               = URI.create("rsync://foo.host/bar/")
-  private val ROOT_MANIFEST_LOCATION: URI      = URI.create("rsync://foo.host/bar/manifest.mft")
+  private val REPO_LOCATION: URI = URI.create("rsync://foo.host/bar/")
+  private val ROOT_MANIFEST_LOCATION: URI = URI.create("rsync://foo.host/bar/manifest.mft")
   private val ROOT_CRL_LOCATION: URI = URI.create("rsync://foo.host/bar/ta.crl")
 
   private val ROOT_CERTIFICATE_NAME: X500Principal = new X500Principal("CN=For Testing Only, CN=RIPE NCC, C=NL")
@@ -75,7 +73,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   private var taContext: CertificateRepositoryObjectValidationContext = _
 
   override def beforeEach() {
-    storage  =  new CacheStore(DataSources.InMemoryDataSource)
+    storage = new CacheStore(DataSources.InMemoryDataSource)
+    storage.clear()
     taContext = createTaContext
 
     val childCertificateCrl = getCrl(CERTIFICATE_NAME, CERTIFICATE_KEY_PAIR)
@@ -90,7 +89,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
     storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
 
-    val subject = new TopDownWalker(taContext, storage, createFetcher(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
 
     val result = subject.execute
     result.get(expiredCertificateLocation) should be('empty)
@@ -104,7 +103,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
     storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
 
-    val subject = new TopDownWalker(taContext, storage, createFetcher(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
 
     val result = subject.execute
     result.get(expiredCertificateLocation).exists(_.hasCheckKey(ValidationString.NOT_VALID_AFTER)) should be(true)
@@ -120,11 +119,10 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     createMftWithEntry()
 
     createCrlWithEntry(certificate)
-
-    val subject = new TopDownWalker(taContext, storage, createFetcher(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
 
     val result = subject.execute
-    result.get(certificateLocation)  should be('empty)
+    result.get(certificateLocation) should be('empty)
   }
 
   test("should not warn about revoked certificates not on the manifest") {
@@ -134,7 +132,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
     createCrlWithEntry(certificate)
 
-    val subject = new TopDownWalker(taContext, storage, createFetcher(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
 
     val result = subject.execute
     result.get(ROOT_MANIFEST_LOCATION).filter(_.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE)) should be('empty)
@@ -238,7 +236,6 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   }
 
 
-
   private def getCrl(certificateName: X500Principal, keyPair: KeyPair, revokedSerials: BigInteger*): X509Crl = {
     val builder: X509CrlBuilder = new X509CrlBuilder
     builder.withIssuerDN(certificateName)
@@ -254,9 +251,9 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     builder.build(keyPair.getPrivate)
   }
 
-  def createFetcher(storage: Storage): RepoFetcher = {
-    new RepoFetcher(storage, HttpFetcherStore.inMemory, FetcherConfig("")) {
-      override def fetch(repoUri: URI): Seq[Fetcher.Error] = Seq()
+  def createRepoService(storage: Storage): RepoService = {
+    new RepoService(new RepoFetcher(storage, HttpFetcherStore.inMemory, FetcherConfig(""))) {
+      override def visit(repoUri: URI): Seq[Fetcher.Error] = Seq()
     }
   }
 
