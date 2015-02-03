@@ -250,4 +250,24 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     serial should be(Some(BigInt(1)))
   }
 
+  test("Should not change local serial number in case of errors (could not download one delta of two)") {
+    store.storeSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28", BigInt(1))
+
+    val fetcher = createMockedFetcher({
+      case "http://repo.net/repo/notification.xml" => readFile("mock-http-responses/test5/notification1.xml")
+      case "http://repo.net/repo/delta1.xml" => readFile("mock-http-responses/test5/delta1.xml")
+      case "http://repo.net/repo/delta2.xml" => throw new Exception("Couldn't download delta2")
+    })
+
+    val (objects, withdraws, errors) = fetchRepo(fetcher, "http://repo.net/repo/notification.xml")
+
+    objects should have size 0
+    withdraws should have size 0
+    errors should have size 1
+    errors.head should be (Fetcher.Error(new URI("http://repo.net/repo/delta2.xml"), "Couldn't download delta2"))
+
+    val serial = store.getSerial(new URI("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
+    serial should be(Some(BigInt(1)))
+  }
+
 }
