@@ -216,7 +216,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
 
     val validationResult = ValidationResult.withLocation(uri)
 
-    val errors = repoService.visit(uri)
+    val errors = repoService.visitObject(uri)
     errors.foreach(e => validationResult.error(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, e.toString))
 
     val certificate = store.getCertificate(uri.toString)
@@ -229,7 +229,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   }
 
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visit)
+    trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
     val walker = new TopDownWalker(certificate, store, repoService, validationOptions)(scala.collection.mutable.Set())
     walker.execute
   }

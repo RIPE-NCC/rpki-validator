@@ -191,52 +191,45 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
       _.mkString("","/","/")
     }
 
-  private def checkRsyncPool(uri: URI)(f: => Seq[Fetcher.Error]) = {
-    val u = uri.toString.replaceAll("rsync://", "")
-    if (!chunked(u).exists(rsyncUrlPool.contains)) {
-      val result = f
-      rsyncUrlPool.add(u)
-      result
-    } else Seq()
-  }
+  def fetchObject(repoUri: URI): Seq[Fetcher.Error] = {
+    val fetcher = repoUri.getScheme match {
+      case "rsync" => new RsyncFetcher(config)
+      case "http" | "https" => new SingleObjectHttpFetcher(httpStore)
+      case _ => throw new Exception(s"No fetcher for the object $repoUri")
+    }
 
-  private def checkHttpPool(uri: URI)(f: => Seq[Fetcher.Error]) = {
-    val u = uri.toString
-    if (!httpUrlPool.contains(u)) {
-      val result = f
-      httpUrlPool.add(u)
-      result
-    } else Seq()
+    fetch(repoUri, fetcher)
   }
 
   def fetch(repoUri: URI): Seq[Fetcher.Error] = {
-    val (fetcher, fetchOnlyOnce) = repoUri.getScheme match {
-      case "rsync" => (new RsyncFetcher(config), checkRsyncPool _)
-      // TODO Replace null with real HttpFetcherStore
-      case "http" | "https" => (new HttpFetcher(config, httpStore), checkHttpPool _)
+    val fetcher = repoUri.getScheme match {
+      case "rsync" => new RsyncFetcher(config)
+      case "http" | "https" => new HttpFetcher(httpStore)
       case _ => throw new Exception(s"No fetcher for the uri $repoUri")
     }
 
-    fetchOnlyOnce(repoUri) {
-      fetcher.fetchRepo(repoUri, new FetcherListener {
-        override def processObject(repoObj: RepositoryObject[_]) = {
-          repoObj match {
-            case c: CertificateObject => storage.storeCertificate(c)
-            case c: CrlObject => storage.storeCrl(c)
-            case c: ManifestObject => storage.storeManifest(c)
-            case c: RoaObject => storage.storeRoa(c)
-          }
-        }
+    fetch(repoUri, fetcher)
+  }
 
-        override def withdraw(url: URI, hash: String): Unit = {
-          // TODO Implement the actual withdraw
+  private def fetch(repoUri: URI, fetcher: Fetcher): Seq[Fetcher.Error] = {
+    fetcher.fetchRepo(repoUri, new FetcherListener {
+      override def processObject(repoObj: RepositoryObject[_]) = {
+        repoObj match {
+          case c: CertificateObject => storage.storeCertificate(c)
+          case c: CrlObject => storage.storeCrl(c)
+          case c: ManifestObject => storage.storeManifest(c)
+          case c: RoaObject => storage.storeRoa(c)
         }
+      }
 
-        override def processBroken(brokenObj: BrokenObject): Unit = {
-          storage.storeBroken(brokenObj)
-        }
-      })
-    }
+      override def withdraw(url: URI, hash: String): Unit = {
+        // TODO Implement the actual withdraw
+      }
+
+      override def processBroken(brokenObj: BrokenObject): Unit = {
+        storage.storeBroken(brokenObj)
+      }
+    })
   }
 }
 

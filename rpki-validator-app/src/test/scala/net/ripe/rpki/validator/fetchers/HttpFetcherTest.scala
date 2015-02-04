@@ -64,7 +64,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
   }
 
   def createMockedFetcher(urls: String => String) = {
-    new HttpFetcher(FetcherConfig(), store) with Http {
+    new HttpFetcher(store) with Http {
       override def http = {
         val httpMock = mock[CloseableHttpClient]
         when(httpMock.execute(any[HttpGet])).thenAnswer(new Answer[CloseableHttpResponse]() {

@@ -132,7 +132,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
-  private def prefetch(uri: URI) = repoService.visit(uri)
+  private def prefetch(uri: URI) = repoService.visitRepo(uri)
 
   private def findCrl: Option[CrlObject] = {
     val keyIdentifier = certificateContext.getSubjectKeyIdentifier

@@ -39,7 +39,7 @@ import org.apache.http.client.methods.HttpGet
 import scala.math.BigInt
 import scala.xml.Elem
 
-class HttpFetcher(config: FetcherConfig, store: HttpFetcherStore) extends Fetcher with Http {
+class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 

@@ -51,7 +51,7 @@ trait Fetcher {
 
   def fetchRepo(url: URI, process: FetcherListener): Seq[Error]
 
-  protected def processObject(uri: URI, bytes: Array[Byte], fetcherListener: FetcherListener) = {
+  protected def processObject(uri: URI, bytes: Array[Byte], fetcherListener: FetcherListener): Either[Error, Unit] = {
     def saveIfBroken[T](parsed: => Either[BrokenObject, T]) =
       parsed.left.map { bo =>
         fetcherListener.processBroken(bo)

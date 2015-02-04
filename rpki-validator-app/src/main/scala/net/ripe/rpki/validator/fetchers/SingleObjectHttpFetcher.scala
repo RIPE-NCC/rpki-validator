@@ -27,16 +27,22 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.models
+package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
 
-import net.ripe.rpki.validator.models.validation.RepoFetcher
+import net.ripe.rpki.validator.config.Http
+import net.ripe.rpki.validator.store.HttpFetcherStore
+import org.apache.commons.io.IOUtils
+import org.apache.http.client.methods.HttpGet
 
-class RepoService(fetcher: RepoFetcher) {
-
-  def visitRepo(uri: URI) = fetcher.fetch(uri)
-
-  def visitObject(uri: URI) = fetcher.fetchObject(uri)
-
+class SingleObjectHttpFetcher(store: HttpFetcherStore) extends Fetcher with Http {
+  def fetchRepo(uri: URI, process: FetcherListener): Seq[Fetcher.Error] = {
+    tryTo(uri) {
+      val response = http.execute(new HttpGet(uri.toString))
+      IOUtils.toByteArray(response.getEntity.getContent)
+    }.right.map { bytes =>
+      processObject(uri, bytes, process)
+    }.left.toSeq
+  }
 }
