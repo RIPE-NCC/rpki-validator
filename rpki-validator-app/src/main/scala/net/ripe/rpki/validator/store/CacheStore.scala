@@ -37,13 +37,21 @@ import net.ripe.rpki.validator.models.validation._
 import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.jdbc.core.RowMapper
+import org.springframework.jdbc.datasource.DataSourceTransactionManager
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.support.{TransactionCallback, TransactionTemplate}
 import scala.collection.JavaConversions._
 import scala.collection.{immutable, mutable}
 import scala.util.Try
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
-  val template: NamedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource)
+  private val template = new NamedParameterJdbcTemplate(dataSource)
+  private val tx = new DataSourceTransactionManager(dataSource)
+
+  override def atomic[T](f: => T) = new TransactionTemplate(tx).execute(new TransactionCallback[T] {
+    override def doInTransaction(transactionStatus: TransactionStatus) = f
+  })
 
   override def storeCertificate(certificate: CertificateObject) =
     template.update(
