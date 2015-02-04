@@ -212,27 +212,25 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
   }
 
   private def fetch(repoUri: URI, fetcher: Fetcher): Seq[Fetcher.Error] = {
-    fetchOnlyOnce(repoUri) {
-      storage.atomic {
-        fetcher.fetchRepo(repoUri, new FetcherListener {
-          override def processObject(repoObj: RepositoryObject[_]) = {
-            repoObj match {
-              case c: CertificateObject => storage.storeCertificate(c)
-              case c: CrlObject => storage.storeCrl(c)
-              case c: ManifestObject => storage.storeManifest(c)
-              case c: RoaObject => storage.storeRoa(c)
-            }
+    storage.atomic {
+      fetcher.fetchRepo(repoUri, new FetcherListener {
+        override def processObject(repoObj: RepositoryObject[_]) = {
+          repoObj match {
+            case c: CertificateObject => storage.storeCertificate(c)
+            case c: CrlObject => storage.storeCrl(c)
+            case c: ManifestObject => storage.storeManifest(c)
+            case c: RoaObject => storage.storeRoa(c)
           }
+        }
 
-          override def withdraw(url: URI, hash: String): Unit = {
-            // TODO Implement the actual withdraw
-          }
+        override def withdraw(url: URI, hash: String): Unit = {
+          // TODO Implement the actual withdraw
+        }
 
-          override def processBroken(brokenObj: BrokenObject): Unit = {
-            storage.storeBroken(brokenObj)
-          }
-        })
-      }
+        override def processBroken(brokenObj: BrokenObject): Unit = {
+          storage.storeBroken(brokenObj)
+        }
+      })
     }
   }
 }
