@@ -31,7 +31,7 @@ package net.ripe.rpki.validator.store
 
 import net.ripe.rpki.validator.models.validation._
 
-import scala.collection.immutable
+import scala.collection.mutable
 
 trait Storage {
 
@@ -61,21 +61,25 @@ trait Storage {
   def delete(url: String, hash: String)
 
   def clear()
+
+  def atomic[T](f: => T) : T
 }
 
 /**
  * Generic template for storage singletons.
  */
-class Singletons[K,V](create : K => V) {
-  private var caches = immutable.Map[K,V]()
-  def apply(k: K) : V = {
+class Singletons[K, V](create: K => V) {
+  private val caches = mutable.Map[K, V]()
+
+  def apply(k: K): V = {
     synchronized {
-      val maybeCache = caches.get(k)
-      maybeCache.fold({
-        val c = create(k)
-        caches = caches + (k -> c)
-        c
-      })(identity)
+      caches.get(k) match {
+        case None =>
+          val c = create(k)
+          caches += (k -> c)
+          c
+        case Some(c) => c
+      }
     }
   }
 }
