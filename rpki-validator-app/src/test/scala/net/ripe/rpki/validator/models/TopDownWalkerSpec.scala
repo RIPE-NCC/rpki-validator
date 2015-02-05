@@ -57,6 +57,7 @@ import scala.collection.mutable._
 class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
   private val REPO_LOCATION: URI = URI.create("rsync://foo.host/bar/")
+  private val RRDP_NOTIFICATION_LOCATION: URI = URI.create("http://foo.host/bar/notification.xml")
   private val ROOT_MANIFEST_LOCATION: URI = URI.create("rsync://foo.host/bar/manifest.mft")
   private val ROOT_CRL_LOCATION: URI = URI.create("rsync://foo.host/bar/ta.crl")
 
@@ -138,6 +139,10 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     result.get(ROOT_MANIFEST_LOCATION).filter(_.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE)) should be('empty)
   }
 
+  test("Should prefer rpkiNotify URI over caRepository URI") {
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+    subject.preferredFetchLocation.get should be(RRDP_NOTIFICATION_LOCATION)
+  }
 
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
@@ -157,7 +162,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
     builder.withSubjectInformationAccess(
       new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_CA_REPOSITORY, REPO_LOCATION),
-      new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_CA_REPOSITORY, REPO_LOCATION),
+      new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_NOTIFY, RRDP_NOTIFICATION_LOCATION),
       new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_MANIFEST, ROOT_MANIFEST_LOCATION)
     )
     builder.build

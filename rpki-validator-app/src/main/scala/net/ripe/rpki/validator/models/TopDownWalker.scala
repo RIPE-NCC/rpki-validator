@@ -61,9 +61,11 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   private var crlLocator: CrlLocator = _
   private val objectsToIgnore: scala.collection.mutable.Set[URI] = scala.collection.mutable.Set[URI]()
 
+  private[models] def preferredFetchLocation: Option[URI] = Option(certificateContext.getRpkiNotifyURI).orElse(Option(certificateContext.getRepositoryURI))
+
   def execute: Map[URI, ValidatedObject] = {
     logger.info(s"Validating ${certificateContext.getLocation}")
-    Option(certificateContext.getRepositoryURI) match {
+    preferredFetchLocation match {
       case Some(repositoryUri) => prefetch(repositoryUri)
       case None =>  //TODO do nothing, suppose this could happen if CA has no children?
     }
