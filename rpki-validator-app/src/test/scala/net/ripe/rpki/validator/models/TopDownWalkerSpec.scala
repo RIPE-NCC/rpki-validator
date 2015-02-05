@@ -65,7 +65,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   private val CERTIFICATE_NAME: X500Principal = new X500Principal("CN=123")
   private val ROOT_RESOURCE_SET: IpResourceSet = IpResourceSet.parse("10.0.0.0/8, 192.168.0.0/16, ffce::/16, AS21212")
   private val ROOT_SERIAL_NUMBER: BigInteger = BigInteger.valueOf(900)
-  private val VALIDITY_PERIOD: ValidityPeriod = new ValidityPeriod(new DateTime().minusMinutes(1), new DateTime().plusYears(1))
+  private val NOW: DateTime = DateTime.now()
+  private val VALIDITY_PERIOD: ValidityPeriod = new ValidityPeriod(NOW.minusMinutes(1), NOW.plusYears(1))
   private val ROOT_KEY_PAIR: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val CERTIFICATE_KEY_PAIR: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val DEFAULT_VALIDATION_OPTIONS: ValidationOptions = new ValidationOptions
@@ -179,8 +180,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
   private def createMftWithEntry(uri: URI*): ManifestCms = {
 
-    val thisUpdateTime = new DateTime().minusMinutes(1)
-    val nextUpdateTime = new DateTime().plusYears(1)
+    val thisUpdateTime = NOW.minusMinutes(1)
+    val nextUpdateTime = NOW.plusYears(1)
 
     val builder: ManifestCmsBuilder = new ManifestCmsBuilder
     builder.withCertificate(createManifestEECertificate).withManifestNumber(BigInteger.valueOf(68))
@@ -209,11 +210,11 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   }
 
   def createExpiredResourceCertificate(name: String) = {
-    createResourceCertificate(name, new ValidityPeriod(new DateTime().minusYears(2), new DateTime().minusYears(1)))
+    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)))
   }
 
   def createValidResourceCertificate(name: String) = {
-    createResourceCertificate(name, new ValidityPeriod(new DateTime().minusYears(2), new DateTime().plusYears(1)))
+    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)))
   }
 
   def createResourceCertificate(name: String, validityPeriod: ValidityPeriod): (URI, X509ResourceCertificate) = {
@@ -244,13 +245,13 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   private def getCrl(certificateName: X500Principal, keyPair: KeyPair, revokedSerials: BigInteger*): X509Crl = {
     val builder: X509CrlBuilder = new X509CrlBuilder
     builder.withIssuerDN(certificateName)
-    builder.withThisUpdateTime(new DateTime)
-    builder.withNextUpdateTime(new DateTime().plusHours(8))
+    builder.withThisUpdateTime(NOW)
+    builder.withNextUpdateTime(NOW.plusHours(8))
     builder.withNumber(BigInteger.TEN)
     builder.withAuthorityKeyIdentifier(keyPair.getPublic)
 
     revokedSerials.foreach {
-      i => builder.addEntry(i, DateTime.now().minusDays(1))
+      i => builder.addEntry(i, NOW.minusDays(1))
     }
 
     builder.build(keyPair.getPrivate)
