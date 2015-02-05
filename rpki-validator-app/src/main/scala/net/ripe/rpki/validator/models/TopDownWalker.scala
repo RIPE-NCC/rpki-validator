@@ -166,8 +166,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   private[models] def crossCheckRepoObjects(validationLocation: ValidationLocation, manifestEntries: FileAndHashEntries, roas: Seq[RepositoryObject[RoaCms]], childrenCertificates: Seq[RepositoryObject[X509ResourceCertificate]]) {
 
-    val roaEntries = roas.map(r => URI.create(r.url) -> r)
-    val certEntries = childrenCertificates.map(c => URI.create(c.url) -> c)
+    val roaEntries = roas.map(r => new URI(r.url) -> r)
+    val certEntries = childrenCertificates.map(c => new URI(c.url) -> c)
     val foundObjectsEntries = ( roaEntries ++ certEntries ).toMap
 
     val notFoundInRepo = manifestEntries.keySet -- foundObjectsEntries.keySet

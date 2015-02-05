@@ -107,7 +107,7 @@ class RepositoryObjectStore(datasource: DataSource) {
     override def mapRow(rs: ResultSet, rowNum: Int) = {
       StoredRepositoryObject(
         hash = ByteString(base64.decode(rs.getString("hash"))),
-        uri = URI.create(rs.getString("uri")),
+        uri = new URI(rs.getString("uri")),
         binaryObject = ByteString(base64.decode(rs.getString("encoded_object"))),
         expires = new DateTime(rs.getTimestamp("expires")).withZone(DateTimeZone.UTC))
     }
