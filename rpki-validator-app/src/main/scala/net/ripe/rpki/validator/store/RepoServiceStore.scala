@@ -34,26 +34,21 @@ import java.net.URI
 import org.joda.time.Instant
 
 object RepoServiceStore {
-  var times = Map[URI,Instant]()
+  var times = Map[String, Instant]()
 
+  @inline
+  private def norm(uri: URI) = {
+    val u = uri.toString
+    if (u.endsWith("/")) u else u + "/"
+  }
 
   def getLastFetchTime(uri: URI): Instant = {
-
-    def parentUri(u: URI): Boolean = {
-      val uString: String = u.toString
-      val uriString = uri.toString
-
-      (uString == uriString) || ( uString.endsWith("/") && uriString.startsWith(uString) ) || uriString.startsWith(uString + "/")
-    }
-
-    val instants: Iterable[Instant] = times.filterKeys(parentUri).values
+    val instants = times.filterKeys(norm(uri).startsWith).values
     if (instants.isEmpty) new Instant().withMillis(0)
     else instants.maxBy(_.getMillis)
   }
 
-
-  def updateLastFetchTime(uri: URI, instant: Instant) =
-    synchronized {
-      times = times + (uri -> instant)
-    }
+  def updateLastFetchTime(uri: URI, instant: Instant) = synchronized {
+    times = times + (norm(uri) -> instant)
+  }
 }
