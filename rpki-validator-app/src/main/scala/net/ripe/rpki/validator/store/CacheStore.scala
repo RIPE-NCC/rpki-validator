@@ -33,6 +33,7 @@ import java.io.File
 import java.sql.ResultSet
 import javax.sql.DataSource
 
+import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation._
 import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
@@ -49,25 +50,29 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   private val template = new NamedParameterJdbcTemplate(dataSource)
   private val tx = new DataSourceTransactionManager(dataSource)
 
+  private val locker = new Locker
+
   override def atomic[T](f: => T) = new TransactionTemplate(tx).execute(new TransactionCallback[T] {
     override def doInTransaction(transactionStatus: TransactionStatus) = f
   })
 
   override def storeCertificate(certificate: CertificateObject) =
-    template.update(
-      """INSERT INTO certificates(aki, ski, hash, url, encoded)
+    locker.locked("certificates") {
+      template.update(
+        """INSERT INTO certificates(aki, ski, hash, url, encoded)
          SELECT :aki, :ski, :hash, :url, :encoded
          WHERE NOT EXISTS (
            SELECT * FROM certificates c
            WHERE c.url = :url
            AND  c.hash = :hash
          )
-      """,
-      Map("aki" -> stringify(certificate.aki),
-        "ski" -> stringify(certificate.ski),
-        "hash" -> stringify(certificate.hash),
-        "url" -> certificate.url,
-        "encoded" -> certificate.encoded))
+        """,
+        Map("aki" -> stringify(certificate.aki),
+          "ski" -> stringify(certificate.ski),
+          "hash" -> stringify(certificate.hash),
+          "url" -> certificate.url,
+          "encoded" -> certificate.encoded))
+    }
 
   override def storeRoa(roa: RoaObject) = storeRepoObject(roa, "roa")
 
@@ -76,34 +81,38 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   override def storeCrl(crl: CrlObject) = storeRepoObject(crl, "crl")
 
   private def storeRepoObject[T](obj: RepositoryObject[T], objType: String) =
-    template.update(
-      """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
+    locker.locked("repo_objects") {
+      template.update(
+        """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
          SELECT :aki, :hash, :url, :encoded, :object_type
          WHERE NOT EXISTS (
            SELECT * FROM repo_objects ro
            WHERE ro.hash = :hash
            AND ro.url = :url
          )
-      """,
-      Map("aki" -> stringify(obj.aki),
-        "hash" -> stringify(obj.hash),
-        "url" -> obj.url,
-        "encoded" -> obj.encoded,
-        "object_type" -> objType))
+        """,
+        Map("aki" -> stringify(obj.aki),
+          "hash" -> stringify(obj.hash),
+          "url" -> obj.url,
+          "encoded" -> obj.encoded,
+          "object_type" -> objType))
+    }
 
   override def storeBroken(broken: BrokenObject) =
-    template.update(
-      """INSERT INTO broken_objects(hash, url, encoded, message)
+    locker.locked("broken_objects") {
+      template.update(
+        """INSERT INTO broken_objects(hash, url, encoded, message)
          SELECT :hash, :url, :encoded, :message
          WHERE NOT EXISTS (
            SELECT * FROM broken_objects ro
            WHERE ro.url = :url
          )
       """,
-      Map("hash" -> stringify(broken.hash),
-        "url" -> broken.url,
-        "encoded" -> broken.bytes,
-        "message" -> broken.errorMessage))
+        Map("hash" -> stringify(broken.hash),
+          "url" -> broken.url,
+          "encoded" -> broken.bytes,
+          "message" -> broken.errorMessage))
+      }
 
   override def getCertificate(url: String): Option[CertificateObject] =
     try {
@@ -169,15 +178,17 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
 
     table.foreach { t =>
-      template.update(
-        """DELETE FROM :table WHERE
+      locker.locked(url) {
+        template.update(
+          """DELETE FROM :table WHERE
          WHERE url = :url
          AND hash = :hash
        )
-        """,
-        Map("hash" -> hash,
-          "url" -> url,
-          "table" -> t))
+          """,
+          Map("hash" -> hash,
+            "url" -> url,
+            "table" -> t))
+      }
     }
   }
 }
