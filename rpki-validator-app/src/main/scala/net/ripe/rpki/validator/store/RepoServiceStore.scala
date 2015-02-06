@@ -30,17 +30,11 @@
 package net.ripe.rpki.validator.store
 
 import java.net.URI
-import javax.sql.DataSource
 
-import org.joda.time.{DateTime, Instant}
+import org.joda.time.Instant
 
-trait RepoServiceStorage {
-  def getLastFetchTime(uri: URI): Instant
-  def updateLastFetchTime(uri: URI, instant: Instant)
-}
-
-class RepoServiceStore(dataSource: DataSource) extends RepoServiceStorage {
-  val times = scala.collection.mutable.Map[URI,Instant]()
+object RepoServiceStore {
+  var times = Map[URI,Instant]()
 
 
   def getLastFetchTime(uri: URI): Instant = {
@@ -58,5 +52,8 @@ class RepoServiceStore(dataSource: DataSource) extends RepoServiceStorage {
   }
 
 
-  def updateLastFetchTime(uri: URI, instant: Instant) = times.put(uri, instant)
+  def updateLastFetchTime(uri: URI, instant: Instant) =
+    synchronized {
+      times = times + (uri -> instant)
+    }
 }

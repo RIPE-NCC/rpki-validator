@@ -33,28 +33,32 @@ import java.net.URI
 
 import net.ripe.rpki.validator.fetchers.Fetcher
 import net.ripe.rpki.validator.models.validation.RepoFetcher
-import net.ripe.rpki.validator.store.{DataSources, RepoServiceStore}
+import net.ripe.rpki.validator.store.RepoServiceStore
 import org.joda.time.{Duration, Instant}
 
 
 class RepoService(fetcher: RepoFetcher) {
   val UPDATE_INTERVAL = Duration.standardMinutes(5) //TODO
 
-  val store = new RepoServiceStore(DataSources.InMemoryDataSource) // TODO
+  val store = RepoServiceStore
 
   def visitRepo(uri: URI): Seq[Fetcher.Error] = {
+    fetchAndUpdateTime(uri) { fetcher.fetch(uri) }
+  }
+
+  protected[models] def fetchAndUpdateTime(uri: URI)(f: => Seq[Fetcher.Error]): Seq[Fetcher.Error] = {
     if (haveRecentDataInStore(uri)) Seq()
-    else fetchAndUpdateTime(uri)
+    else {
+      val fetchTime = Instant.now()
+      val result = f
+      store.updateLastFetchTime(uri, fetchTime)
+      result
+    }
   }
 
-  protected[models] def fetchAndUpdateTime(uri: URI): Seq[Fetcher.Error] = {
-    val fetchTime = Instant.now()
-    val result = fetcher.fetch(uri)
-    store.updateLastFetchTime(uri, fetchTime)
-    result
+  def visitObject(uri: URI) = {
+    fetchAndUpdateTime(uri) { fetcher.fetchObject(uri) }
   }
-
-  def visitObject(uri: URI) = fetcher.fetchObject(uri)
 
   private def haveRecentDataInStore(uri: URI): Boolean = {
     timeIsRecent(store.getLastFetchTime(uri), UPDATE_INTERVAL)
