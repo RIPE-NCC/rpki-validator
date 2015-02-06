@@ -31,12 +31,34 @@ package net.ripe.rpki.validator.models
 
 import java.net.URI
 
+import net.ripe.rpki.validator.fetchers.Fetcher
 import net.ripe.rpki.validator.models.validation.RepoFetcher
+import net.ripe.rpki.validator.store.{DataSources, RepoServiceStore}
+import org.joda.time.{Duration, Instant}
+
 
 class RepoService(fetcher: RepoFetcher) {
+  val UPDATE_INTERVAL = Duration.standardMinutes(5) //TODO
 
-  def visitRepo(uri: URI) = fetcher.fetch(uri)
+  val store = new RepoServiceStore(DataSources.InMemoryDataSource) // TODO
+
+  def visitRepo(uri: URI): Seq[Fetcher.Error] = {
+    if (haveRecentDataInStore(uri)) Seq()
+    else fetchAndUpdateTime(uri)
+  }
+
+  protected[models] def fetchAndUpdateTime(uri: URI): Seq[Fetcher.Error] = {
+    val fetchTime = Instant.now()
+    val result = fetcher.fetch(uri)
+    store.updateLastFetchTime(uri, fetchTime)
+    result
+  }
 
   def visitObject(uri: URI) = fetcher.fetchObject(uri)
 
+  private def haveRecentDataInStore(uri: URI): Boolean = {
+    timeIsRecent(store.getLastFetchTime(uri), UPDATE_INTERVAL)
+  }
+
+  private[models] def timeIsRecent(dateTime: Instant, duration: Duration): Boolean = dateTime.plus(duration).isAfterNow
 }

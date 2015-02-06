@@ -27,13 +27,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.store
+package net.ripe.rpki.validator.models
 
 import java.net.URI
 
-import net.ripe.rpki.validator.models.RepoService
 import net.ripe.rpki.validator.models.validation.RepoFetcher
 import net.ripe.rpki.validator.support.ValidatorTestCase
+import org.joda.time.{Duration, Instant}
 import org.mockito.Mockito
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
@@ -60,4 +60,25 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
     Mockito.verify(fetcher).fetchObject(uri)
   }
 
+  test("should NOT fetch if URI was just visited") {
+    val uri: URI = new URI("http://foo.bar/bla")
+
+    repoService.visitRepo(uri)
+    Mockito.verify(fetcher).fetch(uri)
+
+    repoService.visitRepo(uri)
+    Mockito.verifyNoMoreInteractions(fetcher)
+  }
+
+  test("fetch time should be recent") {
+    val minuteAgo: Instant = Instant.now().minus(Duration.standardMinutes(1))
+    val twoMinutes: Duration = Duration.standardMinutes(2)
+    repoService.timeIsRecent(minuteAgo, twoMinutes) should be(true)
+  }
+
+  test("fetch time should NOT be recent") {
+    val twoMinutesAgo: Instant = Instant.now().minus(Duration.standardMinutes(2))
+    val minute: Duration = Duration.standardMinutes(1)
+    repoService.timeIsRecent(twoMinutesAgo, minute) should be(false)
+  }
 }

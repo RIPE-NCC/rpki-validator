@@ -51,7 +51,7 @@ import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.DateTime
 import org.scalatest._
 
-import scala.collection.mutable._
+//import scala.collection.mutable._
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
