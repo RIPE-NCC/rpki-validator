@@ -75,7 +75,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   override def storeCrl(crl: CrlObject) = storeRepoObject(crl, "crl")
 
-  private def storeRepoObject[T](obj: RepositoryObject[T], objType: String) = {
+  private def storeRepoObject[T](obj: RepositoryObject[T], objType: String) =
     template.update(
       """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
          SELECT :aki, :hash, :url, :encoded, :object_type
@@ -90,9 +90,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         "url" -> obj.url,
         "encoded" -> obj.encoded,
         "object_type" -> objType))
-  }
 
-  override def storeBroken(broken: BrokenObject) = {
+  override def storeBroken(broken: BrokenObject) =
     template.update(
       """INSERT INTO broken_objects(hash, url, encoded, message)
          SELECT :hash, :url, :encoded, :message
@@ -105,7 +104,6 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         "url" -> broken.url,
         "encoded" -> broken.bytes,
         "message" -> broken.errorMessage))
-  }
 
   override def getCertificate(url: String): Option[CertificateObject] =
     try {
