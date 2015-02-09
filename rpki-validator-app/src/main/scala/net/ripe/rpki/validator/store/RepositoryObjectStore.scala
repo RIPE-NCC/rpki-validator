@@ -118,7 +118,7 @@ object DataSources {
 
   private object DSSingletons extends Singletons[String, DataSource]({ dataDirBasePath =>
     val result = new BasicDataSource
-    result.setUrl("jdbc:h2:" + dataDirBasePath + File.separator + "rpki-object-cache")
+    result.setUrl("jdbc:h2:" + dataDirBasePath + File.separator + "rpki-object-cache;MVCC=TRUE")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
     migrate(result)
@@ -135,7 +135,7 @@ object DataSources {
    */
   def InMemoryDataSource = {
     val result = new BasicDataSource
-    result.setUrl("jdbc:h2:mem:rpki-object-cache")
+    result.setUrl("jdbc:h2:mem:rpki-object-cache;MVCC=TRUE")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
     migrate(result)
