@@ -32,37 +32,38 @@ package net.ripe.rpki.validator.models
 import java.net.URI
 
 import net.ripe.rpki.validator.fetchers.Fetcher
+import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation.RepoFetcher
 import net.ripe.rpki.validator.store.RepoServiceStore
 import org.joda.time.{Duration, Instant}
 
-
 class RepoService(fetcher: RepoFetcher) {
   val UPDATE_INTERVAL = Duration.standardMinutes(5) //TODO
 
-  val store = RepoServiceStore
+  private val locker = new Locker
 
-  def visitRepo(uri: URI): Seq[Fetcher.Error] = {
-    fetchAndUpdateTime(uri) { fetcher.fetch(uri) }
-  }
-
-  protected[models] def fetchAndUpdateTime(uri: URI)(f: => Seq[Fetcher.Error]): Seq[Fetcher.Error] = {
-    if (haveRecentDataInStore(uri)) Seq()
-    else {
-      val fetchTime = Instant.now()
-      val result = f
-      store.updateLastFetchTime(uri, fetchTime)
-      result
+  def visitRepo(uri: URI): Seq[Fetcher.Error] =
+    fetchAndUpdateTime(uri) {
+      fetcher.fetch(uri)
     }
+
+  protected[models] def fetchAndUpdateTime(uri: URI)(block: => Seq[Fetcher.Error]): Seq[Fetcher.Error] =
+    locker.locked(uri) {
+      if (haveRecentDataInStore(uri)) Seq()
+      else {
+        val fetchTime = Instant.now()
+        val result = block
+        RepoServiceStore.updateLastFetchTime(uri, fetchTime)
+        result
+      }
+    }
+
+  def visitObject(uri: URI) = fetchAndUpdateTime(uri) {
+    fetcher.fetchObject(uri)
   }
 
-  def visitObject(uri: URI) = {
-    fetchAndUpdateTime(uri) { fetcher.fetchObject(uri) }
-  }
+  private def haveRecentDataInStore(uri: URI) =
+    timeIsRecent(RepoServiceStore.getLastFetchTime(uri), UPDATE_INTERVAL)
 
-  private def haveRecentDataInStore(uri: URI): Boolean = {
-    timeIsRecent(store.getLastFetchTime(uri), UPDATE_INTERVAL)
-  }
-
-  private[models] def timeIsRecent(dateTime: Instant, duration: Duration): Boolean = dateTime.plus(duration).isAfterNow
+  private[models] def timeIsRecent(dateTime: Instant, duration: Duration) = dateTime.plus(duration).isAfterNow
 }
