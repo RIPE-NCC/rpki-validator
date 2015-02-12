@@ -40,12 +40,11 @@ import org.joda.time.{Duration, Instant}
 class RepoService(fetcher: RepoFetcher) {
   val UPDATE_INTERVAL = Duration.standardMinutes(5) //TODO
 
-  private val locker = new Locker
+  private val locker = RepoService.locker
 
-  def visitRepo(uri: URI): Seq[Fetcher.Error] =
-    fetchAndUpdateTime(uri) {
-      fetcher.fetch(uri)
-    }
+  def visitRepo(uri: URI): Seq[Fetcher.Error] = fetchAndUpdateTime(uri) {
+    fetcher.fetch(uri)
+  }
 
   protected[models] def fetchAndUpdateTime(uri: URI)(block: => Seq[Fetcher.Error]): Seq[Fetcher.Error] =
     locker.locked(uri) {
@@ -66,4 +65,8 @@ class RepoService(fetcher: RepoFetcher) {
     timeIsRecent(RepoServiceStore.getLastFetchTime(uri), UPDATE_INTERVAL)
 
   private[models] def timeIsRecent(dateTime: Instant, duration: Duration) = dateTime.plus(duration).isAfterNow
+}
+
+object RepoService {
+  val locker = new Locker
 }
