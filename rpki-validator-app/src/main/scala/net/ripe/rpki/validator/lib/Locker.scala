@@ -44,9 +44,7 @@ class Locker {
 
   def locked[T](key: Object)(f: => T): T = {
     val lock: ReentrantLock = _locked(globalLock) {
-      locks.getOrElseUpdate(key, {
-        new ReentrantLock()
-      })
+      locks.getOrElseUpdate(key, new ReentrantLock())
     }
     try {
       _locked(lock) {
