@@ -160,11 +160,11 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
     val roas = store.getRoas(roa.aki)
     roas should have length 1
-    roas.head.validationTime.get should be(newTime)
+    roas.head.validationTime should be(Some(newTime))
 
     val certificates = store.getCertificates(certificate.aki)
     certificates should have length 1
-//    certificates.head.validationTime.get should be(newTime)
+    certificates.head.validationTime should be(Some(newTime))
   }
 
 }

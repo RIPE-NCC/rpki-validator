@@ -149,10 +149,13 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
 
   override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] =
-    template.query("SELECT url, ski, encoded FROM certificates WHERE aki = :aki",
+    template.query(
+      """SELECT url, ski, encoded, download_time, validation_time
+        FROM certificates WHERE aki = :aki""",
       Map("aki" -> stringify(aki)),
       new RowMapper[CertificateObject] {
-        override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(3))
+        override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(3)).
+          copy(downloadTime = instant(rs.getTimestamp(4)), validationTime = instant(rs.getTimestamp(5)))
       }).toSeq
 
   def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, "crl") { (url, bytes, downloadTime, validationTime) =>
