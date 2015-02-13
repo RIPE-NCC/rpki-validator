@@ -29,20 +29,22 @@
  */
 package net.ripe.rpki.validator.store
 
-import java.io.File
+import java.io.{Serializable, File}
 import java.sql.ResultSet
 import javax.sql.DataSource
 
 import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation._
+import org.joda.time.Instant
 import org.springframework.dao.EmptyResultDataAccessException
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
+import org.springframework.jdbc.core.namedparam.{SqlParameterSource, MapSqlParameterSource, NamedParameterJdbcTemplate}
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.{TransactionCallback, TransactionTemplate}
 import scala.collection.JavaConversions._
 import scala.util.Try
+import scalaz.Category.ObjectToMorphism
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
@@ -55,22 +57,33 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   private val locker = new Locker
 
-  override def storeCertificate(certificate: CertificateObject) = locker.locked(certificate.url) {
-    template.update(
-      """INSERT INTO certificates(aki, ski, hash, url, encoded)
-         SELECT :aki, :ski, :hash, :url, :encoded FROM (VALUES(0))
-         WHERE NOT EXISTS (
-           SELECT * FROM certificates c
-           WHERE c.url = :url
-           AND  c.hash = :hash
-         )
-        """,
-        Map("aki" -> stringify(certificate.aki),
-          "ski" -> stringify(certificate.ski),
-          "hash" -> stringify(certificate.hash),
-          "url" -> certificate.url,
-          "encoded" -> certificate.encoded))
+  override def storeCertificate(certificate: CertificateObject) =
+    locker.locked(certificate.url) {
+      val params = Map("aki" -> stringify(certificate.aki),
+        "ski" -> stringify(certificate.ski),
+        "hash" -> stringify(certificate.hash),
+        "url" -> certificate.url,
+        "encoded" -> certificate.encoded)
+
+      atomic {
+        val updateCount = template.update(
+          """UPDATE certificates SET
+             hash = :hash,
+             encoded = :encoded,
+             download_time = NOW()
+           WHERE hash = :hash
+           AND   url = :url
+          """, params)
+
+        if (updateCount == 0) {
+          template.update(
+            """INSERT INTO certificates(aki, ski, hash, url, encoded)
+             VALUES (:aki, :ski, :hash, :url, :encoded)
+            """, params)
+        }
+      }
     }
+
 
   override def storeRoa(roa: RoaObject) = storeRepoObject(roa, "roa")
 
@@ -78,21 +91,32 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   override def storeCrl(crl: CrlObject) = storeRepoObject(crl, "crl")
 
-  private def storeRepoObject[T](obj: RepositoryObject[T], objType: String) = locker.locked(obj.url) {
-    template.update(
-      """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
-         SELECT :aki, :hash, :url, :encoded, :object_type FROM (VALUES(0))
-         WHERE NOT EXISTS (
-           SELECT * FROM repo_objects ro
-           WHERE ro.hash = :hash
-           AND ro.url = :url
-         )
-        """,
-        Map("aki" -> stringify(obj.aki),
-          "hash" -> stringify(obj.hash),
-          "url" -> obj.url,
-          "encoded" -> obj.encoded,
-          "object_type" -> objType))
+  private def storeRepoObject[T](obj: RepositoryObject[T], objType: String) =
+    locker.locked(obj.url) {
+      val params = Map("aki" -> stringify(obj.aki),
+        "hash" -> stringify(obj.hash),
+        "url" -> obj.url,
+        "encoded" -> obj.encoded,
+        "object_type" -> objType)
+
+      atomic {
+        val updateCount = template.update(
+          """UPDATE repo_objects SET
+             hash = :hash,
+             object_type = :object_type,
+             encoded = :encoded,
+             download_time = NOW()
+           WHERE aki = :aki
+           AND   url = :url
+          """, params)
+
+        if (updateCount == 0) {
+          template.update(
+            """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
+               VALUES (:aki, :hash, :url, :encoded, :object_type)
+            """, params)
+        }
+      }
     }
 
   override def storeBroken(broken: BrokenObject) = synchronized {
@@ -131,11 +155,17 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(3))
       }).toSeq
 
-  def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, "crl")(CrlObject.parse)
+  def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, "crl") { (url, bytes, downloadTime, validationTime) =>
+    CrlObject.parse(url, bytes).copy(downloadTime = downloadTime, validationTime = validationTime)
+  }
 
-  def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, "manifest")(ManifestObject.parse)
+  def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, "manifest") { (url, bytes, downloadTime, validationTime) =>
+    ManifestObject.parse(url, bytes).copy(downloadTime = downloadTime, validationTime = validationTime)
+  }
 
-  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, "roa")(RoaObject.parse)
+  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, "roa") { (url, bytes, downloadTime, validationTime) =>
+    RoaObject.parse(url, bytes).copy(downloadTime = downloadTime, validationTime = validationTime)
+  }
 
   override def getBroken(url: String) = Try {
     template.queryForObject(
@@ -147,44 +177,64 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   }.toOption
 
   override def getBroken = template.query(
-    "SELECT url, encoded, message FROM broken_objects", Map[String, Object](),
+    "SELECT url, encoded, message FROM broken_objects", Map.empty[String, Object],
     new RowMapper[BrokenObject] {
       override def mapRow(rs: ResultSet, i: Int) = BrokenObject(rs.getString(1), rs.getBytes(2), rs.getString(3))
     }).toSeq
 
-  private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte]) => T) =
-    template.query("SELECT url, encoded FROM repo_objects WHERE aki = :aki AND object_type = :object_type",
+
+  private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte], Option[Instant], Option[Instant]) => T) =
+    template.query(
+      """SELECT url, encoded, download_time, validation_time
+        FROM repo_objects
+        WHERE aki = :aki AND object_type = :object_type""",
       Map("aki" -> stringify(aki), "object_type" -> objType),
       new RowMapper[T] {
-        override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2))
+        override def mapRow(rs: ResultSet, i: Int) =
+          mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)), instant(rs.getTimestamp(4)))
       }).toSeq
 
   def clear() = {
     for (t <- Seq("certificates", "repo_objects", "broken_objects"))
-      template.update(s"TRUNCATE TABLE $t", Map[String, Object]())
+      template.update(s"TRUNCATE TABLE $t", Map.empty[String, Object])
   }
 
-  override def delete(url: String, hash: String) = locker.locked(url) {
-    val extension = url.takeRight(3).toLowerCase
-
-    val table = extension match {
-      case "cer" => Some("certificates")
-      case "mft" | "crl" | "roa" => Some("repo_objects")
-      case _ => None
-    }
+  override def delete(url: String, aki: String) = locker.locked(url) {
+    val table = tableName(url)
 
     table.foreach { t =>
       template.update(
         """DELETE FROM :table WHERE
          WHERE url = :url
-         AND hash = :hash
+         AND aki = :aki
        )
         """,
-        Map("hash" -> hash,
+        Map("aki" -> aki,
           "url" -> url,
           "table" -> t))
     }
   }
+
+  def tableName(url: String): Option[String] =
+    url.takeRight(3).toLowerCase match {
+      case "cer" => Some("certificates")
+      case "mft" | "crl" | "roa" => Some("repo_objects")
+      case _ => None
+    }
+
+  def updateValidationTimestamp(urls: Seq[String], timestamp: Instant) = atomic {
+    urls.groupBy(tableName).foreach { p =>
+      val (table, tableUrls) = p
+      table.foreach { t =>
+        template.batchUpdate(s"UPDATE $t SET validation_time = :t WHERE url = :url",
+          tableUrls.map { u =>
+            new MapSqlParameterSource(Map("url" -> u, "t" -> new java.sql.Timestamp(timestamp.getMillis)))
+          }.toArray[SqlParameterSource])
+      }
+    }
+  }
+
+  private def instant(d: java.util.Date) = Option(d).map(d => new Instant(d.getTime))
 }
 
 object DurableCaches extends Singletons[String, CacheStore]({

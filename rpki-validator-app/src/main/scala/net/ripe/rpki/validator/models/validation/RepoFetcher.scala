@@ -40,6 +40,7 @@ import net.ripe.rpki.commons.crypto.x509cert.{X509ResourceCertificate, X509Resou
 import net.ripe.rpki.commons.validation.ValidationResult
 import net.ripe.rpki.validator.fetchers._
 import net.ripe.rpki.validator.store._
+import org.joda.time.Instant
 
 import scala.collection.JavaConversions._
 
@@ -50,12 +51,6 @@ trait Hashing {
   def stringify(bytes: Array[Byte]) = Option(bytes).map {
     _.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
   }.getOrElse("")
-
-  def stringToBytes(s: String) =
-    if (s == null || s.isEmpty)
-      Array[Byte]()
-    else
-      new BigInteger(s, 16).toByteArray
 
   def equals(hashA: Array[Byte], hashB: Array[Byte]): Boolean = { hashA.deep == hashB.deep }
 }
@@ -70,6 +65,10 @@ sealed trait RepositoryObject[T] extends Hashing {
   def hash: Array[Byte] = getHash(encoded)
 
   def decoded: T
+
+  def validationTime: Option[Instant]
+
+  def downloadTime: Option[Instant]
 }
 
 trait Parsing {
@@ -145,7 +144,9 @@ object RoaObject extends Parsing {
 }
 
 case class CertificateObject(override val url: String,
-                             override val decoded: X509ResourceCertificate) extends RepositoryObject[X509ResourceCertificate] {
+                             override val decoded: X509ResourceCertificate,
+                             override val downloadTime: Option[Instant] = Some(Instant.now()),
+                             override val validationTime: Option[Instant] = None) extends RepositoryObject[X509ResourceCertificate] {
 
   def encoded = decoded.getEncoded
   def aki = decoded.getAuthorityKeyIdentifier
@@ -153,19 +154,25 @@ case class CertificateObject(override val url: String,
 }
 
 case class ManifestObject(override val url: String,
-                          override val decoded: ManifestCms) extends RepositoryObject[ManifestCms] {
+                          override val decoded: ManifestCms,
+                          override val downloadTime: Option[Instant] = Some(Instant.now()),
+                          override val validationTime: Option[Instant] = None) extends RepositoryObject[ManifestCms] {
   def encoded = decoded.getEncoded
   def aki = decoded.getCertificate.getAuthorityKeyIdentifier
 }
 
 case class CrlObject(override val url: String,
-                     override val decoded: X509Crl) extends RepositoryObject[X509Crl] {
+                     override val decoded: X509Crl,
+                     override val downloadTime: Option[Instant] = Some(Instant.now()),
+                     override val validationTime: Option[Instant] = None) extends RepositoryObject[X509Crl] {
   def encoded = decoded.getEncoded
   def aki = decoded.getAuthorityKeyIdentifier
 }
 
 case class RoaObject(override val url: String,
-                     override val decoded: RoaCms) extends RepositoryObject[RoaCms] {
+                     override val decoded: RoaCms,
+                     override val downloadTime: Option[Instant] = Some(Instant.now()),
+                     override val validationTime: Option[Instant] = None) extends RepositoryObject[RoaCms] {
 
   def aki = decoded.getCertificate.getAuthorityKeyIdentifier
   def encoded = decoded.getEncoded

@@ -35,6 +35,7 @@ import net.ripe.rpki.commons.crypto.crl.X509CrlTest
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.support.ValidatorTestCase
+import org.joda.time.{Period, Duration, ReadableDuration, Instant}
 import org.scalatest.BeforeAndAfter
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
@@ -145,6 +146,25 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
     b.get.url should be(broken.url)
     b.get.hash should be(broken.hash)
     b.get.errorMessage should be(broken.errorMessage)
+  }
+
+  test("Update validation timestamp") {
+    val roa: RoaObject = RoaObject(url = "rsync://bla.roa", decoded = testRoa)
+    store.storeRoa(roa)
+
+    val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
+    store.storeCertificate(certificate)
+
+    val newTime = Instant.now
+    store.updateValidationTimestamp(Seq(roa.url, certificate.url), newTime)
+
+    val roas = store.getRoas(roa.aki)
+    roas should have length 1
+    roas.head.validationTime.get should be(newTime)
+
+    val certificates = store.getCertificates(certificate.aki)
+    certificates should have length 1
+//    certificates.head.validationTime.get should be(newTime)
   }
 
 }
