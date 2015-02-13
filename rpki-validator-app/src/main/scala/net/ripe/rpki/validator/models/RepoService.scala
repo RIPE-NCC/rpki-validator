@@ -68,5 +68,5 @@ class RepoService(fetcher: RepoFetcher) {
 }
 
 object RepoService {
-  val locker = new Locker
+  private val locker = new Locker
 }
