@@ -135,8 +135,9 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
   }
 
   test("Store twice and fetch a broken object") {
-    val roa = RoaObject(url = "rsync://bla", decoded = testRoa)
     val broken = BrokenObject(url = "rsync://bla", bytes = Array[Byte](1.toByte, 2.toByte), errorMessage = "Couldn't parse that")
+
+    val now = Instant.now()
 
     store.storeBroken(broken)
     store.storeBroken(broken)
@@ -146,6 +147,8 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
     b.get.url should be(broken.url)
     b.get.hash should be(broken.hash)
     b.get.errorMessage should be(broken.errorMessage)
+    b.get.downloadTime.isAfter(now) should be(true)
+    b.get.downloadTime.isBefore(now.plus(10000L)) should be(true)
   }
 
   test("Update validation timestamp") {

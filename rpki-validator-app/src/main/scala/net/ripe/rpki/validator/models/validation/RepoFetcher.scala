@@ -82,7 +82,7 @@ trait Parsing {
   }
 }
 
-case class BrokenObject(url: String, bytes: Array[Byte], errorMessage: String) extends Hashing {
+case class BrokenObject(url: String, bytes: Array[Byte], errorMessage: String, downloadTime: Instant = Instant.now) extends Hashing {
   def hash: Array[Byte] = getHash(bytes)
 }
 

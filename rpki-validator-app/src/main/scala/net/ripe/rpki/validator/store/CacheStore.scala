@@ -30,7 +30,7 @@
 package net.ripe.rpki.validator.store
 
 import java.io.{Serializable, File}
-import java.sql.ResultSet
+import java.sql.{Timestamp, ResultSet}
 import javax.sql.DataSource
 
 import net.ripe.rpki.validator.lib.Locker
@@ -119,34 +119,40 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       }
     }
 
-  override def storeBroken(broken: BrokenObject) = synchronized {
-    template.update(
-      """INSERT INTO broken_objects(hash, url, encoded, message)
-         SELECT :hash, :url, :encoded, :message FROM (VALUES(0))
-         WHERE NOT EXISTS (
-           SELECT * FROM broken_objects ro
-           WHERE ro.url = :url
-         )
-      """,
-      Map("hash" -> stringify(broken.hash),
+  override def storeBroken(broken: BrokenObject) =
+    locker.locked(broken.url) {
+      val params = Map("hash" -> stringify(broken.hash),
         "url" -> broken.url,
         "encoded" -> broken.bytes,
-        "message" -> broken.errorMessage))
-  }
+        "message" -> broken.errorMessage)
 
-  override def getCertificate(url: String): Option[CertificateObject] =
-    try {
-      Option(
-        template.queryForObject("SELECT url, encoded FROM certificates WHERE url = :url",
-          Map("url" -> url),
-          new RowMapper[CertificateObject] {
-            override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(2))
-          }
-        )
-      )
-    } catch {
-      case e: EmptyResultDataAccessException => None
+      atomic {
+        val updateCount = template.update(
+          """UPDATE broken_objects SET
+             hash = :hash,
+             encoded = :encoded,
+             message = :message,
+             download_time = NOW()
+           WHERE url = :url
+          """, params)
+
+        if (updateCount == 0) {
+          template.update(
+            """INSERT INTO broken_objects(hash, url, encoded, message)
+             VALUES( :hash, :url, :encoded, :message)
+            """, params)
+        }
+      }
     }
+
+  override def getCertificate(url: String): Option[CertificateObject] = Try {
+    template.queryForObject("SELECT url, encoded FROM certificates WHERE url = :url",
+      Map("url" -> url),
+      new RowMapper[CertificateObject] {
+        override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(2))
+      }
+    )
+  }.toOption
 
   override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] =
     template.query(
@@ -172,10 +178,11 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   override def getBroken(url: String) = Try {
     template.queryForObject(
-      "SELECT encoded, message FROM broken_objects WHERE url = :url",
+      "SELECT encoded, message, download_time FROM broken_objects WHERE url = :url",
       Map("url" -> url),
       new RowMapper[BrokenObject] {
-        override def mapRow(rs: ResultSet, i: Int) = BrokenObject(url, rs.getBytes(1), rs.getString(2))
+        override def mapRow(rs: ResultSet, i: Int) = BrokenObject(url, rs.getBytes(1), rs.getString(2)).
+          copy(downloadTime = instant(rs.getTimestamp(3)).getOrElse(Instant.now()))
       })
   }.toOption
 
@@ -225,18 +232,19 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       case _ => None
     }
 
-  def updateValidationTimestamp(urls: Seq[String], timestamp: Instant) = atomic {
+  def updateValidationTimestamp(urls: Seq[String], t: Instant) = atomic {
     urls.groupBy(tableName).foreach { p =>
-      val (table, tableUrls) = p
-      table.foreach { t =>
-        template.batchUpdate(s"UPDATE $t SET validation_time = :t WHERE url = :url",
+      val (tableOption, tableUrls) = p
+      tableOption.foreach { table =>
+        template.batchUpdate(s"UPDATE $table SET validation_time = :t WHERE url = :url",
           tableUrls.map { u =>
-            new MapSqlParameterSource(Map("url" -> u, "t" -> new java.sql.Timestamp(timestamp.getMillis)))
+            new MapSqlParameterSource(Map("url" -> u, "t" -> timestamp(t)))
           }.toArray[SqlParameterSource])
       }
     }
   }
 
+  private def timestamp(timestamp: Instant)= new Timestamp(timestamp.getMillis)
   private def instant(d: java.util.Date) = Option(d).map(d => new Instant(d.getTime))
 }
 
