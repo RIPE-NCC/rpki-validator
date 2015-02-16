@@ -33,6 +33,7 @@ import java.io.{Serializable, File}
 import java.sql.{Timestamp, ResultSet}
 import javax.sql.DataSource
 
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
@@ -84,14 +85,13 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       }
     }
 
-
   override def storeRoa(roa: RoaObject) = storeRepoObject(roa, "roa")
 
   override def storeManifest(manifest: ManifestObject) = storeRepoObject(manifest, "manifest")
 
   override def storeCrl(crl: CrlObject) = storeRepoObject(crl, "crl")
 
-  private def storeRepoObject[T](obj: RepositoryObject[T], objType: String) =
+  private def storeRepoObject[T <: CertificateRepositoryObject](obj: RepositoryObject[T], objType: String) =
     locker.locked(obj.url) {
       val params = Map("aki" -> stringify(obj.aki),
         "hash" -> stringify(obj.hash),

@@ -42,6 +42,7 @@ import net.ripe.rpki.commons.validation.{ValidationCheck, ValidationLocation, Va
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.Storage
 import org.apache.commons.lang.Validate
+import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
 
@@ -166,6 +167,10 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   type FileAndHashEntries = Map[URI, Array[Byte]]
 
+  def notPublishedAnymore(value: RepositoryObject[_ >: X509ResourceCertificate with RoaCms <: CertificateRepositoryObject]): Boolean = {
+    repoService.lastFetchTime(new URI(value.url)).isAfter(Instant.now())//value.downloadTimeStamp)
+  }
+
   private[models] def crossCheckRepoObjects(validationLocation: ValidationLocation, manifestEntries: FileAndHashEntries, roas: Seq[RepositoryObject[RoaCms]], childrenCertificates: Seq[RepositoryObject[X509ResourceCertificate]]) {
 
     val roaEntries = roas.map(r => new URI(r.url) -> r)
@@ -182,10 +187,13 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
     notOnManifest.foreach { location =>
       val repositoryObject = foundObjectsEntries.get(location).get
-      if (repositoryObject.decoded.isPastValidityTime || repositoryObject.decoded.isRevoked) {
-        objectsToIgnore += new URI(repositoryObject.url)
-        //TODO store.remove(repositoryObject)
-        //TODO remove repositoryObject from returned ValidatedObjects
+      if ( repositoryObject.isExpiredOrRevoked ) {
+        if (notPublishedAnymore(repositoryObject)) {
+          objectsToIgnore += new URI(repositoryObject.url)
+          store.delete(repositoryObject.url, HashUtil.stringify(repositoryObject.hash))
+        } else {
+          certContextValidationResult.warnForLocation(new ValidationLocation(location), VALIDATOR_REPOSITORY_EXPIRED_REVOKED_OBJECT, location.toString)
+        }
       } else {
         certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, location.toString)
       }

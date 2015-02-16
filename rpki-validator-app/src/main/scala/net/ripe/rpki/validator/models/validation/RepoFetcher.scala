@@ -55,7 +55,7 @@ trait Hashing {
   def equals(hashA: Array[Byte], hashB: Array[Byte]): Boolean = { hashA.deep == hashB.deep }
 }
 
-sealed trait RepositoryObject[T] extends Hashing {
+sealed trait RepositoryObject[T <: net.ripe.rpki.commons.crypto.CertificateRepositoryObject] extends Hashing {
   def url: String
 
   def aki: Array[Byte]
@@ -69,6 +69,8 @@ sealed trait RepositoryObject[T] extends Hashing {
   def validationTime: Option[Instant]
 
   def downloadTime: Option[Instant]
+
+  def isExpiredOrRevoked = decoded.isPastValidityTime || decoded.isRevoked
 }
 
 trait Parsing {
