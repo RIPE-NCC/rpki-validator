@@ -201,6 +201,11 @@
             <version>${scalatra.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.scalacheck</groupId>
+            <artifactId>scalacheck_${scala.binary.version}</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
