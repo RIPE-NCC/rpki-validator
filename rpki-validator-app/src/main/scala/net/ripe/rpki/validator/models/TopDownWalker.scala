@@ -111,7 +111,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     {
       // don't update validation timestamps for validatedChildrenObjects --- it will
       // be validated by the stepDown recursively
-      store.updateValidationTimestamp(validatedObjectMap.keySet.map(_.toString).filter(childrenValidatedObjects.contains(_)))
+      store.updateValidationTimestamp(validatedObjectMap.keySet.map(_.toString).filterNot(childrenValidatedObjects.contains(_)))
     }
 
     validatedObjectMap.filterKeys(!objectsToIgnore.contains(_))
