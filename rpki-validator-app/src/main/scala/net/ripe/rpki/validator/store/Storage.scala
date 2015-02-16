@@ -30,6 +30,7 @@
 package net.ripe.rpki.validator.store
 
 import net.ripe.rpki.validator.models.validation._
+import org.joda.time.Instant
 
 import scala.collection.mutable
 
@@ -46,6 +47,7 @@ trait Storage {
   def storeBroken(brokenObject: BrokenObject)
 
   def getCertificate(uri: String): Option[CertificateObject]
+
   def getCertificates(aki: Array[Byte]): Seq[CertificateObject]
 
   def getCrls(aki: Array[Byte]): Seq[CrlObject]
@@ -62,7 +64,11 @@ trait Storage {
 
   def clear()
 
-  def atomic[T](f: => T) : T
+  def atomic[T](f: => T): T
+
+  def updateValidationTimestamp(urls: Iterable[String], t: Instant): Unit
+
+  def updateValidationTimestamp(urls: Iterable[String]): Unit = updateValidationTimestamp(urls, Instant.now())
 }
 
 /**

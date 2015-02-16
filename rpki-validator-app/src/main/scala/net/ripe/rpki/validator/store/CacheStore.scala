@@ -37,8 +37,8 @@ import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
-import org.springframework.jdbc.core.RowMapper
-import org.springframework.jdbc.core.namedparam.{MapSqlParameterSource, NamedParameterJdbcTemplate, SqlParameterSource}
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
+import org.springframework.jdbc.core.{JdbcTemplate, RowMapper}
 import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.{TransactionCallback, TransactionTemplate}
@@ -209,16 +209,9 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   }
 
   override def delete(url: String, hash: String) = locker.locked(url) {
-    val table = tableName(url)
-
-    table.foreach { t =>
-      template.update(
-        s"""DELETE FROM $t
-         WHERE url = :url
-         AND hash = :hash
-        """,
-        Map("hash" -> hash,
-          "url" -> url))
+    tableName(url).foreach { t =>
+      template.update(s"DELETE FROM $t WHERE url = :url AND hash = :hash",
+        Map("hash" -> hash, "url" -> url))
     }
   }
 
@@ -229,17 +222,25 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       case _ => None
     }
 
-  def updateValidationTimestamp(urls: Seq[String], t: Instant) = atomic {
+  def updateValidationTimestamp(urls: Iterable[String], t: Instant) = atomic {
+    val tt = timestamp(t)
+    val jdbc = new JdbcTemplate(dataSource)
+    // That has to be as fast as possible to prevent
+    // other threads from being locked
     urls.groupBy(tableName).foreach { p =>
       val (tableOption, tableUrls) = p
       tableOption.foreach { table =>
-        template.batchUpdate(s"UPDATE $table SET validation_time = :t WHERE url = :url",
-          tableUrls.map { u =>
-            new MapSqlParameterSource(Map("url" -> u, "t" -> timestamp(t)))
-          }.toArray[SqlParameterSource])
+        jdbc.batchUpdate {
+          tableUrls.grouped(99).map {
+            group =>
+              val inClause = group.map("'" + _ + "'").mkString("(", ",", ")")
+              s"UPDATE $table SET validation_time = '$tt' WHERE url IN $inClause"
+          }.toArray
+        }
       }
     }
   }
+
 
   private def timestamp(timestamp: Instant)= new Timestamp(timestamp.getMillis)
   private def instant(d: java.util.Date) = Option(d).map(d => new Instant(d.getTime))

@@ -45,6 +45,8 @@ import org.apache.commons.lang.Validate
 import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
+import scala.collection.immutable.ListSet.ListSetBuilder
+import scala.collection.mutable.ListBuffer
 
 class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, repoService: RepoService, validationOptions: ValidationOptions, validationStartTime: Instant)(seen: scala.collection.mutable.Set[String])
   extends Logging {
@@ -58,23 +60,23 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   
   private val certContextValidationLocation = new ValidationLocation(certificateContext.getLocation)
   private val certContextValidationResult: ValidationResult = ValidationResult.withLocation(certContextValidationLocation)
-  private val validatedObjects = Map.newBuilder[URI, ValidatedObject]
   private var crlLocator: CrlLocator = _
   private val objectsToIgnore: scala.collection.mutable.Set[URI] = scala.collection.mutable.Set[URI]()
 
   private[models] def preferredFetchLocation: Option[URI] = Option(certificateContext.getRpkiNotifyURI).orElse(Option(certificateContext.getRepositoryURI))
 
   def execute: Map[URI, ValidatedObject] = {
-    logger.info(s"Validating ${certificateContext.getLocation}")
-    preferredFetchLocation match {
-      case Some(repositoryUri) => prefetch(repositoryUri)
-      case None =>  //TODO do nothing, suppose this could happen if CA has no children?
-    }
 
-    findCrl match {
+    logger.info(s"Validating ${certificateContext.getLocation}")
+    val fetchErrors = preferredFetchLocation.map(prefetch)
+
+    val validatedObjects = Map.newBuilder[URI, ValidatedObject]
+
+    val childrenValidatedObjects = findCrl match {
       case None =>
         certContextValidationResult.rejectForLocation(certContextValidationLocation, CRL_REQUIRED, s"No valid CRL found with AKI=$certificateSkiHex")
         validatedObjects += certificateContext.getLocation -> InvalidObject(certificateContext.getLocation, certContextValidationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
+        Seq()
 
       case Some(crl) =>
         crlLocator = new CrlLocator {
@@ -98,11 +100,21 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         validatedObjects ++= roas.map(createValidatedObjectEntry)
         validatedObjects ++= childrenCertificates.map(createValidatedObjectEntry)
 
-        validatedObjects ++= childrenCertificates.flatMap(stepDown)
+        val validatedChildrenObjects = childrenCertificates.flatMap(stepDown)
+        validatedObjects ++= validatedChildrenObjects
+
+        validatedChildrenObjects.map(x => x._1.toString)
     }
 
-    val result: Map[URI, ValidatedObject] = validatedObjects.result()
-    result.filterKeys(!objectsToIgnore.contains(_))
+    val validatedObjectMap = validatedObjects.result()
+
+    {
+      // don't update validation timestamps for validatedChildrenObjects --- it will
+      // be validated by the stepDown recursively
+      store.updateValidationTimestamp(validatedObjectMap.keySet.map(_.toString).filter(childrenValidatedObjects.contains(_)))
+    }
+
+    validatedObjectMap.filterKeys(!objectsToIgnore.contains(_))
   }
 
   private def stepDown: (RepositoryObject[X509ResourceCertificate]) => Map[URI, ValidatedObject] = {
@@ -116,6 +128,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
         nextLevelWalker.execute
       }
+
     }
   }
 
