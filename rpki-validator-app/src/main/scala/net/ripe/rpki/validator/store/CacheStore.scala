@@ -29,23 +29,22 @@
  */
 package net.ripe.rpki.validator.store
 
-import java.io.{Serializable, File}
-import java.sql.{Timestamp, ResultSet}
+import java.io.File
+import java.sql.{ResultSet, Timestamp}
 import javax.sql.DataSource
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
-import org.springframework.dao.EmptyResultDataAccessException
-import org.springframework.jdbc.core.namedparam.{SqlParameterSource, MapSqlParameterSource, NamedParameterJdbcTemplate}
 import org.springframework.jdbc.core.RowMapper
+import org.springframework.jdbc.core.namedparam.{MapSqlParameterSource, NamedParameterJdbcTemplate, SqlParameterSource}
 import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.{TransactionCallback, TransactionTemplate}
+
 import scala.collection.JavaConversions._
 import scala.util.Try
-import scalaz.Category.ObjectToMorphism
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
@@ -209,19 +208,17 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       template.update(s"TRUNCATE TABLE $t", Map.empty[String, Object])
   }
 
-  override def delete(url: String, aki: String) = locker.locked(url) {
+  override def delete(url: String, hash: String) = locker.locked(url) {
     val table = tableName(url)
 
     table.foreach { t =>
       template.update(
-        """DELETE FROM :table WHERE
+        s"""DELETE FROM $t
          WHERE url = :url
-         AND aki = :aki
-       )
+         AND hash = :hash
         """,
-        Map("aki" -> aki,
-          "url" -> url,
-          "table" -> t))
+        Map("hash" -> hash,
+          "url" -> url))
     }
   }
 
