@@ -46,7 +46,7 @@ import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
 
-class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, repoService: RepoService, validationOptions: ValidationOptions)(seen: scala.collection.mutable.Set[String])
+class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, repoService: RepoService, validationOptions: ValidationOptions, validationStartTime: Instant)(seen: scala.collection.mutable.Set[String])
   extends Logging {
 
   private object HashUtil extends Hashing
@@ -113,7 +113,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         Map()
       } else {
         val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
-        val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions)(seen)
+        val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
         nextLevelWalker.execute
       }
     }
@@ -165,11 +165,13 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     })
   }
 
-  type FileAndHashEntries = Map[URI, Array[Byte]]
-
-  def notPublishedAnymore(value: RepositoryObject[_ >: X509ResourceCertificate with RoaCms <: CertificateRepositoryObject]): Boolean = {
-    repoService.lastFetchTime(new URI(value.url)).isAfter(Instant.now())//value.downloadTimeStamp)
+  private[models] def notPublishedAnymore(value: RepositoryObject[_ >: X509ResourceCertificate with RoaCms <: CertificateRepositoryObject]): Boolean = {
+    value.downloadTime.fold(ifEmpty = true) {
+      _.isBefore(validationStartTime)
+    }
   }
+
+  type FileAndHashEntries = Map[URI, Array[Byte]]
 
   private[models] def crossCheckRepoObjects(validationLocation: ValidationLocation, manifestEntries: FileAndHashEntries, roas: Seq[RepositoryObject[RoaCms]], childrenCertificates: Seq[RepositoryObject[X509ResourceCertificate]]) {
 

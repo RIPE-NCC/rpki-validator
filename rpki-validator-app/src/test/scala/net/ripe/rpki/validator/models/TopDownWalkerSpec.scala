@@ -48,7 +48,7 @@ import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.{CacheStore, DataSources, HttpFetcherStore, Storage}
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.bouncycastle.asn1.x509.KeyUsage
-import org.joda.time.DateTime
+import org.joda.time.{Instant, DateTime}
 import org.scalatest._
 
 //import scala.collection.mutable._
@@ -84,17 +84,32 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
   }
 
-  test("should ignore expired certificates that are not on the manifest") {
+  test("should ignore and remove from store expired certificates that are NOT on the manifest and not published") {
     val (expiredCertificateLocation, _) = createExpiredResourceCertificate("expired.cer")
     createMftWithEntry()
 
     val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
     storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
     result.get(expiredCertificateLocation) should be('empty)
+    storage.getCertificate(expiredCertificateLocation.toString) should be('empty)
+  }
+
+  test("should WARN about expired certificates that are NOT on the manifest BUT are published") {
+    val (expiredCertificateLocation, _) = createExpiredResourceCertificate("expired.cer")
+    createMftWithEntry()
+
+    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
+    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
+
+    val validationTime: Instant = new DateTime().minusDays(1).toInstant // before objects are stored in the Storage
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, validationTime)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+    result.get(expiredCertificateLocation).filter(_.hasCheckKey(ValidationString.VALIDATOR_REPOSITORY_EXPIRED_REVOKED_OBJECT)) should be('defined)
   }
 
   test("should warn about expired certificates that are on the manifest") {
@@ -105,7 +120,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
     storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
     result.get(expiredCertificateLocation).exists(_.hasCheckKey(ValidationString.NOT_VALID_AFTER)) should be(true)
@@ -115,33 +130,47 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     }
   }
 
-  test("should ignore revoked certificates that are not on the manifest") {
+  test("should ignore revoked certificates that are not on the manifest and not in repository") {
 
     val (certificateLocation, certificate) = createValidResourceCertificate("expired.cer")
     createMftWithEntry()
 
     createCrlWithEntry(certificate)
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
     result.get(certificateLocation) should be('empty)
   }
 
-  test("should not warn about revoked certificates not on the manifest") {
+  test("should not warn about revoked certificates not on the manifest and not in repository") {
 
     val (_, certificate) = createValidResourceCertificate("expired.cer")
     createMftWithEntry()
 
     createCrlWithEntry(certificate)
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
     result.get(ROOT_MANIFEST_LOCATION).filter(_.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE)) should be('empty)
   }
 
+  test("should warn about revoked certificates that are NOT on the manifest BUT still published") {
+
+    val (certificateLocation, certificate) = createValidResourceCertificate("expired.cer")
+    createMftWithEntry()
+
+    createCrlWithEntry(certificate)
+
+    val validationTime: Instant = new DateTime().minusDays(1).toInstant // before objects are put in the Storage
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, validationTime)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+    result.get(certificateLocation).filter(_.hasCheckKey(ValidationString.VALIDATOR_REPOSITORY_EXPIRED_REVOKED_OBJECT)) should be('defined)
+  }
+
   test("Should prefer rpkiNotify URI over caRepository URI") {
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS)(scala.collection.mutable.Set())
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
     subject.preferredFetchLocation.get should be(RRDP_NOTIFICATION_LOCATION)
   }
 

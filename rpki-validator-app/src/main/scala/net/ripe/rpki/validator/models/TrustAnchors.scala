@@ -45,7 +45,7 @@ import net.ripe.rpki.validator.lib.HashSupport
 import net.ripe.rpki.validator.models.validation.{CertificateObject, RepoFetcher}
 import net.ripe.rpki.validator.store.{CacheStore, DataSources}
 import net.ripe.rpki.validator.util.TrustAnchorLocator
-import org.joda.time.DateTime
+import org.joda.time.{Instant, DateTime}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.stm.{Ref, atomic}
@@ -229,8 +229,9 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   }
 
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
+    val startTime = Instant.now
     trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
-    val walker = new TopDownWalker(certificate, store, repoService, validationOptions)(scala.collection.mutable.Set())
+    val walker = new TopDownWalker(certificate, store, repoService, validationOptions, startTime)(scala.collection.mutable.Set())
     walker.execute
   }
 
