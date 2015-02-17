@@ -107,12 +107,12 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
     val validatedObjectMap = validatedObjects.result()
 
-    updateStorage(childrenValidatedObjects, validatedObjectMap)
+    updateAndCleanStorage(childrenValidatedObjects, validatedObjectMap)
 
     validatedObjectMap.filterKeys(key => !objectsToIgnore.contains(key.toString))
   }
 
-  private def updateStorage(childrenValidatedObjects: Seq[String], validatedObjectMap: Map[URI, ValidatedObject]) = {
+  private def updateAndCleanStorage(childrenValidatedObjects: Seq[String], validatedObjectMap: Map[URI, ValidatedObject]) = {
     // delete ignored objects
     objectsToIgnore.foreach { uri =>
       logger.info("Removing object: " + uri._1)
@@ -126,6 +126,15 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       logger.info("Setting validation time for the object: " + uri)
     }
     store.updateValidationTimestamp(materialValidatedOnThisStep)
+
+//
+//    //
+//    val oldOnes: Seq[RepositoryObject[_]] = store.getVeryOldObjects("1 week old")
+//    oldOnes.foreach {
+//      logger.info("Cleaning up very old object: " + _)
+//    }
+//    store.delete(oldOnes.map( o => ( o.url -> HashUtil.stringify(o.hash) )))
+
   }
 
   private def stepDown: (RepositoryObject[X509ResourceCertificate]) => Map[URI, ValidatedObject] = {
@@ -189,12 +198,6 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     })
   }
 
-  private[models] def notPublishedAnymore(value: RepositoryObject[_]): Boolean = {
-    value.downloadTime.fold(ifEmpty = true) {
-      _.isBefore(validationStartTime)
-    }
-  }
-
   type FileAndHashEntries = Map[URI, Array[Byte]]
 
   private[models] def crossCheckRepoObjects(validationLocation: ValidationLocation, manifestEntries: FileAndHashEntries, roas: Seq[RepositoryObject[RoaCms]], childrenCertificates: Seq[RepositoryObject[X509ResourceCertificate]]) {
@@ -223,12 +226,12 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, repositoryObject.url)
     }
 
-    expiredOrRevoked.filter(notPublishedAnymore).foreach { repositoryObject =>
-      objectsToIgnore = objectsToIgnore + (repositoryObject.url -> HashUtil.stringify(repositoryObject.hash))
+    expiredOrRevoked.filter(_.validationTime.isEmpty).foreach { repositoryObject =>
+      certContextValidationResult.warnForLocation(new ValidationLocation(repositoryObject.url), VALIDATOR_REPOSITORY_EXPIRED_REVOKED_OBJECT, repositoryObject.url)
     }
 
-    expiredOrRevoked.filterNot(notPublishedAnymore).foreach { repositoryObject =>
-      certContextValidationResult.warnForLocation(new ValidationLocation(repositoryObject.url), VALIDATOR_REPOSITORY_EXPIRED_REVOKED_OBJECT, repositoryObject.url)
+    expiredOrRevoked.filterNot(_.validationTime.isEmpty).foreach { repositoryObject =>
+      objectsToIgnore = objectsToIgnore + (repositoryObject.url -> HashUtil.stringify(repositoryObject.hash))
     }
   }
 

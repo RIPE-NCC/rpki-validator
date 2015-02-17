@@ -84,6 +84,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
   test("should ignore and remove from store expired certificates that are NOT on the manifest and not published") {
     val (expiredCertificateLocation, _) = createExpiredResourceCertificate("expired.cer")
+    storage.updateValidationTimestamp(Seq(expiredCertificateLocation.toString), NOW.minusDays(1).toInstant)
     createMftWithEntry()
 
     val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
@@ -131,6 +132,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   test("should ignore alert messages for revoked certificates that are not on the manifest and not in repository") {
 
     val (certificateLocation, certificate) = createValidResourceCertificate("expired.cer")
+    storage.updateValidationTimestamp(Seq(certificateLocation.toString), NOW.minusDays(1).toInstant)
     createMftWithEntry()
 
     createCrlWithEntry(certificate)
@@ -143,6 +145,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   test("should delete revoked certificates that are not on the manifest and not in repository and are not published anymore") {
 
     val (certificateLocation, certificate) = createValidResourceCertificate("expired.cer")
+    storage.updateValidationTimestamp(Seq(certificateLocation.toString), NOW.minusDays(1).toInstant)
     createMftWithEntry()
 
     createCrlWithEntry(certificate)
