@@ -175,11 +175,10 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   override def getBroken(url: String) = Try {
     template.queryForObject(
-      "SELECT encoded, message, download_time FROM broken_objects WHERE url = :url",
+      "SELECT encoded, message FROM broken_objects WHERE url = :url",
       Map("url" -> url),
       new RowMapper[BrokenObject] {
-        override def mapRow(rs: ResultSet, i: Int) = BrokenObject(url, rs.getBytes(1), rs.getString(2)).
-          copy(downloadTime = instant(rs.getTimestamp(3)).getOrElse(Instant.now()))
+        override def mapRow(rs: ResultSet, i: Int) = BrokenObject(url, rs.getBytes(1), rs.getString(2))
       })
   }.toOption
 
