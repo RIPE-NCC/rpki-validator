@@ -45,14 +45,17 @@ import org.apache.commons.lang.Validate
 import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 
-class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, repoService: RepoService, validationOptions: ValidationOptions, validationStartTime: Instant)(seen: scala.collection.mutable.Set[String])
+class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext,
+                    store: Storage,
+                    repoService: RepoService,
+                    validationOptions: ValidationOptions,
+                    validationStartTime: Instant)(seen: scala.collection.mutable.Set[String])
   extends Logging {
 
   private object HashUtil extends Hashing
 
-  val certificateSkiHex: String = HashUtil.stringify(certificateContext.getSubjectKeyIdentifier)
+  private val certificateSkiHex: String = HashUtil.stringify(certificateContext.getSubjectKeyIdentifier)
   
   Validate.isTrue(seen.add(certificateSkiHex))
   Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")

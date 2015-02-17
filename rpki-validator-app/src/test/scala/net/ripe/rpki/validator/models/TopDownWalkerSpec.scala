@@ -72,8 +72,6 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   private val storage = new CacheStore(DataSources.InMemoryDataSource)
   private var taContext: CertificateRepositoryObjectValidationContext = _
 
-  private object HashUtil extends Hashing
-
   override def beforeEach() {
     storage.clear()
     taContext = createTaContext
