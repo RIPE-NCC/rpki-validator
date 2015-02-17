@@ -102,7 +102,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         val validatedChildrenObjects = childrenCertificates.flatMap(stepDown)
         validatedObjects ++= validatedChildrenObjects
 
-        validatedChildrenObjects.map(x => x._1.toString)
+        validatedChildrenObjects.map(_._1.toString)
     }
 
     val validatedObjectMap = validatedObjects.result()
