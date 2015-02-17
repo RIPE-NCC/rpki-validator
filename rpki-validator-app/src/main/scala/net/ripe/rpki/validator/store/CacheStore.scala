@@ -105,7 +105,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
              object_type = :object_type,
              encoded = :encoded,
              download_time = NOW()
-           WHERE aki = :aki
+           WHERE hash = :hash
            AND   url = :url
           """, params)
 
@@ -226,21 +226,20 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     val tt = timestamp(t)
     val jdbc = new JdbcTemplate(dataSource)
     // That has to be as fast as possible to prevent
-    // other threads from being locked
+    // other threads from being locked. That's why
+    // we do all that dancing.
     urls.groupBy(tableName).foreach { p =>
       val (tableOption, tableUrls) = p
       tableOption.foreach { table =>
         jdbc.batchUpdate {
-          tableUrls.grouped(99).map {
-            group =>
-              val inClause = group.map("'" + _ + "'").mkString("(", ",", ")")
-              s"UPDATE $table SET validation_time = '$tt' WHERE url IN $inClause"
+          tableUrls.grouped(99).map { group =>
+            val inClause = group.map("'" + _ + "'").mkString("(", ",", ")")
+            s"UPDATE $table SET validation_time = '$tt' WHERE url IN $inClause"
           }.toArray
         }
       }
     }
   }
-
 
   private def timestamp(timestamp: Instant)= new Timestamp(timestamp.getMillis)
   private def instant(d: java.util.Date) = Option(d).map(d => new Instant(d.getTime))
