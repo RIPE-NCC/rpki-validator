@@ -204,31 +204,29 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     val foundObjectsEntries = ( roaEntries ++ certEntries ).toMap
 
     val notFoundInRepo = manifestEntries.keySet -- foundObjectsEntries.keySet
-    val notOnManifest = foundObjectsEntries.keySet -- manifestEntries.keySet
-    val objectsWithMatchingUri = manifestEntries.keySet intersect foundObjectsEntries.keySet
-
     notFoundInRepo.foreach { location =>
       certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_FILE_NOT_FOUND_BY_AKI, location.toString, certificateSkiHex)
     }
 
-    notOnManifest.foreach { location =>
-      val repositoryObject = foundObjectsEntries.get(location).get
-      if (repositoryObject.isExpiredOrRevoked) {
-        if (notPublishedAnymore(repositoryObject)) {
-          objectsToIgnore = objectsToIgnore + (repositoryObject.url -> HashUtil.stringify(repositoryObject.hash))
-        } else {
-          certContextValidationResult.warnForLocation(new ValidationLocation(location), VALIDATOR_REPOSITORY_EXPIRED_REVOKED_OBJECT, location.toString)
-        }
-      } else {
-        certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, location.toString)
-      }
-    }
-
+    val objectsWithMatchingUri = manifestEntries.keySet intersect foundObjectsEntries.keySet
     objectsWithMatchingUri.filterNot { location =>
       HashUtil.equals(manifestEntries(location), foundObjectsEntries(location).hash)
     } foreach { location =>
       certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE,
         s"Hash code of object at $location (${foundObjectsEntries(location)}) does not match the one specified in the manifest (${manifestEntries(location)})")
+    }
+
+    val notOnManifest = (foundObjectsEntries.keySet -- manifestEntries.keySet).map { foundObjectsEntries.get(_).get }
+    val (expiredOrRevoked, notExpiredOrRevoked) = notOnManifest.partition(_.isExpiredOrRevoked)
+
+    notExpiredOrRevoked.foreach { certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, _.url) }
+
+    expiredOrRevoked.filter(notPublishedAnymore).foreach { repositoryObject =>
+      objectsToIgnore = objectsToIgnore + (repositoryObject.url -> HashUtil.stringify(repositoryObject.hash))
+    }
+
+    expiredOrRevoked.filterNot(notPublishedAnymore).foreach { repositoryObject =>
+      certContextValidationResult.warnForLocation(new ValidationLocation(repositoryObject.url), VALIDATOR_REPOSITORY_EXPIRED_REVOKED_OBJECT, repositoryObject.url)
     }
   }
 
