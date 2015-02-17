@@ -43,8 +43,8 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
   private val memoryDataSource = DataSources.InMemoryDataSource
 
-  val store = new CacheStore(memoryDataSource)
-
+  private val store = new CacheStore(memoryDataSource)
+  
   val testCrl = X509CrlTest.createCrl
   val testManifest = ManifestCmsTest.getRootManifestCms
   val testRoa = RoaCmsTest.getRoaCms
