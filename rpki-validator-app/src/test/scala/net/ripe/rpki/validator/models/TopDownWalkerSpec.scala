@@ -51,8 +51,6 @@ import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.{Instant, DateTime}
 import org.scalatest._
 
-//import scala.collection.mutable._
-
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
@@ -71,17 +69,17 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   private val CERTIFICATE_KEY_PAIR: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val DEFAULT_VALIDATION_OPTIONS: ValidationOptions = new ValidationOptions
 
-  private var storage: Storage = _
+  private val storage = new CacheStore(DataSources.InMemoryDataSource)
   private var taContext: CertificateRepositoryObjectValidationContext = _
 
+  private object HashUtil extends Hashing
+
   override def beforeEach() {
-    storage = new CacheStore(DataSources.InMemoryDataSource)
     storage.clear()
     taContext = createTaContext
 
     val childCertificateCrl = getCrl(CERTIFICATE_NAME, CERTIFICATE_KEY_PAIR)
     storage.storeCrl(CrlObject(REPO_LOCATION + "childCertificateCrl.cer", childCertificateCrl))
-
   }
 
   test("should ignore and remove from store expired certificates that are NOT on the manifest and not published") {
@@ -172,6 +170,26 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   test("Should prefer rpkiNotify URI over caRepository URI") {
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
     subject.preferredFetchLocation.get should be(RRDP_NOTIFICATION_LOCATION)
+  }
+
+  test("should update validation time for validated objects") {
+
+    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
+    createMftWithEntry()
+    createCrlWithEntry(certificate)
+
+    val validationTime: Instant = new DateTime().minusDays(1).toInstant // before objects are put in the Storage
+    val now = Instant.now()
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, validationTime)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+    val certs = storage.getCertificates(certificate.getAuthorityKeyIdentifier)
+    val mfts = storage.getManifests(certificate.getAuthorityKeyIdentifier)
+    val crls = storage.getCrls(certificate.getAuthorityKeyIdentifier)
+
+    certs.forall(_.validationTime.exists(now.isBefore(_))) should be(true)
+    mfts.forall(_.validationTime.exists(now.isBefore(_))) should be(true)
+    crls.forall(_.validationTime.exists(now.isBefore(_))) should be(true)
   }
 
   def getRootResourceCertificate: X509ResourceCertificate = {
