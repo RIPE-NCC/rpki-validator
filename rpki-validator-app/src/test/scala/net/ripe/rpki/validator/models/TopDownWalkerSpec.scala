@@ -130,7 +130,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     }
   }
 
-  test("should ignore revoked certificates that are not on the manifest and not in repository") {
+  test("should ignore alert messages for revoked certificates that are not on the manifest and not in repository") {
 
     val (certificateLocation, certificate) = createValidResourceCertificate("expired.cer")
     createMftWithEntry()
@@ -140,6 +140,18 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
     val result = subject.execute
     result.get(certificateLocation) should be('empty)
+  }
+
+  test("should delete revoked certificates that are not on the manifest and not in repository and are not published anymore") {
+
+    val (certificateLocation, certificate) = createValidResourceCertificate("expired.cer")
+    createMftWithEntry()
+
+    createCrlWithEntry(certificate)
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    subject.execute
+    storage.getCertificate(certificateLocation.toString).isEmpty should be(true)
   }
 
   test("should not warn about revoked certificates not on the manifest and not in repository") {
