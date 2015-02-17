@@ -70,7 +70,10 @@ sealed trait RepositoryObject[T <: net.ripe.rpki.commons.crypto.CertificateRepos
 
   def downloadTime: Option[Instant]
 
-  def isExpiredOrRevoked = decoded.isPastValidityTime || decoded.isRevoked
+  def isExpiredOrRevoked = {
+    val d = decoded
+    d.isPastValidityTime || d.isRevoked
+  }
 }
 
 trait Parsing {
