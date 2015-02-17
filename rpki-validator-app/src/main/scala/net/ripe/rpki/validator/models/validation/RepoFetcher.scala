@@ -232,11 +232,11 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
           }
         }
 
-        override def withdraw(url: URI, hash: String): Unit = {
-          // TODO Implement the actual withdraw
+        override def withdraw(url: URI, hash: String) = {
+          storage.delete(url.toString, hash)
         }
 
-        override def processBroken(brokenObj: BrokenObject): Unit = {
+        override def processBroken(brokenObj: BrokenObject) = {
           storage.storeBroken(brokenObj)
         }
       })
