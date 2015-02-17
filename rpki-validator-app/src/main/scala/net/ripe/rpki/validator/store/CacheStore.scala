@@ -70,8 +70,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         val updateCount = template.update(
           """UPDATE certificates SET
              hash = :hash,
-             encoded = :encoded,
-             download_time = NOW()
+             encoded = :encoded
            WHERE hash = :hash
            AND   url = :url
           """, params)
@@ -104,8 +103,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
           """UPDATE repo_objects SET
              hash = :hash,
              object_type = :object_type,
-             encoded = :encoded,
-             download_time = NOW()
+             encoded = :encoded
            WHERE hash = :hash
            AND   url = :url
           """, params)
@@ -131,8 +129,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
           """UPDATE broken_objects SET
              hash = :hash,
              encoded = :encoded,
-             message = :message,
-             download_time = NOW()
+             message = :message
            WHERE url = :url
           """, params)
 
@@ -156,24 +153,24 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] =
     template.query(
-      """SELECT url, ski, encoded, download_time, validation_time
+      """SELECT url, ski, encoded, validation_time
         FROM certificates WHERE aki = :aki""",
       Map("aki" -> stringify(aki)),
       new RowMapper[CertificateObject] {
         override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(3)).
-          copy(downloadTime = instant(rs.getTimestamp(4)), validationTime = instant(rs.getTimestamp(5)))
+          copy(validationTime = instant(rs.getTimestamp(4)))
       }).toSeq
 
-  def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, "crl") { (url, bytes, downloadTime, validationTime) =>
-    CrlObject.parse(url, bytes).copy(downloadTime = downloadTime, validationTime = validationTime)
+  def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, "crl") { (url, bytes, validationTime) =>
+    CrlObject.parse(url, bytes).copy(validationTime = validationTime)
   }
 
-  def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, "manifest") { (url, bytes, downloadTime, validationTime) =>
-    ManifestObject.parse(url, bytes).copy(downloadTime = downloadTime, validationTime = validationTime)
+  def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, "manifest") { (url, bytes, validationTime) =>
+    ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
   }
 
-  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, "roa") { (url, bytes, downloadTime, validationTime) =>
-    RoaObject.parse(url, bytes).copy(downloadTime = downloadTime, validationTime = validationTime)
+  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, "roa") { (url, bytes, validationTime) =>
+    RoaObject.parse(url, bytes).copy(validationTime = validationTime)
   }
 
   override def getBroken(url: String) = Try {
@@ -193,15 +190,14 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }).toSeq
 
 
-  private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte], Option[Instant], Option[Instant]) => T) =
+  private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte], Option[Instant]) => T) =
     template.query(
-      """SELECT url, encoded, download_time, validation_time
+      """SELECT url, encoded, validation_time
         FROM repo_objects
         WHERE aki = :aki AND object_type = :object_type""",
       Map("aki" -> stringify(aki), "object_type" -> objType),
       new RowMapper[T] {
-        override def mapRow(rs: ResultSet, i: Int) =
-          mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)), instant(rs.getTimestamp(4)))
+        override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)))
       }).toSeq
 
   def clear() = {
