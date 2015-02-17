@@ -178,7 +178,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     })
   }
 
-  private[models] def notPublishedAnymore(value: RepositoryObject[_ >: X509ResourceCertificate with RoaCms <: CertificateRepositoryObject]): Boolean = {
+  private[models] def notPublishedAnymore(value: RepositoryObject[_]): Boolean = {
     value.downloadTime.fold(ifEmpty = true) {
       _.isBefore(validationStartTime)
     }
