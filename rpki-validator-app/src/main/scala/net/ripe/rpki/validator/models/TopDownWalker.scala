@@ -219,7 +219,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     val notOnManifest = (foundObjectsEntries.keySet -- manifestEntries.keySet).map { foundObjectsEntries.get(_).get }
     val (expiredOrRevoked, notExpiredOrRevoked) = notOnManifest.partition(_.isExpiredOrRevoked)
 
-    notExpiredOrRevoked.foreach { certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, _.url) }
+    notExpiredOrRevoked.foreach { repositoryObject =>
+      certContextValidationResult.warnForLocation(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, repositoryObject.url)
+    }
 
     expiredOrRevoked.filter(notPublishedAnymore).foreach { repositoryObject =>
       objectsToIgnore = objectsToIgnore + (repositoryObject.url -> HashUtil.stringify(repositoryObject.hash))
