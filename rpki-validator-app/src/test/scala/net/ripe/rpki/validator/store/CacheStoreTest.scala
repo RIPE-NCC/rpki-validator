@@ -39,11 +39,11 @@ import org.joda.time.{Period, Duration, ReadableDuration, Instant}
 import org.scalatest.BeforeAndAfter
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
+class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing {
 
   private val memoryDataSource = DataSources.InMemoryDataSource
 
-  val store = new CacheStore(memoryDataSource)
+  private val store = new CacheStore(memoryDataSource)
 
   val testCrl = X509CrlTest.createCrl
   val testManifest = ManifestCmsTest.getRootManifestCms
@@ -59,7 +59,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
     store.storeCertificate(certificate)
 
-    val certificates: Seq[CertificateObject] = store.getCertificates(certificate.aki)
+    val certificates = store.getCertificates(certificate.aki)
     certificates should have length 1
 
     val head = certificates.head
@@ -118,7 +118,6 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
   test("Do not store the same object twice") {
     val roa = RoaObject(url = "rsync://bla", decoded = testRoa)
-
     store.storeRoa(roa)
     store.storeRoa(roa)
 
@@ -168,6 +167,28 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
     val certificates = store.getCertificates(certificate.aki)
     certificates should have length 1
     certificates.head.validationTime should be(Some(newTime))
+  }
+
+  test("Should delete objects in batches") {
+    val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
+    val roa = RoaObject(url = "rsync://bla/bla.roa", decoded = testRoa)
+    val manifest = ManifestObject(url = "rsync://bla/bla.mft", decoded = testManifest)
+    val crl = CrlObject(url = "rsync://bla/bla.crl", decoded = testCrl)
+
+    store.storeCrl(crl)
+    store.storeManifest(manifest)
+    store.storeCertificate(certificate)
+    store.storeRoa(roa)
+
+    store.delete(Map(
+      certificate.url -> stringify(certificate.hash),
+      roa.url -> stringify(roa.hash),
+      manifest.url -> stringify(manifest.hash)))
+
+    store.getCertificates(certificate.aki) should be(Seq())
+    store.getRoas(roa.aki) should be(Seq())
+    store.getManifests(manifest.aki) should be(Seq())
+    store.getCrls(manifest.aki) should have size 1
   }
 
 }

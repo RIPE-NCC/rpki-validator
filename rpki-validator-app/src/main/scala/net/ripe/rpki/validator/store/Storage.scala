@@ -29,6 +29,8 @@
  */
 package net.ripe.rpki.validator.store
 
+import java.net.URI
+
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
 
@@ -61,6 +63,8 @@ trait Storage {
   def getBroken: Seq[BrokenObject]
 
   def delete(url: String, hash: String)
+
+  def delete(objs: Map[String, String])
 
   def clear()
 

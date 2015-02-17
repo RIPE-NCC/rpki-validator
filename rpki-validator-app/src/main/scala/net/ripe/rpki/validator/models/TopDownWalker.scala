@@ -45,8 +45,7 @@ import org.apache.commons.lang.Validate
 import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.ListSet.ListSetBuilder
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable
 
 class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, repoService: RepoService, validationOptions: ValidationOptions, validationStartTime: Instant)(seen: scala.collection.mutable.Set[String])
   extends Logging {
@@ -61,7 +60,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   private val certContextValidationLocation = new ValidationLocation(certificateContext.getLocation)
   private val certContextValidationResult: ValidationResult = ValidationResult.withLocation(certContextValidationLocation)
   private var crlLocator: CrlLocator = _
-  private val objectsToIgnore: scala.collection.mutable.Set[URI] = scala.collection.mutable.Set[URI]()
+  private var objectsToIgnore = Map[String, String]()
 
   private[models] def preferredFetchLocation: Option[URI] = Option(certificateContext.getRpkiNotifyURI).orElse(Option(certificateContext.getRepositoryURI))
 
@@ -108,13 +107,25 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
     val validatedObjectMap = validatedObjects.result()
 
-    {
-      // don't update validation timestamps for validatedChildrenObjects --- it will
-      // be validated by the stepDown recursively
-      store.updateValidationTimestamp(validatedObjectMap.keySet.map(_.toString).filterNot(childrenValidatedObjects.contains(_)))
-    }
+    updateStorage(childrenValidatedObjects, validatedObjectMap)
 
-    validatedObjectMap.filterKeys(!objectsToIgnore.contains(_))
+    validatedObjectMap.filterKeys(key => !objectsToIgnore.contains(key.toString))
+  }
+
+  private def updateStorage(childrenValidatedObjects: Seq[String], validatedObjectMap: Map[URI, ValidatedObject]) = {
+    // delete ignored objects
+    objectsToIgnore.foreach { uri =>
+      logger.info("Removing object: " + uri._1)
+    }
+    store.delete(objectsToIgnore)
+    
+    // don't update validation timestamps for validatedChildrenObjects --- it will
+    // be validated by the stepDown recursively
+    val materialValidatedOnThisStep = validatedObjectMap.keySet.map(_.toString).filterNot(childrenValidatedObjects.contains(_))
+    materialValidatedOnThisStep.foreach { uri =>
+      logger.info("Setting validation time for the object: " + uri)
+    }
+    store.updateValidationTimestamp(materialValidatedOnThisStep)
   }
 
   private def stepDown: (RepositoryObject[X509ResourceCertificate]) => Map[URI, ValidatedObject] = {
@@ -202,10 +213,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
     notOnManifest.foreach { location =>
       val repositoryObject = foundObjectsEntries.get(location).get
-      if ( repositoryObject.isExpiredOrRevoked ) {
+      if (repositoryObject.isExpiredOrRevoked) {
         if (notPublishedAnymore(repositoryObject)) {
-          objectsToIgnore += new URI(repositoryObject.url)
-          store.delete(repositoryObject.url, HashUtil.stringify(repositoryObject.hash))
+          objectsToIgnore = objectsToIgnore + (repositoryObject.url -> HashUtil.stringify(repositoryObject.hash))
         } else {
           certContextValidationResult.warnForLocation(new ValidationLocation(location), VALIDATOR_REPOSITORY_EXPIRED_REVOKED_OBJECT, location.toString)
         }

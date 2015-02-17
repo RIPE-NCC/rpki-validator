@@ -44,6 +44,7 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.{TransactionCallback, TransactionTemplate}
 
 import scala.collection.JavaConversions._
+import scala.collection.immutable
 import scala.util.Try
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
@@ -105,7 +106,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
              object_type = :object_type,
              encoded = :encoded,
              download_time = NOW()
-           WHERE aki = :aki
+           WHERE hash = :hash
            AND   url = :url
           """, params)
 
@@ -215,8 +216,26 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
   }
 
-  def tableName(url: String): Option[String] =
-    url.takeRight(3).toLowerCase match {
+  override def delete(objs: Map[String, String]) = {
+    val sqls = objs.groupBy(kv => tableName(kv._1)).flatMap { x =>
+      val (tableOption, tableObjects) = x
+      tableOption.map { table =>
+        tableObjects.grouped(99).map { tobj =>
+          val condition = tobj.map(t => s"(url = '${t._1}' AND hash = '${t._2}')").mkString("(", " OR ", ")")
+          s"DELETE FROM $table WHERE $condition"
+        }
+      }.getOrElse(Iterator.empty)
+    }
+
+    if (sqls.nonEmpty) {
+      atomic {
+        new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
+      }
+    }
+  }
+
+  def tableName(uri: String): Option[String] =
+    uri.takeRight(3).toLowerCase match {
       case "cer" => Some("certificates")
       case "mft" | "crl" | "roa" => Some("repo_objects")
       case _ => None
@@ -224,23 +243,25 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   def updateValidationTimestamp(urls: Iterable[String], t: Instant) = atomic {
     val tt = timestamp(t)
-    val jdbc = new JdbcTemplate(dataSource)
     // That has to be as fast as possible to prevent
-    // other threads from being locked
-    urls.groupBy(tableName).foreach { p =>
+    // other threads from being locked. That's why
+    // we do all that dancing.
+    val sqls = urls.groupBy(tableName).flatMap { p =>
       val (tableOption, tableUrls) = p
-      tableOption.foreach { table =>
-        jdbc.batchUpdate {
-          tableUrls.grouped(99).map {
-            group =>
-              val inClause = group.map("'" + _ + "'").mkString("(", ",", ")")
-              s"UPDATE $table SET validation_time = '$tt' WHERE url IN $inClause"
-          }.toArray
+      tableOption.map { table =>
+        tableUrls.grouped(99).map { group =>
+          val inClause = group.map("'" + _ + "'").mkString("(", ",", ")")
+          s"UPDATE $table SET validation_time = '$tt' WHERE url IN $inClause"
         }
+      }.getOrElse(Iterator.empty)
+    }
+
+    if (sqls.nonEmpty) {
+      atomic {
+        new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
       }
     }
   }
-
 
   private def timestamp(timestamp: Instant)= new Timestamp(timestamp.getMillis)
   private def instant(d: java.util.Date) = Option(d).map(d => new Instant(d.getTime))
