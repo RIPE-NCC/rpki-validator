@@ -59,7 +59,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
     store.storeCertificate(certificate)
 
-    val certificates: Seq[CertificateObject] = store.getCertificates(certificate.aki)
+    val certificates = store.getCertificates(certificate.aki)
     certificates should have length 1
 
     val head = certificates.head
