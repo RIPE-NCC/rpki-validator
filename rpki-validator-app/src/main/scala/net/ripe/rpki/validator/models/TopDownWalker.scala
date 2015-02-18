@@ -140,18 +140,15 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   }
 
-  private def stepDown: (RepositoryObject[X509ResourceCertificate]) => Map[URI, ValidatedObject] = {
-    cert => {
-      val ski: String = HashUtil.stringify(cert.decoded.getSubjectKeyIdentifier)
-      if (seen.contains(ski)) {
-        logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
-        Map()
-      } else {
-        val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
-        val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
-        nextLevelWalker.execute
-      }
-
+  private def stepDown(cert: RepositoryObject[X509ResourceCertificate]): Map[URI, ValidatedObject] = {
+    val ski: String = HashUtil.stringify(cert.decoded.getSubjectKeyIdentifier)
+    if (seen.contains(ski)) {
+      logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
+      Map()
+    } else {
+      val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
+      val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
+      nextLevelWalker.execute
     }
   }
 
