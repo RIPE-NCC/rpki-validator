@@ -38,7 +38,12 @@ import net.ripe.rpki.validator.store.RepoServiceStore
 import org.joda.time.{Duration, Instant}
 
 class RepoService(fetcher: RepoFetcher) {
-  val UPDATE_INTERVAL = Duration.standardMinutes(5) //TODO
+
+  private def interval(uri: URI) =
+    if (uri.getScheme == "rsync")
+      Duration.standardMinutes(60)
+    else
+      Duration.standardMinutes(1)
 
   private val locker = RepoService.locker
 
@@ -66,7 +71,7 @@ class RepoService(fetcher: RepoFetcher) {
   }
 
   private def haveRecentDataInStore(uri: URI) =
-    timeIsRecent(RepoServiceStore.getLastFetchTime(uri), UPDATE_INTERVAL)
+    timeIsRecent(RepoServiceStore.getLastFetchTime(uri), interval(uri))
 
   private[models] def timeIsRecent(dateTime: Instant, duration: Duration) = dateTime.plus(duration).isAfterNow
 }
