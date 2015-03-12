@@ -253,6 +253,7 @@ span.object-counter {
     min-height: 600px;
 }
 .nzrs-header-heading {
-    float: right;
+    position: absolute;
+    top: 17px;
 }
 /* END MARK */
