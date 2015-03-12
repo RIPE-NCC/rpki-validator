@@ -75,9 +75,8 @@ object Layouts {
             <div class="row" style="position: relative;">
               <div class="span4 nzrs-header-logo">
                 <a href="https://nzrs.net.nz/" title=".nz Registry Services" target="_blank">
-                  <img src="/images/nzrs-logo.png" height="40"/>
+                  <img src="/images/nzrs-logo.png" width="171" height="70"/>
                 </a>
-                <p>A subsidiary of Internet NZ</p>
               </div>
 
               <div class="span4 nzrs-header-heading">
