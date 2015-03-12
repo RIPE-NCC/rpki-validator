@@ -50,6 +50,7 @@ object Layouts {
       <head>
         <meta charset="utf-8"/>
         <title>NZRS RPKI Validator - { view.title }</title>
+        <link rel="shortcut icon" href="/favicon.ico"/>
         <link rel="stylesheet" href="/stylesheets/bootstrap/1.3.0/bootstrap.css"/>
         <link rel="stylesheet" href="/stylesheets/application.css"/>
         <script src="/javascript/datatables/1.8.2/jquery.js"/>
