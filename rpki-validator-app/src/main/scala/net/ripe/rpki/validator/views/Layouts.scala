@@ -50,6 +50,7 @@ object Layouts {
       <head>
         <meta charset="utf-8"/>
         <title>NZRS RPKI Validator - { view.title }</title>
+        <link rel="shortcut icon" href="/favicon.ico"/>
         <link rel="stylesheet" href="/stylesheets/bootstrap/1.3.0/bootstrap.css"/>
         <link rel="stylesheet" href="/stylesheets/application.css"/>
         <script src="/javascript/datatables/1.8.2/jquery.js"/>
@@ -75,9 +76,8 @@ object Layouts {
             <div class="row" style="position: relative;">
               <div class="span4 nzrs-header-logo">
                 <a href="https://nzrs.net.nz/" title=".nz Registry Services" target="_blank">
-                  <img src="/images/nzrs-logo.png" height="40"/>
+                  <img src="/images/nzrs-logo.png" width="171" height="70"/>
                 </a>
-                <p>A subsidiary of Internet NZ</p>
               </div>
 
               <div class="span4 nzrs-header-heading">

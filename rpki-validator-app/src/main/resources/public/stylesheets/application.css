@@ -253,11 +253,6 @@ span.object-counter {
     min-height: 600px;
 }
 .nzrs-header-heading {
-    width: 960px;
-    height: 72px;
-    text-align: center;
-    position: absolute;
-    top: 16px; /* To give the sensation of vertically centered */
-    left: 0px;
+    float: right;
 }
 /* END MARK */
