@@ -176,7 +176,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
 
     val mft: ManifestObject = objects.head.asInstanceOf[ManifestObject]
     mft.url should be("rsync://bandito.ripe.net/repo/3a87a4b1-6e22-4a63-ad0f-06f83ad3ca16/default/671570f06499fbd2d6ab76c4f22566fe49d5de60.mft")
-    mft.decoded.getFiles.keySet().iterator().next() should be("671570f06499fbd2d6ab76c4f22566fe49d5de60.crl")
+    mft.decoded.getHashes.keySet().iterator().next() should be("671570f06499fbd2d6ab76c4f22566fe49d5de60.crl")
 
     val crl = objects.tail.head.asInstanceOf[CrlObject]
     crl.url should be("rsync://bandito.ripe.net/repo/3a87a4b1-6e22-4a63-ad0f-06f83ad3ca16/default/671570f06499fbd2d6ab76c4f22566fe49d5de60.crl")

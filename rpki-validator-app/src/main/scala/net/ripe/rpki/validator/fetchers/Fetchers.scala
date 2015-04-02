@@ -45,7 +45,7 @@ object Fetcher {
   case class Error(url: URI, message: String)
 }
 
-trait Fetcher {
+trait Fetcher extends Hashing {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
@@ -72,8 +72,8 @@ trait Fetcher {
         case _ =>
           Left(Error(uri, "Found unknown file $f"))
       }
-      repoObject.right.map {
-        ro => fetcherListener.processObject(ro)
+      repoObject.right.map { ro =>
+        fetcherListener.processObject(ro)
       }
     }
   }

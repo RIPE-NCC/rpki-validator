@@ -37,6 +37,7 @@ import org.joda.time.Instant
 import scala.collection.mutable
 
 trait Storage {
+  def getObject(uri: URI, bytes: Array[Byte]) : Option[RepositoryObject[_]] = ???
 
   def storeCertificate(certificate: CertificateObject)
 
