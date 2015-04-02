@@ -38,6 +38,7 @@ import scala.collection.mutable
 
 trait Storage {
   def getObject(uri: URI, bytes: Array[Byte]) : Option[RepositoryObject[_]] = ???
+  def getObject(uri: URI) : Option[RepositoryObject[_]] = ???
 
   def storeCertificate(certificate: CertificateObject)
 
