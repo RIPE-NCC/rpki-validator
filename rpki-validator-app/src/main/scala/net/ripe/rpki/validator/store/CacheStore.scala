@@ -210,19 +210,19 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)))
       }).toSeq
 
-  override def getObjects(uri: URI): Seq[RepositoryObject[_]] = {
+  override def getObjects(url: String): Seq[RepositoryObject[_]] = {
     val objects = template.query(
       """SELECT encoded, validation_time, object_type
         FROM repo_objects
         WHERE url = :url""",
-      Map("url" -> uri),
+      Map("url" -> url),
       new RowMapper[RepositoryObject[_]] {
         override def mapRow(rs: ResultSet, i: Int) = {
           val (bytes, validationTime, objType) = (rs.getBytes(1), instant(rs.getTimestamp(2)), rs.getString(3))
           objType match {
-            case "roa" => RoaObject.parse(uri.toString, bytes).copy(validationTime = validationTime)
-            case "manifest" => ManifestObject.parse(uri.toString, bytes).copy(validationTime = validationTime)
-            case "crl" => CrlObject.parse(uri.toString, bytes).copy(validationTime = validationTime)
+            case "roa" => RoaObject.parse(url, bytes).copy(validationTime = validationTime)
+            case "manifest" => ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
+            case "crl" => CrlObject.parse(url, bytes).copy(validationTime = validationTime)
           }
         }
       })
@@ -231,11 +231,11 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       """SELECT encoded, validation_time
         FROM certificates
         WHERE url = :url""",
-      Map("url" -> uri),
+      Map("url" -> url),
       new RowMapper[RepositoryObject[_]] {
         override def mapRow(rs: ResultSet, i: Int) = {
           val (bytes, validationTime) = (rs.getBytes(1), instant(rs.getTimestamp(2)))
-          CertificateObject.parse(uri.toString, bytes).copy(validationTime = validationTime)
+          CertificateObject.parse(url, bytes).copy(validationTime = validationTime)
         }
       })
 

@@ -273,7 +273,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
     manifest.decoded.getHashes.entrySet().asScala.foreach { e =>
       val (uri, hash) = (repositoryUri.resolve(e.getKey), e.getValue)
-      val objs = store.getObjects(uri)
+      val objs = store.getObjects(uri.toString)
 
       if (objs.isEmpty)
         warnings += warning(validationLocation, VALIDATOR_MANIFEST_FILE_NOT_FOUND_BY_AKI, uri.toString, certificateSkiHex)

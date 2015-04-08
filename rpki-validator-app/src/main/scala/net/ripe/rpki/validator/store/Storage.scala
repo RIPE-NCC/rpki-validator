@@ -38,7 +38,7 @@ import scala.collection.mutable
 
 trait Storage {
 
-  def getObjects(uri: URI) : Seq[RepositoryObject[_]]
+  def getObjects(url: String) : Seq[RepositoryObject[_]]
 
   def storeCertificate(certificate: CertificateObject)
 

@@ -35,7 +35,7 @@ import net.ripe.rpki.commons.crypto.crl.X509CrlTest
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.support.ValidatorTestCase
-import org.joda.time.{Period, Duration, ReadableDuration, Instant}
+import org.joda.time.Instant
 import org.scalatest.BeforeAndAfter
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
@@ -189,6 +189,38 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     store.getRoas(roa.aki) should be(Seq())
     store.getManifests(manifest.aki) should be(Seq())
     store.getCrls(manifest.aki) should have size 1
+  }
+
+  test("Should return both objects and certificates matching the url") {
+    val myUrl = "rsync://bla"
+    val certificate = CertificateObject(url = myUrl, decoded = testCertificate)
+    val roa = RoaObject(url = myUrl, decoded = testRoa)
+    val manifest = ManifestObject(url = myUrl, decoded = testManifest)
+    val crl = CrlObject(url = myUrl, decoded = testCrl)
+    val someOtherCrl = CrlObject(url = "rsync:bla.bla", decoded = testCrl)
+
+    store.storeCrl(crl)
+    store.storeManifest(manifest)
+    store.storeCertificate(certificate)
+    store.storeRoa(roa)
+    store.storeCrl(someOtherCrl)
+
+    val objects = store.getObjects(myUrl)
+
+    objects should have size 4
+
+    objects.foreach {
+      case c: CertificateObject => c.decoded should be(certificate.decoded)
+      case c: RoaObject => c.decoded should be(roa.decoded)
+      case c: ManifestObject => c.decoded should be(manifest.decoded)
+      case c: CrlObject => c.decoded should be(crl.decoded)
+    }
+  }
+
+  test("Should return an empty Seq when nothing matches the url") {
+    val objects = store.getObjects("rsync:bla")
+
+    objects should have size 0
   }
 
 }
