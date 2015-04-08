@@ -269,7 +269,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     val validationLocation = new ValidationLocation(manifest.url)
 
     val warnings = scala.collection.mutable.Buffer[Check]()
-    val validObjects = scala.collection.mutable.Buffer[RepositoryObject[_]]()
+    val foundObjects = scala.collection.mutable.Buffer[RepositoryObject[_]]()
 
     manifest.decoded.getHashes.entrySet().asScala.foreach { e =>
       val (uri, hash) = (repositoryUri.resolve(e.getKey), e.getValue)
@@ -280,14 +280,14 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       else
         objs.foreach { o =>
           if (HashUtil.equals(o.hash, hash)) {
-            validObjects += o
+            foundObjects += o
           } else {
             warnings += warning(validationLocation, VALIDATOR_MANIFEST_LOCATION_MISMATCH, uri.toString, certificateSkiHex)
           }
         }
     }
 
-    (classify(validObjects.toSeq), warnings.toSeq)
+    (classify(foundObjects.toSeq), warnings.toSeq)
   }
 
 }
