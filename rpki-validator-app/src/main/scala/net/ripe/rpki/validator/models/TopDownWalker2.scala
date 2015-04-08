@@ -38,12 +38,14 @@ import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.validation._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.validator.models.ValidatedObject
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.Storage
 import org.apache.commons.lang.Validate
 import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationContext,
                      store: Storage,
@@ -74,7 +76,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     logger.info(s"Validating ${certificateContext.getLocation}")
     val fetchErrors = preferredFetchLocation.map(prefetch)
 
-    val validatedObjects = Map.newBuilder[URI, ValidatedObject]
+    var validatedObjects = Map[URI, ValidatedObject]()
 
     val crlList = fetchCrlsByAKI
 
@@ -110,7 +112,26 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
         }
     }
 
-    validatedObjects.result()
+    validatedObjects
+  }
+
+  private def merge(m1: Map[URI, ValidatedObject], m2: Map[URI, ValidatedObject]): Map[URI, ValidatedObject] = {
+    m1.map { e1 =>
+      val (u1, v1) = e1
+      m2.get(u1) match {
+        case None => e1
+        case Some(v2) => (u1, merge(v1, v2))
+      }
+    } ++ m2.filterKeys(!m1.contains(_))
+  }
+
+  private def merge(vo1: ValidatedObject, vo2: ValidatedObject): ValidatedObject = {
+    (vo1, vo2) match {
+      case (InvalidObject(u1, checks1), InvalidObject(u2, checks2)) => InvalidObject(u1, checks1 ++ checks2)
+      case (InvalidObject(u1, checks1), ValidObject(u2, checks2, _)) => InvalidObject(u1, checks1 ++ checks2)
+      case (ValidObject(u1, checks1, _), InvalidObject(u2, checks2)) => InvalidObject(u1, checks1 ++ checks2)
+      case (ValidObject(u1, checks1, obj1), ValidObject(u2, checks2, obj2)) => ValidObject(u1, checks1 ++ checks2, obj1)
+    }
   }
 
 
