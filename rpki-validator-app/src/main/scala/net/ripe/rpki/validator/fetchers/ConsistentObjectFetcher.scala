@@ -6,14 +6,14 @@
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- *   - Redistributions of source code must retain the above copyright notice,
- *     this list of conditions and the following disclaimer.
- *   - Redistributions in binary form must reproduce the above copyright notice,
- *     this list of conditions and the following disclaimer in the documentation
- *     and/or other materials provided with the distribution.
- *   - Neither the name of the RIPE NCC nor the names of its contributors may be
- *     used to endorse or promote products derived from this software without
- *     specific prior written permission.
+ * - Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * - Neither the name of the RIPE NCC nor the names of its contributors may be
+ * used to endorse or promote products derived from this software without
+ * specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -30,22 +30,24 @@
 package net.ripe.rpki.validator
 package fetchers
 
-import java.net.URI
-import models.StoredRepositoryObject
-import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms.FileContentSpecification
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
-import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
-import net.ripe.rpki.commons.util.{Specifications, Specification}
-import net.ripe.rpki.commons.validation.ValidationLocation
-import net.ripe.rpki.commons.validation.ValidationResult
-import net.ripe.rpki.commons.validation.ValidationString
-import scala.collection.JavaConverters._
-import store.RepositoryObjectStore
-import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.rpki.commons.crypto.crl.X509Crl
 import java.io.File
+import java.net.URI
+import java.security.cert.CertificateExpiredException
+import javax.security.cert.CertificateNotYetValidException
+
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms.FileContentSpecification
+import net.ripe.rpki.commons.crypto.crl.X509Crl
+import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
+import net.ripe.rpki.commons.util.{Specification, Specifications}
+import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationResult, ValidationString}
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.validator.models.StoredRepositoryObject
+import net.ripe.rpki.validator.store.RepositoryObjectStore
+
+import scala.collection.JavaConverters._
 
 class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetcher, store: RepositoryObjectStore) extends CertificateRepositoryObjectFetcher {
 
@@ -81,7 +83,7 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetc
     getCurrentManifestForContext(context, result).orNull
   }
 
-  private def getCurrentManifestForContext(context: CertificateRepositoryObjectValidationContext, result: ValidationResult): Option[ManifestCms] =  {
+  private def getCurrentManifestForContext(context: CertificateRepositoryObjectValidationContext, result: ValidationResult): Option[ManifestCms] = {
     val manifestURI: URI = context.getManifestURI
     storedObjectToCro(manifestURI, store.getLatestByUrl(manifestURI), result) match {
       case mft: ManifestCms => Some(mft)
@@ -89,7 +91,7 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetc
     }
   }
 
-  override def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, specification: Specification[Array[Byte]], result: ValidationResult): CertificateRepositoryObject =  specification match {
+  override def getObject(uri: URI, context: CertificateRepositoryObjectValidationContext, specification: Specification[Array[Byte]], result: ValidationResult): CertificateRepositoryObject = specification match {
     case fileContentSpec: FileContentSpecification =>
       storedObjectToCro(uri, store.getByHash(fileContentSpec.getHash), result)
     case _ =>
@@ -100,6 +102,13 @@ class ConsistentObjectFetcher(remoteObjectFetcher: RsyncRpkiRepositoryObjectFetc
     val fetchResult = ValidationResult.withLocation(uri)
     remoteObjectFetcher.fetch(uri, Specifications.alwaysTrue[Array[Byte]](), fetchResult) match {
       case cert: X509ResourceCertificate =>
+        try {
+          cert.getCertificate.checkValidity()
+        } catch {
+          case e: CertificateExpiredException => result.error(ValidationString.NOT_VALID_AFTER, e.toString)
+          case e: CertificateNotYetValidException => result.error(ValidationString.NOT_VALID_BEFORE, e.toString)
+        }
+
         store.put(StoredRepositoryObject(uri, cert.getEncoded))
         Some(cert)
       case _ =>
