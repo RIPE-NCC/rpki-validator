@@ -6,14 +6,14 @@
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * - Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- * - Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- * - Neither the name of the RIPE NCC nor the names of its contributors may be
- * used to endorse or promote products derived from this software without
- * specific prior written permission.
+ *   - Redistributions of source code must retain the above copyright notice,
+ *     this list of conditions and the following disclaimer.
+ *   - Redistributions in binary form must reproduce the above copyright notice,
+ *     this list of conditions and the following disclaimer in the documentation
+ *     and/or other materials provided with the distribution.
+ *   - Neither the name of the RIPE NCC nor the names of its contributors may be
+ *     used to endorse or promote products derived from this software without
+ *     specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -29,33 +29,38 @@
  */
 package net.ripe.rpki.validator.fetchers
 
-import net.ripe.ipresource.IpResourceSet
-import net.ripe.rpki.validimport
-import org.joda.time.DateTime
-
-java.io.File
-import java.math.BigInteger
-import java.net.URI
-
-import net.ripe.rpki.commons.crypto.{ValidityPeriod, CertificateRepositoryObject}
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
-import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsTest
-import net.ripe.rpki.commons.crypto.crl.X509CrlTest
-import net.ripe.rpki.commons.crypto.util.KeyPairFactoryTest.TEST_KEY_PAIR
-import net.ripe.rpki.commons.crypto.x509cert.{X509ResourceCertificate, X509ResourceCertificateTest}
+import net.ripe.rpki.validator.store.DataSources
+import net.ripe.rpki.validator.store.RepositoryObjectStore
 import net.ripe.rpki.commons.rsync.Rsync
-import net.ripe.rpki.commons.util.{ConfigurationUtil, Specification}
-import net.ripe.rpki.commons.validation.ValidationString._
+import net.ripe.rpki.commons.util.ConfigurationUtil;
+import net.ripe.rpki.validator.util.UriToFileMapper
+import java.io.File
+import java.net.URI
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.validation._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.commons.validation.ValidationString._
+import net.ripe.rpki.commons.util.Specification
+import net.ripe.rpki.commons.util.Specifications
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
+import net.ripe.rpki.commons.crypto.crl.X509CrlTest
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsTest
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
+import net.ripe.rpki.commons.crypto.util.KeyPairFactoryTest.TEST_KEY_PAIR
 import net.ripe.rpki.validator.models.StoredRepositoryObject
-import net.ripe.rpki.validator.store.{DataSources, RepositoryObjectStore}
-import net.ripe.rpki.validator.support.ValidatorTestCase
-import net.ripe.rpki.validator.util.UriToFileMapper
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
+import org.mockito.Matchers._
+import org.mockito.Mockito._
+import org.mockito.stubbing.Answer
+import org.mockito.invocation.InvocationOnMock
+import java.util
+import scala.Some
+import scala.collection.JavaConverters._
+import net.ripe.rpki.validator.support.ValidatorTestCase
+import java.math.BigInteger
 
-import scala.collection.JavaConverters._h(classOf[org.scalatest.junit.JUnitRunner])
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
 
 
@@ -107,46 +112,10 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
     store.getLatestByUrl(roaUri) should equal(Some(StoredRepositoryObject(uri = roaUri, binary = roa.getEncoded)))
   }
 
-   test("Should check if TA certificate is expired") {
-     val certificate = createCertificate(new ValidityPeriod(new DateTime().minusDays(10), new DateTime().minusDays(9)))
-
-    val certUri: URI = new URI("http://some.cer")
-    val entries = Map( certUri -> certificate)
-    val rsyncFetcher = new TestRemoteObjectFetcher(entries)
-
-    val validationResult = ValidationResult.withLocation(certUri)
-
-    val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
-    subject.getTrustAnchorCertificate(certUri, validationResult)
-
-    validationResult.hasFailures should be(true)  
-  }
-
-  test ("Should check if TA certificate is not yet valid") {
-      val certificate = createCertificate(new ValidityPeriod(new DateTime().plusDays(9), new DateTime().plusDays(10)))
-    val certUri: URI = new URI("http://some.cer")
-    val entries = Map( certUri -> certificate)
-    val rsyncFetcher = new TestRemoteObjectFetcher(entries)
-
-    val validationResult = ValidationResult.withLocation(certUri)
-
-    val subject = new ConsistentObjectFetcher(remoteObjectFetcher = rsyncFetcher, store = store)
-    subject.getTrustAnchorCertificate(certUri, validationResult)
-
-    validationResult.hasFailures should be(true)  
-  }
-
-
-  def createCertificate(validityPeriod: ValidityPeriod): X509ResourceCertificate = {
-        val caCertificateBuilder = X509ResourceCertificateTest.createBasicBuilder     caCertificateBuilder      .withValidityPeriod(validityPeriod)      .withResources(IpResourceSet.parse("10.0.0.0/8, 192.168.0.0/16, ffce::/16, AS21212"));     val certificate = caCertificateBuilder.build()     certificate  
-  }
-
-
-
   test("Should fall back to old mft if new content is missing") {
     store.put(List(StoredRepositoryObject(uri = mftUri, binary = mft.getEncoded),
-      StoredRepositoryObject(uri = crlUri, binary = crl.getEncoded),
-      StoredRepositoryObject(uri = roaUri, binary = roa.getEncoded)))
+                   StoredRepositoryObject(uri = crlUri, binary = crl.getEncoded),
+                   StoredRepositoryObject(uri = roaUri, binary = roa.getEncoded)))
 
     val mftBuilder = ManifestCmsTest.getRootManifestBuilder
     mftBuilder.addFile(crlFileName, crl.getEncoded)
@@ -243,7 +212,7 @@ class ConsistentObjectFetcherTest extends ValidatorTestCase with BeforeAndAfter 
       StoredRepositoryObject(uri = roaUri, binary = roa.getEncoded)))
 
     val crl2 = X509CrlTest.getCrlBuilder().withNumber(BigInteger.valueOf(11)).build(TEST_KEY_PAIR.getPrivate());
-    crl should not equal (crl2)
+    crl should not equal(crl2)
 
     val mft2Builder = ManifestCmsTest.getRootManifestBuilder
     mft2Builder.addFile(crlFileName, crl2.getEncoded)
