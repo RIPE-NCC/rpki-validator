@@ -72,18 +72,22 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     Check(location, new ValidationCheck(ValidationStatus.WARNING, key, params: _*))
 
 
-  def execute: Map[URI, ValidatedObject] = {
+  def execute = {
+    val validatedObjects = doExecute
+    updateValidationTimes(validatedObjects)
+    validatedObjects
+  }
+
+  def doExecute: Map[URI, ValidatedObject] = {
     logger.info(s"Validating ${certificateContext.getLocation}")
     val fetchErrors = preferredFetchLocation.map(prefetch)
 
-    var validatedObjects = Map[URI, ValidatedObject]()
-
     val crlList = fetchCrlsByAKI
 
-    findRecentValidCrl(crlList) match {
+    val validatedObjects: Map[URI, ValidatedObject] = findRecentValidCrl(crlList) match {
       case None =>
-        validatedObjects += certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
-          Set(new ValidationCheck(ValidationStatus.ERROR, CRL_REQUIRED, s"No valid CRL found with AKI=$certificateSkiHex")))
+        Map(certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
+          Set(new ValidationCheck(ValidationStatus.ERROR, CRL_REQUIRED, s"No valid CRL found with AKI=$certificateSkiHex"))))
 
       case Some(crl) =>
         val mftList = fetchMftsByAKI
@@ -100,19 +104,34 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
             val checkMap = checks.groupBy(_.location)
 
-            validatedObjects ++= roas.map(validatedObject(checkMap))
-            validatedObjects ++= childrenCertificates.map(validatedObject(checkMap))
+            val validatedRoas: Map[URI, ValidatedObject] = roas.map(validatedObject(checkMap)).toMap
+            val validatedCertifcates: Map[URI, ValidatedObject] = childrenCertificates.map(validatedObject(checkMap)).toMap
+            val validatedCrls: Map[URI, ValidatedObject] = crlList.map(validatedObject(checkMap)).toMap
+            val validatedMfts: Map[URI, ValidatedObject] = mftList.map(validatedObject(checkMap)).toMap
 
-            val validatedChildrenObjects = childrenCertificates.flatMap(stepDown)
-            validatedObjects ++= validatedChildrenObjects
+            val myValidatedObjects: Map[URI, ValidatedObject] = merge ( validatedMfts, merge (validatedCrls, merge (validatedRoas, validatedCertifcates)))
+
+            val validatedChildrenObjects = childrenCertificates.flatMap(stepDown).toMap
+
+            merge (myValidatedObjects, validatedChildrenObjects)
 
           case None =>
-            validatedObjects += certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
-              Set(new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex)))
+            Map(certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
+              Set(new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex))))
         }
     }
 
     validatedObjects
+  }
+
+  private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
+    // don't update validation timestamps for validatedChildrenObjects --- it will
+    // be validated by the stepDown recursively
+    val validatedObjects = validatedObjectMap.keySet.map(_.toString)
+    validatedObjects.foreach { uri =>
+      logger.info("Setting validation time for the object: " + uri)
+    }
+    store.updateValidationTimestamp(validatedObjects)
   }
 
   private def merge(m1: Map[URI, ValidatedObject], m2: Map[URI, ValidatedObject]): Map[URI, ValidatedObject] = {
@@ -134,7 +153,6 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
   }
 
-
   def validatedObject[T <: CertificateRepositoryObject](checkMap: Map[ValidationLocation, List[Check]])(r: RepositoryObject[T]): (URI, ValidatedObject) = {
     val uri = new URI(r.url)
     val validationChecks = checkMap.get(new ValidationLocation(uri)).map(_.map(_.impl).toSet)
@@ -144,10 +162,6 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     } else {
       uri -> ValidObject(uri, validationChecks.getOrElse(Set()), r.decoded)
     }
-  }
-
-  private def createValidatedObjects() = {
-
   }
 
   def validate[T <: CertificateRepositoryObject](objects: Seq[RepositoryObject[T]], crl: CrlObject): List[Check] = {
@@ -173,7 +187,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     } else {
       val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
       val nextLevelWalker = new TopDownWalker2(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
-      nextLevelWalker.execute
+      nextLevelWalker.doExecute
     }
   }
 
@@ -297,13 +311,13 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       val objs = store.getObjects(uri.toString)
 
       if (objs.isEmpty)
-        warnings += warning(validationLocation, VALIDATOR_MANIFEST_FILE_NOT_FOUND_BY_AKI, uri.toString, certificateSkiHex)
+        warnings += warning(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, certificateSkiHex)
       else
         objs.foreach { o =>
           if (HashUtil.equals(o.hash, hash)) {
             foundObjects += o
           } else {
-            warnings += warning(validationLocation, VALIDATOR_MANIFEST_LOCATION_MISMATCH, uri.toString, certificateSkiHex)
+            warnings += warning(validationLocation, VALIDATOR_MANIFEST_HASH_MISMATCH, uri.toString, certificateSkiHex)
           }
         }
     }
