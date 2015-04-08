@@ -6,14 +6,14 @@
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- *   - Redistributions of source code must retain the above copyright notice,
- *     this list of conditions and the following disclaimer.
- *   - Redistributions in binary form must reproduce the above copyright notice,
- *     this list of conditions and the following disclaimer in the documentation
- *     and/or other materials provided with the distribution.
- *   - Neither the name of the RIPE NCC nor the names of its contributors may be
- *     used to endorse or promote products derived from this software without
- *     specific prior written permission.
+ * - Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * - Neither the name of the RIPE NCC nor the names of its contributors may be
+ * used to endorse or promote products derived from this software without
+ * specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -44,22 +44,21 @@ import org.apache.commons.lang.Validate
 import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Iterable
 
 class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationContext,
-                    store: Storage,
-                    repoService: RepoService,
-                    validationOptions: ValidationOptions,
-                    validationStartTime: Instant)(seen: scala.collection.mutable.Set[String])
+                     store: Storage,
+                     repoService: RepoService,
+                     validationOptions: ValidationOptions,
+                     validationStartTime: Instant)(seen: scala.collection.mutable.Set[String])
   extends Logging {
 
   private object HashUtil extends Hashing
 
   private val certificateSkiHex: String = HashUtil.stringify(certificateContext.getSubjectKeyIdentifier)
-  
+
   Validate.isTrue(seen.add(certificateSkiHex))
   Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")
-  
+
   private[models] def preferredFetchLocation: Option[URI] = Option(certificateContext.getRpkiNotifyURI).orElse(Option(certificateContext.getRepositoryURI))
 
   case class Check(location: ValidationLocation, impl: ValidationCheck)
@@ -69,7 +68,6 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
   private def warning(location: ValidationLocation, key: String, params: String*) =
     Check(location, new ValidationCheck(ValidationStatus.WARNING, key, params: _*))
-
 
 
   def execute: Map[URI, ValidatedObject] = {
@@ -116,15 +114,15 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
   }
 
 
-  def validatedObject[T <: CertificateRepositoryObject](checkMap: Map[ValidationLocation, List[Check]])(r : RepositoryObject[T]): (URI, ValidatedObject) = {
-      val uri = new URI(r.url)
-      val validationChecks = checkMap.get(new ValidationLocation(uri)).map(_.map(_.impl).toSet)
-      val hasErrors = validationChecks.exists(c => !c.forall(_.isOk))
-      if (hasErrors) {
-        uri -> InvalidObject(uri, validationChecks.get)
-      } else {
-        uri -> ValidObject(uri, validationChecks.getOrElse(Set()), r.decoded)
-      }
+  def validatedObject[T <: CertificateRepositoryObject](checkMap: Map[ValidationLocation, List[Check]])(r: RepositoryObject[T]): (URI, ValidatedObject) = {
+    val uri = new URI(r.url)
+    val validationChecks = checkMap.get(new ValidationLocation(uri)).map(_.map(_.impl).toSet)
+    val hasErrors = validationChecks.exists(c => !c.forall(_.isOk))
+    if (hasErrors) {
+      uri -> InvalidObject(uri, validationChecks.get)
+    } else {
+      uri -> ValidObject(uri, validationChecks.getOrElse(Set()), r.decoded)
+    }
   }
 
   private def createValidatedObjects() = {
@@ -143,7 +141,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
   private def toChecks[T <: CertificateRepositoryObject](location: ValidationLocation, result: ValidationResult): List[Check] = {
     result.getWarnings(location).asScala.map(r => warning(location, r.getKey, r.getParams: _*)).toList ++
-    result.getFailures(location).asScala.map(r => error(location, r.getKey, r.getParams: _*)).toList
+      result.getFailures(location).asScala.map(r => error(location, r.getKey, r.getParams: _*)).toList
   }
 
   private def stepDown(cert: RepositoryObject[X509ResourceCertificate]): Map[URI, ValidatedObject] = {
@@ -186,9 +184,10 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
 
   private def fetchCrlsByAKI: Seq[CrlObject] = store.getCrls(certificateContext.getSubjectKeyIdentifier)
+
   private def fetchMftsByAKI: Seq[ManifestObject] = store.getManifests(certificateContext.getSubjectKeyIdentifier)
 
-  private def crlLocator(crl :CrlObject) = new CrlLocator {
+  private def crlLocator(crl: CrlObject) = new CrlLocator {
     override def getCrl(uri: URI, context: CertificateRepositoryObjectValidationContext, result: ValidationResult): X509Crl =
       crl.decoded
   }
@@ -256,33 +255,39 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
   private def checkManifestObjects(manifest: ManifestObject, crlByAki: CrlObject) = {
     val validationLocation = new ValidationLocation(manifest.url)
 
-//    val (classified @ ClassifiedObjects(roas, childrenCertificates, crlsOnManifest), warnings) = getManifestObjects(manifest)
-//
-//    val crlWarning = crossCheckCrls(crlByAki, crlsOnManifest, validationLocation)
+    val (classified@ClassifiedObjects(roas, childrenCertificates, crlsOnManifest), warnings) = getManifestObjectsOrWarnings(manifest)
+    //
+    val crlWarning = crossCheckCrls(crlByAki, crlsOnManifest, validationLocation)
 
     // TODO Implement more checks for other objects on the manifest
 
-//    (classified, warnings ++ crlWarning.toList)
+    (classified, warnings ++ crlWarning.toList)
   }
 
+  private def getManifestObjectsOrWarnings(manifest: ManifestObject) = {
+    val repositoryUri = certificateContext.getRepositoryURI
+    val validationLocation = new ValidationLocation(manifest.url)
 
-//  private def getManifestObjects(manifest: ManifestObject) = {
-//    val repositoryUri = certificateContext.getRepositoryURI
-//    val validationLocation = new ValidationLocation(manifest.url)
-//    val objectsOrWarnings = manifest.decoded.getHashes.entrySet().asScala.map { e =>
-//      val (uri, hash) = (repositoryUri.resolve(e.getKey), e.getValue)
-//      val objs = store.getObjects(uri)
-//      val r = objs.toRight(warning(validationLocation, VALIDATOR_MANIFEST_FILE_NOT_FOUND_BY_AKI, uri.toString, certificateSkiHex))
-//      r.right.flatMap { o =>
-//        Either.cond[Check, RepositoryObject[_]](HashUtil.equals(o.hash, hash), o,
-//          warning(validationLocation, VALIDATOR_MANIFEST_LOCATION_MISMATCH, uri.toString, certificateSkiHex))
-//      }
-//    }
-//    val warnings = objectsOrWarnings.collect { case Left(w) => w }
-//    val objects = objectsOrWarnings.collect { case Right(o) => o }
-//
-//    (classify(objects.toSeq), warnings.toSeq)
-//  }
+    val warnings = scala.collection.mutable.Buffer[Check]()
+    val validObjects = scala.collection.mutable.Buffer[RepositoryObject[_]]()
 
+    manifest.decoded.getHashes.entrySet().asScala.foreach { e =>
+      val (uri, hash) = (repositoryUri.resolve(e.getKey), e.getValue)
+      val objs = store.getObjects(uri)
+
+      if (objs.isEmpty)
+        warnings += warning(validationLocation, VALIDATOR_MANIFEST_FILE_NOT_FOUND_BY_AKI, uri.toString, certificateSkiHex)
+      else
+        objs.foreach { o =>
+          if (HashUtil.equals(o.hash, hash)) {
+            validObjects += o
+          } else {
+            warnings += warning(validationLocation, VALIDATOR_MANIFEST_LOCATION_MISMATCH, uri.toString, certificateSkiHex)
+          }
+        }
+    }
+
+    (classify(validObjects.toSeq), warnings.toSeq)
+  }
 
 }
