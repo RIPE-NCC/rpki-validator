@@ -78,7 +78,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     val childrenValidatedObjects = findCrl match {
       case None =>
         certContextValidationResult.rejectForLocation(certContextValidationLocation, CRL_REQUIRED, s"No valid CRL found with AKI=$certificateSkiHex")
-        validatedObjects += certificateContext.getLocation -> InvalidObject(certificateContext.getLocation, certContextValidationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
+        validatedObjects += certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
+          certContextValidationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
         Seq()
 
       case Some(crl) =>

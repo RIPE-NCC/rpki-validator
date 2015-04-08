@@ -30,10 +30,15 @@
 package net.ripe.rpki.validator.store
 
 import java.io.File
+import java.net.URI
 import java.sql.{ResultSet, Timestamp}
+import java.util
 import javax.sql.DataSource
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
+import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
@@ -56,11 +61,16 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     override def doInTransaction(transactionStatus: TransactionStatus) = f
   })
 
+  private val roaObjectType = "roa"
+  private val manifestObjectType = "manifest"
+  private val crlObjectType = "crl"
+
   private val locker = new Locker
 
   override def storeCertificate(certificate: CertificateObject) =
     locker.locked(certificate.url) {
-      val params = Map("aki" -> stringify(certificate.aki),
+      val params = Map(
+        "aki" -> stringify(certificate.aki),
         "ski" -> stringify(certificate.ski),
         "hash" -> stringify(certificate.hash),
         "url" -> certificate.url,
@@ -84,11 +94,12 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       }
     }
 
-  override def storeRoa(roa: RoaObject) = storeRepoObject(roa, "roa")
 
-  override def storeManifest(manifest: ManifestObject) = storeRepoObject(manifest, "manifest")
+  override def storeRoa(roa: RoaObject) = storeRepoObject(roa, roaObjectType)
 
-  override def storeCrl(crl: CrlObject) = storeRepoObject(crl, "crl")
+  override def storeManifest(manifest: ManifestObject) = storeRepoObject(manifest, manifestObjectType)
+
+  override def storeCrl(crl: CrlObject) = storeRepoObject(crl, crlObjectType)
 
   private def storeRepoObject[T <: CertificateRepositoryObject](obj: RepositoryObject[T], objType: String) =
     locker.locked(obj.url) {
@@ -161,15 +172,15 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
           copy(validationTime = instant(rs.getTimestamp(4)))
       }).toSeq
 
-  def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, "crl") { (url, bytes, validationTime) =>
+  def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, crlObjectType) { (url, bytes, validationTime) =>
     CrlObject.parse(url, bytes).copy(validationTime = validationTime)
   }
 
-  def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, "manifest") { (url, bytes, validationTime) =>
+  def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, manifestObjectType) { (url, bytes, validationTime) =>
     ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
   }
 
-  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, "roa") { (url, bytes, validationTime) =>
+  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, roaObjectType) { (url, bytes, validationTime) =>
     RoaObject.parse(url, bytes).copy(validationTime = validationTime)
   }
 
@@ -198,6 +209,38 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       new RowMapper[T] {
         override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)))
       }).toSeq
+
+  override def getObjects(uri: URI): Seq[RepositoryObject[_]] = {
+    val objects = template.query(
+      """SELECT encoded, validation_time, object_type
+        FROM repo_objects
+        WHERE url = :url""",
+      Map("url" -> uri),
+      new RowMapper[RepositoryObject[_]] {
+        override def mapRow(rs: ResultSet, i: Int) = {
+          val (bytes, validationTime, objType) = (rs.getBytes(1), instant(rs.getTimestamp(2)), rs.getString(3))
+          objType match {
+            case "roa" => RoaObject.parse(uri.toString, bytes).copy(validationTime = validationTime)
+            case "manifest" => ManifestObject.parse(uri.toString, bytes).copy(validationTime = validationTime)
+            case "crl" => CrlObject.parse(uri.toString, bytes).copy(validationTime = validationTime)
+          }
+        }
+      })
+
+    val certificates = template.query(
+      """SELECT encoded, validation_time
+        FROM certificates
+        WHERE url = :url""",
+      Map("url" -> uri),
+      new RowMapper[RepositoryObject[_]] {
+        override def mapRow(rs: ResultSet, i: Int) = {
+          val (bytes, validationTime) = (rs.getBytes(1), instant(rs.getTimestamp(2)))
+          CertificateObject.parse(uri.toString, bytes).copy(validationTime = validationTime)
+        }
+      })
+
+    objects ++ certificates
+  }
 
   def clear() = {
     for (t <- Seq("certificates", "repo_objects", "broken_objects"))
@@ -236,7 +279,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       case _ => None
     }
 
-  def updateValidationTimestamp(urls: Iterable[String], t: Instant) = atomic {
+  def updateValidationTimestamp(urls: Iterable[String], t: Instant) = {
     val tt = timestamp(t)
     // That has to be as fast as possible to prevent
     // other threads from being locked. That's why
