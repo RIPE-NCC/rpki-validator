@@ -33,7 +33,7 @@ package fetchers
 import java.io.File
 import java.net.URI
 import java.security.cert.CertificateExpiredException
-import javax.security.cert.CertificateNotYetValidException
+import java.security.cert.CertificateNotYetValidException
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
