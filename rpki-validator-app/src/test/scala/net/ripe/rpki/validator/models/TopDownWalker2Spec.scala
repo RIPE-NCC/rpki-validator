@@ -203,11 +203,11 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   private def createMftWithCrlAndEntries(crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
-    createMftWithEntries(ROOT_KEY_PAIR, entries.toSeq :+ (ROOT_CRL_LOCATION, crlContent):_*)
+    createMftWithEntries(ROOT_KEY_PAIR, entries.toSeq :+(ROOT_CRL_LOCATION, crlContent):_*)
   }
 
   private def createMftWithCrlAndEntries(keyPair: KeyPair, crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
-    createMftWithEntries(keyPair, entries.toSeq :+ (ROOT_CRL_LOCATION, crlContent):_*)
+    createMftWithEntries(keyPair, entries.toSeq :+(ROOT_CRL_LOCATION, crlContent):_*)
   }
 
   private def createMftWithEntries(keyPair: KeyPair, entries: (URI, Array[Byte])*): ManifestCms = {

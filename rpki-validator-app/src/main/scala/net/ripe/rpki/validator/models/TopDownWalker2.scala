@@ -103,11 +103,16 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
             val checkMap = checks.groupBy(_.location)
 
+            val validatedChildren = childrenCertificates.view.map { c =>
+              val v = validatedObject(checkMap)(c)
+              (c, v, c.decoded.isObjectIssuer && v._2.isValid)
+            }
+
             Seq(roas.map(validatedObject(checkMap)),
-              childrenCertificates.map(validatedObject(checkMap)),
+              validatedChildren.map(_._2).force,
               crlList.map(validatedObject(checkMap)),
               mftList.map(validatedObject(checkMap)),
-              childrenCertificates.filter(_.decoded.isObjectIssuer).flatMap(stepDown(checkMap))
+              validatedChildren.filter(_._3).map(_._1).force.flatMap(stepDown)
             ).map(_.toMap).fold(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
 
           case None =>
@@ -172,19 +177,15 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       result.getFailures(location).asScala.map(r => error(location, r.getKey, r.getParams: _*)).toList
   }
 
-  private def stepDown(checkMap: Map[ValidationLocation, List[Check]])(cert: RepositoryObject[X509ResourceCertificate]): Map[URI, ValidatedObject] = {
-    validatedObject(checkMap)(cert) match {
-      case (uri, v: ValidObject) =>
-        val ski: String = HashUtil.stringify(cert.decoded.getSubjectKeyIdentifier)
-        if (seen.contains(ski)) {
-          logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
-          Map()
-        } else {
-          val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
-          val nextLevelWalker = new TopDownWalker2(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
-          nextLevelWalker.doExecute
-        }
-      case (uri, x: ValidatedObject) => Map()
+  private def stepDown(cert: RepositoryObject[X509ResourceCertificate]): Map[URI, ValidatedObject] = {
+    val ski: String = HashUtil.stringify(cert.decoded.getSubjectKeyIdentifier)
+    if (seen.contains(ski)) {
+      logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
+      Map()
+    } else {
+      val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
+      val nextLevelWalker = new TopDownWalker2(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
+      nextLevelWalker.doExecute
     }
   }
 
