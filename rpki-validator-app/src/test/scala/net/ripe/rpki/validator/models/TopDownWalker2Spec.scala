@@ -75,35 +75,47 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   override def beforeEach() {
     storage.clear()
     taContext = createTaContext
+//
+//    val childCertificateCrl = getCrl(CERTIFICATE_NAME, CERTIFICATE_KEY_PAIR)
+//    storage.storeCrl(CrlObject(REPO_LOCATION + "childCertificateCrl.cer", childCertificateCrl))
+  }
 
-    val childCertificateCrl = getCrl(CERTIFICATE_NAME, CERTIFICATE_KEY_PAIR)
-    storage.storeCrl(CrlObject(REPO_LOCATION + "childCertificateCrl.cer", childCertificateCrl))
+  test("should not give warnings when all entries are present in the manifest") {
+
+    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
+    val crl = createEmptyCrl()
+    createMftWithCrlAndEntries(crl.getEncoded, (certificateLocation, certificate.getEncoded))
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result.get(certificateLocation) should be ('empty)
   }
 
   test("should warn about expired certificates that are on the manifest") {
 
     val (expiredCertificateLocation, cert) = createExpiredResourceCertificate("expired.cer")
-    createMftWithEntries((expiredCertificateLocation, cert.getEncoded))
-
-    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
-    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
+    val crl = createEmptyCrl()
+    createMftWithCrlAndEntries(crl.getEncoded, (expiredCertificateLocation, cert.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
-    result.get(expiredCertificateLocation).exists(_.hasCheckKey(ValidationString.NOT_VALID_AFTER)) should be(true)
+
+    result.get(expiredCertificateLocation).exists(o => o.hasCheckKey(ValidationString.NOT_VALID_AFTER) && o.uri == expiredCertificateLocation) should be(true)
   }
 
   test("should ignore alert messages for revoked certificates that are not on the manifest and not in repository") {
 
-    val (certificateLocation, certificate) = createValidResourceCertificate("expired.cer")
-    storage.updateValidationTimestamp(Seq(certificateLocation.toString), NOW.minusDays(1).toInstant)
+    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
     val crl = createCrlWithEntry(certificate)
-    createMftWithEntries((ROOT_CRL_LOCATION, crl.getEncoded))
+    createMftWithCrlAndEntries(crl.getEncoded)
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
+
     result.get(certificateLocation) should be('empty)
   }
 
@@ -116,11 +128,13 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
+
     result.get(ROOT_MANIFEST_LOCATION).filter(_.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE)) should be('empty)
   }
 
   test("Should prefer rpkiNotify URI over caRepository URI") {
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
     subject.preferredFetchLocation.get should be(RRDP_NOTIFICATION_LOCATION)
   }
 
@@ -134,7 +148,8 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     val now = Instant.now()
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, validationTime)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    subject.execute
+
     val certs = storage.getCertificates(certificate.getAuthorityKeyIdentifier)
     val mfts = storage.getManifests(certificate.getAuthorityKeyIdentifier)
     val crls = storage.getCrls(certificate.getAuthorityKeyIdentifier)
@@ -170,6 +185,12 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
   private def extractFileName(uri: URI): String = {
     uri.toString.split('/').last
+  }
+
+  def createEmptyCrl() = {
+    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
+    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
+    taCrl
   }
 
   def createCrlWithEntry(certificate: X509ResourceCertificate) = {
@@ -234,6 +255,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     builder.withSigningKeyPair(ROOT_KEY_PAIR)
     builder.withCrlDistributionPoints(URI.create("rsync://foo.host/bar/i_dont_care.crl"))
     builder.withCa(true)
+    builder.withKeyUsage(KeyUsage.keyCertSign)
     builder.withSubjectInformationAccess(
       new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_CA_REPOSITORY, REPO_LOCATION),
       new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_MANIFEST, ROOT_MANIFEST_LOCATION)
@@ -254,7 +276,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     builder.withThisUpdateTime(NOW)
     builder.withNextUpdateTime(NOW.plusHours(8))
     builder.withNumber(BigInteger.TEN)
-    builder.withAuthorityKeyIdentifier(keyPair.getPublic)
+    builder.withAuthorityKeyIdentifier(keyPair.getPublic)     // TODO use the ski from the rootResourceCertificate
 
     revokedSerials.foreach {
       i => builder.addEntry(i, NOW.minusDays(1))
