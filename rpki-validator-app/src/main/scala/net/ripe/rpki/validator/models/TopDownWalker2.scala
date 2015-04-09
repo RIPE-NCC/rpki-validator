@@ -70,13 +70,13 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     Check(location, new ValidationCheck(ValidationStatus.WARNING, key, params: _*))
 
 
-  def execute = {
-    val validatedObjects = doExecute()
+  def execute: Map[URI, ValidatedObject] = {
+    val validatedObjects = doExecute
     updateValidationTimes(validatedObjects)
     validatedObjects
   }
 
-  def doExecute(): Map[URI, ValidatedObject] = {
+  private def doExecute = {
     logger.info(s"Validating ${certificateContext.getLocation}")
     val fetchErrors = preferredFetchLocation.map(prefetch)
 
@@ -119,8 +119,6 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
   }
 
   private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
-    // don't update validation timestamps for validatedChildrenObjects --- it will
-    // be validated by the stepDown recursively
     val validatedObjects = validatedObjectMap.keySet.map(_.toString)
     validatedObjects.foreach { uri =>
       logger.info("Setting validation time for the object: " + uri)
