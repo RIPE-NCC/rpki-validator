@@ -78,9 +78,6 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
     storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
-//
-//    val childCertificateCrl = getCrl(CERTIFICATE_NAME, CERTIFICATE_KEY_PAIR)
-//    storage.storeCrl(CrlObject(REPO_LOCATION + "childCertificateCrl.cer", childCertificateCrl))
   }
 
   test("should not give warnings when all entries are present in the manifest") {
@@ -94,6 +91,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     val result = subject.execute
 
+    result should have size(3)
     result.get(certificateLocation) should be ('empty)
   }
 
@@ -217,7 +215,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     val nextUpdateTime = NOW.plusYears(1)
 
     val builder: ManifestCmsBuilder = new ManifestCmsBuilder
-    builder.withCertificate(createManifestEECertificate).withManifestNumber(BigInteger.valueOf(68))
+    builder.withCertificate(createManifestEECertificate(keyPair)).withManifestNumber(BigInteger.valueOf(68))
     builder.withThisUpdateTime(thisUpdateTime).withNextUpdateTime(nextUpdateTime)
 
     entries.foreach { e =>
@@ -233,11 +231,11 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     manifest
   }
 
-  private def createManifestEECertificate: X509ResourceCertificate = {
+  private def createManifestEECertificate(keyPair: KeyPair): X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withCa(false).withSubjectDN(new X500Principal("CN=EECert")).withIssuerDN(ROOT_CERTIFICATE_NAME).withSerial(BigInteger.ONE)
-    builder.withPublicKey(ROOT_KEY_PAIR.getPublic)
-    builder.withSigningKeyPair(ROOT_KEY_PAIR)
+    builder.withPublicKey(keyPair.getPublic)
+    builder.withSigningKeyPair(keyPair)
     builder.withInheritedResourceTypes(java.util.EnumSet.allOf(classOf[IpResourceType]))
     builder.withValidityPeriod(VALIDITY_PERIOD)
     builder.withCrlDistributionPoints(ROOT_CRL_LOCATION)
