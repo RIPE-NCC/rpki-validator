@@ -38,14 +38,12 @@ import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.validation._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.rpki.validator.models.ValidatedObject
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.Storage
 import org.apache.commons.lang.Validate
 import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 
 class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationContext,
                      store: Storage,
@@ -73,12 +71,12 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
 
   def execute = {
-    val validatedObjects = doExecute
+    val validatedObjects = doExecute()
     updateValidationTimes(validatedObjects)
     validatedObjects
   }
 
-  def doExecute: Map[URI, ValidatedObject] = {
+  def doExecute(): Map[URI, ValidatedObject] = {
     logger.info(s"Validating ${certificateContext.getLocation}")
     val fetchErrors = preferredFetchLocation.map(prefetch)
 
@@ -104,16 +102,12 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
             val checkMap = checks.groupBy(_.location)
 
-            val validatedRoas: Map[URI, ValidatedObject] = roas.map(validatedObject(checkMap)).toMap
-            val validatedCertifcates: Map[URI, ValidatedObject] = childrenCertificates.map(validatedObject(checkMap)).toMap
-            val validatedCrls: Map[URI, ValidatedObject] = crlList.map(validatedObject(checkMap)).toMap
-            val validatedMfts: Map[URI, ValidatedObject] = mftList.map(validatedObject(checkMap)).toMap
-
-            val myValidatedObjects: Map[URI, ValidatedObject] = merge ( validatedMfts, merge (validatedCrls, merge (validatedRoas, validatedCertifcates)))
-
-            val validatedChildrenObjects = childrenCertificates.flatMap(stepDown).toMap
-
-            merge (myValidatedObjects, validatedChildrenObjects)
+            Seq(roas.map(validatedObject(checkMap)),
+              childrenCertificates.map(validatedObject(checkMap)),
+              crlList.map(validatedObject(checkMap)),
+              mftList.map(validatedObject(checkMap)),
+              childrenCertificates.flatMap(stepDown)
+            ).map(_.toMap).fold(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
 
           case None =>
             Map(certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
