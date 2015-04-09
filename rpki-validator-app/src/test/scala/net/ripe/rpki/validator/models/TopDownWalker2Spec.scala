@@ -31,7 +31,7 @@ package net.ripe.rpki.validator.models
 
 import java.math.BigInteger
 import java.net.URI
-import java.security.KeyPair
+import java.security.{PublicKey, KeyPair}
 import javax.security.auth.x500.X500Principal
 
 import net.ripe.ipresource.{IpResourceSet, IpResourceType}
@@ -75,6 +75,9 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   override def beforeEach() {
     storage.clear()
     taContext = createTaContext
+
+    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
+    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
 //
 //    val childCertificateCrl = getCrl(CERTIFICATE_NAME, CERTIFICATE_KEY_PAIR)
 //    storage.storeCrl(CrlObject(REPO_LOCATION + "childCertificateCrl.cer", childCertificateCrl))
@@ -83,8 +86,9 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   test("should not give warnings when all entries are present in the manifest") {
 
     val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
-    val crl = createEmptyCrl()
-    createMftWithCrlAndEntries(crl.getEncoded, (certificateLocation, certificate.getEncoded))
+    val crl = createEmptyCrl(CERTIFICATE_KEY_PAIR)
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, crl.getEncoded)
+    createMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, crl.getEncoded, (certificateLocation, certificate.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
@@ -96,7 +100,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   test("should warn about expired certificates that are on the manifest") {
 
     val (expiredCertificateLocation, cert) = createExpiredResourceCertificate("expired.cer")
-    val crl = createEmptyCrl()
+    val crl = createEmptyCrl(CERTIFICATE_KEY_PAIR)
     createMftWithCrlAndEntries(crl.getEncoded, (expiredCertificateLocation, cert.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
@@ -187,8 +191,8 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     uri.toString.split('/').last
   }
 
-  def createEmptyCrl() = {
-    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
+  def createEmptyCrl(keyPair: KeyPair) = {
+    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, keyPair)
     storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
     taCrl
   }
@@ -200,10 +204,14 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   private def createMftWithCrlAndEntries(crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
-    createMftWithEntries(entries.toSeq :+ (ROOT_CRL_LOCATION, crlContent):_*)
+    createMftWithEntries(ROOT_KEY_PAIR, entries.toSeq :+ (ROOT_CRL_LOCATION, crlContent):_*)
   }
 
-  private def createMftWithEntries(entries: (URI, Array[Byte])*): ManifestCms = {
+  private def createMftWithCrlAndEntries(keyPair: KeyPair, crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
+    createMftWithEntries(keyPair, entries.toSeq :+ (ROOT_CRL_LOCATION, crlContent):_*)
+  }
+
+  private def createMftWithEntries(keyPair: KeyPair, entries: (URI, Array[Byte])*): ManifestCms = {
 
     val thisUpdateTime = NOW.minusMinutes(1)
     val nextUpdateTime = NOW.plusYears(1)
@@ -219,7 +227,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     builder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER)
 
-    val manifest = builder.build(ROOT_KEY_PAIR.getPrivate)
+    val manifest = builder.build(keyPair.getPrivate)
     storage.storeManifest(ManifestObject(ROOT_MANIFEST_LOCATION.toString, manifest))
 
     manifest
