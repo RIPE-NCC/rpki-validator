@@ -52,7 +52,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
 
   val store = new HttpFetcherStore(DataSources.InMemoryDataSource)
 
-  type FetcherReturnType = Either[BrokenObject, RepositoryObject[_]]
+  type FetcherReturnType = Either[BrokenObject, RepositoryObject.ROType]
 
   before {
     store.clear()
@@ -84,11 +84,11 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
   }
 
   def fetchRepo(fetcher: HttpFetcher, rootUrl: String) = {
-    var objects = List[RepositoryObject[_]]()
+    var objects = List[RepositoryObject.ROType]()
     var withdraws = List[(URI, String)]()
 
     val errors: Seq[Fetcher.Error] = fetcher.fetchRepo(new URI(rootUrl), new FetcherListener {
-      override def processObject(repoObj: RepositoryObject[_]) = {
+      override def processObject(repoObj: RepositoryObject.ROType) = {
         objects = repoObj :: objects
       }
 
