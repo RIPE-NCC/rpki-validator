@@ -246,7 +246,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
   case class ClassifiedObjects(roas: Seq[RoaObject], certificates: Seq[CertificateObject], crls: Seq[CrlObject])
 
-  private def classify(objects: Seq[RepositoryObject[_]]) = {
+  private def classify(objects: Seq[RepositoryObject.ROType]) = {
     var (roas, certificates, crls) = (List[RoaObject](), List[CertificateObject](), List[CrlObject]())
     val c = objects.foreach {
       case roa: RoaObject => roas = roa :: roas
@@ -302,20 +302,20 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     val validationLocation = new ValidationLocation(manifest.url)
 
     val warnings = scala.collection.mutable.Buffer[Check]()
-    val foundObjects = scala.collection.mutable.Buffer[RepositoryObject[_]]()
+    val foundObjects = scala.collection.mutable.Buffer[RepositoryObject.ROType]()
 
     manifest.decoded.getHashes.entrySet().asScala.foreach { e =>
       val (uri, hash) = (repositoryUri.resolve(e.getKey), e.getValue)
-      val objs = store.getObjects(uri.toString)
+      val obj = store.getObject(HashUtil.stringify(hash))
 
-      if (objs.isEmpty)
+      if (obj.isEmpty)
         warnings += warning(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, certificateSkiHex)
       else
-        objs.foreach { o =>
-          if (HashUtil.equals(o.hash, hash)) {
+        obj.foreach { o =>
+          if (o.url == uri.toString) {
             foundObjects += o
           } else {
-            warnings += warning(validationLocation, VALIDATOR_MANIFEST_HASH_MISMATCH, uri.toString, certificateSkiHex)
+            warnings += warning(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, certificateSkiHex)
           }
         }
     }

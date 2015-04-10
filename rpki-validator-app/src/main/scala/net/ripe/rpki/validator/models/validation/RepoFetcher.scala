@@ -29,8 +29,8 @@
  */
 package net.ripe.rpki.validator.models.validation
 
+import scala.language.existentials
 import java.io.File
-import java.math.BigInteger
 import java.net.URI
 
 import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsParser}
@@ -61,7 +61,12 @@ trait Hashing {
   def equals(hashA: Array[Byte], hashB: Array[Byte]): Boolean = { hashA.deep == hashB.deep }
 }
 
+object RepositoryObject {
+  type ROType = RepositoryObject[T] forSome { type T <: net.ripe.rpki.commons.crypto.CertificateRepositoryObject }
+}
+
 sealed trait RepositoryObject[T <: net.ripe.rpki.commons.crypto.CertificateRepositoryObject] extends Hashing {
+
   def url: String
 
   def aki: Array[Byte]
@@ -232,7 +237,7 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
   private def fetch(repoUri: URI, fetcher: Fetcher): Seq[Fetcher.Error] = {
     storage.atomic {
       fetcher.fetchRepo(repoUri, new FetcherListener {
-        override def processObject(repoObj: RepositoryObject[_]) = {
+        override def processObject(repoObj: RepositoryObject.ROType) = {
           repoObj match {
             case c: CertificateObject => storage.storeCertificate(c)
             case c: CrlObject => storage.storeCrl(c)

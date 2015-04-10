@@ -36,7 +36,7 @@ import net.ripe.rpki.validator.models.validation._
 case class FetcherConfig(rsyncDir: String = "", taName: String = "")
 
 trait FetcherListener {
-  def processObject(repoObj: RepositoryObject[_])
+  def processObject(repoObj: RepositoryObject.ROType)
   def processBroken(brokenObj: BrokenObject)
   def withdraw(url: URI, hash: String)
 }

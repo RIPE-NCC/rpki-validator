@@ -52,7 +52,7 @@ class SingleObjectHttpFetcherTest extends ValidatorTestCase with BeforeAndAfter 
 
   val store = new HttpFetcherStore(DataSources.InMemoryDataSource)
 
-  type FetcherReturnType = Either[BrokenObject, RepositoryObject[_]]
+  type FetcherReturnType = Either[BrokenObject, RepositoryObject.ROType]
 
   before {
     store.clear()
@@ -83,10 +83,10 @@ class SingleObjectHttpFetcherTest extends ValidatorTestCase with BeforeAndAfter 
   }
 
   def fetchRepo(fetcher: SingleObjectHttpFetcher, rootUrl: String) = {
-    var objects = List[RepositoryObject[_]]()
+    var objects = List[RepositoryObject.ROType]()
 
     val errors: Seq[Fetcher.Error] = fetcher.fetchRepo(new URI(rootUrl), new FetcherListener {
-      override def processObject(repoObj: RepositoryObject[_]) = {
+      override def processObject(repoObj: RepositoryObject.ROType) = {
         objects = repoObj :: objects
       }
 
