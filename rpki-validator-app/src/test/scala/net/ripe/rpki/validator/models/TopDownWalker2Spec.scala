@@ -31,7 +31,7 @@ package net.ripe.rpki.validator.models
 
 import java.math.BigInteger
 import java.net.URI
-import java.security.{PublicKey, KeyPair}
+import java.security.KeyPair
 import javax.security.auth.x500.X500Principal
 
 import net.ripe.ipresource.{IpResourceSet, IpResourceType}
@@ -93,7 +93,8 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     val result = subject.execute
 
     result should have size(3)
-    result.get(certificateLocation) should be ('empty)   // TODO fails because recursion is done for the certificate but no child crl is found
+
+    result.get(certificateLocation).get.checks should be ('empty)
     // TODO check that also the entries for the crl and the mft dont have warnings and are validObjects
   }
 
@@ -107,7 +108,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     val result = subject.execute
 
     result should have size(3)
-    result.get(certificateLocation) // should be ('empty)   // TODO test that there is a warning
+    result.get(certificateLocation).get.checks should not be ('empty)
   }
 
   // TODO test also:
@@ -291,8 +292,10 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     builder.withPublicKey(CERTIFICATE_KEY_PAIR.getPublic)
     builder.withSigningKeyPair(ROOT_KEY_PAIR)
     builder.withCrlDistributionPoints(URI.create("rsync://foo.host/bar/i_dont_care.crl"))
-    builder.withCa(true)
-    builder.withKeyUsage(KeyUsage.keyCertSign)
+    builder.withKeyUsage(KeyUsage.digitalSignature)
+//    builder.withCa(true)
+//    builder.withKeyUsage(KeyUsage.cRLSign)
+//    builder.withKeyUsage(KeyUsage.keyCertSign)
 
     if (isObjectIssuer) {
       builder.withSubjectInformationAccess(
