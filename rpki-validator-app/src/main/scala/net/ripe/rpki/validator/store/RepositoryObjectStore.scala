@@ -116,7 +116,7 @@ class RepositoryObjectStore(datasource: DataSource) {
 
 object DataSources {
 
-  private object DSSingletons extends Singletons[String, DataSource]({ dataDirBasePath =>
+  private object DSSingletons extends SimpleSingletons[String, DataSource]({ dataDirBasePath =>
     val result = new BasicDataSource
     result.setUrl("jdbc:h2:" + dataDirBasePath + File.separator + "rpki-object-cache;MVCC=TRUE")
     result.setDriverClassName("org.h2.Driver")

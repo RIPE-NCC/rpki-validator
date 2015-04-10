@@ -157,13 +157,14 @@ class Main extends Http { main =>
     val maxStaleDays = userPreferences.single.get.maxStaleDays
     val trustAnchors = memoryImage.single.get.trustAnchors.all
 
-    val taLocators = trustAnchorNames.flatMap { name => trustAnchors.find(_.name == name) }.map(_.locator)
+    val taLocators = trustAnchorNames.flatMap { name => trustAnchors.find(_.name == name) }
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays,
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator.locator, maxStaleDays,
           ApplicationOptions.workDirLocation,
-          FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation),
+          ApplicationOptions.rsyncDirLocation,
+          trustAnchorLocator.name,
           ApplicationOptions.enableLooseValidation
         ) with TrackValidationProcess with ValidationProcessLogger {
           override val memoryImage = main.memoryImage
@@ -172,7 +173,7 @@ class Main extends Http { main =>
           process.runProcess() match {
             case Success(validatedObjectsByUri) =>
               val validatedObjects = validatedObjectsByUri.values.toSeq
-              updateMemoryImage(_.updateValidatedObjects(trustAnchorLocator, validatedObjects))
+              updateMemoryImage(_.updateValidatedObjects(trustAnchorLocator.locator, validatedObjects))
             case Failure(_) =>
           }
         } finally {

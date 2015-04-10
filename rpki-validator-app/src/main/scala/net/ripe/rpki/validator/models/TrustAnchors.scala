@@ -199,7 +199,8 @@ trait ValidationProcess {
 
 class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int,
                                    storageDirectory: File,
-                                   fetcherConfig: FetcherConfig,
+                                   rsyncDir: String,
+                                   taName: String,
                                    enableLooseValidation: Boolean = false)
   extends ValidationProcess {
 
@@ -208,8 +209,8 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   validationOptions.setMaxStaleDays(maxStaleDays)
   validationOptions.setLooseValidationEnabled(enableLooseValidation)
 
-  val store = DurableCaches(storageDirectory)
-  val repoService = new RepoService(RepoFetcher(storageDirectory, fetcherConfig))
+  val store = DurableCaches(storageDirectory, taName)
+  val repoService = new RepoService(RepoFetcher(storageDirectory, FetcherConfig(rsyncDir, taName)))
 
   override def extractTrustAnchorLocator(): ValidatedObject = {
     val uri = trustAnchorLocator.getCertificateLocation
@@ -232,7 +233,9 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val startTime = Instant.now
     trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
     val walker = new TopDownWalker(certificate, store, repoService, validationOptions, startTime)(scala.collection.mutable.Set())
-    walker.execute
+    val result: Map[URI, ValidatedObject] = walker.execute
+    store.clearOldObjects(startTime)
+    result
   }
 
   private def keyInfoMatches(certificate: CertificateObject): Boolean = {

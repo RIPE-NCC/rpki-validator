@@ -43,7 +43,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
   private val memoryDataSource = DataSources.InMemoryDataSource
 
-  private val store = new CacheStore(memoryDataSource)
+  private val store = new CacheStore(memoryDataSource, TA_NAME)
 
   val testCrl = X509CrlTest.createCrl
   val testManifest = ManifestCmsTest.getRootManifestCms
@@ -167,6 +167,26 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val certificates = store.getCertificates(certificate.aki)
     certificates should have length 1
     certificates.head.validationTime should be(Some(newTime))
+  }
+
+  test("Delete old objects") {
+
+    val roa: RoaObject = RoaObject(url = "rsync://bla.roa", decoded = testRoa)
+    store.storeRoa(roa)
+
+    val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
+    store.storeCertificate(certificate)
+
+    val timeInThePast = Instant.now.minus(1000l)
+    store.updateValidationTimestamp(Seq(roa.url, certificate.url), timeInThePast)
+
+    store.clearOldObjects(Instant.now)
+
+    val roas = store.getRoas(roa.aki)
+    roas should have length 0
+
+    val certificates = store.getCertificates(certificate.aki)
+    certificates should have length 0
   }
 
   test("Should delete objects in batches") {

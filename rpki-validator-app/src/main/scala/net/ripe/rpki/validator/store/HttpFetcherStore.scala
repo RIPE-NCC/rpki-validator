@@ -87,9 +87,9 @@ class HttpFetcherStore(dataSource: DataSource) {
   }
 }
 
-object HttpFetcherStore extends Singletons[String, HttpFetcherStore]({
+object HttpFetcherStore extends SimpleSingletons[String, HttpFetcherStore]({
   path =>
     new HttpFetcherStore(DataSources.DurableDataSource(new File(path)))
 }) {
-  def inMemory: HttpFetcherStore = new HttpFetcherStore(DataSources.InMemoryDataSource)
+  def inMemory(taName: String): HttpFetcherStore = new HttpFetcherStore(DataSources.InMemoryDataSource)
 }

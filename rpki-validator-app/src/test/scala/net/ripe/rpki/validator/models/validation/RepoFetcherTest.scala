@@ -34,14 +34,14 @@ import java.net.URI
 
 import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.fetchers.FetcherConfig
-import net.ripe.rpki.validator.store.{DataSources, CacheStore, Storage}
+import net.ripe.rpki.validator.store.{DataSources, CacheStore}
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.scalatest.mock.MockitoSugar
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
 
-  val storage = new CacheStore(DataSources.InMemoryDataSource)
+  val storage = new CacheStore(DataSources.InMemoryDataSource, TA_NAME)
 
   test("Should create different directories for different repo URLs") {
     val fetcher = RepoFetcher.inMemory(FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation))

@@ -43,7 +43,7 @@ import org.scalatest.mock.MockitoSugar
 class RsyncFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
 
   test("Should download repository") {
-    val fetcher = new RsyncFetcher(FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation))
+    val fetcher = new RsyncFetcher(FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation, TA_NAME))
 
     System.gc()
     Thread.sleep(2000)
