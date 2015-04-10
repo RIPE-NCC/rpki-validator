@@ -86,16 +86,17 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   test("should not give warnings when all entries are present in the manifest") {
 
     val (certificateLocation, certificate) = createLeafResourceCertificate("valid.cer")
-    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
+    val mft = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
 
-    result should have size(3)
+    result should have size 3
 
     result.get(certificateLocation).get.checks should be ('empty)
-    // TODO check that also the entries for the crl and the mft dont have warnings and are validObjects
+    result.get(ROOT_CRL_LOCATION).get.checks should be ('empty)
+    result.get(ROOT_MANIFEST_LOCATION).get.checks should be ('empty)
   }
 
   test("should give warning when no crl refers to a certificate that is an object issuer") {
@@ -107,7 +108,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     val result = subject.execute
 
-    result should have size(3)
+    result should have size 3
     result.get(certificateLocation).get.checks should not be ('empty)
   }
 
@@ -120,7 +121,6 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   // - crl that revokes its own mft (should give error)
   // - mismatching hashes
 
-  // TODO find by hash; if not found: error; then check uri; if mismatch: error
 
   // TODO make sure all existing tests have a valid setup and context
 
@@ -243,8 +243,10 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     val nextUpdateTime = NOW.plusYears(1)
 
     val builder: ManifestCmsBuilder = new ManifestCmsBuilder
-    builder.withCertificate(createManifestEECertificate(keyPair)).withManifestNumber(BigInteger.valueOf(68))
-    builder.withThisUpdateTime(thisUpdateTime).withNextUpdateTime(nextUpdateTime)
+    builder.withCertificate(createManifestEECertificate(keyPair))
+      .withManifestNumber(BigInteger.valueOf(68))
+      .withThisUpdateTime(thisUpdateTime)
+      .withNextUpdateTime(nextUpdateTime)
 
     entries.foreach { e =>
       val (u, content) = e
@@ -267,6 +269,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     builder.withInheritedResourceTypes(java.util.EnumSet.allOf(classOf[IpResourceType]))
     builder.withValidityPeriod(VALIDITY_PERIOD)
     builder.withCrlDistributionPoints(ROOT_CRL_LOCATION)
+    builder.withKeyUsage(KeyUsage.digitalSignature);
     builder.build
   }
 
