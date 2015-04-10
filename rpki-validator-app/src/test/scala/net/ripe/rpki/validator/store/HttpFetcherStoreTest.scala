@@ -37,7 +37,7 @@ import org.scalatest.BeforeAndAfter
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class HttpFetcherStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
-  val store = new HttpFetcherStore(DataSources.InMemoryDataSource, TA_NAME)
+  val store = new HttpFetcherStore(DataSources.InMemoryDataSource)
 
   before {
     store.clear()

@@ -71,37 +71,62 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
   private val storage = new CacheStore(DataSources.InMemoryDataSource, TA_NAME)
   private var taContext: CertificateRepositoryObjectValidationContext = _
+  private var taCrl: X509Crl = _
 
   override def beforeEach() {
     storage.clear()
-    taContext = createTaContext
 
-    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
+    val rootResourceCertificate = getRootResourceCertificate
+    taContext = new CertificateRepositoryObjectValidationContext(URI.create("rsync://host/ta"), rootResourceCertificate)
+
+    taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
     storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
-//
-//    val childCertificateCrl = getCrl(CERTIFICATE_NAME, CERTIFICATE_KEY_PAIR)
-//    storage.storeCrl(CrlObject(REPO_LOCATION + "childCertificateCrl.cer", childCertificateCrl))
   }
 
   test("should not give warnings when all entries are present in the manifest") {
 
-    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
-    val crl = createEmptyCrl(CERTIFICATE_KEY_PAIR)
-    createMftWithCrlAndEntries(ROOT_KEY_PAIR, crl.getEncoded)
-    createMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, crl.getEncoded, (certificateLocation, certificate.getEncoded))
+    val (certificateLocation, certificate) = createLeafResourceCertificate("valid.cer")
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
 
-    result.get(certificateLocation) should be ('empty)
+    result should have size(3)
+    result.get(certificateLocation) should be ('empty)   // TODO fails because recursion is done for the certificate but no child crl is found
+    // TODO check that also the entries for the crl and the mft dont have warnings and are validObjects
   }
+
+  test("should give warning when no crl refers to a certificate that is an object issuer") {
+
+    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result should have size(3)
+    result.get(certificateLocation) // should be ('empty)   // TODO test that there is a warning
+  }
+
+  // TODO test also:
+  // - certificate with child objects
+  // - cycle
+  // - invalid mft, invalid crl
+  // - multiple crl's: most recent should be taken
+  // - multiple mft's: most recent should be taken
+  // - crl that revokes its own mft (should give error)
+  // - mismatching hashes
+
+  // TODO find by hash; if not found: error; then check uri; if mismatch: error
+
+  // TODO make sure all existing tests have a valid setup and context
 
   test("should warn about expired certificates that are on the manifest") {
 
     val (expiredCertificateLocation, cert) = createExpiredResourceCertificate("expired.cer")
-    val crl = createEmptyCrl(CERTIFICATE_KEY_PAIR)
-    createMftWithCrlAndEntries(crl.getEncoded, (expiredCertificateLocation, cert.getEncoded))
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (expiredCertificateLocation, cert.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
@@ -204,11 +229,11 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   private def createMftWithCrlAndEntries(crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
-    createMftWithEntries(ROOT_KEY_PAIR, entries.toSeq :+ (ROOT_CRL_LOCATION, crlContent):_*)
+    createMftWithEntries(ROOT_KEY_PAIR, entries.toSeq :+(ROOT_CRL_LOCATION, crlContent):_*)
   }
 
   private def createMftWithCrlAndEntries(keyPair: KeyPair, crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
-    createMftWithEntries(keyPair, entries.toSeq :+ (ROOT_CRL_LOCATION, crlContent):_*)
+    createMftWithEntries(keyPair, entries.toSeq :+(ROOT_CRL_LOCATION, crlContent):_*)
   }
 
   private def createMftWithEntries(keyPair: KeyPair, entries: (URI, Array[Byte])*): ManifestCms = {
@@ -217,7 +242,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     val nextUpdateTime = NOW.plusYears(1)
 
     val builder: ManifestCmsBuilder = new ManifestCmsBuilder
-    builder.withCertificate(createManifestEECertificate).withManifestNumber(BigInteger.valueOf(68))
+    builder.withCertificate(createManifestEECertificate(keyPair)).withManifestNumber(BigInteger.valueOf(68))
     builder.withThisUpdateTime(thisUpdateTime).withNextUpdateTime(nextUpdateTime)
 
     entries.foreach { e =>
@@ -233,11 +258,11 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     manifest
   }
 
-  private def createManifestEECertificate: X509ResourceCertificate = {
+  private def createManifestEECertificate(keyPair: KeyPair): X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withCa(false).withSubjectDN(new X500Principal("CN=EECert")).withIssuerDN(ROOT_CERTIFICATE_NAME).withSerial(BigInteger.ONE)
-    builder.withPublicKey(ROOT_KEY_PAIR.getPublic)
-    builder.withSigningKeyPair(ROOT_KEY_PAIR)
+    builder.withPublicKey(keyPair.getPublic)
+    builder.withSigningKeyPair(keyPair)
     builder.withInheritedResourceTypes(java.util.EnumSet.allOf(classOf[IpResourceType]))
     builder.withValidityPeriod(VALIDITY_PERIOD)
     builder.withCrlDistributionPoints(ROOT_CRL_LOCATION)
@@ -245,14 +270,18 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   def createExpiredResourceCertificate(name: String) = {
-    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)))
+    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)), true)
   }
 
   def createValidResourceCertificate(name: String) = {
-    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)))
+    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), true)
   }
 
-  def createResourceCertificate(name: String, validityPeriod: ValidityPeriod): (URI, X509ResourceCertificate) = {
+  def createLeafResourceCertificate(name: String) = {
+    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false)
+  }
+
+  def createResourceCertificate(name: String, validityPeriod: ValidityPeriod, isObjectIssuer: Boolean): (URI, X509ResourceCertificate) = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withValidityPeriod(validityPeriod)
     builder.withResources(ROOT_RESOURCE_SET)
@@ -264,10 +293,13 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     builder.withCrlDistributionPoints(URI.create("rsync://foo.host/bar/i_dont_care.crl"))
     builder.withCa(true)
     builder.withKeyUsage(KeyUsage.keyCertSign)
-    builder.withSubjectInformationAccess(
-      new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_CA_REPOSITORY, REPO_LOCATION),
-      new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_MANIFEST, ROOT_MANIFEST_LOCATION)
-    )
+
+    if (isObjectIssuer) {
+      builder.withSubjectInformationAccess(
+        new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_CA_REPOSITORY, REPO_LOCATION),
+        new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_MANIFEST, ROOT_MANIFEST_LOCATION)
+      )
+    }
 
     val certificate = builder.build
 
@@ -299,9 +331,4 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     }
   }
 
-  def createTaContext: CertificateRepositoryObjectValidationContext = {
-    val ta = getRootResourceCertificate
-    val taContext = new CertificateRepositoryObjectValidationContext(URI.create("rsync://host/ta"), ta)
-    taContext
   }
-}

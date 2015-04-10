@@ -40,7 +40,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 
 import scala.util.Try
 
-class HttpFetcherStore(dataSource: DataSource, taName: String) {
+class HttpFetcherStore(dataSource: DataSource) {
 
   val template: NamedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource)
 
@@ -87,9 +87,9 @@ class HttpFetcherStore(dataSource: DataSource, taName: String) {
   }
 }
 
-object HttpFetcherStore extends Singletons[String, String, HttpFetcherStore]({
-  (path, taName) =>
-    new HttpFetcherStore(DataSources.DurableDataSource(new File(path)), taName)
+object HttpFetcherStore extends SimpleSingletons[String, HttpFetcherStore]({
+  path =>
+    new HttpFetcherStore(DataSources.DurableDataSource(new File(path)))
 }) {
-  def inMemory(taName: String): HttpFetcherStore = new HttpFetcherStore(DataSources.InMemoryDataSource, taName)
+  def inMemory(taName: String): HttpFetcherStore = new HttpFetcherStore(DataSources.InMemoryDataSource)
 }

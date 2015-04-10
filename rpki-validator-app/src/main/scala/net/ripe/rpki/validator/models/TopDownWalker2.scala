@@ -41,6 +41,7 @@ import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryOb
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.Storage
 import org.apache.commons.lang.Validate
+import org.bouncycastle.asn1.x509.Certificate
 import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
@@ -95,18 +96,23 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
             val checks = checkManifestUrlOnCertMatchesLocationInRepo(manifest).toList ++
               mftObjectsChecks ++
-              validateAllCrls(crlList) ++
-              validateAllMfts(mftList, crl) ++
-              validate(roas, crl) ++
-              validate(childrenCertificates, crl)
+              checkAllCrls(crlList) ++
+              checkAllMfts(mftList, crl) ++
+              check(roas, crl) ++
+              check(childrenCertificates, crl)
 
             val checkMap = checks.groupBy(_.location)
 
+            val validatedChildren = childrenCertificates.view.map { c =>
+              val v = validatedObject(checkMap)(c)
+              (c, v, c.decoded.isObjectIssuer && v._2.isValid)
+            }
+
             Seq(roas.map(validatedObject(checkMap)),
-              childrenCertificates.map(validatedObject(checkMap)),
+              validatedChildren.map(_._2).force,
               crlList.map(validatedObject(checkMap)),
               mftList.map(validatedObject(checkMap)),
-              childrenCertificates.flatMap(stepDown)
+              validatedChildren.filter(_._3).map(_._1).force.flatMap(stepDown)
             ).map(_.toMap).fold(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
 
           case None =>
@@ -156,7 +162,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
   }
 
-  def validate[T <: CertificateRepositoryObject](objects: Seq[RepositoryObject[T]], crl: CrlObject): List[Check] = {
+  def check[T <: CertificateRepositoryObject](objects: Seq[RepositoryObject[T]], crl: CrlObject): List[Check] = {
     objects.map { o =>
       val location = new ValidationLocation(o.url)
       val result = ValidationResult.withLocation(location)
@@ -198,7 +204,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       !crlValidationResult.hasFailures
     }
 
-  private def validateAllCrls(crlList: Seq[CrlObject]): List[Check] =
+  private def checkAllCrls(crlList: Seq[CrlObject]): List[Check] =
     crlList.map { crl =>
       val (location, crlValidationResult) = _validateCrl(crl)
       toChecks(location, crlValidationResult)
@@ -225,7 +231,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       !mftValidationResult.hasFailures
     }
 
-  private def validateAllMfts(mftList: Seq[ManifestObject], crl: CrlObject): List[Check] =
+  private def checkAllMfts(mftList: Seq[ManifestObject], crl: CrlObject): List[Check] =
     mftList.map { mft =>
       val (location, mftValidationResult) = _validateMft(crl, mft)
       toChecks(location, mftValidationResult)
