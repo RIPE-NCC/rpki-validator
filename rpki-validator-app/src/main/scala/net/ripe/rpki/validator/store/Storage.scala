@@ -29,8 +29,6 @@
  */
 package net.ripe.rpki.validator.store
 
-import java.net.URI
-
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
 
@@ -38,7 +36,7 @@ import scala.collection.mutable
 
 trait Storage {
 
-  def getObjects(url: String) : Seq[RepositoryObject[_]]
+  def getObject(hash: String) : Option[RepositoryObject.ROType]
 
   def storeCertificate(certificate: CertificateObject)
 

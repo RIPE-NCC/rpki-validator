@@ -29,6 +29,7 @@
  */
 package net.ripe.rpki.validator.store
 
+import scala.language.existentials
 import java.io.File
 import java.net.URI
 import java.sql.{ResultSet, Timestamp}
@@ -210,36 +211,40 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)))
       }).toSeq
 
-  override def getObjects(url: String): Seq[RepositoryObject[_]] = {
-    val objects = template.query(
-      """SELECT encoded, validation_time, object_type
+  override def getObject(hash: String): Option[RepositoryObject.ROType] = {
+    val repoObject : Option[RepositoryObject.ROType] = Try {
+      template.queryForObject(
+        """SELECT encoded, validation_time, object_type, url
         FROM repo_objects
-        WHERE url = :url""",
-      Map("url" -> url),
-      new RowMapper[RepositoryObject[_]] {
-        override def mapRow(rs: ResultSet, i: Int) = {
-          val (bytes, validationTime, objType) = (rs.getBytes(1), instant(rs.getTimestamp(2)), rs.getString(3))
-          objType match {
-            case "roa" => RoaObject.parse(url, bytes).copy(validationTime = validationTime)
-            case "manifest" => ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
-            case "crl" => CrlObject.parse(url, bytes).copy(validationTime = validationTime)
+        WHERE hash = :hash""",
+        Map("hash" -> hash),
+        new RowMapper[RepositoryObject.ROType] {
+          override def mapRow(rs: ResultSet, i: Int) = {
+            val (bytes, validationTime, objType, url) = (rs.getBytes(1), instant(rs.getTimestamp(2)), rs.getString(3), rs.getString(4))
+            objType match {
+              case "roa" => RoaObject.parse(url, bytes).copy(validationTime = validationTime)
+              case "manifest" => ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
+              case "crl" => CrlObject.parse(url, bytes).copy(validationTime = validationTime)
+            }
           }
-        }
-      })
+        })
+    }.toOption
 
-    val certificates = template.query(
-      """SELECT encoded, validation_time
+    val certificate = Try {
+      template.queryForObject(
+        """SELECT encoded, validation_time, url
         FROM certificates
-        WHERE url = :url""",
-      Map("url" -> url),
-      new RowMapper[RepositoryObject[_]] {
-        override def mapRow(rs: ResultSet, i: Int) = {
-          val (bytes, validationTime) = (rs.getBytes(1), instant(rs.getTimestamp(2)))
-          CertificateObject.parse(url, bytes).copy(validationTime = validationTime)
-        }
-      })
+        WHERE hash = :hash""",
+        Map("hash" -> hash),
+        new RowMapper[CertificateObject] {
+          override def mapRow(rs: ResultSet, i: Int) = {
+            val (bytes, validationTime, url) = (rs.getBytes(1), instant(rs.getTimestamp(2)), rs.getString(3))
+            CertificateObject.parse(url, bytes).copy(validationTime = validationTime)
+          }
+        })
+    }.toOption
 
-    objects ++ certificates
+    repoObject.orElse(certificate)
   }
 
   def clear() = {
