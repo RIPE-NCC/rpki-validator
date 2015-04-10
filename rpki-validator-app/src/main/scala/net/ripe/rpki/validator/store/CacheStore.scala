@@ -254,9 +254,9 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
   def clearOldObjects(olderThan: Instant) = {
     val tt = timestamp(olderThan)
     atomic {
-      template.update(s"DELETE FROM certificates WHERE validation_time < '$tt' AND ta_name = '$taName'", Map.empty[String, Object])
-      template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt' AND ta_name = '$taName'", Map.empty[String, Object])
-
+      Seq("certificates", "repo_objects").foreach { table =>
+        template.update(s"DELETE FROM $table WHERE validation_time < '$tt' AND ta_name = '$taName'", Map.empty[String, Object])
+      }
     }
   }
 
