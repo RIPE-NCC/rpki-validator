@@ -29,12 +29,13 @@
  */
 package net.ripe.rpki.validator.store
 
+import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
 
 import scala.collection.mutable
 
-trait Storage {
+trait Storage extends Logging {
 
   def getObject(hash: String) : Option[RepositoryObject.ROType]
 
@@ -94,18 +95,16 @@ class SimpleSingletons[K, V](create: K => V) {
   }
 }
 
-/**
- * Generic template for storage singletons.
- */
+//TODO - Try to merge both Singletons
 class Singletons[K, S, V](create: (K, S) => V) {
-  private val caches = mutable.Map[K, V]()
+  private val caches = mutable.Map[(K,S), V]()
 
   def apply(k: K, s: S): V = {
     synchronized {
-      caches.get(k) match {
+      caches.get((k,s)) match {
         case None =>
           val c = create(k, s)
-          caches += (k -> c)
+          caches += ((k,s) -> c)
           c
         case Some(c) => c
       }
