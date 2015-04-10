@@ -233,7 +233,9 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val startTime = Instant.now
     trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
     val walker = new TopDownWalker(certificate, store, repoService, validationOptions, startTime)(scala.collection.mutable.Set())
-    walker.execute
+    val result: Map[URI, ValidatedObject] = walker.execute
+    store.clearOldObjects(startTime)
+    result
   }
 
   private def keyInfoMatches(certificate: CertificateObject): Boolean = {

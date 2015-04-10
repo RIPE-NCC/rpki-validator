@@ -251,6 +251,15 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
       template.update(s"TRUNCATE TABLE $t", Map.empty[String, Object])
   }
 
+  def clearOldObjects(olderThan: Instant) = {
+    val tt = timestamp(olderThan)
+    atomic {
+      template.update(s"DELETE FROM certificates WHERE validation_time < '$tt' AND ta_name = '$taName'", Map.empty[String, Object])
+      template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt' AND ta_name = '$taName'", Map.empty[String, Object])
+
+    }
+  }
+
   override def delete(url: String, hash: String) = locker.locked(url) {
     tableName(url).foreach { t =>
       template.update(s"DELETE FROM $t WHERE url = :url AND hash = :hash AND ta_name = :ta_name",
