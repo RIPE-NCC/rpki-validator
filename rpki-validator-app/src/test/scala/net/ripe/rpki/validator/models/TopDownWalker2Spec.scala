@@ -85,17 +85,43 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
   test("should not give warnings when all entries are present in the manifest") {
 
-    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
-    val crl = createEmptyCrl(CERTIFICATE_KEY_PAIR)
-    createMftWithCrlAndEntries(ROOT_KEY_PAIR, crl.getEncoded)
-    createMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, crl.getEncoded, (certificateLocation, certificate.getEncoded))
+    val (certificateLocation, certificate) = createLeafResourceCertificate("valid.cer")
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
 
-    result.get(certificateLocation) should be ('empty)
+    result should have size(3)
+    result.get(certificateLocation) should be ('empty)   // TODO fails because recursion is done for the certificate but no child crl is found
+    // TODO check that also the entries for the crl and the mft dont have warnings and are validObjects
   }
+
+  test("should give warning when no crl refers to a certificate that is an object issuer") {
+
+    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result should have size(3)
+    result.get(certificateLocation) // should be ('empty)   // TODO test that there is a warning
+  }
+
+  // TODO test also:
+  // - certificate with child objects
+  // - cycle
+  // - invalid mft, invalid crl
+  // - multiple crl's: most recent should be taken
+  // - multiple mft's: most recent should be taken
+  // - crl that revokes its own mft (should give error)
+  // - mismatching hashes
+
+  // TODO find by hash; if not found: error; then check uri; if mismatch: error
+
+  // TODO make sure all existing tests have a valid setup and context
 
   test("should warn about expired certificates that are on the manifest") {
 
@@ -244,14 +270,18 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   def createExpiredResourceCertificate(name: String) = {
-    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)))
+    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)), true)
   }
 
   def createValidResourceCertificate(name: String) = {
-    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)))
+    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), true)
   }
 
-  def createResourceCertificate(name: String, validityPeriod: ValidityPeriod): (URI, X509ResourceCertificate) = {
+  def createLeafResourceCertificate(name: String) = {
+    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false)
+  }
+
+  def createResourceCertificate(name: String, validityPeriod: ValidityPeriod, isObjectIssuer: Boolean): (URI, X509ResourceCertificate) = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withValidityPeriod(validityPeriod)
     builder.withResources(ROOT_RESOURCE_SET)
@@ -263,10 +293,13 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     builder.withCrlDistributionPoints(URI.create("rsync://foo.host/bar/i_dont_care.crl"))
     builder.withCa(true)
     builder.withKeyUsage(KeyUsage.keyCertSign)
-    builder.withSubjectInformationAccess(
-      new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_CA_REPOSITORY, REPO_LOCATION),
-      new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_MANIFEST, ROOT_MANIFEST_LOCATION)
-    )
+
+    if (isObjectIssuer) {
+      builder.withSubjectInformationAccess(
+        new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_CA_REPOSITORY, REPO_LOCATION),
+        new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_MANIFEST, ROOT_MANIFEST_LOCATION)
+      )
+    }
 
     val certificate = builder.build
 
