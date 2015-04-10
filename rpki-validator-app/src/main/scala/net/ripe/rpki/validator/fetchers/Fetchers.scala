@@ -33,7 +33,7 @@ import java.net.URI
 
 import net.ripe.rpki.validator.models.validation._
 
-case class FetcherConfig(rsyncDir: String = "")
+case class FetcherConfig(rsyncDir: String = "", taName: String = "")
 
 trait FetcherListener {
   def processObject(repoObj: RepositoryObject[_])

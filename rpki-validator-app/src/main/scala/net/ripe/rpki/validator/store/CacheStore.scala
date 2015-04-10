@@ -30,15 +30,10 @@
 package net.ripe.rpki.validator.store
 
 import java.io.File
-import java.net.URI
 import java.sql.{ResultSet, Timestamp}
-import java.util
 import javax.sql.DataSource
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
-import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
-import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
@@ -49,10 +44,9 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.{TransactionCallback, TransactionTemplate}
 
 import scala.collection.JavaConversions._
-import scala.collection.immutable
 import scala.util.Try
 
-class CacheStore(dataSource: DataSource) extends Storage with Hashing {
+class CacheStore(dataSource: DataSource, taName: String) extends Storage with Hashing {
 
   private val template = new NamedParameterJdbcTemplate(dataSource)
   private val tx = new DataSourceTransactionManager(dataSource)
@@ -305,9 +299,9 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   private def instant(d: java.util.Date) = Option(d).map(d => new Instant(d.getTime))
 }
 
-object DurableCaches extends Singletons[String, CacheStore]({
-  path =>
-    new CacheStore(DataSources.DurableDataSource(new File(path)))
+object DurableCaches extends Singletons[String, String, CacheStore]({
+  (path, taName) =>
+    new CacheStore(DataSources.DurableDataSource(new File(path)), taName)
 }) {
-  def apply(d: File) : CacheStore = this.apply(d.getAbsolutePath)
+  def apply(d: File, taName: String) : CacheStore = this.apply(d.getAbsolutePath, taName)
 }

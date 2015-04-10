@@ -50,7 +50,7 @@ import org.scalatest.mock.MockitoSugar
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
 
-  val store = new HttpFetcherStore(DataSources.InMemoryDataSource)
+  val store = new HttpFetcherStore(DataSources.InMemoryDataSource, TA_NAME)
 
   type FetcherReturnType = Either[BrokenObject, RepositoryObject[_]]
 

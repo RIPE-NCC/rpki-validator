@@ -80,7 +80,7 @@ trait Storage {
 /**
  * Generic template for storage singletons.
  */
-class Singletons[K, V](create: K => V) {
+class SimpleSingletons[K, V](create: K => V) {
   private val caches = mutable.Map[K, V]()
 
   def apply(k: K): V = {
@@ -88,6 +88,25 @@ class Singletons[K, V](create: K => V) {
       caches.get(k) match {
         case None =>
           val c = create(k)
+          caches += (k -> c)
+          c
+        case Some(c) => c
+      }
+    }
+  }
+}
+
+/**
+ * Generic template for storage singletons.
+ */
+class Singletons[K, S, V](create: (K, S) => V) {
+  private val caches = mutable.Map[K, V]()
+
+  def apply(k: K, s: S): V = {
+    synchronized {
+      caches.get(k) match {
+        case None =>
+          val c = create(k, s)
           caches += (k -> c)
           c
         case Some(c) => c

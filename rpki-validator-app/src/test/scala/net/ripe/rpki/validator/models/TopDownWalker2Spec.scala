@@ -69,7 +69,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   private val CERTIFICATE_KEY_PAIR: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val DEFAULT_VALIDATION_OPTIONS: ValidationOptions = new ValidationOptions
 
-  private val storage = new CacheStore(DataSources.InMemoryDataSource)
+  private val storage = new CacheStore(DataSources.InMemoryDataSource, TA_NAME)
   private var taContext: CertificateRepositoryObjectValidationContext = _
 
   override def beforeEach() {
@@ -294,7 +294,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   def createRepoService(storage: Storage): RepoService = {
-    new RepoService(new RepoFetcher(storage, HttpFetcherStore.inMemory, FetcherConfig(""))) {
+    new RepoService(new RepoFetcher(storage, HttpFetcherStore.inMemory(TA_NAME), FetcherConfig("", TA_NAME))) {
       override def visitRepo(repoUri: URI): Seq[Fetcher.Error] = Seq()
     }
   }

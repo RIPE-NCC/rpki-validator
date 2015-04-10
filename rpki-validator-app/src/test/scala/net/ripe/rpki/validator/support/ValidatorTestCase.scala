@@ -34,4 +34,6 @@ import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-abstract class ValidatorTestCase extends JunitLog4JSetup with FunSuite with ShouldMatchers
+abstract class ValidatorTestCase extends JunitLog4JSetup with FunSuite with ShouldMatchers {
+  protected val TA_NAME: String = "TA NAME"
+}
