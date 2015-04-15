@@ -29,6 +29,8 @@
  */
 package net.ripe.rpki.validator.rtr
 
+import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
+
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.BeforeAndAfterAll
@@ -219,7 +221,51 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     client should be ('connected)
   }
 
-  // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.4
+  test("Server should not put notify inside other response") {
+    // TODO: use the method that allows explicit list of roa prefixes for testing
+
+    val prefixes = List[RoaPrefix](
+      RoaCmsObjectMother.TEST_IPV4_PREFIX_1,
+      RoaCmsObjectMother.TEST_IPV4_PREFIX_2,
+      RoaCmsObjectMother.TEST_IPV6_PREFIX,
+      RoaCmsObjectMother.TEST_IPV6_PREFIX) // List IPv6 Prefix twice. It should be filtered when response is sent
+
+    val validityPeriod = new ValidityPeriod(new DateTime(), new DateTime().plusYears(1))
+
+    val roa: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes.asJava, validityPeriod, RoaCmsObjectMother.TEST_ASN)
+    val roaUri: URI = URI.create("rsync://example.com/roa.roa")
+
+    val validatedRoa = new ValidObject(roaUri, Set.empty[ValidationCheck], roa)
+
+    val roas = Seq(validatedRoa)
+
+    cache.single.transform { db => db.updateValidatedObjects(tal, roas) }
+
+    var sendNotify: Boolean = true
+
+    val pool: ExecutorService = Executors.newSingleThreadExecutor()
+    pool.execute(new Runnable {
+      override def run() {
+        while (sendNotify) {
+          server.notify(42l)
+          Thread.sleep(Random.nextInt(10))
+        }
+      }
+    })
+    pool.shutdown()
+
+    for (i <- 1 to 100) {
+      client.sendPdu(ResetQueryPdu())
+      var response: List[Pdu] = client.getResponse(Seq(classOf[EndOfDataPdu],classOf[ErrorPdu]), timeOutMs = 100000)
+println(i)
+println(response.mkString("\n"))
+    }
+    sendNotify = false
+    assert(pool.awaitTermination(10, TimeUnit.SECONDS), "Can't stop background notify thread")
+    client.getAllResponses
+  }
+
+    // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.4
   test("Server should answer with No Data Available Error Pdu when RTRClient sends ResetQuery -- and there is no data") {
     client.sendPdu(ResetQueryPdu())
     var responsePdus = client.getResponse()
