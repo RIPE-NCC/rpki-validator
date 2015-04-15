@@ -144,15 +144,34 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     result.get(certificateLocation).get.checks should not be ('empty)
   }
 
-  // TODO test also:
-  // - cycle
+  test("should give error when a cycle between a manifest and a certificate is found") {
+    val childManifestLocation =  URI.create("rsync://foo.host/bar/childManifest.mft")
+
+    val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", childManifestLocation)
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
+
+    val childCrlLocation = URI.create("rsync://foo.host/bar/child.crl")
+    val childCrl = getCrl(new X500Principal("CN=For Testing Only, CN=RIPE NCC, C=NL"), CERTIFICATE_KEY_PAIR)
+    storage.storeCrl(CrlObject(URI.create("rsync://foo.host/bar/child.crl").toString, childCrl))
+
+    createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
+      childCrl.getEncoded, (certificateLocation, certificate.getEncoded))     // Note that the child Mft holds a reference to its parent certificate
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result.get(certificateLocation).get.checks should not be ('empty)
+  }
+
+    // TODO test also:
   // - invalid mft, invalid crl
   // - multiple mft's: most recent valid one should be taken
   // - crl that revokes its own mft (should give error)
   // - mismatching hashes
 
 
-  // TODO make sure all existing tests have a valid setup and context
+  // TODO use own builder/ util class to easily create hierarchies of certificates + mfts + crls
 
   test("should warn about expired certificates that are on the manifest") {
 
@@ -357,7 +376,6 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     (certificateLocation, certificate)
   }
-
 
   private def getCrl(certificateName: X500Principal, keyPair: KeyPair, revokedSerials: BigInteger*): X509Crl = {
     val builder: X509CrlBuilder = new X509CrlBuilder

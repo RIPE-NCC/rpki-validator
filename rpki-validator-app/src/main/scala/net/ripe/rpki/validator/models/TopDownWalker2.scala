@@ -71,12 +71,12 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
 
   def execute: Map[URI, ValidatedObject] = {
-    val validatedObjects = doExecute
+    val validatedObjects = validateContext
     updateValidationTimes(validatedObjects)
     validatedObjects
   }
 
-  private def doExecute = {
+  private def validateContext = {
     logger.info(s"Validating ${certificateContext.getLocation}")
     val fetchErrors = preferredFetchLocation.map(prefetch)
 
@@ -170,7 +170,6 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }.flatten.toList
   }
 
-
   private def toChecks[T <: CertificateRepositoryObject](location: ValidationLocation, result: ValidationResult): List[Check] = {
     result.getWarnings(location).asScala.map(r => warning(location, r.getKey, r.getParams: _*)).toList ++
       result.getFailures(location).asScala.map(r => error(location, r.getKey, r.getParams: _*)).toList
@@ -180,11 +179,12 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     val ski: String = HashUtil.stringify(cert.decoded.getSubjectKeyIdentifier)
     if (seen.contains(ski)) {
       logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
+      // TODO add Check with error
       Map()
     } else {
       val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded)
       val nextLevelWalker = new TopDownWalker2(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
-      nextLevelWalker.doExecute
+      nextLevelWalker.validateContext
     }
   }
 
