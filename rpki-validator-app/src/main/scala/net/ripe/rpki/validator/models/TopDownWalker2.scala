@@ -41,7 +41,6 @@ import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryOb
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.Storage
 import org.apache.commons.lang.Validate
-import org.bouncycastle.asn1.x509.Certificate
 import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
@@ -229,7 +228,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     mftList.sortBy(_.decoded.getNumber.negate).find { mft =>
       val (_, mftValidationResult) = _validateMft(crl, mft)
       !mftValidationResult.hasFailures
-    }
+    }  // TODO raise warnings in case we have to skip mft's which are not valid
 
   private def checkAllMfts(mftList: Seq[ManifestObject], crl: CrlObject): List[Check] =
     mftList.map { mft =>
@@ -256,7 +255,6 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
     ClassifiedObjects(roas.toSeq, certificates.toSeq, crls.toSeq)
   }
-
 
   def checkManifestUrlOnCertMatchesLocationInRepo(manifest: ManifestObject): Option[Check] = {
     val manifestLocationInCertificate = certificateContext.getManifestURI.toString

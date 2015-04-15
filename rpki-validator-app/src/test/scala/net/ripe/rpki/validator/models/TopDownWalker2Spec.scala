@@ -85,8 +85,8 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
   test("should not give warnings when all entries are present in the manifest") {
 
-    val (certificateLocation, certificate) = createLeafResourceCertificate("valid.cer")
-    val mft = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
+    val (certificateLocation, certificate) = createLeafResourceCertificate(ROOT_KEY_PAIR, "valid.cer")
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
@@ -99,9 +99,41 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     result.get(ROOT_MANIFEST_LOCATION).get.checks should be ('empty)
   }
 
-  test("should give warning when no crl refers to a certificate that is an object issuer") {
+  test("should not give warnings for valid certificate with child objects") {
 
-    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
+    val childManifestLocation =  URI.create("rsync://foo.host/bar/childManifest.mft")
+
+    val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", childManifestLocation)
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
+
+    val childKeyPair = PregeneratedKeyPairFactory.getInstance.generate
+
+    val childCrlLocation = URI.create("rsync://foo.host/bar/child.crl")
+    val childCrl = getCrl(new X500Principal("CN=For Testing Only, CN=RIPE NCC, C=NL"), CERTIFICATE_KEY_PAIR)
+    storage.storeCrl(CrlObject(URI.create("rsync://foo.host/bar/child.crl").toString, childCrl))
+
+    val (childCertificateLocation, childCertificate) = createChildResourceCertificate(childKeyPair, CERTIFICATE_KEY_PAIR, "validChild.cer",  new X500Principal("CN=124"), CERTIFICATE_NAME)
+
+    createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
+      childCrl.getEncoded, (childCertificateLocation, childCertificate.getEncoded))
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result should have size 6
+
+    result.get(certificateLocation).get.checks should be ('empty)
+    result.get(ROOT_CRL_LOCATION).get.checks should be ('empty)
+    result.get(ROOT_MANIFEST_LOCATION).get.checks should be ('empty)
+    result.get(childCertificateLocation).get.checks should be ('empty)
+    result.get(childManifestLocation).get.checks should be ('empty)
+    result.get(childCrlLocation).get.checks should be ('empty)
+  }
+
+  test("should give warning when no mft refers to a certificate that is an object issuer") {
+
+    val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
     createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
@@ -113,11 +145,9 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   // TODO test also:
-  // - certificate with child objects
   // - cycle
   // - invalid mft, invalid crl
-  // - multiple crl's: most recent should be taken
-  // - multiple mft's: most recent should be taken
+  // - multiple mft's: most recent valid one should be taken
   // - crl that revokes its own mft (should give error)
   // - mismatching hashes
 
@@ -126,7 +156,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
   test("should warn about expired certificates that are on the manifest") {
 
-    val (expiredCertificateLocation, cert) = createExpiredResourceCertificate("expired.cer")
+    val (expiredCertificateLocation, cert) = createExpiredResourceCertificate(CERTIFICATE_KEY_PAIR, "expired.cer")
     createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (expiredCertificateLocation, cert.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
@@ -138,7 +168,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
   test("should ignore alert messages for revoked certificates that are not on the manifest and not in repository") {
 
-    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
+    val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
     val crl = createCrlWithEntry(certificate)
     createMftWithCrlAndEntries(crl.getEncoded)
 
@@ -151,7 +181,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
   test("should not warn about revoked certificates not on the manifest and not in repository") {
 
-    val (_, certificate) = createValidResourceCertificate("expired.cer")
+    val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "expired.cer", ROOT_MANIFEST_LOCATION)
     val crl = createCrlWithEntry(certificate)
     createMftWithCrlAndEntries(crl.getEncoded)
 
@@ -170,7 +200,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
   test("should update validation time for validated objects") {
 
-    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
+    val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
     val crl = createCrlWithEntry(certificate)
     createMftWithCrlAndEntries(crl.getEncoded, (certificateLocation, certificate.getEncoded))
 
@@ -230,20 +260,23 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   private def createMftWithCrlAndEntries(crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
-    createMftWithEntries(ROOT_KEY_PAIR, entries.toSeq :+(ROOT_CRL_LOCATION, crlContent):_*)
+    createMftWithEntries(ROOT_KEY_PAIR, ROOT_MANIFEST_LOCATION, ROOT_CERTIFICATE_NAME, entries.toSeq :+(ROOT_CRL_LOCATION, crlContent):_*)
   }
 
   private def createMftWithCrlAndEntries(keyPair: KeyPair, crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
-    createMftWithEntries(keyPair, entries.toSeq :+(ROOT_CRL_LOCATION, crlContent):_*)
+    createMftWithEntries(keyPair, ROOT_MANIFEST_LOCATION, ROOT_CERTIFICATE_NAME, entries.toSeq :+(ROOT_CRL_LOCATION, crlContent):_*)
   }
 
-  private def createMftWithEntries(keyPair: KeyPair, entries: (URI, Array[Byte])*): ManifestCms = {
+  private def createChildMftWithCrlAndEntries(keyPair: KeyPair, manifestLocation: URI,  issuer: X500Principal, crlLocation: URI, crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
+    createMftWithEntries(keyPair, manifestLocation, issuer, entries.toSeq :+(crlLocation, crlContent):_*)
+  }
 
+  private def createMftWithEntries(keyPair: KeyPair, manifestLocation: URI, issuer: X500Principal, entries: (URI, Array[Byte])*): ManifestCms = {
     val thisUpdateTime = NOW.minusMinutes(1)
     val nextUpdateTime = NOW.plusYears(1)
 
     val builder: ManifestCmsBuilder = new ManifestCmsBuilder
-    builder.withCertificate(createManifestEECertificate(keyPair))
+    builder.withCertificate(createManifestEECertificate(keyPair, issuer))
       .withManifestNumber(BigInteger.valueOf(68))
       .withThisUpdateTime(thisUpdateTime)
       .withNextUpdateTime(nextUpdateTime)
@@ -256,61 +289,71 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     builder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER)
 
     val manifest = builder.build(keyPair.getPrivate)
-    storage.storeManifest(ManifestObject(ROOT_MANIFEST_LOCATION.toString, manifest))
+    storage.storeManifest(ManifestObject(manifestLocation.toString, manifest))
 
     manifest
   }
 
-  private def createManifestEECertificate(keyPair: KeyPair): X509ResourceCertificate = {
+  private def createManifestEECertificate(keyPair: KeyPair, issuerDN: X500Principal): X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
-    builder.withCa(false).withSubjectDN(new X500Principal("CN=EECert")).withIssuerDN(ROOT_CERTIFICATE_NAME).withSerial(BigInteger.ONE)
+    builder.withCa(false).withSubjectDN(new X500Principal("CN=EECert")).withIssuerDN(issuerDN).withSerial(BigInteger.ONE)
     builder.withPublicKey(keyPair.getPublic)
     builder.withSigningKeyPair(keyPair)
     builder.withInheritedResourceTypes(java.util.EnumSet.allOf(classOf[IpResourceType]))
     builder.withValidityPeriod(VALIDITY_PERIOD)
     builder.withCrlDistributionPoints(ROOT_CRL_LOCATION)
-    builder.withKeyUsage(KeyUsage.digitalSignature);
+    builder.withKeyUsage(KeyUsage.digitalSignature)
     builder.build
   }
 
-  def createExpiredResourceCertificate(name: String) = {
-    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)), true)
+  def createExpiredResourceCertificate(keyPair: KeyPair, locationName: String) = {
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, ROOT_MANIFEST_LOCATION, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)), true)
   }
 
-  def createValidResourceCertificate(name: String) = {
-    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), true)
+  def createValidResourceCertificate(keyPair: KeyPair, locationName: String, manifestLocation: URI) = {
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, manifestLocation, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), true)
   }
 
-  def createLeafResourceCertificate(name: String) = {
-    createResourceCertificate(name, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false)
+  def createLeafResourceCertificate(keyPair: KeyPair, locationName: String) = {
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, ROOT_MANIFEST_LOCATION, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false)
   }
 
-  def createResourceCertificate(name: String, validityPeriod: ValidityPeriod, isObjectIssuer: Boolean): (URI, X509ResourceCertificate) = {
+  def createChildResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, certificateName: X500Principal, parentName: X500Principal) = {
+    createResourceCertificate(keyPair, parentKeyPair, locationName, ROOT_MANIFEST_LOCATION, certificateName, parentName, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false)
+  }
+
+  def createResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, manifestLocation: URI, certificateName: X500Principal, parentName: X500Principal,
+                                validityPeriod: ValidityPeriod, isObjectIssuer: Boolean): (URI, X509ResourceCertificate) = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withValidityPeriod(validityPeriod)
     builder.withResources(ROOT_RESOURCE_SET)
-    builder.withIssuerDN(ROOT_CERTIFICATE_NAME)
-    builder.withSubjectDN(CERTIFICATE_NAME)
+    builder.withIssuerDN(parentName)
+    builder.withSubjectDN(certificateName)
     builder.withSerial(ROOT_SERIAL_NUMBER.add(BigInteger.ONE))
-    builder.withPublicKey(CERTIFICATE_KEY_PAIR.getPublic)
-    builder.withSigningKeyPair(ROOT_KEY_PAIR)
+    builder.withPublicKey(keyPair.getPublic)
+    builder.withAuthorityKeyIdentifier(true)
+    builder.withSubjectKeyIdentifier(true)
+    builder.withSigningKeyPair(parentKeyPair)
     builder.withCrlDistributionPoints(URI.create("rsync://foo.host/bar/i_dont_care.crl"))
-    builder.withKeyUsage(KeyUsage.digitalSignature)
-//    builder.withCa(true)
-//    builder.withKeyUsage(KeyUsage.cRLSign)
-//    builder.withKeyUsage(KeyUsage.keyCertSign)
 
     if (isObjectIssuer) {
+      builder.withCa(true)
+      builder.withKeyUsage(KeyUsage.digitalSignature + KeyUsage.keyCertSign + KeyUsage.cRLSign)
+
       builder.withSubjectInformationAccess(
         new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_CA_REPOSITORY, REPO_LOCATION),
-        new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_MANIFEST, ROOT_MANIFEST_LOCATION)
+        new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_MANIFEST, manifestLocation)
       )
+    } else {
+      builder.withKeyUsage(KeyUsage.digitalSignature)
     }
 
     val certificate = builder.build
 
-    val certificateLocation = new URI(REPO_LOCATION + name)
+    val certificateLocation = new URI(REPO_LOCATION + locationName)
     storage.storeCertificate(CertificateObject(certificateLocation.toString, certificate))
+
+    certificate.getManifestUri
 
     (certificateLocation, certificate)
   }
@@ -322,7 +365,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     builder.withThisUpdateTime(NOW)
     builder.withNextUpdateTime(NOW.plusHours(8))
     builder.withNumber(BigInteger.TEN)
-    builder.withAuthorityKeyIdentifier(keyPair.getPublic)     // TODO use the ski from the rootResourceCertificate
+    builder.withAuthorityKeyIdentifier(keyPair.getPublic)
 
     revokedSerials.foreach {
       i => builder.addEntry(i, NOW.minusDays(1))
