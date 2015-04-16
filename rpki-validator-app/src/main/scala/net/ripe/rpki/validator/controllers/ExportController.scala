@@ -33,7 +33,7 @@ package controllers
 import net.ripe.ipresource._
 import net.ripe.rpki.commons.validation.roa.AllowedRoute
 import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
+import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat, DateTimeFormat}
 import views.ExportView
 import models.RtrPrefix
 import net.liftweb.json._
@@ -77,26 +77,29 @@ trait ExportController extends ApplicationController {
 
   get("/export.rpsl") {
 
-    contentType = "text/rpsl"
+    contentType = "text/plain"
     response.addHeader("Pragma", "public")
     response.addHeader("Cache-Control", "no-cache")
 
     val routes = new StringBuilder
     val allowedRoutes = getRtrPrefixes.map { rtr =>
-      val allowedRoute = new AllowedRoute(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
-
-      val possibleRoutes = getAllRoutesFor(allowedRoute.getPrefix, allowedRoute.getMaximumLength)
 
       val caName = if(rtr.trustAnchorLocator.isEmpty) "unknown" else rtr.trustAnchorLocator.get.getCaName
+      val dateTime = ISODateTimeFormat.dateHourMinuteSecond().print(DateTime.now)
+
+      val allowedRoute = new AllowedRoute(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
+      val possibleRoutes = getAllRoutesFor(allowedRoute.getPrefix, allowedRoute.getMaximumLength)
 
       possibleRoutes.foreach { range =>
         val version = if(IpResourceType.IPv6 == range.getType) "6" else ""
+
         routes ++= s"""
                    |route$version: $range
                    |origin: ${allowedRoute.getAsn}
                    |descr: exported from ripe ncc validator
                    |mnt-by: N/A
-                   |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+                   |created: $dateTime
+                   |last-modified: $dateTime
                    |source: $caName
                    |"""
       }

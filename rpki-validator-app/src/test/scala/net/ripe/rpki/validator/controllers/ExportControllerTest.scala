@@ -35,8 +35,8 @@ import java.net.URI
 import java.util.Collections
 
 import net.ripe.rpki.validator.util.TrustAnchorLocator
-import org.joda.time.DateTime
-import org.joda.time.format.DateTimeFormat
+import org.joda.time.{DateTimeUtils, DateTime}
+import org.joda.time.format.{ISODateTimeFormat, DateTimeFormat}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
@@ -88,6 +88,10 @@ class ExportControllerTest extends ControllerTestCase {
   }
 
   test("Should make rpsl for every possible route") {
+    val dateTime = DateTime.now
+    DateTimeUtils.setCurrentMillisFixed(dateTime.getMillis)
+    val formattedDateTime = ISODateTimeFormat.dateHourMinuteSecond().print(dateTime)
+
     get("/export.rpsl") {
 
       val expectedResponse =
@@ -96,69 +100,78 @@ class ExportControllerTest extends ControllerTestCase {
          |origin: AS6500
          |descr: exported from ripe ncc validator
          |mnt-by: N/A
-         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |created: ${formattedDateTime}
+         |last-modified: ${formattedDateTime}
          |source: caName
          |
          |route: 10.0.0.0/16
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: N/A
-         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |created: ${formattedDateTime}
+         |last-modified: ${formattedDateTime}
          |source: unknown
          |
          |route: 10.0.0.0/17
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: N/A
-         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |created: ${formattedDateTime}
+         |last-modified: ${formattedDateTime}
          |source: unknown
          |
          |route: 10.0.0.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: N/A
-         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |created: ${formattedDateTime}
+         |last-modified: ${formattedDateTime}
          |source: unknown
          |
          |route: 10.0.64.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: N/A
-         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |created: ${formattedDateTime}
+         |last-modified: ${formattedDateTime}
          |source: unknown
          |
          |route: 10.0.128.0/17
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: N/A
-         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |created: ${formattedDateTime}
+         |last-modified: ${formattedDateTime}
          |source: unknown
          |
          |route: 10.0.128.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: N/A
-         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |created: ${formattedDateTime}
+         |last-modified: ${formattedDateTime}
          |source: unknown
          |
          |route: 10.0.192.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: N/A
-         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |created: ${formattedDateTime}
+         |last-modified: ${formattedDateTime}
          |source: unknown
          |
          |route6: 2001:43e8::/32
          |origin: AS6502
          |descr: exported from ripe ncc validator
          |mnt-by: N/A
-         |changed: foo@bar.net 201504106
+         |created: ${formattedDateTime}
+         |last-modified: ${formattedDateTime}
          |source: caName
          |""".stripMargin
 
       status should equal(200)
       body should equal(expectedResponse)
-      header("Content-Type") should equal("text/rpsl;charset=UTF-8")
+      header("Content-Type") should equal("text/plain;charset=UTF-8")
       header("Pragma") should equal("public")
       header("Cache-Control") should equal("no-cache")
     }
