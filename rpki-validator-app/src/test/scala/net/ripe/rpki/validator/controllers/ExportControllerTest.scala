@@ -47,7 +47,7 @@ import net.ripe.ipresource.{ IpRange, Asn }
 @RunWith(classOf[JUnitRunner])
 class ExportControllerTest extends ControllerTestCase {
 
-  val tal = new TrustAnchorLocator(new File(""), "caName", URI.create("rsync://rpki.ripe.net/root.cer"), "publicKeyInfo", Collections.emptyList())
+  val tal = new TrustAnchorLocator(new File(""), "Ca Name", URI.create("rsync://rpki.ripe.net/root.cer"), "publicKeyInfo", Collections.emptyList())
   val PREFIX1 = RtrPrefix(asn = Asn.parse("AS6500"), prefix = IpRange.parse("10/8"), maxPrefixLength = None, Some(tal))
   val PREFIX2 = RtrPrefix(asn = Asn.parse("AS6501"), prefix = IpRange.parse("10/16"), maxPrefixLength = Some(18))
   val PREFIX3 = RtrPrefix(asn = Asn.parse("AS6502"), prefix = IpRange.parse("2001:43e8::/32"), maxPrefixLength = Some(32), Some(tal))
@@ -99,74 +99,74 @@ class ExportControllerTest extends ControllerTestCase {
          |route: 10.0.0.0/8
          |origin: AS6500
          |descr: exported from ripe ncc validator
-         |mnt-by: N/A
+         |mnt-by: NA
          |created: ${formattedDateTime}
          |last-modified: ${formattedDateTime}
-         |source: caName
+         |source: ROA-CA-NAME
          |
          |route: 10.0.0.0/16
          |origin: AS6501
          |descr: exported from ripe ncc validator
-         |mnt-by: N/A
+         |mnt-by: NA
          |created: ${formattedDateTime}
          |last-modified: ${formattedDateTime}
-         |source: unknown
+         |source: ROA-UNKNOWN
          |
          |route: 10.0.0.0/17
          |origin: AS6501
          |descr: exported from ripe ncc validator
-         |mnt-by: N/A
+         |mnt-by: NA
          |created: ${formattedDateTime}
          |last-modified: ${formattedDateTime}
-         |source: unknown
+         |source: ROA-UNKNOWN
          |
          |route: 10.0.0.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
-         |mnt-by: N/A
+         |mnt-by: NA
          |created: ${formattedDateTime}
          |last-modified: ${formattedDateTime}
-         |source: unknown
+         |source: ROA-UNKNOWN
          |
          |route: 10.0.64.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
-         |mnt-by: N/A
+         |mnt-by: NA
          |created: ${formattedDateTime}
          |last-modified: ${formattedDateTime}
-         |source: unknown
+         |source: ROA-UNKNOWN
          |
          |route: 10.0.128.0/17
          |origin: AS6501
          |descr: exported from ripe ncc validator
-         |mnt-by: N/A
+         |mnt-by: NA
          |created: ${formattedDateTime}
          |last-modified: ${formattedDateTime}
-         |source: unknown
+         |source: ROA-UNKNOWN
          |
          |route: 10.0.128.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
-         |mnt-by: N/A
+         |mnt-by: NA
          |created: ${formattedDateTime}
          |last-modified: ${formattedDateTime}
-         |source: unknown
+         |source: ROA-UNKNOWN
          |
          |route: 10.0.192.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
-         |mnt-by: N/A
+         |mnt-by: NA
          |created: ${formattedDateTime}
          |last-modified: ${formattedDateTime}
-         |source: unknown
+         |source: ROA-UNKNOWN
          |
          |route6: 2001:43e8::/32
          |origin: AS6502
          |descr: exported from ripe ncc validator
-         |mnt-by: N/A
+         |mnt-by: NA
          |created: ${formattedDateTime}
          |last-modified: ${formattedDateTime}
-         |source: caName
+         |source: ROA-CA-NAME
          |""".stripMargin
 
       status should equal(200)

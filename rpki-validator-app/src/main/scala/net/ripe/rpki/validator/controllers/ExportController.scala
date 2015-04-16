@@ -84,7 +84,7 @@ trait ExportController extends ApplicationController {
     val routes = new StringBuilder
     getRtrPrefixes.map { rtr =>
 
-      val caName = if(rtr.trustAnchorLocator.isEmpty) "unknown" else rtr.trustAnchorLocator.get.getCaName
+      val caName = if(rtr.trustAnchorLocator.isEmpty) "UNKNOWN" else rtr.trustAnchorLocator.get.getCaName.replace(' ', '-').toUpperCase
       val dateTime = ISODateTimeFormat.dateTimeNoMillis().withZoneUTC().print(DateTime.now)
 
       val allowedRoute = new AllowedRoute(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
@@ -97,10 +97,10 @@ trait ExportController extends ApplicationController {
                    |route$version: $range
                    |origin: ${allowedRoute.getAsn}
                    |descr: exported from ripe ncc validator
-                   |mnt-by: N/A
+                   |mnt-by: NA
                    |created: $dateTime
                    |last-modified: $dateTime
-                   |source: $caName
+                   |source: ROA-$caName
                    |"""
       }
 
