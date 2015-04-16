@@ -36,7 +36,7 @@ import java.util.Collections
 
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.joda.time.{DateTimeUtils, DateTime}
-import org.joda.time.format.{ISODateTimeFormat, DateTimeFormat}
+import org.joda.time.format.ISODateTimeFormat
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
@@ -52,13 +52,13 @@ class ExportControllerTest extends ControllerTestCase {
   val PREFIX2 = RtrPrefix(asn = Asn.parse("AS6501"), prefix = IpRange.parse("10/16"), maxPrefixLength = Some(18))
   val PREFIX3 = RtrPrefix(asn = Asn.parse("AS6502"), prefix = IpRange.parse("2001:43e8::/32"), maxPrefixLength = Some(32), Some(tal))
   val TEST_PREFIXES = Set[RtrPrefix](PREFIX1, PREFIX2, PREFIX3)
-  
+
   override def controller = new ControllerFilter with ExportController {
     override def getRtrPrefixes: Set[RtrPrefix] = {
       TEST_PREFIXES
     }
   }
-  
+
   test("Should make CSV with max lengths filled out") {
     get("/export.csv") {
 
@@ -90,7 +90,7 @@ class ExportControllerTest extends ControllerTestCase {
   test("Should make rpsl for every possible route") {
     val dateTime = DateTime.now
     DateTimeUtils.setCurrentMillisFixed(dateTime.getMillis)
-    val formattedDateTime = ISODateTimeFormat.dateHourMinuteSecond().print(dateTime)
+    val formattedDateTime = ISODateTimeFormat.dateTimeNoMillis().withZoneUTC().print(dateTime)
 
     get("/export.rpsl") {
 

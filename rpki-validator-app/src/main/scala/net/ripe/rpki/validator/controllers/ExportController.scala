@@ -33,7 +33,7 @@ package controllers
 import net.ripe.ipresource._
 import net.ripe.rpki.commons.validation.roa.AllowedRoute
 import org.joda.time.DateTime
-import org.joda.time.format.{DateTimeFormatter, ISODateTimeFormat, DateTimeFormat}
+import org.joda.time.format.ISODateTimeFormat
 import views.ExportView
 import models.RtrPrefix
 import net.liftweb.json._
@@ -85,7 +85,7 @@ trait ExportController extends ApplicationController {
     val allowedRoutes = getRtrPrefixes.map { rtr =>
 
       val caName = if(rtr.trustAnchorLocator.isEmpty) "unknown" else rtr.trustAnchorLocator.get.getCaName
-      val dateTime = ISODateTimeFormat.dateHourMinuteSecond().print(DateTime.now)
+      val dateTime = ISODateTimeFormat.dateTimeNoMillis().withZoneUTC().print(DateTime.now)
 
       val allowedRoute = new AllowedRoute(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
       val possibleRoutes = getAllRoutesFor(allowedRoute.getPrefix, allowedRoute.getMaximumLength)
