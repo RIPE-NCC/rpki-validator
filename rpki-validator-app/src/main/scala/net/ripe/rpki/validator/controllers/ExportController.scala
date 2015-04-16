@@ -95,8 +95,9 @@ trait ExportController extends ApplicationController {
       val caName = if(rtr.trustAnchorLocator.isEmpty) "unknown" else rtr.trustAnchorLocator.get.getCaName
 
       possibleRoutes.foreach { range =>
+        val version = if(IpResourceType.IPv6 == range.getType) "6" else ""
         routes ++= s"""
-                       |route: $range
+                       |route$version: $range
                        |origin: ${allowedRoute.getAsn}
                        |descr: exported from ripe ncc validator
                        |mnt-by: N/A
