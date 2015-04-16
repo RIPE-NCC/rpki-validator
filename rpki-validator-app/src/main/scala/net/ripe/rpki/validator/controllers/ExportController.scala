@@ -82,7 +82,7 @@ trait ExportController extends ApplicationController {
     response.addHeader("Cache-Control", "no-cache")
 
     val routes = new StringBuilder
-    val allowedRoutes = getRtrPrefixes.map { rtr =>
+    getRtrPrefixes.map { rtr =>
 
       val caName = if(rtr.trustAnchorLocator.isEmpty) "unknown" else rtr.trustAnchorLocator.get.getCaName
       val dateTime = ISODateTimeFormat.dateTimeNoMillis().withZoneUTC().print(DateTime.now)
@@ -109,27 +109,27 @@ trait ExportController extends ApplicationController {
   }
 
 
-  def getAllRoutesFor(prefix: IpRange, maximumLength: Int) = {
+  def getAllRoutesFor(prefix: IpRange, maxPrefixLength: Int) = {
     import scala.collection.JavaConversions._
     val ips = prefix.splitToPrefixes().map(_.getStart)
 
     ips.flatMap { ip =>
-      getAllRangesFor(ip.lowerBoundForPrefix(prefix.getPrefixLength), prefix.getPrefixLength, maximumLength)
+      getAllRangesFor(ip.lowerBoundForPrefix(prefix.getPrefixLength), prefix.getPrefixLength, maxPrefixLength)
     }
   }
 
 
-  def getAllRangesFor(ip: IpAddress, p: Int, ml:Int): Seq[IpRange] = {
-    val start = ip.lowerBoundForPrefix(p)
-    val end   = ip.upperBoundForPrefix(p)
+  def getAllRangesFor(ip: IpAddress, prefixLength: Int, maxPrefixLength:Int): Seq[IpRange] = {
+    val lower = ip.lowerBoundForPrefix(prefixLength)
+    val upper = ip.upperBoundForPrefix(prefixLength)
 
-    val route = IpRange.range(start, end)
+    val route = IpRange.range(lower, upper)
 
-    if(p < ml) {
+    if(prefixLength < maxPrefixLength) {
       Seq.concat(
         Seq(route),
-        getAllRangesFor(start, p + 1, ml),
-        getAllRangesFor(end, p + 1, ml)
+        getAllRangesFor(lower, prefixLength + 1, maxPrefixLength),
+        getAllRangesFor(upper, prefixLength + 1, maxPrefixLength)
       )
     } else {
       Seq(route)
