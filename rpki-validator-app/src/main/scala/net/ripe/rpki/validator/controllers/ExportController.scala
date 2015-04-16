@@ -30,6 +30,15 @@
 package net.ripe.rpki.validator
 package controllers
 
+import java.io.File
+import java.util
+
+import net.ripe.ipresource._
+import net.ripe.ipresource.etree.{IpResourceIntervalStrategy, NestedIntervalMap}
+import net.ripe.rpki.commons.validation.roa.{AllowedRoute, RouteOriginValidationPolicy}
+import net.ripe.rpki.validator.util.TrustAnchorLocator
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 import views.ExportView
 import models.RtrPrefix
 import net.liftweb.json._
@@ -69,6 +78,63 @@ trait ExportController extends ApplicationController {
         ("maxLength" -> rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
     )
     response.getWriter.write(compact(render(("roas" -> roas))))
+  }
+
+  get("/export.rpsl") {
+
+    contentType = "text/rpsl"
+    response.addHeader("Pragma", "public")
+    response.addHeader("Cache-Control", "no-cache")
+
+    val routes = new StringBuilder
+    val allowedRoutes = getRtrPrefixes.map { rtr =>
+      val allowedRoute = new AllowedRoute(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
+
+      val possibleRoutes = getAllRoutesFor(allowedRoute.getPrefix, allowedRoute.getMaximumLength)
+
+      val caName = if(rtr.trustAnchorLocator.isEmpty) "unknown" else rtr.trustAnchorLocator.get.getCaName
+
+      possibleRoutes.foreach { range =>
+        routes ++= s"""
+                       |route: $range
+                       |origin: ${allowedRoute.getAsn}
+                       |descr: exported from ripe ncc validator
+                       |mnt-by: N/A
+                       |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+                       |source: $caName
+                       |"""
+      }
+
+    }
+    response.getWriter.write(routes.stripMargin)
+  }
+
+
+  def getAllRoutesFor(prefix: IpRange, maximumLength: Int) = {
+    import scala.collection.JavaConversions._
+    val ips = prefix.splitToPrefixes().map(_.getStart)
+
+    ips.flatMap { ip =>
+      getAllRangesFor(ip.lowerBoundForPrefix(prefix.getPrefixLength), prefix.getPrefixLength, maximumLength)
+    }
+  }
+
+
+  def getAllRangesFor(ip: IpAddress, p: Int, ml:Int): Seq[IpRange] = {
+    val start = ip.lowerBoundForPrefix(p)
+    val end   = ip.upperBoundForPrefix(p)
+
+    val route = IpRange.range(start, end)
+
+    if(p < ml) {
+      Seq.concat(
+        Seq(route),
+        getAllRangesFor(start, p + 1, ml),
+        getAllRangesFor(end, p + 1, ml)
+      )
+    } else {
+      Seq(route)
+    }
   }
 
 }

@@ -30,6 +30,13 @@
 package net.ripe.rpki.validator
 package controllers
 
+import java.io.File
+import java.net.URI
+import java.util.Collections
+
+import net.ripe.rpki.validator.util.TrustAnchorLocator
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
@@ -40,8 +47,9 @@ import net.ripe.ipresource.{ IpRange, Asn }
 @RunWith(classOf[JUnitRunner])
 class ExportControllerTest extends ControllerTestCase {
 
-  val PREFIX1 = RtrPrefix(asn = Asn.parse("AS6500"), prefix = IpRange.parse("10/8"), maxPrefixLength = None)
-  val PREFIX2 = RtrPrefix(asn = Asn.parse("AS6500"), prefix = IpRange.parse("192.168/16"), maxPrefixLength = Some(24))
+  val tal = new TrustAnchorLocator(new File(""), "caName", URI.create("rsync://rpki.ripe.net/root.cer"), "publicKeyInfo", Collections.emptyList())
+  val PREFIX1 = RtrPrefix(asn = Asn.parse("AS6500"), prefix = IpRange.parse("10/8"), maxPrefixLength = None, Some(tal))
+  val PREFIX2 = RtrPrefix(asn = Asn.parse("AS6501"), prefix = IpRange.parse("10/16"), maxPrefixLength = Some(18))
   val TEST_PREFIXES = Set[RtrPrefix](PREFIX1, PREFIX2)
   
   override def controller = new ControllerFilter with ExportController {
@@ -56,7 +64,7 @@ class ExportControllerTest extends ControllerTestCase {
       val expectedResponse =
         """ASN,IP Prefix,Max Length
           |AS6500,10.0.0.0/8,8
-          |AS6500,192.168.0.0/16,24
+          |AS6501,10.0.0.0/16,18
           |""".stripMargin
 
       status should equal(200)
@@ -70,8 +78,78 @@ class ExportControllerTest extends ControllerTestCase {
   test("Should export JSON with max lengths filled out") {
     get("/export.json") {
       status should equal(200)
-      body should equal( """{"roas":[{"asn":"AS6500","prefix":"10.0.0.0/8","maxLength":8},{"asn":"AS6500","prefix":"192.168.0.0/16","maxLength":24}]}""")
+      body should equal( """{"roas":[{"asn":"AS6500","prefix":"10.0.0.0/8","maxLength":8},{"asn":"AS6501","prefix":"10.0.0.0/16","maxLength":18}]}""")
       header("Content-Type") should equal("text/json;charset=UTF-8")
+      header("Pragma") should equal("public")
+      header("Cache-Control") should equal("no-cache")
+    }
+  }
+
+  test("Should make rpsl for every possible route") {
+    get("/export.rpsl") {
+
+      val expectedResponse =
+        s"""
+         |route: 10.0.0.0/8
+         |origin: AS6500
+         |descr: exported from ripe ncc validator
+         |mnt-by: N/A
+         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |source: caName
+         |
+         |route: 10.0.0.0/16
+         |origin: AS6501
+         |descr: exported from ripe ncc validator
+         |mnt-by: N/A
+         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |source: unknown
+         |
+         |route: 10.0.0.0/17
+         |origin: AS6501
+         |descr: exported from ripe ncc validator
+         |mnt-by: N/A
+         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |source: unknown
+         |
+         |route: 10.0.0.0/18
+         |origin: AS6501
+         |descr: exported from ripe ncc validator
+         |mnt-by: N/A
+         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |source: unknown
+         |
+         |route: 10.0.64.0/18
+         |origin: AS6501
+         |descr: exported from ripe ncc validator
+         |mnt-by: N/A
+         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |source: unknown
+         |
+         |route: 10.0.128.0/17
+         |origin: AS6501
+         |descr: exported from ripe ncc validator
+         |mnt-by: N/A
+         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |source: unknown
+         |
+         |route: 10.0.128.0/18
+         |origin: AS6501
+         |descr: exported from ripe ncc validator
+         |mnt-by: N/A
+         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |source: unknown
+         |
+         |route: 10.0.192.0/18
+         |origin: AS6501
+         |descr: exported from ripe ncc validator
+         |mnt-by: N/A
+         |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+         |source: unknown
+         |""".stripMargin
+
+      status should equal(200)
+      body should equal(expectedResponse)
+      header("Content-Type") should equal("text/rpsl;charset=UTF-8")
       header("Pragma") should equal("public")
       header("Cache-Control") should equal("no-cache")
     }
