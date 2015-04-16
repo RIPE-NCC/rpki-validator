@@ -30,13 +30,8 @@
 package net.ripe.rpki.validator
 package controllers
 
-import java.io.File
-import java.util
-
 import net.ripe.ipresource._
-import net.ripe.ipresource.etree.{IpResourceIntervalStrategy, NestedIntervalMap}
-import net.ripe.rpki.commons.validation.roa.{AllowedRoute, RouteOriginValidationPolicy}
-import net.ripe.rpki.validator.util.TrustAnchorLocator
+import net.ripe.rpki.commons.validation.roa.AllowedRoute
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import views.ExportView
@@ -97,13 +92,13 @@ trait ExportController extends ApplicationController {
       possibleRoutes.foreach { range =>
         val version = if(IpResourceType.IPv6 == range.getType) "6" else ""
         routes ++= s"""
-                       |route$version: $range
-                       |origin: ${allowedRoute.getAsn}
-                       |descr: exported from ripe ncc validator
-                       |mnt-by: N/A
-                       |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
-                       |source: $caName
-                       |"""
+                   |route$version: $range
+                   |origin: ${allowedRoute.getAsn}
+                   |descr: exported from ripe ncc validator
+                   |mnt-by: N/A
+                   |changed: foo@bar.net ${DateTimeFormat.forPattern("YYYYMMDD").print(DateTime.now)}
+                   |source: $caName
+                   |"""
       }
 
     }
