@@ -40,6 +40,8 @@ import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsBuilde
 import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateInformationAccessDescriptor, X509ResourceCertificate, X509ResourceCertificateBuilder}
+import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.validator.models.validation.CrlObject
 import net.ripe.rpki.validator.store.Storage
 import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.DateTime
@@ -54,16 +56,15 @@ class RpkiTreeBuilder(store: Storage) {
   private val VALIDITY_PERIOD: ValidityPeriod = new ValidityPeriod(NOW.minusMinutes(1), NOW.plusYears(1))
 
   private var rootCertName: X500Principal = _
-  private var rootKeyPair: KeyPair = _
 
-  private val certs = scala.collection.mutable.HashMap.empty[X500Principal, KeyPair]
+  private val certs = scala.collection.mutable.HashMap.empty[X500Principal, (URI, KeyPair)]
   private val crlsByCert = scala.collection.mutable.HashMap.empty[X500Principal, (URI, Seq[BigInteger])]
   private val mftsByCert = scala.collection.mutable.HashMap.empty[X500Principal, (URI, Seq[(URI, Array[Byte])])]
+  private val certsByParent = scala.collection.mutable.HashMap.empty[X500Principal, Seq[X500Principal]]
 
-  def addRootCertificate(name: X500Principal, keyPair: KeyPair) = {
+  def addRootCertificate(name: X500Principal, location: URI, keyPair: KeyPair) = {
     rootCertName = name
-    rootKeyPair = keyPair
-    certs.put(name, keyPair)
+    certs.put(name, (location, keyPair))
   }
 
   def addCrl(parentCertificateName: X500Principal, location: URI, revokedSerials: BigInteger*) = {
@@ -74,18 +75,36 @@ class RpkiTreeBuilder(store: Storage) {
     mftsByCert.put(parentCertificateName, (location, entries.toSeq))
   }
 
+  def addCert(parentCertificateName: X500Principal, location: URI, keyPair: KeyPair, certificateName: X500Principal) = {
+    certs.put(certificateName, (location, keyPair))
+    val siblings = certsByParent.getOrElse(parentCertificateName, Seq())
+    certsByParent.put(parentCertificateName, siblings :+ certificateName)
+  }
+
+  /**
+   * Builds and stores the entire tree of rpki objects.
+   *
+   * @return the taContext
+   */
   def build = {
-    // TODO Build and store the whole tree, starting with the rootCert
+    val (rootLocation, rootKeyPair) = certs.get(rootCertName).get
     val rootCert = buildRootCertificate(rootCertName, rootKeyPair)
 
     buildTreeFrom(rootCertName)
+
+    new CertificateRepositoryObjectValidationContext(rootLocation, rootCert)
   }
 
-  def buildTreeFrom(certificateName: X500Principal) = {
-    val mft = buildMft(certificateName)
-    val crl = buildCrl(certificateName)
-    // TODO store them
-    // TODO also build other objects and recurse on certs
+  private def buildTreeFrom(certificateName: X500Principal) = {
+    buildMft(certificateName)
+    val (crlLocation, crl) = buildCrl(certificateName)
+    store.storeCrl(CrlObject(crlLocation.toString, crl))
+
+    // TODO also build other objects and recurse on certs if a mft is present.
+  }
+
+  private def buildCertificate(name: X500Principal) = {
+    // TODO  build cert, check if it has a child mft, in that case make it a ca.
   }
 
   private def buildRootCertificate(name: X500Principal, keyPair: KeyPair) = {
@@ -115,9 +134,9 @@ class RpkiTreeBuilder(store: Storage) {
     builder.build
   }
 
-  private def buildCrl(certificateName: X500Principal): X509Crl = {
-    val keyPair = certs.get(certificateName).get
-    val (_, revokedSerials) = crlsByCert.get(certificateName).get
+  private def buildCrl(certificateName: X500Principal): (URI, X509Crl) = {
+    val (_, keyPair) = certs.get(certificateName).get
+    val (location, revokedSerials) = crlsByCert.get(certificateName).get
 
     val builder: X509CrlBuilder = new X509CrlBuilder
     builder.withIssuerDN(certificateName)
@@ -130,12 +149,12 @@ class RpkiTreeBuilder(store: Storage) {
       i => builder.addEntry(i, NOW.minusDays(1))
     }
 
-    builder.build(keyPair.getPrivate)
+    (location, builder.build(keyPair.getPrivate))
   }
 
-  private def buildMft(certificateName: X500Principal): ManifestCms = {
-    val keyPair = certs.get(certificateName).get
-    val (_, entries) = mftsByCert.get(certificateName).get
+  private def buildMft(certificateName: X500Principal): (URI, ManifestCms) = {
+    val (_, keyPair) = certs.get(certificateName).get
+    val (location, entries) = mftsByCert.get(certificateName).get
     val (crlLocation, _) = crlsByCert.get(certificateName).get
 
     val thisUpdateTime = NOW.minusMinutes(1)
@@ -154,7 +173,7 @@ class RpkiTreeBuilder(store: Storage) {
 
     builder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER)
 
-    builder.build(keyPair.getPrivate)
+    (location, builder.build(keyPair.getPrivate))
   }
 
   private def createManifestEECertificate(keyPair: KeyPair, issuerDN: X500Principal, crlLocation: URI): X509ResourceCertificate = {
