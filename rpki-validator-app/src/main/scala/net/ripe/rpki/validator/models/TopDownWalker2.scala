@@ -81,7 +81,10 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
   private def validateContext = {
     logger.info(s"Validating ${certificateContext.getLocation}")
-    val fetchErrors = preferredFetchLocation.map(prefetch)
+
+    val fetchErrors = preferredFetchLocation.map {
+      prefetch(_).map { e => e.uri -> e } toMap
+    }.getOrElse(Map())
 
     val mftList = fetchMftsByAKI
     val validatedObjects = findRecentValidMftWithCrl(mftList) match {
@@ -112,7 +115,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
           Set(new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex))))
     }
 
-    validatedObjects
+    fetchErrors ++ validatedObjects
   }
 
   private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
@@ -180,7 +183,11 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
   }
 
-  private def prefetch(uri: URI) = repoService.visitRepo(uri)
+  private def prefetch(uri: URI) = {
+    repoService.visitRepo(uri).map { error =>
+      InvalidObject(error.url, Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, error.message)))
+    }
+  }
 
   private def validateObject(obj: RepositoryObject.ROType)(validate: ValidationResult => Unit) = {
     val validationResult = ValidationResult.withLocation(location(obj))
