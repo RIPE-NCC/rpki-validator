@@ -180,7 +180,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val timeInThePast = Instant.now.minus(1000l)
     store.updateValidationTimestamp(Seq(roa.url, certificate.url), timeInThePast)
 
-    store.clearOldObjects(Instant.now)
+    store.clearObjects(Instant.now)
 
     val roas = store.getRoas(roa.aki)
     roas should have length 0
