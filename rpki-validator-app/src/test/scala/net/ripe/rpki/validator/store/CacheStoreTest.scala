@@ -189,6 +189,24 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     certificates should have length 0
   }
 
+  test("Delete objects never validated") {
+
+    val roa: RoaObject = RoaObject(url = "rsync://bla.roa", decoded = testRoa)
+    store.storeRoa(roa)
+
+    val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
+    store.storeCertificate(certificate)
+
+
+    store.deleteObjectsNeverValidated()
+
+    val roas = store.getRoas(roa.aki)
+    roas should have length 0
+
+    val certificates = store.getCertificates(certificate.aki)
+    certificates should have length 0
+  }
+
   test("Should delete objects in batches") {
     val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
     val roa = RoaObject(url = "rsync://bla/bla.roa", decoded = testRoa)

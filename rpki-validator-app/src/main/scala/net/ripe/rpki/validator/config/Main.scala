@@ -31,6 +31,7 @@ package net.ripe.rpki.validator
 package config
 
 import net.ripe.rpki.validator.fetchers.FetcherConfig
+import net.ripe.rpki.validator.store.DurableCaches
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.config.ConnectionConfig
@@ -125,10 +126,16 @@ class Main extends Http { main =>
 
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 10.seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 2.hours) { refreshRisDumps() }
+  actorSystem.scheduler.schedule(initialDelay = 8.hours, interval = 8.hours) { deleteObjectsNeverValidated() }
 
   private def loadTrustAnchors(): TrustAnchors = {
     val tals = FileUtils.listFiles(ApplicationOptions.talDirLocation, Array("tal"), false)
     TrustAnchors.load(tals.asScala.toSeq)
+  }
+
+  private def deleteObjectsNeverValidated() {
+    val store = DurableCaches(ApplicationOptions.workDirLocation, "")
+    store.deleteObjectsNeverValidated()
   }
 
   private def refreshRisDumps() {

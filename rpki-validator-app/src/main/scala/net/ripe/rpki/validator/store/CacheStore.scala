@@ -261,6 +261,16 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
     }
   }
 
+  def deleteObjectsNeverValidated() = {
+    atomic {
+      Seq("certificates", "repo_objects").foreach { table =>
+        val i = template.update(s"DELETE FROM $table WHERE validation_time is null", Map.empty[String, Object])
+        info(s"Delete objects never validated -> $i object(s) deleted from $table")
+      }
+    }
+  }
+
+
   override def delete(url: String, hash: String) = locker.locked(url) {
     tableName(url).foreach { t =>
       template.update(s"DELETE FROM $t WHERE url = :url AND hash = :hash AND ta_name = :ta_name",
