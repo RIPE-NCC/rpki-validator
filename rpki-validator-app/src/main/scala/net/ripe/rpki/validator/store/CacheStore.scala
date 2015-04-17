@@ -270,7 +270,6 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
     }
   }
 
-
   override def delete(url: String, hash: String) = locker.locked(url) {
     tableName(url).foreach { t =>
       template.update(s"DELETE FROM $t WHERE url = :url AND hash = :hash AND ta_name = :ta_name",
