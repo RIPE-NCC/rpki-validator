@@ -30,6 +30,8 @@
 package net.ripe.rpki.validator
 package controllers
 
+import java.io.PrintWriter
+
 import net.ripe.ipresource._
 import net.ripe.rpki.commons.validation.roa.AllowedRoute
 import org.joda.time.DateTime
@@ -37,6 +39,8 @@ import org.joda.time.format.ISODateTimeFormat
 import views.ExportView
 import models.RtrPrefix
 import net.liftweb.json._
+
+import scala.collection.mutable
 
 trait ExportController extends ApplicationController {
 
@@ -81,8 +85,8 @@ trait ExportController extends ApplicationController {
     response.addHeader("Pragma", "public")
     response.addHeader("Cache-Control", "no-cache")
 
-    val routes = new StringBuilder
-    getRtrPrefixes.map { rtr =>
+    val writer = response.getWriter
+    getRtrPrefixes.foreach { rtr =>
 
       val caName = if(rtr.trustAnchorLocator.isEmpty) "UNKNOWN" else rtr.trustAnchorLocator.get.getCaName.replace(' ', '-').toUpperCase
       val dateTime = ISODateTimeFormat.dateTimeNoMillis().withZoneUTC().print(DateTime.now)
@@ -93,7 +97,7 @@ trait ExportController extends ApplicationController {
       possibleRoutes.foreach { range =>
         val version = if(IpResourceType.IPv6 == range.getType) "6" else ""
 
-        routes ++= s"""
+        writer.write(s"""
                    |route$version: $range
                    |origin: ${allowedRoute.getAsn}
                    |descr: exported from ripe ncc validator
@@ -101,11 +105,10 @@ trait ExportController extends ApplicationController {
                    |created: $dateTime
                    |last-modified: $dateTime
                    |source: ROA-$caName
-                   |"""
-      }
+                   |""".stripMargin)
 
+      }
     }
-    response.getWriter.write(routes.stripMargin)
   }
 
 
