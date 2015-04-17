@@ -85,10 +85,9 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
     val mftList = fetchMftsByAKI
     val validatedObjects = findRecentValidMftWithCrl(mftList) match {
-      case Some((manifest, mftObjects, mftCrlChecks)) =>
+      case Some((manifest, crl, mftObjects, mftCrlChecks)) =>
         val ClassifiedObjects(roas, childrenCertificates, crlList) = classify(mftObjects)
 
-        val crl = crlList.head
         val checks = checkManifestUrlOnCertMatchesLocationInRepo(manifest).toList ++
           mftCrlChecks ++
           check(roas, crl) ++
@@ -189,25 +188,10 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     validationResult
   }
 
-  private def findRecentValidCrl(crlList: Seq[CrlObject]): Option[CrlObject] =
-    crlList.sortBy(_.decoded.getNumber.negate).find { crl =>
-      val crlValidationResult = _validateCrl(crl)
-      !crlValidationResult.hasFailures
-    }
-
-  private def checkAllCrls(crlList: Seq[CrlObject]): List[Check] =
-    crlList.map { crl =>
-      val crlValidationResult = _validateCrl(crl)
-      toChecks(crlValidationResult.getCurrentLocation, crlValidationResult)
-    }.flatten.toList
-
-
   private def _validateCrl(crl: CrlObject): ValidationResult =
     validateObject(crl) { validationResult =>
       crl.decoded.validate(crl.url, certificateContext, crlLocator(crl), validationOptions, validationResult)
     }
-
-  private def fetchCrlsByAKI: Seq[CrlObject] = store.getCrls(certificateContext.getSubjectKeyIdentifier)
 
   private def fetchMftsByAKI: Seq[ManifestObject] = store.getManifests(certificateContext.getSubjectKeyIdentifier)
 
@@ -217,7 +201,23 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
   }
 
 
-  private def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): Option[(ManifestObject, Seq[RepositoryObject.ROType], Seq[Check])] = {
+  private def getCrlChecks(mft: ManifestObject, crl: Option[CrlObject]) = crl.fold {
+    List(error(location(mft), CRL_REQUIRED))
+  } { c =>
+    toChecks(location(c), _validateCrl(c))
+  }
+
+  private def getMftChecks(mft: ManifestObject, crl: Option[CrlObject]) = crl.fold {
+    List[Check]()
+  } { c =>
+    val checks = toChecks(location(c), _validateMft(c, mft))
+    if (!HashUtil.equals(c.aki, mft.aki))
+      error(location(c), CRL_AKI_MISMATCH) :: checks
+    else
+      checks
+  }
+
+  private def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): Option[(ManifestObject, CrlObject, Seq[RepositoryObject.ROType], Seq[Check])] = {
     // sort manifests chronologically so that
     // the latest one goes first
     val recentFirstManifests = mftList.sortBy(_.decoded.getNumber.negate)
@@ -231,24 +231,9 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
       val (crl, crlWarnings) = crossCheckCrls(crlsOnManifest, location(mft))
 
-      // validate the crl and the manifest by themselves
-      val crlChecks = crl.fold {
-        List(error(location(mft), CRL_REQUIRED))
-      } { c =>
-        toChecks(location(c), _validateCrl(c))
-      }
-
-      val mftChecks = crl.fold {
-        List[Check]()
-      } { c =>
-        val checks = toChecks(location(c), _validateMft(c, mft))
-        if (!HashUtil.equals(c.aki, mft.aki))
-          error(location(c), CRL_AKI_MISMATCH) :: checks
-        else
-          checks
-      }
-
-      (mft, mftObjects, warnings ++ crlChecks ++ mftChecks ++ crlWarnings.toList)
+      val crlChecks = getCrlChecks(mft, crl)
+      val mftChecks = getMftChecks(mft, crl)
+      (mft, crl, mftObjects, warnings ++ crlChecks ++ mftChecks ++ crlWarnings.toList)
     }
 
     // Add warnings for the cases when we have to move
@@ -256,7 +241,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     // problem by itself.
     var allChecks = Seq[Check]()
     val mft = validatedManifests.iterator.find { x =>
-      val (mft, _, checks) = x
+      val (mft, crl, _, checks) = x
       allChecks ++= checks
 
       // TODO Verify this: is it a correct strategy to
@@ -265,20 +250,14 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       if (errorsExist) {
         allChecks :+ warning(location(mft), VALIDATOR_MANIFEST_IS_INVALID)
       }
-      errorsExist
+      !errorsExist && crl.isDefined
     }
 
     // replace the particular manifest checks with all the checks
     // we've found while searching for the proper manifest
-    mft.map(m => (m._1, m._2, allChecks))
+    for { m <- mft; c <- m._2 }
+      yield (m._1, c, m._3, allChecks)
   }
-
-
-  private def checkAllMfts(mftList: Seq[ManifestObject], crl: CrlObject): List[Check] =
-    mftList.map { mft =>
-      val mftValidationResult = _validateMft(crl, mft)
-      toChecks(location(mft), mftValidationResult)
-    }.flatten.toList
 
   private def _validateMft(crl: CrlObject, mft: ManifestObject): ValidationResult =
     validateObject(mft) { validationResult =>
@@ -318,19 +297,6 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
         (Some(manifestCrlEntries.head), None)
   }
 
-  private def checkManifestObjects(manifest: ManifestObject, crlByAki: CrlObject) = {
-    val (classified@ClassifiedObjects(roas, childrenCertificates, crlsOnManifest), warnings, entries) = getManifestObjectsOrWarnings(manifest)
-    //
-    val (_, crlWarning) = crossCheckCrls(crlsOnManifest, location(manifest))
-
-    // TODO Implement more checks for other objects on the manifest
-    (classified, warnings ++ crlWarning.toList)
-  }
-
-  private def getManifestObjectsOrWarnings(manifest: ManifestObject) = {
-    val (foundObjects, warnings, entries) = getManifestObjects(manifest)
-    (classify(foundObjects), warnings, entries)
-  }
 
   def getManifestObjects(manifest: ManifestObject): (Seq[ROType], Seq[Check], Map[URI, Array[Byte]]) = {
     val repositoryUri = certificateContext.getRepositoryURI
