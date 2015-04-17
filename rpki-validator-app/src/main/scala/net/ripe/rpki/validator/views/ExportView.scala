@@ -44,6 +44,7 @@ class ExportView extends View with ViewHelpers {
       <div class="alert-actions">
         <a href="export.csv" class="btn">Get CSV</a>
         <a href="export.json" class="btn">Get JSON</a>
+        <a href="export.rpsl" class="btn">Get RPSL</a>
         <span class="help-inline">
           These are stable links, so you can use a tool such as wget from cron to periodically get this export.
         </span>

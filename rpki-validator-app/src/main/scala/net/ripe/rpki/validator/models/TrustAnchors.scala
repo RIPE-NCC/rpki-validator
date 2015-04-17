@@ -234,7 +234,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
     val walker = new TopDownWalker2(certificate, store, repoService, validationOptions, startTime)(scala.collection.mutable.Set())
     val result: Map[URI, ValidatedObject] = walker.execute
-    store.clearOldObjects(startTime)
+    store.clearObjects(startTime)
     result
   }
 
