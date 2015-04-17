@@ -32,12 +32,12 @@ package net.ripe.rpki.validator.models
 import java.net.URI
 
 import grizzled.slf4j.Logging
-import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509Crl}
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.validation._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.validator.models.validation.RepositoryObject.ROType
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.Storage
 import org.apache.commons.lang.Validate
@@ -69,6 +69,9 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
   private def warning(location: ValidationLocation, key: String, params: String*) =
     Check(location, new ValidationCheck(ValidationStatus.WARNING, key, params: _*))
 
+  private def isError(c: Check) = !c.impl.isOk
+
+  private def location(o: RepositoryObject.ROType) = new ValidationLocation(o.url)
 
   def execute: Map[URI, ValidatedObject] = {
     val validatedObjects = validateContext
@@ -80,44 +83,34 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     logger.info(s"Validating ${certificateContext.getLocation}")
     val fetchErrors = preferredFetchLocation.map(prefetch)
 
-    val crlList = fetchCrlsByAKI
+    val mftList = fetchMftsByAKI
+    val validatedObjects = findRecentValidMftWithCrl(mftList) match {
+      case Some((manifest, mftObjects, mftCrlChecks)) =>
+        val ClassifiedObjects(roas, childrenCertificates, crlList) = classify(mftObjects)
 
-    val validatedObjects: Map[URI, ValidatedObject] = findRecentValidCrl(crlList) match {
+        val crl = crlList.head
+        val checks = checkManifestUrlOnCertMatchesLocationInRepo(manifest).toList ++
+          mftCrlChecks ++
+          check(roas, crl) ++
+          check(childrenCertificates, crl)
+
+        val checkMap = checks.groupBy(_.location)
+
+        val validatedChildren = childrenCertificates.view.map { c =>
+          val v = validatedObject(checkMap)(c)
+          (c, v, c.decoded.isObjectIssuer && v._2.isValid)
+        }
+
+        Seq(roas.map(validatedObject(checkMap)),
+          validatedChildren.map(_._2).force,
+          crlList.map(validatedObject(checkMap)),
+          mftList.map(validatedObject(checkMap)),
+          validatedChildren.filter(_._3).map(_._1).force.flatMap(stepDown)
+        ).map(_.toMap).fold(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
+
       case None =>
         Map(certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
-          Set(new ValidationCheck(ValidationStatus.ERROR, CRL_REQUIRED, s"No valid CRL found with AKI=$certificateSkiHex"))))
-
-      case Some(crl) =>
-        val mftList = fetchMftsByAKI
-        findRecentValidMft(mftList, crl) match {
-          case Some(manifest) =>
-            val (ClassifiedObjects(roas, childrenCertificates, _), mftObjectsChecks) = checkManifestObjects(manifest, crl)
-
-            val checks = checkManifestUrlOnCertMatchesLocationInRepo(manifest).toList ++
-              mftObjectsChecks ++
-              checkAllCrls(crlList) ++
-              checkAllMfts(mftList, crl) ++
-              check(roas, crl) ++
-              check(childrenCertificates, crl)
-
-            val checkMap = checks.groupBy(_.location)
-
-            val validatedChildren = childrenCertificates.view.map { c =>
-              val v = validatedObject(checkMap)(c)
-              (c, v, c.decoded.isObjectIssuer && v._2.isValid)
-            }
-
-            Seq(roas.map(validatedObject(checkMap)),
-              validatedChildren.map(_._2).force,
-              crlList.map(validatedObject(checkMap)),
-              mftList.map(validatedObject(checkMap)),
-              validatedChildren.filter(_._3).map(_._1).force.flatMap(stepDown)
-            ).map(_.toMap).fold(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
-
-          case None =>
-            Map(certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
-              Set(new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex))))
-        }
+          Set(new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex))))
     }
 
     validatedObjects
@@ -150,7 +143,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
   }
 
-  def validatedObject[T <: CertificateRepositoryObject](checkMap: Map[ValidationLocation, List[Check]])(r: RepositoryObject[T]): (URI, ValidatedObject) = {
+  def validatedObject(checkMap: Map[ValidationLocation, List[Check]])(r: RepositoryObject.ROType): (URI, ValidatedObject) = {
     val uri = new URI(r.url)
     val validationChecks = checkMap.get(new ValidationLocation(uri)).map(_.map(_.impl).toSet)
     val hasErrors = validationChecks.exists(c => !c.forall(_.isOk))
@@ -161,7 +154,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
   }
 
-  def check[T <: CertificateRepositoryObject](objects: Seq[RepositoryObject[T]], crl: CrlObject): List[Check] = {
+  def check(objects: Seq[RepositoryObject.ROType], crl: CrlObject): List[Check] = {
     objects.map { o =>
       val location = new ValidationLocation(o.url)
       val result = ValidationResult.withLocation(location)
@@ -170,7 +163,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }.flatten.toList
   }
 
-  private def toChecks[T <: CertificateRepositoryObject](location: ValidationLocation, result: ValidationResult): List[Check] = {
+  private def toChecks(location: ValidationLocation, result: ValidationResult): List[Check] = {
     result.getWarnings(location).asScala.map(r => warning(location, r.getKey, r.getParams: _*)).toList ++
       result.getFailures(location).asScala.map(r => error(location, r.getKey, r.getParams: _*)).toList
   }
@@ -190,29 +183,28 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
   private def prefetch(uri: URI) = repoService.visitRepo(uri)
 
-  private def validateObject[T <: CertificateRepositoryObject](obj: RepositoryObject[T])(validate: (String, ValidationResult) => Unit) = {
-    val location = new ValidationLocation(obj.url)
-    val validationResult = ValidationResult.withLocation(location)
-    validate(obj.url, validationResult)
-    (location, validationResult)
+  private def validateObject(obj: RepositoryObject.ROType)(validate: ValidationResult => Unit) = {
+    val validationResult = ValidationResult.withLocation(location(obj))
+    validate(validationResult)
+    validationResult
   }
 
   private def findRecentValidCrl(crlList: Seq[CrlObject]): Option[CrlObject] =
     crlList.sortBy(_.decoded.getNumber.negate).find { crl =>
-      val (_, crlValidationResult) = _validateCrl(crl)
+      val crlValidationResult = _validateCrl(crl)
       !crlValidationResult.hasFailures
     }
 
   private def checkAllCrls(crlList: Seq[CrlObject]): List[Check] =
     crlList.map { crl =>
-      val (location, crlValidationResult) = _validateCrl(crl)
-      toChecks(location, crlValidationResult)
+      val crlValidationResult = _validateCrl(crl)
+      toChecks(crlValidationResult.getCurrentLocation, crlValidationResult)
     }.flatten.toList
 
 
-  private def _validateCrl(crl: CrlObject): (ValidationLocation, ValidationResult) =
-    validateObject(crl) { (url, validationResult) =>
-      crl.decoded.validate(url, certificateContext, crlLocator(crl), validationOptions, validationResult)
+  private def _validateCrl(crl: CrlObject): ValidationResult =
+    validateObject(crl) { validationResult =>
+      crl.decoded.validate(crl.url, certificateContext, crlLocator(crl), validationOptions, validationResult)
     }
 
   private def fetchCrlsByAKI: Seq[CrlObject] = store.getCrls(certificateContext.getSubjectKeyIdentifier)
@@ -224,24 +216,74 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       crl.decoded
   }
 
-  private def findRecentValidMft(mftList: Seq[ManifestObject], crl: CrlObject): Option[ManifestObject] =
-    mftList.sortBy(_.decoded.getNumber.negate).find { mft =>
-      val (_, mftValidationResult) = _validateMft(crl, mft)
-      !mftValidationResult.hasFailures
-    }  // TODO raise warnings in case we have to skip mft's which are not valid
+
+  private def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): Option[(ManifestObject, Seq[RepositoryObject.ROType], Seq[Check])] = {
+    // sort manifests chronologically so that
+    // the latest one goes first
+    val recentFirstManifests = mftList.sortBy(_.decoded.getNumber.negate)
+
+    // use "view" here to make it lazy and
+    // avoid checking every existing manifest
+    val validatedManifests = recentFirstManifests.view.map { mft =>
+      // get CRLs on the manifest
+      val (mftObjects, warnings, _) = getManifestObjects(mft)
+      val crlsOnManifest = mftObjects.collect { case c: CrlObject => c }
+
+      val (crl, crlWarnings) = crossCheckCrls(crlsOnManifest, location(mft))
+
+      // validate the crl and the manifest by themselves
+      val crlChecks = crl.fold {
+        List(error(location(mft), CRL_REQUIRED))
+      } { c =>
+        toChecks(location(c), _validateCrl(c))
+      }
+
+      val mftChecks = crl.fold {
+        List[Check]()
+      } { c =>
+        val checks = toChecks(location(c), _validateMft(c, mft))
+        if (!HashUtil.equals(c.aki, mft.aki))
+          error(location(c), CRL_AKI_MISMATCH) :: checks
+        else
+          checks
+      }
+
+      (mft, mftObjects, warnings ++ crlChecks ++ mftChecks ++ crlWarnings.toList)
+    }
+
+    // Add warnings for the cases when we have to move
+    // from one manifest to an older one. That's a
+    // problem by itself.
+    var allChecks = Seq[Check]()
+    val mft = validatedManifests.iterator.find { x =>
+      val (mft, _, checks) = x
+      allChecks ++= checks
+
+      // TODO Verify this: is it a correct strategy to
+      // TODO check for error presence
+      val errorsExist = checks.exists(isError)
+      if (errorsExist) {
+        allChecks :+ warning(location(mft), VALIDATOR_MANIFEST_IS_INVALID)
+      }
+      errorsExist
+    }
+
+    // replace the particular manifest checks with all the checks
+    // we've found while searching for the proper manifest
+    mft.map(m => (m._1, m._2, allChecks))
+  }
+
 
   private def checkAllMfts(mftList: Seq[ManifestObject], crl: CrlObject): List[Check] =
     mftList.map { mft =>
-      val (location, mftValidationResult) = _validateMft(crl, mft)
-      toChecks(location, mftValidationResult)
+      val mftValidationResult = _validateMft(crl, mft)
+      toChecks(location(mft), mftValidationResult)
     }.flatten.toList
 
-  private def _validateMft(crl: CrlObject, mft: ManifestObject): (ValidationLocation, ValidationResult) =
-    validateObject(mft) { (url, validationResult) =>
-      mft.decoded.validate(url, certificateContext, crlLocator(crl), validationOptions, validationResult)
+  private def _validateMft(crl: CrlObject, mft: ManifestObject): ValidationResult =
+    validateObject(mft) { validationResult =>
+      mft.decoded.validate(mft.url, certificateContext, crlLocator(crl), validationOptions, validationResult)
     }
-
-  type FileAndHashEntries = Map[URI, Array[Byte]]
 
   case class ClassifiedObjects(roas: Seq[RoaObject], certificates: Seq[CertificateObject], crls: Seq[CrlObject])
 
@@ -266,44 +308,43 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       None
   }
 
-  def crossCheckCrls(crl: CrlObject, manifestCrlEntries: Seq[CrlObject], validationLocation: ValidationLocation): Option[Check] = {
+  private def crossCheckCrls(manifestCrlEntries: Seq[CrlObject], validationLocation: ValidationLocation): (Option[CrlObject], Option[Check]) = {
     if (manifestCrlEntries.isEmpty) {
-      Some(warning(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, "*.obj"))
+      (None, Some(warning(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, "*.obj")))
     } else if (manifestCrlEntries.size > 1) {
       val crlUris = manifestCrlEntries.map(_.url).mkString(",")
-      Some(warning(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Single CRL expected, found: $crlUris"))
-    } else {
-      val crlOnMft: CrlObject = manifestCrlEntries.head
-      if (crlOnMft.url != crl.url) {
-        Some(warning(validationLocation, VALIDATOR_MANIFEST_CRL_URI_MISMATCH, crlOnMft.url, crl.url))
-      } else if (!HashUtil.equals(crl.hash, crlOnMft.hash)) {
-        Some(warning(validationLocation, VALIDATOR_MANIFEST_HASH_MISMATCH, crlOnMft.url, certificateSkiHex))
-      } else
-        None
-    }
+      (None, Some(warning(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Single CRL expected, found: $crlUris")))
+    } else
+        (Some(manifestCrlEntries.head), None)
   }
 
   private def checkManifestObjects(manifest: ManifestObject, crlByAki: CrlObject) = {
-    val validationLocation = new ValidationLocation(manifest.url)
-
-    val (classified@ClassifiedObjects(roas, childrenCertificates, crlsOnManifest), warnings) = getManifestObjectsOrWarnings(manifest)
+    val (classified@ClassifiedObjects(roas, childrenCertificates, crlsOnManifest), warnings, entries) = getManifestObjectsOrWarnings(manifest)
     //
-    val crlWarning = crossCheckCrls(crlByAki, crlsOnManifest, validationLocation)
+    val (_, crlWarning) = crossCheckCrls(crlsOnManifest, location(manifest))
 
     // TODO Implement more checks for other objects on the manifest
-
     (classified, warnings ++ crlWarning.toList)
   }
 
   private def getManifestObjectsOrWarnings(manifest: ManifestObject) = {
+    val (foundObjects, warnings, entries) = getManifestObjects(manifest)
+    (classify(foundObjects), warnings, entries)
+  }
+
+  def getManifestObjects(manifest: ManifestObject): (Seq[ROType], Seq[Check], Map[URI, Array[Byte]]) = {
     val repositoryUri = certificateContext.getRepositoryURI
-    val validationLocation = new ValidationLocation(manifest.url)
+    val validationLocation = location(manifest)
 
     val warnings = scala.collection.mutable.Buffer[Check]()
-    val foundObjects = scala.collection.mutable.Buffer[RepositoryObject.ROType]()
+    val foundObjects = scala.collection.mutable.Buffer[ROType]()
 
-    manifest.decoded.getHashes.entrySet().asScala.foreach { e =>
-      val (uri, hash) = (repositoryUri.resolve(e.getKey), e.getValue)
+    val entries = manifest.decoded.getHashes.entrySet().asScala.map { e =>
+        (repositoryUri.resolve(e.getKey), e.getValue)
+    }.toMap
+
+    entries.foreach { e =>
+      val (uri, hash) = e
       val obj = store.getObject(HashUtil.stringify(hash))
 
       if (obj.isEmpty)
@@ -317,8 +358,6 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
           }
         }
     }
-
-    (classify(foundObjects.toSeq), warnings.toSeq)
+    (foundObjects.toSeq, warnings.toSeq, entries)
   }
-
 }
