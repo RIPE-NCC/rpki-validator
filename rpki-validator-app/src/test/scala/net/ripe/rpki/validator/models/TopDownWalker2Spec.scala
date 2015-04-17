@@ -41,9 +41,11 @@ import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
 import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateInformationAccessDescriptor, X509ResourceCertificate, X509ResourceCertificateBuilder}
+import net.ripe.rpki.commons.validation
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.rpki.commons.validation.{ValidationOptions, ValidationString}
+import net.ripe.rpki.commons.validation.{ValidationStatus, ValidationOptions, ValidationString}
 import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
+import net.ripe.rpki.validator.models.ValidatedObject
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.{CacheStore, DataSources, HttpFetcherStore, Storage}
 import net.ripe.rpki.validator.support.ValidatorTestCase
@@ -238,6 +240,29 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     crls.forall(_.validationTime.exists(!now.isAfter(_))) should be(true)
   }
 
+  test("should give error when fetch fails") {
+
+    val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
+    val crl = createCrlWithEntry(certificate)
+    createMftWithCrlAndEntries(crl.getEncoded)
+
+    val uri = new URI("http://some.uri")
+    val message = "Some message"
+
+    val errors = Seq[Fetcher.Error](new Fetcher.Error(uri, message))
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage, errors), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    val invalidObjects = result.collect { case (_, validatedObject: InvalidObject) => validatedObject }
+    invalidObjects.size should be(1)
+    invalidObjects.head.uri should be(uri)
+    invalidObjects.head.checks foreach { invalidObject =>
+      invalidObject.getStatus should be(ValidationStatus.FETCH_ERROR)
+      invalidObject.getKey should be(message)
+    }
+  }
+
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withSubjectDN(ROOT_CERTIFICATE_NAME)
@@ -392,9 +417,11 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     builder.build(keyPair.getPrivate)
   }
 
-  def createRepoService(storage: Storage): RepoService = {
+  def createRepoService(storage: Storage, errors: Seq[Fetcher.Error] = Seq()): RepoService = {
     new RepoService(new RepoFetcher(storage, HttpFetcherStore.inMemory(TA_NAME), FetcherConfig("", TA_NAME))) {
-      override def visitRepo(repoUri: URI): Seq[Fetcher.Error] = Seq()
+      override def visitRepo(repoUri: URI): Seq[Fetcher.Error] = {
+        errors
+      }
     }
   }
 
