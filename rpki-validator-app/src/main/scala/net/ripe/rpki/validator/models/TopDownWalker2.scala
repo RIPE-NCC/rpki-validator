@@ -240,7 +240,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
     // use "view" here to make it lazy and
     // avoid checking every existing manifest
-    val validatedManifests = recentFirstManifests.view.map { mft =>
+    val validatedManifestData = recentFirstManifests.view.map { mft =>
       // get CRLs on the manifest
       val (mftObjects, warnings, _) = getManifestObjects(mft)
       val crlsOnManifest = mftObjects.collect { case c: CrlObject => c }
@@ -256,7 +256,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     // from one manifest to an older one. That's a
     // problem by itself.
     var allChecks = Seq[Check]()
-    val mostRecentValidMft = validatedManifests.iterator.find { x =>
+    val mostRecentValidMft = validatedManifestData.iterator.find { x =>
       val (mft, crl, _, nonFatalChecks, fatalChecks) = x
       allChecks ++= nonFatalChecks ++ fatalChecks
       val errorsExist = fatalChecks.exists(isError)
