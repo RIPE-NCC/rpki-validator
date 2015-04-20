@@ -336,7 +336,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     result.get._3.head.decoded should be(crl)
     result.get._4 should have size errorNumber
   }
-  
+
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withSubjectDN(ROOT_CERTIFICATE_NAME)
