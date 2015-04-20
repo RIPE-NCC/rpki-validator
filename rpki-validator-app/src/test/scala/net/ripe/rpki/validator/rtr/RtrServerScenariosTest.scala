@@ -130,7 +130,7 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     cache.single.transform { db => db.updateValidatedObjects(tal, roas) }
 
     client.sendPdu(ResetQueryPdu())
-    var responsePdus = client.getResponse(expectedNumber = 5)
+    val responsePdus = client.getResponse(expectedNumber = 5)
     responsePdus.size should equal(5)
 
     var iter = responsePdus.iterator
@@ -202,7 +202,7 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     cache.single.transform { db => db.updateValidatedObjects(tal, roas) }
     server.notify(cache.single.get.version)
 
-    var responsePdusAfterCacheUpdate = client.getResponse(expectedNumber = 1)
+    val responsePdusAfterCacheUpdate = client.getResponse(expectedNumber = 1)
     responsePdusAfterCacheUpdate.size should equal(1)
     responsePdusAfterCacheUpdate.head match {
       case SerialNotifyPdu(sessionId, serial) =>
@@ -212,7 +212,7 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     // Send serial, should get reset response (we don't support incremental updates yet)
     client.sendPdu(SerialQueryPdu(sessionId = sessionId, serial = lastSerial))
 
-    var responsePdusAfterNewRoas = client.getResponse(expectedNumber = 1)
+    val responsePdusAfterNewRoas = client.getResponse(expectedNumber = 1)
     responsePdusAfterNewRoas.size should equal(1)
     responsePdusAfterNewRoas.head match {
       case CacheResetPdu() => // No content to check, we're good
@@ -297,54 +297,54 @@ println(response.mkString("\n"))
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
   test("Server should answer with Invalid Request Error Pdu when RTRClient sends nonsense") {
     client.sendPdu(new ErrorPdu(errorCode = ErrorPdu.NoDataAvailable, Array.empty, ""))
-    var responsePdus = client.getResponse()
+    val responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.head
+    val response = responsePdus.head
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.InvalidRequest)
-    client should not be ('connected)
+    client should not be 'connected
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
   test("Server should answer with '5 - Unsupported PDU Type' when unsupported PDU type is sent") {
     client.sendData(Array[Byte](0x0, 0xff.toByte, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8))
 
-    var responsePdus = client.getResponse()
+    val responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.head
+    val response = responsePdus.head
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.UnsupportedPduType)
-    client should not be ('connected)
+    client should not be 'connected
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
   test("Server should answer with '4: Unsupported Protocol Version' when unsupported protocol is sent") {
     client.sendData(Array[Byte](0x1, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8))
-    var responsePdus = client.getResponse()
+    val responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.head
+    val response = responsePdus.head
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.UnsupportedProtocolVersion)
-    client should not be ('connected)
+    client should not be 'connected
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-10
   test("Server should answer with CorruptData when PDU length less than 8") {
     client.sendData(Array[Byte](0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x6))
 
-    var responsePdus = client.getResponse()
+    val responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.head
+    val response = responsePdus.head
 
     assert(response.isInstanceOf[ErrorPdu])
     val errorPdu = response.asInstanceOf[ErrorPdu]
