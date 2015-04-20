@@ -171,10 +171,30 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   // - invalid mft, invalid crl
   // - multiple mft's: most recent valid one should be taken
   // - crl that revokes its own mft (should give error)
-  // - mismatching hashes
 
+  test("should give warning when object referenced in manifest is not found by its hash") {
+    val missingHash = Array[Byte] (1, 2, 3, 4)
+    val (manifestLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, ( new URI(REPO_LOCATION + "missing.cer"), missingHash))
 
-  // TODO use own builder/ util class to easily create hierarchies of certificates + mfts + crls
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result should have size 2
+    result.get(manifestLocation).exists(o => o.hasCheckKey(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)) should be (true)
+  }
+
+  test("should give warning when object is found by hash but location doesnt match with location in manifest") {
+    val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
+    val (manifestLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (new URI(REPO_LOCATION + "missing.cer"), certificate.getEncoded))
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result should have size 3
+    result.get(manifestLocation).get.checks should not be ('empty)
+  }
 
   test("should warn about expired certificates that are on the manifest") {
 
@@ -325,19 +345,19 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     taCrl
   }
 
-  private def createMftWithCrlAndEntries(crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
+  private def createMftWithCrlAndEntries(crlContent: Array[Byte], entries: (URI, Array[Byte])*): (URI, ManifestCms) = {
     createMftWithEntries(ROOT_KEY_PAIR, ROOT_MANIFEST_LOCATION, ROOT_CERTIFICATE_NAME, entries.toSeq :+(ROOT_CRL_LOCATION, crlContent):_*)
   }
 
-  private def createMftWithCrlAndEntries(keyPair: KeyPair, crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
+  private def createMftWithCrlAndEntries(keyPair: KeyPair, crlContent: Array[Byte], entries: (URI, Array[Byte])*): (URI, ManifestCms) = {
     createMftWithEntries(keyPair, ROOT_MANIFEST_LOCATION, ROOT_CERTIFICATE_NAME, entries.toSeq :+(ROOT_CRL_LOCATION, crlContent):_*)
   }
 
-  private def createChildMftWithCrlAndEntries(keyPair: KeyPair, manifestLocation: URI,  issuer: X500Principal, crlLocation: URI, crlContent: Array[Byte], entries: (URI, Array[Byte])*): ManifestCms = {
+  private def createChildMftWithCrlAndEntries(keyPair: KeyPair, manifestLocation: URI,  issuer: X500Principal, crlLocation: URI, crlContent: Array[Byte], entries: (URI, Array[Byte])*): (URI, ManifestCms) = {
     createMftWithEntries(keyPair, manifestLocation, issuer, entries.toSeq :+(crlLocation, crlContent):_*)
   }
 
-  private def createMftWithEntries(keyPair: KeyPair, manifestLocation: URI, issuer: X500Principal, entries: (URI, Array[Byte])*): ManifestCms = {
+  private def createMftWithEntries(keyPair: KeyPair, manifestLocation: URI, issuer: X500Principal, entries: (URI, Array[Byte])*): (URI, ManifestCms) = {
     val thisUpdateTime = NOW.minusMinutes(1)
     val nextUpdateTime = NOW.plusYears(1)
 
@@ -357,7 +377,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     val manifest = builder.build(keyPair.getPrivate)
     storage.storeManifest(ManifestObject(manifestLocation.toString, manifest))
 
-    manifest
+    (manifestLocation, manifest)
   }
 
   private def createManifestEECertificate(keyPair: KeyPair, issuerDN: X500Principal): X509ResourceCertificate = {

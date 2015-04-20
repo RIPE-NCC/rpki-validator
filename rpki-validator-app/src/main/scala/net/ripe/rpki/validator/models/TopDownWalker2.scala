@@ -262,8 +262,8 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
     // replace the particular manifest checks with all the checks
     // we've found while searching for the proper manifest
-    for { m <- mft; c <- m._2 }
-      yield (m._1, c, m._3, allChecks)
+    for { m <- mft; crl <- m._2 }
+      yield (m._1, crl, m._3, allChecks)
   }
 
   private def _validateMft(crl: CrlObject, mft: ManifestObject): ValidationResult =
@@ -324,9 +324,8 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
         warnings += warning(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, certificateSkiHex)
       else
         obj.foreach { o =>
-          if (o.url == uri.toString) {
-            foundObjects += o
-          } else {
+          foundObjects += o
+          if (o.url != uri.toString) {
             warnings += warning(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, certificateSkiHex)
           }
         }
