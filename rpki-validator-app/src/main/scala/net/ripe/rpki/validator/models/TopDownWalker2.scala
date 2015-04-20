@@ -224,7 +224,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       checks
   }
 
-  private def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): Option[(ManifestObject, CrlObject, Seq[RepositoryObject.ROType], Seq[Check])] = {
+  def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): Option[(ManifestObject, CrlObject, Seq[RepositoryObject.ROType], Seq[Check])] = {
     // sort manifests chronologically so that
     // the latest one goes first
     val recentFirstManifests = mftList.sortBy(_.decoded.getNumber.negate)
