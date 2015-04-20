@@ -309,7 +309,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     val repositoryUri = certificateContext.getRepositoryURI
     val validationLocation = location(manifest)
 
-    val warnings = scala.collection.mutable.Buffer[Check]()
+    val errors = scala.collection.mutable.Buffer[Check]()
     val foundObjects = scala.collection.mutable.Buffer[ROType]()
 
     val entries = manifest.decoded.getHashes.entrySet().asScala.map { e =>
@@ -321,15 +321,15 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       val obj = store.getObject(HashUtil.stringify(hash))
 
       if (obj.isEmpty)
-        warnings += warning(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, certificateSkiHex)
+        errors += error(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, certificateSkiHex)
       else
         obj.foreach { o =>
           foundObjects += o
           if (o.url != uri.toString) {
-            warnings += warning(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, certificateSkiHex)
+            errors += error(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, certificateSkiHex)
           }
         }
     }
-    (foundObjects.toSeq, warnings.toSeq, entries)
+    (foundObjects.toSeq, errors.toSeq, entries)
   }
 }

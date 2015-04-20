@@ -165,14 +165,24 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     val result = subject.execute
 
     result.get(certificateLocation).get.checks should not be ('empty)
+    result.get(certificateLocation).get.isValid should be(false)
   }
 
     // TODO test also:
   // - invalid mft, invalid crl
-  // - multiple mft's: most recent valid one should be taken
-  // - crl that revokes its own mft (should give error)
 
-  test("should give warning when object referenced in manifest is not found by its hash") {
+  // TODO
+//  test("should give error when a crl revokes its own manifest") {
+//    createMftWithCrl(ROOT_KEY_PAIR, taCrl.getEncoded)
+//
+//    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+//
+//    val result = subject.execute
+//
+//    result should have size 2
+//  }
+
+  test("should give error when object referenced in manifest is not found by its hash") {
     val missingHash = Array[Byte] (1, 2, 3, 4)
     val (manifestLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, ( new URI(REPO_LOCATION + "missing.cer"), missingHash))
 
@@ -180,20 +190,22 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     val result = subject.execute
 
-    result should have size 2
+    result should have size 1
     result.get(manifestLocation).exists(o => o.hasCheckKey(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)) should be (true)
+    result.get(manifestLocation).get.isValid should be(false)
   }
 
-  test("should give warning when object is found by hash but location doesnt match with location in manifest") {
-    val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
+  test("should give error when object is found by hash but location doesnt match with location in manifest") {
+    val (_, certificate) = createLeafResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer")
     val (manifestLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (new URI(REPO_LOCATION + "missing.cer"), certificate.getEncoded))
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
 
-    result should have size 3
-    result.get(manifestLocation).get.checks should not be ('empty)
+    result should have size 2
+    result.get(manifestLocation).exists(o => o.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_URI_MISMATCH)) should be (true)
+    result.get(manifestLocation).get.isValid should be(false)
   }
 
   test("should warn about expired certificates that are on the manifest") {
