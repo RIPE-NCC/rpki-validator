@@ -288,7 +288,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   test("should find recent valid manifest with valid CRL") {
     val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
     val crl = createCrlWithEntry(certificate)
-    val manifest = createMftWithCrlAndEntries(crl.getEncoded)
+    val (_, manifest) = createMftWithCrlAndEntries(crl.getEncoded)
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
     val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest)
