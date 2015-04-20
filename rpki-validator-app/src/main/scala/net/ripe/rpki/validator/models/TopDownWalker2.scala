@@ -259,7 +259,6 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     val mostRecentValidMft = validatedManifests.iterator.find { x =>
       val (mft, crl, _, nonFatalChecks, fatalChecks) = x
       allChecks ++= nonFatalChecks ++ fatalChecks
-
       val errorsExist = fatalChecks.exists(isError)
       if (errorsExist) {
         allChecks :+ warning(location(mft), VALIDATOR_MANIFEST_IS_INVALID)
@@ -303,7 +302,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
   private def crossCheckCrls(manifestCrlEntries: Seq[CrlObject], validationLocation: ValidationLocation): (Option[CrlObject], Option[Check]) = {
     if (manifestCrlEntries.isEmpty) {
-      (None, Some(warning(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, "*.obj")))
+      (None, Some(warning(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, "*.crl")))
     } else if (manifestCrlEntries.size > 1) {
       val crlUris = manifestCrlEntries.map(_.url).mkString(",")
       (None, Some(warning(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, s"Single CRL expected, found: $crlUris")))
