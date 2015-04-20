@@ -169,23 +169,6 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     result.get(certificateLocation).get.isValid should be(false)
   }
 
-    // TODO test also:
-  // - invalid mft, invalid crl
-
-  test("should give error when a crl revokes its own certificate") {
-    val bogusCrl = createCrlWithEntry(rootResourceCertificate)
-    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, bogusCrl))
-
-    createMftWithCrlAndEntries(ROOT_KEY_PAIR, bogusCrl.getEncoded)
-
-    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
-
-    val result = subject.execute
-
-    result should have size 2
-    result.get(ROOT_CRL_LOCATION).get.isValid should be(false)
-  }
-
   test("should give error when object referenced in manifest is not found by its hash") {
     val missingHash = Array[Byte] (1, 2, 3, 4)
     val (manifestLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, ( new URI(REPO_LOCATION + "missing.cer"), missingHash))
@@ -300,7 +283,6 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     }
   }
 
-
   test("should find recent valid manifest with valid CRL") {
     val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
     val crl = createCrlWithEntry(certificate)
@@ -319,7 +301,6 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     result.get._3.head.decoded should be (crl)
     result.get._4 should have size 0
   }
-
 
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
@@ -483,4 +464,4 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     }
   }
 
-  }
+}
