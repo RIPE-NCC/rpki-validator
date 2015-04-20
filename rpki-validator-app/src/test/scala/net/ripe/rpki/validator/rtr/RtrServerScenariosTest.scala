@@ -29,28 +29,21 @@
  */
 package net.ripe.rpki.validator.rtr
 
-import java.util.concurrent.{TimeUnit, ExecutorService, Executors}
-
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.BeforeAndAfter
-import net.ripe.rpki.validator.lib._
-import net.ripe.rpki.validator.config._
-import net.ripe.rpki.validator.util.TrustAnchorLocator
 import java.io.File
 import java.net.URI
+import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
+
+import net.ripe.ipresource.{Asn, IpRange, Ipv4Address, Ipv6Address}
 import net.ripe.rpki.commons.crypto.cms.roa._
+import net.ripe.rpki.validator.lib._
 import net.ripe.rpki.validator.models._
-import net.ripe.ipresource.Ipv4Address
-import net.ripe.ipresource.Asn
-import net.ripe.ipresource.Ipv6Address
-import scala.util.Random
-import net.ripe.rpki.commons.crypto.ValidityPeriod
-import org.joda.time.DateTime
-import scala.collection.JavaConverters._
-import net.ripe.rpki.commons.validation.ValidationCheck
 import net.ripe.rpki.validator.support.ValidatorTestCase
+import net.ripe.rpki.validator.util.TrustAnchorLocator
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+
+import scala.util.Random
 
 @RunWith(classOf[JUnitRunner])
 class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll with BeforeAndAfter {
@@ -60,30 +53,22 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
   var server: RTRServer = null
   var client: RTRClient = null
 
-  var cache: scala.concurrent.stm.Ref[MemoryImage] = null
+  var sessionId: Short = Random.nextInt(Short.MaxValue).toShort
+  var serialNr: Int = 0
+  var rtrPrefixes: Set[RtrPrefix] = Set()
 
-  var sessionId: Short = new Random().nextInt(65536).toShort
-  var tal: TrustAnchorLocator = null
+  var tal: TrustAnchorLocator = new TrustAnchorLocator(new File("/tmp"), "test ca", URI.create("rsync://example.com/"), "info", new java.util.ArrayList[URI]())
 
   var hasTrustAnchors: Boolean = true
 
   override def beforeAll() = {
     implicit val actorSystem = akka.actor.ActorSystem()
-    var file: File = new File("/tmp")
-    var caName = "test ca"
-    var location: URI = URI.create("rsync://example.com/")
-    var publicKeyInfo = "info"
-    var prefetchUris: java.util.List[URI] = new java.util.ArrayList[URI]()
-    tal = new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
-    val trustAnchors: TrustAnchors = new TrustAnchors(Seq(TrustAnchor(locator = tal, status = Idle(new DateTime, None), enabled = true)))
-    val validatedObjects: ValidatedObjects = new ValidatedObjects(Map.empty)
-    cache = scala.concurrent.stm.Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects))
     server = new RTRServer(
       port = port,
       closeOnError = true,
       sendNotify = true,
-      getCurrentCacheSerial = { () => cache.single.get.version },
-      getCurrentRtrPrefixes = { () => cache.single.get.getDistinctRtrPrefixes },
+      getCurrentCacheSerial = { () => serialNr },
+      getCurrentRtrPrefixes = { () => rtrPrefixes },
       getCurrentSessionId = { () => sessionId },
       hasTrustAnchorsEnabled = { () => hasTrustAnchors }
     )
@@ -100,34 +85,25 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
   }
 
   after {
-    cache.single.transform {
-      db => MemoryImage(Filters(), Whitelist(), new TrustAnchors(Seq.empty), new ValidatedObjects(Map.empty))
-    }
+    rtrPrefixes = Set()
+    serialNr = 0
+    client.getAllResponses //foreach println
     client.close()
+    if (client.hasErrors) fail("RtrClient errors: " + client.getErrors.mkString("\n"))
   }
 
   // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.1
   test("Server should answer with data to ResetQuery") {
-
-
-    // TODO: use the method that allows explicit list of roa prefixes for testing
-
     val prefixes = List[RoaPrefix](
       RoaCmsObjectMother.TEST_IPV4_PREFIX_1,
       RoaCmsObjectMother.TEST_IPV4_PREFIX_2,
       RoaCmsObjectMother.TEST_IPV6_PREFIX,
       RoaCmsObjectMother.TEST_IPV6_PREFIX) // List IPv6 Prefix twice. It should be filtered when response is sent
 
-    val validityPeriod = new ValidityPeriod(new DateTime(), new DateTime().plusYears(1))
-
-    val roa: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes.asJava, validityPeriod, RoaCmsObjectMother.TEST_ASN)
-    val roaUri: URI = URI.create("rsync://example.com/roa.roa")
-
-    val validatedRoa = new ValidObject(roaUri, Set.empty[ValidationCheck], roa)
-
-    val roas = Seq(validatedRoa)
-
-    cache.single.transform { db => db.updateValidatedObjects(tal, roas) }
+    serialNr = 1
+    rtrPrefixes =  (for (prefix <- prefixes)
+      yield RtrPrefix(RoaCmsObjectMother.TEST_ASN, prefix.getPrefix, maxPrefixLength=if (prefix.getMaximumLength == null) None else Some(prefix.getMaximumLength.toInt), trustAnchorLocator=Some(tal)))
+      .toSet
 
     client.sendPdu(ResetQueryPdu())
     val responsePdus = client.getResponse(expectedNumber = 5)
@@ -170,17 +146,17 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     iter.next() match {
       case EndOfDataPdu(responseSessionId, serial) =>
         responseSessionId should equal(sessionId)
-        serial should equal(cache.single.get.version)
+        serial should equal(serialNr)
         lastSerial = serial
       case _ => fail("Expected end of data")
     }
 
-    client.isConnected should be(true)
+    client should be ('connected)
 
     // Send serial, should get response with no new announcements/withdrawals
     client.sendPdu(SerialQueryPdu(sessionId = sessionId, serial = lastSerial))
 
-    var responsePdusBeforeNewRoas = client.getResponse(expectedNumber = 2)
+    val responsePdusBeforeNewRoas = client.getResponse(expectedNumber = 2)
     responsePdusBeforeNewRoas.size should equal(2)
 
     iter = responsePdusBeforeNewRoas.iterator
@@ -198,14 +174,16 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
 
     client should be ('connected)
 
-    // Update ROAs, client should get notify
-    cache.single.transform { db => db.updateValidatedObjects(tal, roas) }
-    server.notify(cache.single.get.version)
+    // Increment serial, client should get notify
+    serialNr = serialNr + 1
+    server.notify(serialNr)
 
     val responsePdusAfterCacheUpdate = client.getResponse(expectedNumber = 1)
     responsePdusAfterCacheUpdate.size should equal(1)
     responsePdusAfterCacheUpdate.head match {
-      case SerialNotifyPdu(sessionId, serial) =>
+      case SerialNotifyPdu(id, serial) =>
+        id should be(sessionId)
+        serial should be(serialNr)
       case _ => fail("Should get serial notify")
     }
 
@@ -216,37 +194,22 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     responsePdusAfterNewRoas.size should equal(1)
     responsePdusAfterNewRoas.head match {
       case CacheResetPdu() => // No content to check, we're good
-      case _ => fail("Should get cache reset response")
+      case pdu => fail(s"Should get cache reset response, but got $pdu")
     }
     client should be ('connected)
   }
 
   test("Server should not put notify inside other response") {
-    // TODO: use the method that allows explicit list of roa prefixes for testing
+    serialNr = 1
+    rtrPrefixes = (for (x <- 1 to 2000) yield RtrPrefix(new Asn(x), IpRange.range(new Ipv4Address(x*2), new Ipv4Address(x*2+1)))).toSet
 
-    val prefixes = List[RoaPrefix](
-      RoaCmsObjectMother.TEST_IPV4_PREFIX_1,
-      RoaCmsObjectMother.TEST_IPV4_PREFIX_2,
-      RoaCmsObjectMother.TEST_IPV6_PREFIX,
-      RoaCmsObjectMother.TEST_IPV6_PREFIX) // List IPv6 Prefix twice. It should be filtered when response is sent
+    var shutdown: Boolean = false
 
-    val validityPeriod = new ValidityPeriod(new DateTime(), new DateTime().plusYears(1))
-
-    val roa: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes.asJava, validityPeriod, RoaCmsObjectMother.TEST_ASN)
-    val roaUri: URI = URI.create("rsync://example.com/roa.roa")
-
-    val validatedRoa = new ValidObject(roaUri, Set.empty[ValidationCheck], roa)
-
-    val roas = Seq(validatedRoa)
-
-    cache.single.transform { db => db.updateValidatedObjects(tal, roas) }
-
-    var sendNotify: Boolean = true
-
+    // start background thread that calls notify on server with small random interval
     val pool: ExecutorService = Executors.newSingleThreadExecutor()
     pool.execute(new Runnable {
       override def run() {
-        while (sendNotify) {
+        while (!shutdown) {
           server.notify(42l)
           Thread.sleep(Random.nextInt(10))
         }
@@ -254,26 +217,28 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     })
     pool.shutdown()
 
-    for (i <- 1 to 100) {
-      client.sendPdu(ResetQueryPdu())
-      var response: List[Pdu] = client.getResponse(Seq(classOf[EndOfDataPdu],classOf[ErrorPdu]), timeOutMs = 100000)
-println(i)
-println(response.mkString("\n"))
+    // read responses from server; if notify pdu comes inside RttClient will fail on assertion
+    try {
+      for (i <- 1 to 100) {
+        client.sendPdu(ResetQueryPdu())
+        val response: List[Pdu] = client.getResponse(Seq(classOf[EndOfDataPdu], classOf[ErrorPdu]), timeOutMs = 100000)
+        if (client.hasErrors) fail("RtrClient errors: " + client.getErrors.mkString("\n"))
+      }
+    } finally {
+      shutdown = true
+      assert(pool.awaitTermination(10, TimeUnit.SECONDS), "Can't stop background notify thread")
     }
-    sendNotify = false
-    assert(pool.awaitTermination(10, TimeUnit.SECONDS), "Can't stop background notify thread")
-    client.getAllResponses
   }
 
     // See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-6.4
   test("Server should answer with No Data Available Error Pdu when RTRClient sends ResetQuery -- and there is no data") {
     client.sendPdu(ResetQueryPdu())
-    var responsePdus = client.getResponse()
+    val responsePdus = client.getResponse()
 
     responsePdus.size should equal(1)
-    var response = responsePdus.head
+    val response = responsePdus.head
 
-    assert(response.isInstanceOf[ErrorPdu])
+    assert(response.isInstanceOf[ErrorPdu], response)
     val errorPdu = response.asInstanceOf[ErrorPdu]
     errorPdu.errorCode should equal(ErrorPdu.NoDataAvailable)
     client should be ('connected)

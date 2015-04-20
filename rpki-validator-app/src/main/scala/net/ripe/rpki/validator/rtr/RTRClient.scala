@@ -28,13 +28,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 package net.ripe.rpki.validator.rtr
-import org.jboss.netty.bootstrap.ClientBootstrap
+import java.net.InetSocketAddress
 import java.util.concurrent.{ExecutorService, Executors}
+
+import grizzled.slf4j.Logger
+import org.jboss.netty.bootstrap.ClientBootstrap
 import org.jboss.netty.channel._
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory
-import java.net.InetSocketAddress
-import grizzled.slf4j.Logger
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
+
+import scala.collection.mutable
 
 class RTRClient(val port: Int) {
 
@@ -71,21 +74,30 @@ class RTRClient(val port: Int) {
     val CacheResponseInProgress, Clean = Value
   }
 
+
+  val errors = mutable.Buffer.empty[String]
+  def hasErrors: Boolean = errors.nonEmpty
+  def getErrors: Seq[String] = errors.toSeq
+
   @volatile
   var state = ClientState.Clean
+
+  def assertState(expected: ClientState.Value, error: String): Unit = {
+    if (state != expected) errors.append(error)
+  }
 
   def updateStateOnReceive(pdu: Pdu): Unit = {
     pdu match {
       case CacheResponsePdu(_) =>
-        assert(state == ClientState.Clean, s"Start of cache response in the middle of $state")
+        assertState(ClientState.Clean, s"Start of cache response in the middle of $state")
         state = ClientState.CacheResponseInProgress
       case (IPv4PrefixAnnouncePdu(_,_,_,_) | IPv6PrefixAnnouncePdu(_,_,_,_)) =>
-        assert(state == ClientState.CacheResponseInProgress, s"Cache response body in the middle of $state")
+        assertState(ClientState.CacheResponseInProgress, s"Cache response body in the middle of $state")
       case EndOfDataPdu(_,_) =>
-        assert(state == ClientState.CacheResponseInProgress, s"End of data response in the middle of $state")
+        assertState(ClientState.CacheResponseInProgress, s"End of data response in the middle of $state")
         state = ClientState.Clean
       case SerialNotifyPdu(_,_) =>
-        assert(state == ClientState.Clean, s"End of cache response in the middle of $state")
+        assertState(ClientState.Clean, s"SerialNotify in the middle of $state")
       case CacheResetPdu() =>
         state = ClientState.Clean
       case ErrorPdu(_,_,_) =>
@@ -108,7 +120,7 @@ class RTRClient(val port: Int) {
 
   def getResponse(until: Seq[Class[_ <: Pdu]], timeOutMs: Int): List[Pdu] = {
     val stopTime = System.currentTimeMillis() + timeOutMs
-    def nextEodPosition() = receivedPdus.indexWhere(r => until.contains(r.getClass))
+    def nextEodPosition() = receivedPdus.indexWhere(pdu => until.contains(pdu.getClass))
     var eodPosition: Int = nextEodPosition()
     while (eodPosition == -1) {
       assert(System.currentTimeMillis() < stopTime, s"Timed out waiting for ${until.map(_.getSimpleName)}. Buffer content: ${receivedPdus}")
