@@ -46,6 +46,7 @@ import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryOb
 import net.ripe.rpki.commons.validation.{ValidationStatus, ValidationOptions, ValidationString}
 import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
 import net.ripe.rpki.validator.models.ValidatedObject
+import net.ripe.rpki.validator.models.validation.RepositoryObject.ROType
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.{CacheStore, DataSources, HttpFetcherStore, Storage}
 import net.ripe.rpki.validator.support.ValidatorTestCase
@@ -262,6 +263,27 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
       invalidObject.getKey should be(message)
     }
   }
+
+
+  test("should find recent valid manifest with valid CRL") {
+    val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
+    val crl = createCrlWithEntry(certificate)
+    val manifest = createMftWithCrlAndEntries(crl.getEncoded)
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest)
+    val result: Option[(ManifestObject, CrlObject, Seq[ROType], Seq[TopDownWalker2#Check])] = subject.findRecentValidMftWithCrl(Seq(manifestObject))
+
+    result.get._1 should be (manifestObject)
+    result.get._2.decoded should be (crl)
+    result.get._2.url should be ("rsync://foo.host/bar/ta.crl")
+    result.get._2.decoded should be (crl)
+    result.get._3 should have size 1
+    result.get._3.head.url should be ("rsync://foo.host/bar/ta.crl")
+    result.get._3.head.decoded should be (crl)
+    result.get._4 should have size 0
+  }
+
 
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
