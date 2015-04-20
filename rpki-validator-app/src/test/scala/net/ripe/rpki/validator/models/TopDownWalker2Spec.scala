@@ -73,13 +73,14 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   private val DEFAULT_VALIDATION_OPTIONS: ValidationOptions = new ValidationOptions
 
   private val storage = new CacheStore(DataSources.InMemoryDataSource, TA_NAME)
+  private var rootResourceCertificate: X509ResourceCertificate = _
   private var taContext: CertificateRepositoryObjectValidationContext = _
   private var taCrl: X509Crl = _
 
   override def beforeEach() {
     storage.clear()
 
-    val rootResourceCertificate = getRootResourceCertificate
+    rootResourceCertificate  = getRootResourceCertificate
     taContext = new CertificateRepositoryObjectValidationContext(URI.create("rsync://host/ta"), rootResourceCertificate)
 
     taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR)
@@ -171,16 +172,19 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     // TODO test also:
   // - invalid mft, invalid crl
 
-  // TODO
-//  test("should give error when a crl revokes its own manifest") {
-//    createMftWithCrl(ROOT_KEY_PAIR, taCrl.getEncoded)
-//
-//    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
-//
-//    val result = subject.execute
-//
-//    result should have size 2
-//  }
+  test("should give error when a crl revokes its own certificate") {
+    val bogusCrl = createCrlWithEntry(rootResourceCertificate)
+    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, bogusCrl))
+
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, bogusCrl.getEncoded)
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result should have size 2
+    result.get(ROOT_CRL_LOCATION).get.isValid should be(false)
+  }
 
   test("should give error when object referenced in manifest is not found by its hash") {
     val missingHash = Array[Byte] (1, 2, 3, 4)
