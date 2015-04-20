@@ -57,7 +57,7 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
   var serialNr: Int = 0
   var rtrPrefixes: Set[RtrPrefix] = Set()
 
-  var tal: TrustAnchorLocator = new TrustAnchorLocator(new File("/tmp"), "test ca", URI.create("rsync://example.com/"), "info", new java.util.ArrayList[URI]())
+  val tal: TrustAnchorLocator = new TrustAnchorLocator(new File("/tmp"), "test ca", URI.create("rsync://example.com/"), "info", new java.util.ArrayList[URI]())
 
   var hasTrustAnchors: Boolean = true
 
