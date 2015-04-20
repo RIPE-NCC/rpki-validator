@@ -177,7 +177,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     val result = subject.execute
 
-    result should have size 1
+    result should have size 2
     result.get(manifestLocation).exists(o => o.hasCheckKey(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)) should be (true)
     result.get(manifestLocation).get.isValid should be(false)
   }
@@ -190,7 +190,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     val result = subject.execute
 
-    result should have size 2
+    result should have size 3
     result.get(manifestLocation).exists(o => o.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_URI_MISMATCH)) should be (true)
     result.get(manifestLocation).get.isValid should be(false)
   }

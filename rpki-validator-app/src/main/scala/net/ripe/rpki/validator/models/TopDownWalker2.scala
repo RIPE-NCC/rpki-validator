@@ -250,7 +250,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
       val crlChecks = getCrlChecks(mft, crl)
       val mftChecks = getMftChecks(mft, crl)
-      (mft, crl, mftObjects, warnings ++ crlChecks ++ mftChecks ++ crlWarnings.toList)
+      (mft, crl, mftObjects, warnings ++ crlWarnings.toList, crlChecks ++ mftChecks)
     }
 
     // Add warnings for the cases when we have to move
@@ -258,12 +258,10 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     // problem by itself.
     var allChecks = Seq[Check]()
     val mft = validatedManifests.iterator.find { x =>
-      val (mft, crl, _, checks) = x
-      allChecks ++= checks
+      val (mft, crl, _, nonFatalChecks, fatalChecks) = x
+      allChecks ++= nonFatalChecks ++ fatalChecks
 
-      // TODO Verify this: is it a correct strategy to
-      // TODO check for error presence
-      val errorsExist = checks.exists(isError)
+      val errorsExist = fatalChecks.exists(isError)
       if (errorsExist) {
         allChecks :+ warning(location(mft), VALIDATOR_MANIFEST_IS_INVALID)
       }
