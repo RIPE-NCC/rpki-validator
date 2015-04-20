@@ -72,6 +72,8 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   private val CERTIFICATE_KEY_PAIR: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val DEFAULT_VALIDATION_OPTIONS: ValidationOptions = new ValidationOptions
 
+  private val DEFAULT_MANIFEST_NUMBER: BigInteger = BigInteger.valueOf(68)
+
   private val storage = new CacheStore(DataSources.InMemoryDataSource, TA_NAME)
   private var rootResourceCertificate: X509ResourceCertificate = _
   private var taContext: CertificateRepositoryObjectValidationContext = _
@@ -302,6 +304,39 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     result.get._4 should have size 0
   }
 
+  test("should find recent valid manifest with valid CRL in case there is second invalid more recent manifest") {
+    testWithBrokenManifest(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)), 3)
+  }
+
+  test("should find recent valid manifest with valid CRL in case there is second invalid older manifest") {
+    testWithBrokenManifest(DEFAULT_MANIFEST_NUMBER.subtract(BigInteger.valueOf(1)), 0)
+  }
+
+  private def testWithBrokenManifest(manifestNumber: BigInteger, errorNumber: Int) = {
+    val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
+    val crl = createCrlWithEntry(certificate)
+    val (_, manifest) = createMftWithCrlAndEntries(crl.getEncoded)
+    val badManifestBuilder = createMftBuilder(ROOT_KEY_PAIR, ROOT_CERTIFICATE_NAME)
+
+    // add some broken CRL to the bad manifest
+    badManifestBuilder.addFile("rsync://host.net/bad_manifest_crl.crl", Array[Byte](1, 2, 3, 4))
+    badManifestBuilder.withManifestNumber(manifestNumber)
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest)
+    val badManifestObject = ManifestObject("rsync://host.net/bad_manifest.mft", badManifestBuilder.build(ROOT_KEY_PAIR.getPrivate))
+    val result = subject.findRecentValidMftWithCrl(Seq(manifestObject, badManifestObject))
+
+    result.get._1 should be(manifestObject)
+    result.get._2.decoded should be(crl)
+    result.get._2.url should be("rsync://foo.host/bar/ta.crl")
+    result.get._2.decoded should be(crl)
+    result.get._3 should have size 1
+    result.get._3.head.url should be("rsync://foo.host/bar/ta.crl")
+    result.get._3.head.decoded should be(crl)
+    result.get._4 should have size errorNumber
+  }
+  
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withSubjectDN(ROOT_CERTIFICATE_NAME)
@@ -354,13 +389,24 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     createMftWithEntries(keyPair, manifestLocation, issuer, entries.toSeq :+(crlLocation, crlContent):_*)
   }
 
+
   private def createMftWithEntries(keyPair: KeyPair, manifestLocation: URI, issuer: X500Principal, entries: (URI, Array[Byte])*): (URI, ManifestCms) = {
+    val builder = createMftBuilder(keyPair, issuer, entries:_*)
+
+    val manifest = builder.build(keyPair.getPrivate)
+    storage.storeManifest(ManifestObject(manifestLocation.toString, manifest))
+
+    (manifestLocation, manifest)
+  }
+
+  private def createMftBuilder(keyPair: KeyPair, issuer: X500Principal, entries: (URI, Array[Byte])*): ManifestCmsBuilder = {
+
     val thisUpdateTime = NOW.minusMinutes(1)
     val nextUpdateTime = NOW.plusYears(1)
 
     val builder: ManifestCmsBuilder = new ManifestCmsBuilder
     builder.withCertificate(createManifestEECertificate(keyPair, issuer))
-      .withManifestNumber(BigInteger.valueOf(68))
+      .withManifestNumber(DEFAULT_MANIFEST_NUMBER)
       .withThisUpdateTime(thisUpdateTime)
       .withNextUpdateTime(nextUpdateTime)
 
@@ -370,11 +416,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     }
 
     builder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER)
-
-    val manifest = builder.build(keyPair.getPrivate)
-    storage.storeManifest(ManifestObject(manifestLocation.toString, manifest))
-
-    (manifestLocation, manifest)
+    builder
   }
 
   private def createManifestEECertificate(keyPair: KeyPair, issuerDN: X500Principal): X509ResourceCertificate = {
