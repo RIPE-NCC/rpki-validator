@@ -227,7 +227,7 @@ public class RepositoryObjectsSetUpHelper {
         builder.withValidityPeriod(VALIDITY_PERIOD);
         builder.withSubjectKeyIdentifier(true);
         builder.withInheritedResourceTypes(EnumSet.allOf(IpResourceType.class));
-        builder.withCrlDistributionPoints(new URI[] { ROOT_MANIFEST_CRL_LOCATION });
+        builder.withCrlDistributionPoints(ROOT_MANIFEST_CRL_LOCATION);
 
         X509CertificateInformationAccessDescriptor[] descriptors = {
                 new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_CA_CA_ISSUERS, ROOT_CERTIFICATE_LOCATION),
@@ -251,7 +251,7 @@ public class RepositoryObjectsSetUpHelper {
         builder.withValidityPeriod(VALIDITY_PERIOD);
         builder.withSubjectKeyIdentifier(true);
         builder.withResources(SECOND_CHILD_RESOURCE_SET);
-        builder.withCrlDistributionPoints(new URI[] { FIRST_CHILD_MANIFEST_CRL_LOCATION });
+        builder.withCrlDistributionPoints(FIRST_CHILD_MANIFEST_CRL_LOCATION);
 
         X509CertificateInformationAccessDescriptor[] descriptors = {
                 new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_CA_CA_ISSUERS, FIRST_CHILD_CERTIFICATE_LOCATION),
