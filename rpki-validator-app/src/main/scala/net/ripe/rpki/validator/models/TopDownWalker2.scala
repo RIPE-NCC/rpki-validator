@@ -89,26 +89,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     val mftList = fetchMftsByAKI
     val validatedObjects = findRecentValidMftWithCrl(mftList) match {
       case Some((manifest, crl, mftObjects, mftCrlChecks)) =>
-        val ClassifiedObjects(roas, childrenCertificates, crlList) = classify(mftObjects)
-
-        val checks = checkManifestUrlOnCertMatchesLocationInRepo(manifest).toList ++
-          mftCrlChecks ++
-          check(roas, crl) ++
-          check(childrenCertificates, crl)
-
-        val checkMap = checks.groupBy(_.location)
-
-        val validatedChildren = childrenCertificates.view.map { c =>
-          val v = validatedObject(checkMap)(c)
-          (c, v, c.decoded.isObjectIssuer && v._2.isValid)
-        }
-
-        Seq(roas.map(validatedObject(checkMap)),
-          validatedChildren.map(_._2).force,
-          crlList.map(validatedObject(checkMap)),
-          mftList.map(validatedObject(checkMap)),
-          validatedChildren.filter(_._3).map(_._1).force.flatMap(stepDown)
-        ).map(_.toMap).fold(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
+        validateManifestChildren(manifest, crl, mftObjects, mftCrlChecks)
 
       case None =>
         Map(certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
@@ -116,6 +97,35 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
 
     fetchErrors ++ validatedObjects
+  }
+
+  def validateManifestChildren(manifest: ManifestObject, crl: CrlObject, mftObjects: Seq[ROType], mftCrlChecks: Seq[Check]): Map[URI, ValidatedObject] = {
+    val ClassifiedObjects(roas, childrenCertificates, crlList) = classify(mftObjects)
+
+    val checks = checkManifestUrlOnCertMatchesLocationInRepo(manifest).toList ++
+      mftCrlChecks ++
+      check(roas, crl) ++
+      check(childrenCertificates, crl)
+
+    val checkMap = checks.groupBy(_.location)
+
+    val validatedChildren = childrenCertificates.view.map { c =>
+      val v = validatedObject(checkMap)(c)
+      (c, v, c.decoded.isObjectIssuer && v._2.isValid)
+    }
+
+    val everythingValidated = Seq(roas.map(validatedObject(checkMap)),
+      validatedChildren.map(_._2).force,
+      crlList.map(validatedObject(checkMap)),
+      Seq(manifest).map(validatedObject(checkMap)),
+      validatedChildren.filter(_._3).map(_._1).force.flatMap(stepDown)
+    )
+
+    mergeTwiceValidatedObjects(everythingValidated)
+  }
+
+  def mergeTwiceValidatedObjects(everythingValidated: Seq[Seq[(URI, ValidatedObject)]]): Map[URI, ValidatedObject] = {
+    everythingValidated.map(_.toMap).fold(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
   }
 
   private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
