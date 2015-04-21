@@ -89,26 +89,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     val mftList = fetchMftsByAKI
     val validatedObjects = findRecentValidMftWithCrl(mftList) match {
       case Some((manifest, crl, mftObjects, mftCrlChecks)) =>
-        val ClassifiedObjects(roas, childrenCertificates, crlList) = classify(mftObjects)
-
-        val checks = checkManifestUrlOnCertMatchesLocationInRepo(manifest).toList ++
-          mftCrlChecks ++
-          check(roas, crl) ++
-          check(childrenCertificates, crl)
-
-        val checkMap = checks.groupBy(_.location)
-
-        val validatedChildren = childrenCertificates.view.map { c =>
-          val v = validatedObject(checkMap)(c)
-          (c, v, c.decoded.isObjectIssuer && v._2.isValid)
-        }
-
-        Seq(roas.map(validatedObject(checkMap)),
-          validatedChildren.map(_._2).force,
-          crlList.map(validatedObject(checkMap)),
-          mftList.map(validatedObject(checkMap)),
-          validatedChildren.filter(_._3).map(_._1).force.flatMap(stepDown)
-        ).map(_.toMap).fold(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
+        validateManifestChildren(manifest, crl, mftObjects, mftCrlChecks)
 
       case None =>
         Map(certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
@@ -116,6 +97,35 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
 
     fetchErrors ++ validatedObjects
+  }
+
+  def validateManifestChildren(manifest: ManifestObject, crl: CrlObject, mftObjects: Seq[ROType], mftCrlChecks: Seq[Check]): Map[URI, ValidatedObject] = {
+    val ClassifiedObjects(roas, childrenCertificates, crlList) = classify(mftObjects)
+
+    val checks = checkManifestUrlOnCertMatchesLocationInRepo(manifest).toList ++
+      mftCrlChecks ++
+      check(roas, crl) ++
+      check(childrenCertificates, crl)
+
+    val checkMap = checks.groupBy(_.location)
+
+    val validatedChildren = childrenCertificates.view.map { c =>
+      val v = validatedObject(checkMap)(c)
+      (c, v, c.decoded.isObjectIssuer && v._2.isValid)
+    }
+
+    val everythingValidated = Seq(roas.map(validatedObject(checkMap)),
+      validatedChildren.map(_._2).force,
+      crlList.map(validatedObject(checkMap)),
+      Seq(manifest).map(validatedObject(checkMap)),
+      validatedChildren.filter(_._3).map(_._1).force.flatMap(stepDown)
+    )
+
+    mergeTwiceValidatedObjects(everythingValidated)
+  }
+
+  def mergeTwiceValidatedObjects(everythingValidated: Seq[Seq[(URI, ValidatedObject)]]): Map[URI, ValidatedObject] = {
+    everythingValidated.map(_.toMap).fold(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
   }
 
   private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
@@ -224,7 +234,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       checks
   }
 
-  private def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): Option[(ManifestObject, CrlObject, Seq[RepositoryObject.ROType], Seq[Check])] = {
+  def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): Option[(ManifestObject, CrlObject, Seq[RepositoryObject.ROType], Seq[Check])] = {
     // sort manifests chronologically so that
     // the latest one goes first
     val recentFirstManifests = mftList.sortBy(_.decoded.getNumber.negate)
@@ -240,7 +250,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
       val crlChecks = getCrlChecks(mft, crl)
       val mftChecks = getMftChecks(mft, crl)
-      (mft, crl, mftObjects, warnings ++ crlChecks ++ mftChecks ++ crlWarnings.toList)
+      (mft, crl, mftObjects, warnings ++ crlWarnings.toList, crlChecks ++ mftChecks)
     }
 
     // Add warnings for the cases when we have to move
@@ -248,12 +258,10 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     // problem by itself.
     var allChecks = Seq[Check]()
     val mft = validatedManifests.iterator.find { x =>
-      val (mft, crl, _, checks) = x
-      allChecks ++= checks
+      val (mft, crl, _, nonFatalChecks, fatalChecks) = x
+      allChecks ++= nonFatalChecks ++ fatalChecks
 
-      // TODO Verify this: is it a correct strategy to
-      // TODO check for error presence
-      val errorsExist = checks.exists(isError)
+      val errorsExist = fatalChecks.exists(isError)
       if (errorsExist) {
         allChecks :+ warning(location(mft), VALIDATOR_MANIFEST_IS_INVALID)
       }
@@ -262,8 +270,8 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
     // replace the particular manifest checks with all the checks
     // we've found while searching for the proper manifest
-    for { m <- mft; c <- m._2 }
-      yield (m._1, c, m._3, allChecks)
+    for { m <- mft; crl <- m._2 }
+      yield (m._1, crl, m._3, allChecks)
   }
 
   private def _validateMft(crl: CrlObject, mft: ManifestObject): ValidationResult =
@@ -309,7 +317,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     val repositoryUri = certificateContext.getRepositoryURI
     val validationLocation = location(manifest)
 
-    val warnings = scala.collection.mutable.Buffer[Check]()
+    val errors = scala.collection.mutable.Buffer[Check]()
     val foundObjects = scala.collection.mutable.Buffer[ROType]()
 
     val entries = manifest.decoded.getHashes.entrySet().asScala.map { e =>
@@ -321,16 +329,15 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       val obj = store.getObject(HashUtil.stringify(hash))
 
       if (obj.isEmpty)
-        warnings += warning(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, certificateSkiHex)
+        errors += error(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, certificateSkiHex)
       else
         obj.foreach { o =>
-          if (o.url == uri.toString) {
-            foundObjects += o
-          } else {
-            warnings += warning(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, certificateSkiHex)
+          foundObjects += o
+          if (o.url != uri.toString) {
+            errors += error(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, certificateSkiHex)
           }
         }
     }
-    (foundObjects.toSeq, warnings.toSeq, entries)
+    (foundObjects.toSeq, errors.toSeq, entries)
   }
 }
