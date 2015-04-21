@@ -217,7 +217,6 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       crl.decoded
   }
 
-
   private def getCrlChecks(mft: ManifestObject, crl: Option[CrlObject]) = crl.fold {
     List(error(location(mft), CRL_REQUIRED))
   } { c =>
@@ -257,7 +256,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     // from one manifest to an older one. That's a
     // problem by itself.
     var allChecks = Seq[Check]()
-    val mft = validatedManifests.iterator.find { x =>
+    val mostRecentValidMft = validatedManifests.iterator.find { x =>
       val (mft, crl, _, nonFatalChecks, fatalChecks) = x
       allChecks ++= nonFatalChecks ++ fatalChecks
 
@@ -270,8 +269,8 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
     // replace the particular manifest checks with all the checks
     // we've found while searching for the proper manifest
-    for { m <- mft; crl <- m._2 }
-      yield (m._1, crl, m._3, allChecks)
+    for { (mft, oCrl, mftObjects, _, _) <- mostRecentValidMft; crl <- oCrl }
+      yield (mft, crl, mftObjects, allChecks)
   }
 
   private def _validateMft(crl: CrlObject, mft: ManifestObject): ValidationResult =
