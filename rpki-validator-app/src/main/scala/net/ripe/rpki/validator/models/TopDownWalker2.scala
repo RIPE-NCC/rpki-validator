@@ -242,14 +242,14 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     // avoid checking every existing manifest
     val validatedManifestData = recentFirstManifests.view.map { mft =>
       // get CRLs on the manifest
-      val (mftObjects, warnings, _) = getManifestObjects(mft)
+      val (mftObjects, errors, _) = getManifestObjects(mft)
       val crlsOnManifest = mftObjects.collect { case c: CrlObject => c }
 
       val (crl, crlWarnings) = crossCheckCrls(crlsOnManifest, location(mft))
 
       val crlChecks = getCrlChecks(mft, crl)
       val mftChecks = getMftChecks(mft, crl)
-      (mft, crl, mftObjects, warnings ++ crlWarnings.toList, crlChecks ++ mftChecks)
+      (mft, crl, mftObjects, errors ++ crlWarnings.toList, crlChecks ++ mftChecks)
     }
 
     // Add warnings for the cases when we have to move
