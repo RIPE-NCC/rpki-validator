@@ -200,9 +200,9 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     val mfts = storage.getManifests(certificate.getAuthorityKeyIdentifier)
     val crls = storage.getCrls(certificate.getAuthorityKeyIdentifier)
 
-    certs.forall(_.validationTime.exists(now.isBefore(_))) should be(true)
-    mfts.forall(_.validationTime.exists(now.isBefore(_))) should be(true)
-    crls.forall(_.validationTime.exists(now.isBefore(_))) should be(true)
+    certs.forall(_.validationTime.exists(t => now.isBefore(t) || now == t)) should be(true)
+    mfts.forall(_.validationTime.exists(t => now.isBefore(t) || now == t)) should be(true)
+    crls.forall(_.validationTime.exists(t => now.isBefore(t) || now == t)) should be(true)
   }
 
   def getRootResourceCertificate: X509ResourceCertificate = {
