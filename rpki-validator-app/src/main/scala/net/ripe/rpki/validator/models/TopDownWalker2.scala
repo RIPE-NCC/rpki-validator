@@ -227,6 +227,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     List[Check]()
   } { c =>
     val checks = toChecks(location(c), _validateMft(c, mft))
+    // TODO That check could be redundant because we also check the signature of the CRL
     if (!HashUtil.equals(c.aki, mft.aki))
       error(location(c), CRL_AKI_MISMATCH) :: checks
     else
