@@ -53,7 +53,7 @@ trait Fetcher extends Hashing {
   protected def processObject(uri: URI, bytes: Array[Byte], fetcherListener: FetcherListener): Either[Error, Unit] = {
     def checkIfBroken[T](parsed: => Either[BrokenObject, T]) =
       parsed.left.map { bo =>
-        Error(uri, "Could parse object")
+        Error(uri, "Could not parse object")
       }
 
     val uriStr = uri.toString
