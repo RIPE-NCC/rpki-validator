@@ -96,7 +96,6 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
         withdraws = (url, hash) :: withdraws
       }
 
-      override def processBroken(brokenObj: BrokenObject): Unit = {}
     })
     (objects.reverse, withdraws.reverse, errors)
   }

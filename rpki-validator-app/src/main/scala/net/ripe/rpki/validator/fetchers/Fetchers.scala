@@ -37,7 +37,6 @@ case class FetcherConfig(rsyncDir: String = "", taName: String = "")
 
 trait FetcherListener {
   def processObject(repoObj: RepositoryObject.ROType)
-  def processBroken(brokenObj: BrokenObject)
   def withdraw(url: URI, hash: String)
 }
 
@@ -54,7 +53,6 @@ trait Fetcher extends Hashing {
   protected def processObject(uri: URI, bytes: Array[Byte], fetcherListener: FetcherListener): Either[Error, Unit] = {
     def saveIfBroken[T](parsed: => Either[BrokenObject, T]) =
       parsed.left.map { bo =>
-        fetcherListener.processBroken(bo)
         Error(uri, "Could parse object")
       }
 

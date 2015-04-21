@@ -54,7 +54,6 @@ class RsyncFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockit
       override def processObject(repoObj: RepositoryObject.ROType) = {
         objects = repoObj :: objects
       }
-      override def processBroken(brokenObj: BrokenObject): Unit = {}
       override def withdraw(url: URI, hash: String): Unit = {}
     })
     System.gc()
