@@ -37,7 +37,7 @@ import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceCertificate}
-import net.ripe.rpki.commons.validation.{ValidationOptions, ValidationResult, ValidationString}
+import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationOptions, ValidationResult, ValidationString}
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.validator.config.{ApplicationOptions, MemoryImage}
 import net.ripe.rpki.validator.fetchers._
@@ -221,7 +221,11 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     errors.foreach(e => validationResult.error(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, e.toString))
 
     val certificate = store.getCertificate(uri.toString)
-    certificate.foreach(cert => validationResult.rejectIfFalse(keyInfoMatches(cert), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH))
+    if (certificate.isDefined) {
+      validationResult.rejectIfFalse(keyInfoMatches(certificate.get), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
+    } else {
+      validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, "Trust Anchor Certificate")
+    }
 
     if (validationResult.hasFailureForCurrentLocation)
       InvalidObject(uri, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
