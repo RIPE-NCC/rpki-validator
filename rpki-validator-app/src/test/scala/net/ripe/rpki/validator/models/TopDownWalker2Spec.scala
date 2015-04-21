@@ -259,7 +259,8 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     invalidObjects.head.uri should be(uri)
     invalidObjects.head.checks foreach { invalidObject =>
       invalidObject.getStatus should be(ValidationStatus.FETCH_ERROR)
-      invalidObject.getKey should be(message)
+      invalidObject.getKey should be(ValidationString.VALIDATOR_REPO_EXECUTION)
+      invalidObject.getParams.contains(message) should be(true)
     }
   }
 
