@@ -187,7 +187,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
 
   test("should update validation time for validated objects") {
 
-    val (certificateLocation, certificate) = createValidResourceCertificate("valid.cer")
+    val (_, certificate) = createValidResourceCertificate("valid.cer")
     createMftWithEntry()
     createCrlWithEntry(certificate)
 
@@ -195,7 +195,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     val now = Instant.now()
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, validationTime)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    subject.execute
     val certs = storage.getCertificates(certificate.getAuthorityKeyIdentifier)
     val mfts = storage.getManifests(certificate.getAuthorityKeyIdentifier)
     val crls = storage.getCrls(certificate.getAuthorityKeyIdentifier)

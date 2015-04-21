@@ -65,6 +65,21 @@ abstract class ValidationResultsTableData(records: IndexedSeq[ValidatedObjectRes
 
 }
 
+abstract class FetchResultsTableData(records: IndexedSeq[ValidatedObjectResult]) extends ValidationResultsTableData(records){
+  override def getValuesForRecord(record: ValidatedObjectResult) = {
+    List(record.uri.toString, record.messages)
+  }
+
+  override def ordering(sortColumn: Int) = {
+    sortColumn match {
+      case 0 => implicitly[Ordering[URI]].on(_.uri)
+      case 1 => implicitly[Ordering[String]].on(_.messages)
+      case _ => sys.error("unknown sort column: " + sortColumn)
+    }
+  }
+
+}
+
 case class ValidatedObjectResult(trustAnchorName: String, uri: URI, validationStatus: ValidationStatus, checks: Set[ValidationCheck]) {
   lazy val messages = checks.map(ValidationMessage.getMessage(_)).mkString("<br/>\n")
 }

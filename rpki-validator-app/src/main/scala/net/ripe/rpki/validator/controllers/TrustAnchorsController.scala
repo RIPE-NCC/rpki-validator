@@ -76,11 +76,8 @@ trait TrustAnchorsController extends ApplicationController {
   get(s"${Tabs.TrustAnchorMonitorTab.url}/fetch-detail/:identifierHash") {
     val validatedObjectResultsForTa: IndexedSeq[ValidatedObjectResult] = getValidatedObjectResultsForTa { status => status == ValidationStatus.FETCH_ERROR }
 
-    new ValidationResultsTableData(validatedObjectResultsForTa) {
+    new FetchResultsTableData(validatedObjectResultsForTa) {
       override def getParam(name: String) = params(name)
-      override def getValuesForRecord(record: ValidatedObjectResult) = {
-        List(record.uri.toString, record.messages)
-      }
     }
   }
 
