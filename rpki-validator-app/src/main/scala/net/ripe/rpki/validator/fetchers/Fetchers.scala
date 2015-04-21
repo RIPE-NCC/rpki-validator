@@ -37,7 +37,6 @@ case class FetcherConfig(rsyncDir: String = "", taName: String = "")
 
 trait FetcherListener {
   def processObject(repoObj: RepositoryObject.ROType)
-  def processBroken(brokenObj: BrokenObject)
   def withdraw(url: URI, hash: String)
 }
 
@@ -52,10 +51,9 @@ trait Fetcher extends Hashing {
   def fetchRepo(url: URI, process: FetcherListener): Seq[Error]
 
   protected def processObject(uri: URI, bytes: Array[Byte], fetcherListener: FetcherListener): Either[Error, Unit] = {
-    def saveIfBroken[T](parsed: => Either[BrokenObject, T]) =
+    def checkIfBroken[T](parsed: => Either[BrokenObject, T]) =
       parsed.left.map { bo =>
-        fetcherListener.processBroken(bo)
-        Error(uri, "Could parse object")
+        Error(uri, "Could not parse object")
       }
 
     val uriStr = uri.toString
@@ -63,10 +61,10 @@ trait Fetcher extends Hashing {
       uriStr.takeRight(3).toLowerCase
     }.right.flatMap { extension =>
       val repoObject = extension match {
-        case "cer" => saveIfBroken(CertificateObject.tryParse(uriStr, bytes))
-        case "mft" => saveIfBroken(ManifestObject.tryParse(uriStr, bytes))
-        case "crl" => saveIfBroken(CrlObject.tryParse(uriStr, bytes))
-        case "roa" => saveIfBroken(RoaObject.tryParse(uriStr, bytes))
+        case "cer" => checkIfBroken(CertificateObject.tryParse(uriStr, bytes))
+        case "mft" => checkIfBroken(ManifestObject.tryParse(uriStr, bytes))
+        case "crl" => checkIfBroken(CrlObject.tryParse(uriStr, bytes))
+        case "roa" => checkIfBroken(RoaObject.tryParse(uriStr, bytes))
         case "gbr" =>
           Left(Error(uri, "We don't support GBR records yet"))
         case _ =>

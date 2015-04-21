@@ -30,6 +30,11 @@
 package net.ripe.rpki.validator
 package controllers
 
+import java.net.URI
+
+import net.ripe.rpki.commons.validation.{ValidationString, ValidationStatus, ValidationCheck}
+import net.ripe.rpki.validator.testing.TestingObjectMother
+import net.ripe.rpki.validator.views.FetchResultsTableData
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import support.ControllerTestCase
@@ -38,9 +43,14 @@ import net.ripe.rpki.validator.util.TrustAnchorLocator
 
 @RunWith(classOf[JUnitRunner])
 class TrustAnchorsControllerTest extends ControllerTestCase {
+  private val ta = TestingObjectMother.TA
+  private val message = "some message"
+  private val invalidObject: InvalidObject = InvalidObject(URI.create("rsync://some.host/obj.o"), Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, ValidationString.VALIDATOR_REPO_EXECUTION, message)))
+  private val invalidObjects = Seq(invalidObject)
+
   override def controller = new ControllerFilter with TrustAnchorsController {
-    override def trustAnchors = new TrustAnchors(Seq.empty)
-    override def validatedObjects = new ValidatedObjects(Map.empty)
+    override def trustAnchors = new TrustAnchors(Seq(ta))
+    override def validatedObjects = new ValidatedObjects(Map((ta.locator, TrustAnchorValidations(invalidObjects))))
     override protected def startTrustAnchorValidation(trustAnchors: Seq[String]) = sys.error("TODO")
     override protected def updateTrustAnchorState(locator: TrustAnchorLocator, enabled: Boolean) {}
   }
@@ -51,4 +61,18 @@ class TrustAnchorsControllerTest extends ControllerTestCase {
       result.isInstanceOf[views.TrustAnchorsView] should be(true)
     }
   }
+
+  test("list all fetch errors") {
+    get(s"/trust-anchor-monitor/fetch-detail/${ta.identifierHash}?$extraParamsYouDontNeedToKnowAbout") {
+      response.status should equal(200)
+      val records = result.asInstanceOf[FetchResultsTableData].getAllRecords()
+      records.size should be(1)
+      records.head.uri should be(invalidObject.uri)
+      records.head.messages should be(message)
+    }
+  }
+
+  //used by DataTableJsonView
+  val extraParamsYouDontNeedToKnowAbout = "sSearch=&iDisplayStart=0&iDisplayLength=10&iSortCol_0=0&sSortDir_0=asc"
+
 }

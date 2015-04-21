@@ -64,21 +64,35 @@ trait TrustAnchorsController extends ApplicationController {
   }
 
   get(s"${Tabs.TrustAnchorMonitorTab.url}/validation-detail/:identifierHash") {
-    val validatedObjectResultsForTa: IndexedSeq[ValidatedObjectResult] = validateParameter("identifierHash", required(trustAnchorByIdentifierHash)) match {
-      case Success(trustAnchor) =>  {
-        val validatedObjectsForTa = validatedObjects.all.getOrElse(trustAnchor.locator, TrustAnchorValidations(Seq.empty)).validatedObjects
-        val records = for {
-          validatedObject: ValidatedObject <- validatedObjectsForTa if validatedObject.validationStatus != ValidationStatus.PASSED
-        } yield {
-          ValidatedObjectResult(trustAnchor.name, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
-        }
-        records.seq.toIndexedSeq
-      }
-      case Failure(feedbackMessage) => IndexedSeq.empty
+    val validatedObjectResultsForTa: IndexedSeq[ValidatedObjectResult] = getValidatedObjectResultsForTa { status =>
+      status != ValidationStatus.PASSED && status != ValidationStatus.FETCH_ERROR
     }
 
     new ValidationResultsTableData(validatedObjectResultsForTa) {
       override def getParam(name: String) = params(name)
+    }
+  }
+
+  get(s"${Tabs.TrustAnchorMonitorTab.url}/fetch-detail/:identifierHash") {
+    val validatedObjectResultsForTa: IndexedSeq[ValidatedObjectResult] = getValidatedObjectResultsForTa { status => status == ValidationStatus.FETCH_ERROR }
+
+    new FetchResultsTableData(validatedObjectResultsForTa) {
+      override def getParam(name: String) = params(name)
+    }
+  }
+
+  private def getValidatedObjectResultsForTa(filter: ValidationStatus => Boolean) = {
+    validateParameter("identifierHash", required(trustAnchorByIdentifierHash)) match {
+      case Success(trustAnchor) =>  {
+        val validatedObjectsForTa = validatedObjects.all.getOrElse(trustAnchor.locator, TrustAnchorValidations(Seq.empty)).validatedObjects
+        val records = for {
+          validatedObject: ValidatedObject <- validatedObjectsForTa if filter(validatedObject.validationStatus)
+        } yield {
+          ValidatedObjectResult(trustAnchor.name, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filter(check => filter(check.getStatus)))
+        }
+        records.seq.toIndexedSeq
+      }
+      case Failure(feedbackMessage) => IndexedSeq.empty
     }
   }
 

@@ -92,7 +92,6 @@ class SingleObjectHttpFetcherTest extends ValidatorTestCase with BeforeAndAfter 
 
       override def withdraw(url: URI, hash: String): Unit = {}
 
-      override def processBroken(brokenObj: BrokenObject): Unit = {}
     })
     (objects.reverse, errors)
   }

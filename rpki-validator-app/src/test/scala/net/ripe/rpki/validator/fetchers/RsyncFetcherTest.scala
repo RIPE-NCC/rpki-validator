@@ -32,7 +32,7 @@ package net.ripe.rpki.validator.fetchers
 import java.net.URI
 
 import net.ripe.rpki.validator.config.ApplicationOptions
-import net.ripe.rpki.validator.models.validation.{BrokenObject, RepositoryObject}
+import net.ripe.rpki.validator.models.validation.RepositoryObject
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.junit.Ignore
 import org.scalatest.BeforeAndAfter
@@ -54,7 +54,6 @@ class RsyncFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockit
       override def processObject(repoObj: RepositoryObject.ROType) = {
         objects = repoObj :: objects
       }
-      override def processBroken(brokenObj: BrokenObject): Unit = {}
       override def withdraw(url: URI, hash: String): Unit = {}
     })
     System.gc()

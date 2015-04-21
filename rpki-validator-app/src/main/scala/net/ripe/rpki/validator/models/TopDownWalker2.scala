@@ -195,7 +195,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
   private def prefetch(uri: URI) = {
     repoService.visitRepo(uri).map { error =>
-      InvalidObject(error.url, Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, error.message)))
+      InvalidObject(error.url, Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, VALIDATOR_REPO_EXECUTION, error.message)))
     }
   }
 

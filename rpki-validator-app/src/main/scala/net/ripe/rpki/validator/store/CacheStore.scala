@@ -125,32 +125,6 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
       }
     }
 
-  override def storeBroken(broken: BrokenObject) =
-    locker.locked(broken.url) {
-      val params = Map("hash" -> stringify(broken.hash),
-        "url" -> broken.url,
-        "encoded" -> broken.bytes,
-        "message" -> broken.errorMessage,
-        "ta_name" -> taName)
-
-      atomic {
-        val updateCount = template.update(
-          """UPDATE broken_objects SET
-             hash = :hash,
-             encoded = :encoded,
-             message = :message
-           WHERE url = :url
-          """, params)
-
-        if (updateCount == 0) {
-          template.update(
-            """INSERT INTO broken_objects(hash, url, encoded, message, ta_name)
-             VALUES( :hash, :url, :encoded, :message, :ta_name)
-            """, params)
-        }
-      }
-    }
-
   override def getCertificate(url: String): Option[CertificateObject] = Try {
     template.queryForObject("SELECT url, encoded FROM certificates WHERE url = :url AND ta_name = :ta_name",
       Map("url" -> url, "ta_name" -> taName),
@@ -182,23 +156,6 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
   def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, roaObjectType) { (url, bytes, validationTime) =>
     RoaObject.parse(url, bytes).copy(validationTime = validationTime)
   }
-
-  override def getBroken(url: String) = Try {
-    template.queryForObject(
-      "SELECT encoded, message FROM broken_objects WHERE url = :url AND ta_name = :ta_name",
-      Map("url" -> url,
-        "ta_name" -> taName),
-      new RowMapper[BrokenObject] {
-        override def mapRow(rs: ResultSet, i: Int) = BrokenObject(url, rs.getBytes(1), rs.getString(2))
-      })
-  }.toOption
-
-  override def getBroken = template.query(
-    "SELECT url, encoded, message FROM broken_objects WHERE ta_name = :ta_name", Map("ta_name" -> taName),
-    new RowMapper[BrokenObject] {
-      override def mapRow(rs: ResultSet, i: Int) = BrokenObject(rs.getString(1), rs.getBytes(2), rs.getString(3))
-    }).toSeq
-
 
   private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte], Option[Instant]) => T) =
     template.query(
@@ -247,7 +204,7 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
   }
 
   def clear() = {
-    for (t <- Seq("certificates", "repo_objects", "broken_objects"))
+    for (t <- Seq("certificates", "repo_objects"))
       template.update(s"TRUNCATE TABLE $t", Map.empty[String, Object])
   }
 
