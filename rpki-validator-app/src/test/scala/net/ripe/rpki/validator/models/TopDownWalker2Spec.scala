@@ -42,6 +42,7 @@ import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateInformationAccessDescriptor, X509ResourceCertificate, X509ResourceCertificateBuilder}
 import net.ripe.rpki.commons.validation
+import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.commons.validation.{ValidationStatus, ValidationOptions, ValidationString}
 import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
@@ -63,12 +64,14 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   private val ROOT_CRL_LOCATION: URI = URI.create("rsync://foo.host/bar/ta.crl")
 
   private val ROOT_CERTIFICATE_NAME: X500Principal = new X500Principal("CN=For Testing Only, CN=RIPE NCC, C=NL")
+  private val ROOT_CERTIFICATE_NAME_2: X500Principal = new X500Principal("CN=For Testing Only 2, CN=RIPE NCC, C=NL")
   private val CERTIFICATE_NAME: X500Principal = new X500Principal("CN=123")
   private val ROOT_RESOURCE_SET: IpResourceSet = IpResourceSet.parse("10.0.0.0/8, 192.168.0.0/16, ffce::/16, AS21212")
   private val ROOT_SERIAL_NUMBER: BigInteger = BigInteger.valueOf(900)
   private val NOW: DateTime = DateTime.now()
   private val VALIDITY_PERIOD: ValidityPeriod = new ValidityPeriod(NOW.minusMinutes(1), NOW.plusYears(1))
   private val ROOT_KEY_PAIR: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
+  private val ROOT_KEY_PAIR_2: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val CERTIFICATE_KEY_PAIR: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val DEFAULT_VALIDATION_OPTIONS: ValidationOptions = new ValidationOptions
 
@@ -292,7 +295,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
     val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest)
-    val result: Option[(ManifestObject, CrlObject, Seq[ROType], Seq[TopDownWalker2#Check])] = subject.findRecentValidMftWithCrl(Seq(manifestObject))
+    val result = subject.findRecentValidMftWithCrl(Seq(manifestObject))
 
     result.get._1 should be (manifestObject)
     result.get._2.decoded should be (crl)
@@ -337,6 +340,35 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     result.get._4 should have size errorNumber
   }
 
+  test("should find recent valid manifest in case there is second manifest with invalid CRL") {
+    val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
+    val goodCrl = createCrlWithEntry(certificate)
+    val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, "bad_manifest_crl.crl")
+    val (_, manifest1) = createMftWithCrlAndEntries(goodCrl.getEncoded)
+
+    // add some broken CRL to the bad manifest
+    val bogusManifestBuilder = createMftBuilder(ROOT_KEY_PAIR, ROOT_CERTIFICATE_NAME)
+    bogusManifestBuilder.addFile("rsync://host.net/bad_manifest_crl.crl", bogusMftCrl.getEncoded)
+    bogusManifestBuilder.withManifestNumber(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)))
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest1)
+    val badManifestObject = ManifestObject("rsync://host.net/bad_manifest.mft", bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate))
+    val result = subject.findRecentValidMftWithCrl(Seq(manifestObject, badManifestObject))
+
+    result.get._1 should be(manifestObject)
+    result.get._2.decoded should be(goodCrl)
+    result.get._2.url should be("rsync://foo.host/bar/ta.crl")
+    result.get._2.decoded should be(goodCrl)
+    result.get._3 should have size 1
+    result.get._3.head.url should be("rsync://foo.host/bar/ta.crl")
+    result.get._3.head.decoded should be(goodCrl)
+    result.get._4 should have size 3
+    result.get._4.exists(ch => ch.impl.getKey == CRL_AKI_MISMATCH) should be(true)
+    result.get._4.exists(ch => ch.impl.getKey == CRL_SIGNATURE_VALID) should be(true)
+    result.get._4.exists(ch => ch.impl.getKey == VALIDATOR_MANIFEST_URI_MISMATCH) should be(true)
+  }
+
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withSubjectDN(ROOT_CERTIFICATE_NAME)
@@ -371,9 +403,15 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     taCrl
   }
 
-  def createCrlWithEntry(certificate: X509ResourceCertificate) = {
-    val taCrl = getCrl(ROOT_CERTIFICATE_NAME, ROOT_KEY_PAIR, certificate.getSerialNumber)
-    storage.storeCrl(CrlObject(ROOT_CRL_LOCATION.toString, taCrl))
+  private def createCrlWithEntry(certificate: X509ResourceCertificate) : X509Crl =
+    createCrlWithEntry(certificate, ROOT_CERTIFICATE_NAME, ROOT_CRL_LOCATION.toString)
+
+  private def createCrlWithEntry(certificate: X509ResourceCertificate, certName: X500Principal, crlLocation: String) : X509Crl =
+    createCrlWithEntry(certificate, ROOT_KEY_PAIR, certName, crlLocation)
+
+  private def createCrlWithEntry(certificate: X509ResourceCertificate, keyPair: KeyPair, certName: X500Principal, crlLocation: String) : X509Crl = {
+    val taCrl = getCrl(certName, keyPair, certificate.getSerialNumber)
+    storage.storeCrl(CrlObject(crlLocation, taCrl))
     taCrl
   }
 
