@@ -32,7 +32,7 @@ package net.ripe.rpki.validator.fetchers
 import java.net.URI
 
 import net.ripe.rpki.validator.config.ApplicationOptions
-import net.ripe.rpki.validator.models.validation.{BrokenObject, RepositoryObject}
+import net.ripe.rpki.validator.models.validation.RepositoryObject
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.junit.Ignore
 import org.scalatest.BeforeAndAfter

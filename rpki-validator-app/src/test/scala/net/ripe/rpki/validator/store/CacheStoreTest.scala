@@ -133,23 +133,6 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     store.getCertificates(certificate.aki) should have length 1
   }
 
-  test("Store twice and fetch a broken object") {
-    val broken = BrokenObject(url = "rsync://bla", bytes = Array[Byte](1.toByte, 2.toByte), errorMessage = "Couldn't parse that")
-
-    val now = Instant.now()
-
-    store.storeBroken(broken)
-    store.storeBroken(broken)
-
-    store.getBroken should have length 1
-    val b = store.getBroken("rsync://bla")
-    b.get.url should be(broken.url)
-    b.get.hash should be(broken.hash)
-    b.get.errorMessage should be(broken.errorMessage)
-    b.get.downloadTime.isAfter(now) should be(true)
-    b.get.downloadTime.isBefore(now.plus(10000L)) should be(true)
-  }
-
   test("Update validation timestamp") {
     val roa: RoaObject = RoaObject(url = "rsync://bla.roa", decoded = testRoa)
     store.storeRoa(roa)

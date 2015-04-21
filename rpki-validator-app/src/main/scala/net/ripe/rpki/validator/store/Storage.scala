@@ -47,8 +47,6 @@ trait Storage extends Logging {
 
   def storeRoa(Roa: RoaObject)
 
-  def storeBroken(brokenObject: BrokenObject)
-
   def getCertificate(uri: String): Option[CertificateObject]
 
   def getCertificates(aki: Array[Byte]): Seq[CertificateObject]
@@ -58,10 +56,6 @@ trait Storage extends Logging {
   def getRoas(aki: Array[Byte]): Seq[RoaObject]
 
   def getManifests(aki: Array[Byte]): Seq[ManifestObject]
-
-  def getBroken(url: String): Option[BrokenObject]
-
-  def getBroken: Seq[BrokenObject]
 
   def delete(url: String, hash: String)
 
