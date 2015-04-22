@@ -30,8 +30,10 @@
 package net.ripe.rpki.validator.models
 
 import java.net.URI
+import java.util
 
 import grizzled.slf4j.Logging
+import net.ripe.ipresource.{IpResourceSet, IpResourceType}
 import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509Crl}
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.commons.validation.ValidationString._
@@ -155,7 +157,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
   }
 
-  def validatedObject(checkMap: Map[ValidationLocation, List[Check]])(r: RepositoryObject.ROType): (URI, ValidatedObject) = {
+  private def validatedObject(checkMap: Map[ValidationLocation, List[Check]])(r: RepositoryObject.ROType): (URI, ValidatedObject) = {
     val uri = new URI(r.url)
     val validationChecks = checkMap.get(new ValidationLocation(uri)).map(_.map(_.impl).toSet)
     val hasErrors = validationChecks.exists(c => !c.forall(_.isOk))
@@ -166,7 +168,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
   }
 
-  def check(objects: Seq[RepositoryObject.ROType], crl: CrlObject): List[Check] = {
+  private def check(objects: Seq[RepositoryObject.ROType], crl: CrlObject): List[Check] = {
     objects.map { o =>
       val location = new ValidationLocation(o.url)
       val result = ValidationResult.withLocation(location)
@@ -180,14 +182,21 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       result.getFailures(location).asScala.map(r => error(location, r.getKey, r.getParams: _*)).toList
   }
 
+  private def getResourcesOfType(types: util.EnumSet[IpResourceType], set: IpResourceSet): IpResourceSet = {
+    val resources = set.asScala.filter(ipResource => types.contains(ipResource.getType))
+    import scala.collection.JavaConversions._
+    new IpResourceSet(resources)
+  }
+
   private def stepDown(cert: RepositoryObject[X509ResourceCertificate]): Map[URI, ValidatedObject] = {
-    val ski: String = HashUtil.stringify(cert.decoded.getSubjectKeyIdentifier)
+    val childCert = cert.decoded
+    val ski: String = HashUtil.stringify(childCert.getSubjectKeyIdentifier)
     if (seen.contains(ski)) {
       logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
       Map()
     } else {
-      val childResources = if (cert.decoded.isResourceSetInherited) certificateContext.getResources else cert.decoded.getResources
-      val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), cert.decoded, childResources)
+      val childResources = if (childCert.isResourceSetInherited) getResourcesOfType(childCert.getInheritedResourceTypes, certificateContext.getResources) else childCert.getResources
+      val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), childCert, childResources)
       val nextLevelWalker = new TopDownWalker2(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
       nextLevelWalker.validateContext
     }

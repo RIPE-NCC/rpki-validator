@@ -32,6 +32,7 @@ package net.ripe.rpki.validator.models
 import java.math.BigInteger
 import java.net.URI
 import java.security.KeyPair
+import java.util
 import javax.security.auth.x500.X500Principal
 
 import net.ripe.ipresource.{IpResourceSet, IpResourceType}
@@ -370,6 +371,60 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
     result.get._4.exists(ch => ch.impl.getKey == VALIDATOR_MANIFEST_URI_MISMATCH) should be(true)
   }
 
+  test("should give overclaim warning if a child certificate claims more resources than its parent") {
+    val childManifestLocation =  URI.create("rsync://foo.host/bar/childManifest.mft")
+
+    val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", childManifestLocation)
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
+
+    val childKeyPair = PregeneratedKeyPairFactory.getInstance.generate
+
+    val childCrlLocation = URI.create("rsync://foo.host/bar/child.crl")
+    val childCrl = getCrl(new X500Principal("CN=For Testing Only, CN=RIPE NCC, C=NL"), CERTIFICATE_KEY_PAIR)
+    storage.storeCrl(CrlObject(URI.create("rsync://foo.host/bar/child.crl").toString, childCrl))
+
+    val (childCertificateLocation, childCertificate) = createOverClaimingResourceCertificate(childKeyPair, CERTIFICATE_KEY_PAIR, "validChild.cer", ROOT_MANIFEST_LOCATION, new X500Principal("CN=124"), CERTIFICATE_NAME,
+      new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false)
+
+    createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
+      childCrl.getEncoded, (childCertificateLocation, childCertificate.getEncoded))
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result should have size 6
+    result.get(childCertificateLocation).get.isValid should be(false)
+  }
+
+  test("should not give invalid overclaim warning if a certificate inherits its parents resources") {
+    val childManifestLocation =  URI.create("rsync://foo.host/bar/childManifest.mft")
+
+    val (certificateLocation, certificate) = createInheritingResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", childManifestLocation)
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
+
+    val childKeyPair = PregeneratedKeyPairFactory.getInstance.generate
+
+    val childCrlLocation = URI.create("rsync://foo.host/bar/child.crl")
+    val childCrl = getCrl(new X500Principal("CN=For Testing Only, CN=RIPE NCC, C=NL"), CERTIFICATE_KEY_PAIR)
+    storage.storeCrl(CrlObject(URI.create("rsync://foo.host/bar/child.crl").toString, childCrl))
+
+    val (childCertificateLocation, childCertificate) = createChildResourceCertificate(childKeyPair, CERTIFICATE_KEY_PAIR, "validChild.cer", new X500Principal("CN=124"), CERTIFICATE_NAME)
+
+    createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
+      childCrl.getEncoded, (childCertificateLocation, childCertificate.getEncoded))
+
+    val subject = new TopDownWalker2(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result should have size 6
+    result.get(certificateLocation).get.isValid should be(true)
+    result.get(certificateLocation).get.checks should be ('empty)
+    result.get(childCertificateLocation).get.isValid should be(true)
+    result.get(childCertificateLocation).get.checks should be ('empty)
+  }
+
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withSubjectDN(ROOT_CERTIFICATE_NAME)
@@ -471,26 +526,72 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   def createExpiredResourceCertificate(keyPair: KeyPair, locationName: String) = {
-    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, ROOT_MANIFEST_LOCATION, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)), true)
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, ROOT_MANIFEST_LOCATION, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)), true, false)
+  }
+
+  def createInheritingResourceCertificate(keyPair: KeyPair, locationName: String, manifestLocation: URI) = {
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, manifestLocation, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), true, true)
   }
 
   def createValidResourceCertificate(keyPair: KeyPair, locationName: String, manifestLocation: URI) = {
-    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, manifestLocation, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), true)
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, manifestLocation, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), true, false)
   }
 
   def createLeafResourceCertificate(keyPair: KeyPair, locationName: String) = {
-    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, ROOT_MANIFEST_LOCATION, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false)
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, ROOT_MANIFEST_LOCATION, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false, false)
   }
 
   def createChildResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, certificateName: X500Principal, parentName: X500Principal) = {
-    createResourceCertificate(keyPair, parentKeyPair, locationName, ROOT_MANIFEST_LOCATION, certificateName, parentName, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false)
+    createResourceCertificate(keyPair, parentKeyPair, locationName, ROOT_MANIFEST_LOCATION, certificateName, parentName, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false, false)
   }
 
-  def createResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, manifestLocation: URI, certificateName: X500Principal, parentName: X500Principal,
+  def createOverClaimingResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, manifestLocation: URI, certificateName: X500Principal, parentName: X500Principal,
                                 validityPeriod: ValidityPeriod, isObjectIssuer: Boolean): (URI, X509ResourceCertificate) = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withValidityPeriod(validityPeriod)
-    builder.withResources(ROOT_RESOURCE_SET)
+
+    val overClaimingResourceSet = IpResourceSet.parse("127.0.0.0/8")
+    builder.withResources(overClaimingResourceSet)
+    builder.withIssuerDN(parentName)
+    builder.withSubjectDN(certificateName)
+    builder.withSerial(ROOT_SERIAL_NUMBER.add(BigInteger.ONE))
+    builder.withPublicKey(keyPair.getPublic)
+    builder.withAuthorityKeyIdentifier(true)
+    builder.withSubjectKeyIdentifier(true)
+    builder.withSigningKeyPair(parentKeyPair)
+    builder.withCrlDistributionPoints(URI.create("rsync://foo.host/bar/i_dont_care.crl"))
+
+    if (isObjectIssuer) {
+      builder.withCa(true)
+      builder.withKeyUsage(KeyUsage.digitalSignature + KeyUsage.keyCertSign + KeyUsage.cRLSign)
+
+      builder.withSubjectInformationAccess(
+        new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_CA_REPOSITORY, REPO_LOCATION),
+        new X509CertificateInformationAccessDescriptor(X509CertificateInformationAccessDescriptor.ID_AD_RPKI_MANIFEST, manifestLocation)
+      )
+    } else {
+      builder.withKeyUsage(KeyUsage.digitalSignature)
+    }
+
+    val certificate = builder.build
+
+    val certificateLocation = new URI(REPO_LOCATION + locationName)
+    storage.storeCertificate(CertificateObject(certificateLocation.toString, certificate))
+
+    certificate.getManifestUri
+
+    (certificateLocation, certificate)
+  }
+
+  def createResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, manifestLocation: URI, certificateName: X500Principal, parentName: X500Principal,
+                                validityPeriod: ValidityPeriod, isObjectIssuer: Boolean, inheritResources: Boolean): (URI, X509ResourceCertificate) = {
+    val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
+    builder.withValidityPeriod(validityPeriod)
+    if (inheritResources) {
+      builder.withInheritedResourceTypes(util.EnumSet.allOf(classOf[IpResourceType]))
+    } else {
+      builder.withResources(ROOT_RESOURCE_SET)
+    }
     builder.withIssuerDN(parentName)
     builder.withSubjectDN(certificateName)
     builder.withSerial(ROOT_SERIAL_NUMBER.add(BigInteger.ONE))
