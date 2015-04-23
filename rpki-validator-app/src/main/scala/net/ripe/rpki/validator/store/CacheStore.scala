@@ -60,6 +60,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   private val manifestObjectType = "manifest"
   private val crlObjectType = "crl"
 
+  private val deletionDelay = 2
+
   private val locker = new Locker
 
   override def storeCertificate(certificate: CertificateObject) =
@@ -207,8 +209,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   }
 
   def clearObjects(olderThan: Instant) = {
-    val tt = timestamp(olderThan)
-    val dt = timestamp(olderThan.toDateTime.minusHours(2).toInstant)
+    val tt = timestamp(olderThan.toDateTime.minusHours(deletionDelay).toInstant)
     atomic {
       Seq("certificates", "repo_objects").foreach { table =>
         val i = template.update(s"DELETE FROM $table WHERE validation_time < '$tt'", Map.empty[String, Object])
@@ -216,7 +217,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       }
 
       Seq("certificates", "repo_objects").foreach { table =>
-        val i = template.update(s"DELETE FROM $table WHERE validation_time IS NULL AND download_time < '$dt'", Map.empty[String, Object])
+        val i = template.update(s"DELETE FROM $table WHERE validation_time IS NULL AND download_time < '$tt'", Map.empty[String, Object])
         info(s"Clear Old Objects -> $i object(s) downloaded 2 hours before $olderThan deleted from $table")
       }
     }
