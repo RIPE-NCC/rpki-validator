@@ -41,53 +41,72 @@ import org.scalatest.mock.MockitoSugar
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with MockitoSugar  {
 
-  val fetcher = mock[RepoFetcher]
-  val repoService = new RepoService(fetcher)
+  val fetcher1 = mock[RepoFetcher]
+  val fetcher2 = mock[RepoFetcher]
+  Mockito.when(fetcher1.taName).thenReturn("TA 1")
+  Mockito.when(fetcher2.taName).thenReturn("TA 2")
+
+  val repoService1 = new RepoService(fetcher1)
+  val repoService2 = new RepoService(fetcher2)
 
   test("should fetch if URI was never visited") {
-    val uri: URI = new URI("http://foo.bar/bla")
+    val uri = new URI("http://foo.bar/bla")
 
-    repoService.visitRepo(uri)
-
-    Mockito.verify(fetcher).fetch(uri)
+    repoService1.visitRepo(uri)
+    Mockito.verify(fetcher1).fetch(uri)
   }
 
   test("should NOT fetch if URI was just visited") {
-    val uri: URI = new URI("http://foo.bar/bla")
+    val uri = new URI("http://foo.bar/bla")
 
-    repoService.visitRepo(uri)
-    Mockito.verify(fetcher).fetch(uri)
+    repoService1.visitRepo(uri)
+    repoService1.visitRepo(uri)
 
-    repoService.visitRepo(uri)
-    Mockito.verifyNoMoreInteractions(fetcher)
+    Mockito.verify(fetcher1).fetch(uri)
+    Mockito.verify(fetcher1, Mockito.atLeast(1)).taName
+    Mockito.verifyNoMoreInteractions(fetcher1)
+  }
+
+  test("should fetch URI if it's for another TA") {
+    val uri = new URI("http://foo.bar/bla")
+
+    repoService1.visitRepo(uri)
+    repoService1.visitRepo(uri)
+
+    Mockito.verify(fetcher1).fetch(uri)
+    Mockito.verify(fetcher1, Mockito.atLeast(1)).taName
+    Mockito.verifyNoMoreInteractions(fetcher1)
+
+    repoService2.visitRepo(uri)
+    Mockito.verify(fetcher2).fetch(uri)
   }
 
   test("should fetch object if URI was never visited") {
-    val uri: URI = new URI("http://foo.bar/bla.cer")
+    val uri = new URI("http://foo.bar/bla.cer")
 
-    repoService.visitObject(uri)
+    repoService1.visitObject(uri)
 
-    Mockito.verify(fetcher).fetchObject(uri)
+    Mockito.verify(fetcher1).fetchObject(uri)
   }
 
   test("should not fetch object if URI was already visited") {
     val uri: URI = new URI("http://foo.bar/bla.cer")
 
-    repoService.visitObject(uri)
-    repoService.visitObject(uri)
+    repoService1.visitObject(uri)
+    repoService1.visitObject(uri)
 
-    Mockito.verify(fetcher, Mockito.times(1)).fetchObject(uri)
+    Mockito.verify(fetcher1, Mockito.times(1)).fetchObject(uri)
   }
 
   test("fetch time should be recent") {
     val minuteAgo: Instant = Instant.now().minus(Duration.standardMinutes(1))
     val twoMinutes: Duration = Duration.standardMinutes(2)
-    repoService.timeIsRecent(minuteAgo, twoMinutes) should be(true)
+    repoService1.timeIsRecent(minuteAgo, twoMinutes) should be(true)
   }
 
   test("fetch time should NOT be recent") {
     val twoMinutesAgo: Instant = Instant.now().minus(Duration.standardMinutes(2))
     val minute: Duration = Duration.standardMinutes(1)
-    repoService.timeIsRecent(twoMinutesAgo, minute) should be(false)
+    repoService1.timeIsRecent(twoMinutesAgo, minute) should be(false)
   }
 }

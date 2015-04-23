@@ -205,13 +205,11 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
    *   [localhost:8888, localhost:8888/a, localhost:8888/a/b, localhost:8888/a/b/c]
    */
   private def chunked(uri: String) =
-    uri.split("/").toSeq.foldLeft((Seq[Seq[String]](), Seq[String]())) {
-      (accum, ch) => {
-        val newLatest = accum._2 :+ ch
-        (accum._1 :+ newLatest, newLatest)
-      }
+    uri.split("/").toSeq.foldLeft((Seq[Seq[String]](), Seq[String]())) { (accum, ch) =>
+      val newLatest = accum._2 :+ ch
+      (accum._1 :+ newLatest, newLatest)
     }._1.map {
-      _.mkString("","/","/")
+      _.mkString("", "/", "/")
     }
 
   def fetchObject(repoUri: URI): Seq[Fetcher.Error] = {
@@ -252,6 +250,8 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
       })
     }
   }
+
+  def taName = config.taName
 }
 
 object RepoFetcher {

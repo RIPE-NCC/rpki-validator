@@ -32,32 +32,58 @@ package net.ripe.rpki.validator.store
 import java.net.URI
 
 import net.ripe.rpki.validator.support.ValidatorTestCase
+import org.joda.time.Instant
 import org.scalatest.BeforeAndAfter
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class RepoServiceStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
+  implicit def _url(s: String) : URI = new URI(s)
+
   test("Should not take slashes into account") {
-    val t0 = RepoServiceStore.getLastFetchTime(new URI("rsync://host/a"))
+    val tag = "tag"
+    val t0 = new Instant()
     val t1 = t0.plus(10000L)
     val t2 = t0.plus(50000L)
 
-    RepoServiceStore.updateLastFetchTime(new URI("rsync://host/a/"), t1)
-    RepoServiceStore.getLastFetchTime(new URI("rsync://host/a")) should be(t1)
-    RepoServiceStore.getLastFetchTime(new URI("rsync://host/a/")) should be(t1)
-    RepoServiceStore.getLastFetchTime(new URI("rsync://host/a/b")) should be(t1)
+    RepoServiceStore.updateLastFetchTime("rsync://host/a/", tag, t1)
+    RepoServiceStore.getLastFetchTime("rsync://host/a", tag) should be(t1)
+    RepoServiceStore.getLastFetchTime("rsync://host/a/", tag) should be(t1)
+    RepoServiceStore.getLastFetchTime("rsync://host/a/b", tag) should be(t1)
 
-    RepoServiceStore.updateLastFetchTime(new URI("rsync://host/a/b"), t2)
-    RepoServiceStore.getLastFetchTime(new URI("rsync://host/a/b")) should be(t2)
-    RepoServiceStore.getLastFetchTime(new URI("rsync://host/a")) should be(t1)
-    RepoServiceStore.getLastFetchTime(new URI("rsync://host/a/")) should be(t1)
+    RepoServiceStore.updateLastFetchTime("rsync://host/a/b", tag, t2)
+    RepoServiceStore.getLastFetchTime("rsync://host/a/b", tag) should be(t2)
+    RepoServiceStore.getLastFetchTime("rsync://host/a", tag) should be(t1)
+    RepoServiceStore.getLastFetchTime("rsync://host/a/", tag) should be(t1)
 
-    val t3 = RepoServiceStore.getLastFetchTime(new URI("rsync://host1/b/")).plus(20000L)
-    RepoServiceStore.updateLastFetchTime(new URI("rsync://host1/b"), t3)
-    RepoServiceStore.getLastFetchTime(new URI("rsync://host1/b/")) should be(t3)
-    RepoServiceStore.getLastFetchTime(new URI("rsync://host1/b/x")) should be(t3)
-    RepoServiceStore.getLastFetchTime(new URI("rsync://host1/b/x/")) should be(t3)
-    RepoServiceStore.getLastFetchTime(new URI("rsync://host1/b/x/y")) should be(t3)
+    val t3 = RepoServiceStore.getLastFetchTime("rsync://host1/b/", tag).plus(20000L)
+    RepoServiceStore.updateLastFetchTime("rsync://host1/b", tag,  t3)
+    RepoServiceStore.getLastFetchTime("rsync://host1/b/", tag) should be(t3)
+    RepoServiceStore.getLastFetchTime("rsync://host1/b/x", tag) should be(t3)
+    RepoServiceStore.getLastFetchTime("rsync://host1/b/x/", tag) should be(t3)
+    RepoServiceStore.getLastFetchTime("rsync://host1/b/x/y", tag) should be(t3)
+  }
+
+  test("Should take tags into account") {
+    val tag1 = "tag1"
+    val tag2 = "tag2"
+    val t0 = new Instant()
+    val tt1 = t0.plus(10000L)
+    val tt2 = t0.plus(50000L)
+    val ttt = t0.plus(150000L)
+
+    val t1 = RepoServiceStore.getLastFetchTime("rsync://host/a", tag1)
+    RepoServiceStore.updateLastFetchTime("rsync://host/a/b", tag1, tt1)
+
+    val t2 = RepoServiceStore.getLastFetchTime("rsync://host/a", tag2)
+    RepoServiceStore.updateLastFetchTime("rsync://host/a/b", tag2, tt2)
+
+    RepoServiceStore.getLastFetchTime("rsync://host/a/b", tag1) should be(tt1)
+    RepoServiceStore.getLastFetchTime("rsync://host/a/b", tag2) should be(tt2)
+
+    RepoServiceStore.updateLastFetchTime("rsync://host/a/b", tag1, ttt)
+    RepoServiceStore.getLastFetchTime("rsync://host/a/b", tag1) should be(ttt)
+    RepoServiceStore.getLastFetchTime("rsync://host/a/b", tag2) should be(tt2)
   }
 
 

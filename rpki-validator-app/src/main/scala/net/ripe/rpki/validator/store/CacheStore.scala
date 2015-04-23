@@ -79,6 +79,7 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
              encoded = :encoded
            WHERE hash = :hash
            AND   url = :url
+           AND   ta_name = :ta_name
           """, params)
 
         if (updateCount == 0) {
@@ -114,6 +115,7 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
              encoded = :encoded
            WHERE hash = :hash
            AND   url = :url
+           AND   ta_name = :ta_name
           """, params)
 
         if (updateCount == 0) {
