@@ -79,8 +79,6 @@ sealed trait RepositoryObject[T <: net.ripe.rpki.commons.crypto.CertificateRepos
 
   def validationTime: Option[Instant]
 
-  def downloadTime: Option[Instant]
-
   def isExpiredOrRevoked = {
     val d = decoded
     d.isPastValidityTime || d.isRevoked
@@ -161,7 +159,6 @@ object RoaObject extends Parsing {
 
 case class CertificateObject(override val url: String,
                              override val decoded: X509ResourceCertificate,
-                             override val downloadTime: Option[Instant] = Some(Instant.now()),
                              override val validationTime: Option[Instant] = None) extends RepositoryObject[X509ResourceCertificate] {
 
   def encoded = decoded.getEncoded
@@ -171,7 +168,6 @@ case class CertificateObject(override val url: String,
 
 case class ManifestObject(override val url: String,
                           override val decoded: ManifestCms,
-                          override val downloadTime: Option[Instant] = Some(Instant.now()),
                           override val validationTime: Option[Instant] = None) extends RepositoryObject[ManifestCms] {
   def encoded = decoded.getEncoded
   def aki = decoded.getCertificate.getAuthorityKeyIdentifier
@@ -179,7 +175,6 @@ case class ManifestObject(override val url: String,
 
 case class CrlObject(override val url: String,
                      override val decoded: X509Crl,
-                     override val downloadTime: Option[Instant] = Some(Instant.now()),
                      override val validationTime: Option[Instant] = None) extends RepositoryObject[X509Crl] {
   def encoded = decoded.getEncoded
   def aki = decoded.getAuthorityKeyIdentifier
@@ -187,7 +182,6 @@ case class CrlObject(override val url: String,
 
 case class RoaObject(override val url: String,
                      override val decoded: RoaCms,
-                     override val downloadTime: Option[Instant] = Some(Instant.now()),
                      override val validationTime: Option[Instant] = None) extends RepositoryObject[RoaCms] {
 
   def aki = decoded.getCertificate.getAuthorityKeyIdentifier

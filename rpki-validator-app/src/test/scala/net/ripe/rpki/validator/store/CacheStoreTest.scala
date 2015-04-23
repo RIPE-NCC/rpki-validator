@@ -180,8 +180,9 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
     store.storeCertificate(certificate)
 
+    val timeInTheFuture = Instant.now.plus(3600 * 1000 * 3L)
 
-    store.deleteObjectsNeverValidated()
+    store.clearObjects(timeInTheFuture)
 
     val roas = store.getRoas(roa.aki)
     roas should have length 0
