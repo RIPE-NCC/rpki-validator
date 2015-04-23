@@ -81,20 +81,15 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         "encoded" -> obj.encoded,
         "object_type" -> objType)
 
-      atomic {
-        val updateCount = template.update(
-          """UPDATE repo_objects SET download_time = NOW()
-           WHERE hash = :hash
-           AND   url = :url
-          """, params)
-
-        if (updateCount == 0) {
-          template.update(
-            """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
-               VALUES (:aki, :hash, :url, :encoded, :object_type)
-            """, params)
-        }
-      }
+      template.update(
+        """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
+           SELECT :aki, :hash, :url, :encoded, :object_type
+           WHERE NOT EXISTS (
+             SELECT * FROM repo_objects
+             WHERE hash = :hash
+             AND   url  = :url
+           )
+        """, params)
     }
 
   override def getCertificate(url: String): Option[CertificateObject] = Try {
