@@ -59,8 +59,6 @@ trait Storage extends Logging {
 
   def delete(url: String, hash: String)
 
-  def delete(objs: Map[String, String])
-
   def clear()
 
   def atomic[T](f: => T): T

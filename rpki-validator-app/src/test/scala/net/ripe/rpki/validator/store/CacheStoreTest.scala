@@ -191,28 +191,6 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     certificates should have length 0
   }
 
-  test("Should delete objects in batches") {
-    val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
-    val roa = RoaObject(url = "rsync://bla/bla.roa", decoded = testRoa)
-    val manifest = ManifestObject(url = "rsync://bla/bla.mft", decoded = testManifest)
-    val crl = CrlObject(url = "rsync://bla/bla.crl", decoded = testCrl)
-
-    store.storeCrl(crl)
-    store.storeManifest(manifest)
-    store.storeCertificate(certificate)
-    store.storeRoa(roa)
-
-    store.delete(Map(
-      certificate.url -> stringify(certificate.hash),
-      roa.url -> stringify(roa.hash),
-      manifest.url -> stringify(manifest.hash)))
-
-    store.getCertificates(certificate.aki) should be(Seq())
-    store.getRoas(roa.aki) should be(Seq())
-    store.getManifests(manifest.aki) should be(Seq())
-    store.getCrls(manifest.aki) should have size 1
-  }
-
   test("Should return both objects and certificates matching the url") {
     val myUrl = "rsync://bla"
     val certificate = CertificateObject(url = myUrl, decoded = testCertificate)

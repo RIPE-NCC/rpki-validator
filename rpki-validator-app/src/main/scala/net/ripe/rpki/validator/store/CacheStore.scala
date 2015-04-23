@@ -57,40 +57,15 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   })
 
   private val roaObjectType = "roa"
-  private val manifestObjectType = "manifest"
+  private val manifestObjectType = "mft"
   private val crlObjectType = "crl"
+  private val certificateObjectType = "cer"
 
   private val deletionDelay = 2
 
   private val locker = new Locker
 
-  override def storeCertificate(certificate: CertificateObject) =
-    locker.locked(certificate.url) {
-      val params = Map(
-        "aki" -> stringify(certificate.aki),
-        "ski" -> stringify(certificate.ski),
-        "hash" -> stringify(certificate.hash),
-        "url" -> certificate.url,
-        "encoded" -> certificate.encoded)
-
-      atomic {
-        val updateCount = template.update(
-          """UPDATE certificates SET
-             hash = :hash,
-             encoded = :encoded
-           WHERE hash = :hash
-           AND   url = :url
-          """, params)
-
-        if (updateCount == 0) {
-          template.update(
-            """INSERT INTO certificates(aki, ski, hash, url, encoded)
-             VALUES (:aki, :ski, :hash, :url, :encoded)
-            """, params)
-        }
-      }
-    }
-
+  override def storeCertificate(certificate: CertificateObject) = storeRepoObject(certificate, certificateObjectType)
 
   override def storeRoa(roa: RoaObject) = storeRepoObject(roa, roaObjectType)
 
@@ -108,11 +83,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
       atomic {
         val updateCount = template.update(
-          """UPDATE repo_objects SET
-             hash = :hash,
-             object_type = :object_type,
-             encoded = :encoded,
-             download_time = NOW()
+          """UPDATE repo_objects SET download_time = NOW()
            WHERE hash = :hash
            AND   url = :url
           """, params)
@@ -127,23 +98,17 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
 
   override def getCertificate(url: String): Option[CertificateObject] = Try {
-    template.queryForObject("SELECT url, encoded FROM certificates WHERE url = :url",
-      Map("url" -> url),
+    template.queryForObject("SELECT url, encoded FROM repo_objects WHERE url = :url AND object_type = :object_type",
+      Map("url" -> url, "object_type" -> certificateObjectType),
       new RowMapper[CertificateObject] {
         override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(2))
       }
     )
   }.toOption
 
-  override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] =
-    template.query(
-      """SELECT url, ski, encoded, validation_time
-        FROM certificates WHERE aki = :aki""",
-      Map("aki" -> stringify(aki)),
-      new RowMapper[CertificateObject] {
-        override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(3)).
-          copy(validationTime = instant(rs.getTimestamp(4)))
-      }).toSeq
+  def getCertificates(aki: Array[Byte]): Seq[CertificateObject] = getRepoObject[CertificateObject](aki, certificateObjectType) { (url, bytes, validationTime) =>
+    CertificateObject.parse(url, bytes).copy(validationTime = validationTime)
+  }
 
   def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, crlObjectType) { (url, bytes, validationTime) =>
     CrlObject.parse(url, bytes).copy(validationTime = validationTime)
@@ -167,8 +132,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)))
       }).toSeq
 
-  override def getObject(hash: String): Option[RepositoryObject.ROType] = {
-    val repoObject : Option[RepositoryObject.ROType] = Try {
+  override def getObject(hash: String): Option[RepositoryObject.ROType] =
+    Try {
       template.queryForObject(
         """SELECT encoded, validation_time, object_type, url
         FROM repo_objects
@@ -178,96 +143,43 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
           override def mapRow(rs: ResultSet, i: Int) = {
             val (bytes, validationTime, objType, url) = (rs.getBytes(1), instant(rs.getTimestamp(2)), rs.getString(3), rs.getString(4))
             objType match {
+              case "cer" => CertificateObject.parse(url, bytes).copy(validationTime = validationTime)
               case "roa" => RoaObject.parse(url, bytes).copy(validationTime = validationTime)
-              case "manifest" => ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
+              case "mft" => ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
               case "crl" => CrlObject.parse(url, bytes).copy(validationTime = validationTime)
             }
           }
         })
     }.toOption
 
-    val certificate = Try {
-      template.queryForObject(
-        """SELECT encoded, validation_time, url
-        FROM certificates
-        WHERE hash = :hash""",
-        Map("hash" -> hash),
-        new RowMapper[CertificateObject] {
-          override def mapRow(rs: ResultSet, i: Int) = {
-            val (bytes, validationTime, url) = (rs.getBytes(1), instant(rs.getTimestamp(2)), rs.getString(3))
-            CertificateObject.parse(url, bytes).copy(validationTime = validationTime)
-          }
-        })
-    }.toOption
-
-    repoObject.orElse(certificate)
-  }
-
   def clear() = {
-    for (t <- Seq("certificates", "repo_objects"))
-      template.update(s"TRUNCATE TABLE $t", Map.empty[String, Object])
+    template.update(s"TRUNCATE TABLE repo_objects", Map.empty[String, Object])
   }
 
   def clearObjects(olderThan: Instant) = {
     val tt = timestamp(olderThan.toDateTime.minusHours(deletionDelay).toInstant)
     atomic {
-      Seq("certificates", "repo_objects").foreach { table =>
-        val i = template.update(s"DELETE FROM $table WHERE validation_time < '$tt'", Map.empty[String, Object])
-        info(s"Clear Old Objects -> $i object(s) older than $olderThan deleted from $table")
-      }
+      val i = template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt'", Map.empty[String, Object])
+      info(s"Clear Old Objects -> $i object(s) older than $olderThan deleted from repo_objects")
 
-      Seq("certificates", "repo_objects").foreach { table =>
-        val i = template.update(s"DELETE FROM $table WHERE validation_time IS NULL AND download_time < '$tt'", Map.empty[String, Object])
-        info(s"Clear Old Objects -> $i object(s) downloaded 2 hours before $olderThan deleted from $table")
-      }
+      val j = template.update(s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '$tt'", Map.empty[String, Object])
+      info(s"Clear Old Objects -> $j object(s) downloaded 2 hours before $olderThan deleted from repo_objects")
     }
   }
 
   override def delete(url: String, hash: String) = locker.locked(url) {
-    tableName(url).foreach { t =>
-      template.update(s"DELETE FROM $t WHERE url = :url AND hash = :hash",
-        Map("hash" -> hash, "url" -> url))
-    }
+    template.update(s"DELETE FROM repo_objects WHERE url = :url AND hash = :hash",
+      Map("hash" -> hash, "url" -> url))
   }
-
-  override def delete(objs: Map[String, String]) = {
-    val sqls = objs.groupBy(kv => tableName(kv._1)).flatMap { x =>
-      val (tableOption, tableObjects) = x
-      tableOption.map { table =>
-        tableObjects.grouped(99).map { tobj =>
-          val condition = tobj.map(t => s"(url = '${t._1}' AND hash = '${t._2}')").mkString("(", " OR ", ")")
-          s"DELETE FROM $table WHERE $condition"
-        }
-      }.getOrElse(Iterator.empty)
-    }
-
-    if (sqls.nonEmpty) {
-      atomic {
-        new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
-      }
-    }
-  }
-
-  def tableName(uri: String): Option[String] =
-    uri.takeRight(3).toLowerCase match {
-      case "cer" => Some("certificates")
-      case "mft" | "crl" | "roa" => Some("repo_objects")
-      case _ => None
-    }
 
   def updateValidationTimestamp(urls: Iterable[String], t: Instant) = {
     val tt = timestamp(t)
     // That has to be as fast as possible to prevent
     // other threads from being locked. That's why
     // we do all that dancing.
-    val sqls = urls.groupBy(tableName).flatMap { p =>
-      val (tableOption, tableUrls) = p
-      tableOption.map { table =>
-        tableUrls.grouped(99).map { group =>
-          val inClause = group.map("'" + _ + "'").mkString("(", ",", ")")
-          s"UPDATE $table SET validation_time = '$tt' WHERE url IN $inClause"
-        }
-      }.getOrElse(Iterator.empty)
+    val sqls = urls.grouped(99).map { group =>
+      val inClause = group.map("'" + _ + "'").mkString("(", ",", ")")
+      s"UPDATE repo_objects SET validation_time = '$tt' WHERE url IN $inClause"
     }
 
     if (sqls.nonEmpty) {
