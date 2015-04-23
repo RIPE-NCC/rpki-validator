@@ -34,7 +34,9 @@ CREATE TABLE repo_objects (
 
 CREATE INDEX idx_certificates_aki ON certificates (aki);
 CREATE INDEX idx_certificates_ski ON certificates (ski);
+CREATE INDEX idx_certificates_hash ON certificates (hash);
 CREATE INDEX idx_repo_obj_aki ON repo_objects (aki);
+CREATE INDEX idx_repo_obj_hash ON repo_objects (hash);
 CREATE INDEX idx_repo_obj_aki_type ON repo_objects (aki, object_type);
 
 COMMIT;
