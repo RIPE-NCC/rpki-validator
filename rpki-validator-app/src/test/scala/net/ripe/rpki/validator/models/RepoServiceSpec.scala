@@ -43,8 +43,6 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
 
   val fetcher1 = mock[RepoFetcher]
   val fetcher2 = mock[RepoFetcher]
-  Mockito.when(fetcher1.taName).thenReturn("TA 1")
-  Mockito.when(fetcher2.taName).thenReturn("TA 2")
 
   val repoService1 = new RepoService(fetcher1)
   val repoService2 = new RepoService(fetcher2)
@@ -63,22 +61,7 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
     repoService1.visitRepo(uri)
 
     Mockito.verify(fetcher1).fetch(uri)
-    Mockito.verify(fetcher1, Mockito.atLeast(1)).taName
     Mockito.verifyNoMoreInteractions(fetcher1)
-  }
-
-  test("should fetch URI if it's for another TA") {
-    val uri = new URI("http://foo.bar/bla")
-
-    repoService1.visitRepo(uri)
-    repoService1.visitRepo(uri)
-
-    Mockito.verify(fetcher1).fetch(uri)
-    Mockito.verify(fetcher1, Mockito.atLeast(1)).taName
-    Mockito.verifyNoMoreInteractions(fetcher1)
-
-    repoService2.visitRepo(uri)
-    Mockito.verify(fetcher2).fetch(uri)
   }
 
   test("should fetch object if URI was never visited") {

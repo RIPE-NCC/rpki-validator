@@ -91,5 +91,5 @@ object HttpFetcherStore extends SimpleSingletons[String, HttpFetcherStore]({
   path =>
     new HttpFetcherStore(DataSources.DurableDataSource(new File(path)))
 }) {
-  def inMemory(taName: String): HttpFetcherStore = new HttpFetcherStore(DataSources.InMemoryDataSource)
+  def inMemory: HttpFetcherStore = new HttpFetcherStore(DataSources.InMemoryDataSource)
 }

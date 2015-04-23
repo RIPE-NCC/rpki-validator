@@ -244,17 +244,15 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
       })
     }
   }
-
-  def taName = config.taName
 }
 
 object RepoFetcher {
   def apply(storageDirectory: File, config: FetcherConfig) = {
     val path = storageDirectory.getAbsolutePath
-    new RepoFetcher(DurableCaches(path, config.taName), HttpFetcherStore(path), config)
+    new RepoFetcher(DurableCaches(path), HttpFetcherStore(path), config)
   }
   def inMemory(config: FetcherConfig) = {
     val dataSource = DataSources.InMemoryDataSource
-    new RepoFetcher(new CacheStore(dataSource, config.taName), new HttpFetcherStore(dataSource), config)
+    new RepoFetcher(new CacheStore(dataSource), new HttpFetcherStore(dataSource), config)
   }
 }

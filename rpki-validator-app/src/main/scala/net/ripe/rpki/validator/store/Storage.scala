@@ -88,20 +88,3 @@ class SimpleSingletons[K, V](create: K => V) {
     }
   }
 }
-
-//TODO - Try to merge both Singletons
-class Singletons[K, S, V](create: (K, S) => V) {
-  private val caches = mutable.Map[(K,S), V]()
-
-  def apply(k: K, s: S): V = {
-    synchronized {
-      caches.get((k,s)) match {
-        case None =>
-          val c = create(k, s)
-          caches += ((k,s) -> c)
-          c
-        case Some(c) => c
-      }
-    }
-  }
-}

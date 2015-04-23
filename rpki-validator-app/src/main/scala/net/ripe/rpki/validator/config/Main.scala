@@ -121,16 +121,10 @@ class Main extends Http { main =>
 
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 10.seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 2.hours) { refreshRisDumps() }
-  actorSystem.scheduler.schedule(initialDelay = 8.hours, interval = 8.hours) { deleteObjectsNeverValidated() }
 
   private def loadTrustAnchors(): TrustAnchors = {
     val tals = FileUtils.listFiles(ApplicationOptions.talDirLocation, Array("tal"), false)
     TrustAnchors.load(tals.asScala.toSeq)
-  }
-
-  private def deleteObjectsNeverValidated() {
-    val store = DurableCaches(ApplicationOptions.workDirLocation, "")
-    store.deleteObjectsNeverValidated()
   }
 
   private def refreshRisDumps() {

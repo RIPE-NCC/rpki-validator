@@ -47,7 +47,7 @@ import org.springframework.transaction.support.{TransactionCallback, Transaction
 import scala.collection.JavaConversions._
 import scala.util.Try
 
-class CacheStore(dataSource: DataSource, taName: String) extends Storage with Hashing {
+class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   private val template = new NamedParameterJdbcTemplate(dataSource)
   private val tx = new DataSourceTransactionManager(dataSource)
@@ -69,8 +69,7 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
         "ski" -> stringify(certificate.ski),
         "hash" -> stringify(certificate.hash),
         "url" -> certificate.url,
-        "encoded" -> certificate.encoded,
-        "ta_name" -> taName)
+        "encoded" -> certificate.encoded)
 
       atomic {
         val updateCount = template.update(
@@ -79,13 +78,12 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
              encoded = :encoded
            WHERE hash = :hash
            AND   url = :url
-           AND   ta_name = :ta_name
           """, params)
 
         if (updateCount == 0) {
           template.update(
-            """INSERT INTO certificates(aki, ski, hash, url, encoded, ta_name)
-             VALUES (:aki, :ski, :hash, :url, :encoded, :ta_name)
+            """INSERT INTO certificates(aki, ski, hash, url, encoded)
+             VALUES (:aki, :ski, :hash, :url, :encoded)
             """, params)
         }
       }
@@ -104,8 +102,7 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
         "hash" -> stringify(obj.hash),
         "url" -> obj.url,
         "encoded" -> obj.encoded,
-        "object_type" -> objType,
-        "ta_name" -> taName)
+        "object_type" -> objType)
 
       atomic {
         val updateCount = template.update(
@@ -116,21 +113,20 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
              download_time = NOW()
            WHERE hash = :hash
            AND   url = :url
-           AND   ta_name = :ta_name
           """, params)
 
         if (updateCount == 0) {
           template.update(
-            """INSERT INTO repo_objects(aki, hash, url, encoded, object_type, ta_name)
-               VALUES (:aki, :hash, :url, :encoded, :object_type, :ta_name)
+            """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
+               VALUES (:aki, :hash, :url, :encoded, :object_type)
             """, params)
         }
       }
     }
 
   override def getCertificate(url: String): Option[CertificateObject] = Try {
-    template.queryForObject("SELECT url, encoded FROM certificates WHERE url = :url AND ta_name = :ta_name",
-      Map("url" -> url, "ta_name" -> taName),
+    template.queryForObject("SELECT url, encoded FROM certificates WHERE url = :url",
+      Map("url" -> url),
       new RowMapper[CertificateObject] {
         override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(2))
       }
@@ -140,9 +136,8 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
   override def getCertificates(aki: Array[Byte]): Seq[CertificateObject] =
     template.query(
       """SELECT url, ski, encoded, validation_time
-        FROM certificates WHERE aki = :aki AND ta_name = :ta_name""",
-      Map("aki" -> stringify(aki),
-        "ta_name" -> taName),
+        FROM certificates WHERE aki = :aki""",
+      Map("aki" -> stringify(aki)),
       new RowMapper[CertificateObject] {
         override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(3)).
           copy(validationTime = instant(rs.getTimestamp(4)))
@@ -164,8 +159,8 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
     template.query(
       """SELECT url, encoded, validation_time
         FROM repo_objects
-        WHERE aki = :aki AND object_type = :object_type AND ta_name = :ta_name""",
-      Map("aki" -> stringify(aki), "object_type" -> objType, "ta_name" -> taName),
+        WHERE aki = :aki AND object_type = :object_type""",
+      Map("aki" -> stringify(aki), "object_type" -> objType),
       new RowMapper[T] {
         override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)))
       }).toSeq
@@ -175,8 +170,8 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
       template.queryForObject(
         """SELECT encoded, validation_time, object_type, url
         FROM repo_objects
-        WHERE hash = :hash AND ta_name = :ta_name""",
-        Map("hash" -> hash, "ta_name" -> taName),
+        WHERE hash = :hash""",
+        Map("hash" -> hash),
         new RowMapper[RepositoryObject.ROType] {
           override def mapRow(rs: ResultSet, i: Int) = {
             val (bytes, validationTime, objType, url) = (rs.getBytes(1), instant(rs.getTimestamp(2)), rs.getString(3), rs.getString(4))
@@ -193,8 +188,8 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
       template.queryForObject(
         """SELECT encoded, validation_time, url
         FROM certificates
-        WHERE hash = :hash AND ta_name = :ta_name""",
-        Map("hash" -> hash, "ta_name" -> taName),
+        WHERE hash = :hash""",
+        Map("hash" -> hash),
         new RowMapper[CertificateObject] {
           override def mapRow(rs: ResultSet, i: Int) = {
             val (bytes, validationTime, url) = (rs.getBytes(1), instant(rs.getTimestamp(2)), rs.getString(3))
@@ -216,30 +211,21 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
     val dt = timestamp(olderThan.toDateTime.minusHours(2).toInstant)
     atomic {
       Seq("certificates", "repo_objects").foreach { table =>
-        val i = template.update(s"DELETE FROM $table WHERE validation_time < '$tt' AND ta_name = '$taName'", Map.empty[String, Object])
-        info(s"Clear Old Objects -> $i '$taName' object(s) older than $olderThan deleted from $table")
+        val i = template.update(s"DELETE FROM $table WHERE validation_time < '$tt'", Map.empty[String, Object])
+        info(s"Clear Old Objects -> $i object(s) older than $olderThan deleted from $table")
       }
 
       Seq("certificates", "repo_objects").foreach { table =>
-        val i = template.update(s"DELETE FROM $table WHERE validation_time IS NULL AND download_time < '$dt' AND ta_name = '$taName'", Map.empty[String, Object])
-        info(s"Clear Old Objects -> $i '$taName' object(s) downloaded 2 hours before $olderThan deleted from $table")
-      }
-    }
-  }
-
-  def deleteObjectsNeverValidated() = {
-    atomic {
-      Seq("certificates", "repo_objects").foreach { table =>
-        val i = template.update(s"DELETE FROM $table WHERE validation_time is null", Map.empty[String, Object])
-        info(s"Delete objects never validated -> $i object(s) deleted from $table")
+        val i = template.update(s"DELETE FROM $table WHERE validation_time IS NULL AND download_time < '$dt'", Map.empty[String, Object])
+        info(s"Clear Old Objects -> $i object(s) downloaded 2 hours before $olderThan deleted from $table")
       }
     }
   }
 
   override def delete(url: String, hash: String) = locker.locked(url) {
     tableName(url).foreach { t =>
-      template.update(s"DELETE FROM $t WHERE url = :url AND hash = :hash AND ta_name = :ta_name",
-        Map("hash" -> hash, "url" -> url, "ta_name" -> taName))
+      template.update(s"DELETE FROM $t WHERE url = :url AND hash = :hash",
+        Map("hash" -> hash, "url" -> url))
     }
   }
 
@@ -249,7 +235,7 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
       tableOption.map { table =>
         tableObjects.grouped(99).map { tobj =>
           val condition = tobj.map(t => s"(url = '${t._1}' AND hash = '${t._2}')").mkString("(", " OR ", ")")
-          s"DELETE FROM $table WHERE $condition AND ta_name = '$taName'"
+          s"DELETE FROM $table WHERE $condition"
         }
       }.getOrElse(Iterator.empty)
     }
@@ -278,7 +264,7 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
       tableOption.map { table =>
         tableUrls.grouped(99).map { group =>
           val inClause = group.map("'" + _ + "'").mkString("(", ",", ")")
-          s"UPDATE $table SET validation_time = '$tt' WHERE url IN $inClause AND ta_name = '$taName'"
+          s"UPDATE $table SET validation_time = '$tt' WHERE url IN $inClause"
         }
       }.getOrElse(Iterator.empty)
     }
@@ -294,9 +280,9 @@ class CacheStore(dataSource: DataSource, taName: String) extends Storage with Ha
   private def instant(d: java.util.Date) = Option(d).map(d => new Instant(d.getTime))
 }
 
-object DurableCaches extends Singletons[String, String, CacheStore]({
-  (path, taName) =>
-    new CacheStore(DataSources.DurableDataSource(new File(path)), taName)
+object DurableCaches extends SimpleSingletons[String, CacheStore]({
+  path =>
+    new CacheStore(DataSources.DurableDataSource(new File(path)))
 }) {
-  def apply(d: File, taName: String) : CacheStore = this.apply(d.getAbsolutePath, taName)
+  def apply(d: File) : CacheStore = this.apply(d.getAbsolutePath)
 }

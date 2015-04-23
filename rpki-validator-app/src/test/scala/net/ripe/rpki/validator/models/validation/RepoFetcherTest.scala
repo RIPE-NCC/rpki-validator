@@ -41,7 +41,7 @@ import org.scalatest.mock.MockitoSugar
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
 
-  val storage = new CacheStore(DataSources.InMemoryDataSource, TA_NAME)
+  val storage = new CacheStore(DataSources.InMemoryDataSource)
 
   test("Should create different directories for different repo URLs") {
     val fetcher = RepoFetcher.inMemory(FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation))

@@ -52,17 +52,16 @@ class RepoService(fetcher: RepoFetcher) {
   }
 
   def lastFetchTime(uri: URI): Instant = locker.locked(uri) {
-    RepoServiceStore.getLastFetchTime(uri, fetcher.taName)
+    RepoServiceStore.getLastFetchTime(uri)
   }
 
   protected[models] def fetchAndUpdateTime(uri: URI)(block: => Seq[Fetcher.Error]): Seq[Fetcher.Error] =
     locker.locked(uri) {
-      val taName = fetcher.taName
-      if (haveRecentDataInStore(uri, taName)) Seq()
+      if (haveRecentDataInStore(uri)) Seq()
       else {
         val fetchTime = Instant.now()
         val result = block
-        RepoServiceStore.updateLastFetchTime(uri, taName, fetchTime)
+        RepoServiceStore.updateLastFetchTime(uri, fetchTime)
         result
       }
     }
@@ -71,9 +70,8 @@ class RepoService(fetcher: RepoFetcher) {
     fetcher.fetchObject(uri)
   }
 
-  private def haveRecentDataInStore(uri: URI, taName: String) = {
-    timeIsRecent(RepoServiceStore.getLastFetchTime(uri, taName), interval(uri))
-  }
+  private def haveRecentDataInStore(uri: URI) =
+    timeIsRecent(RepoServiceStore.getLastFetchTime(uri), interval(uri))
 
   private[models] def timeIsRecent(dateTime: Instant, duration: Duration) = dateTime.plus(duration).isAfterNow
 }

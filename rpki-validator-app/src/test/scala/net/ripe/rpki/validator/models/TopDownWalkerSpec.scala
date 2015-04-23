@@ -69,7 +69,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   private val CERTIFICATE_KEY_PAIR: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val DEFAULT_VALIDATION_OPTIONS: ValidationOptions = new ValidationOptions
 
-  private val storage = new CacheStore(DataSources.InMemoryDataSource, TA_NAME)
+  private val storage = new CacheStore(DataSources.InMemoryDataSource)
   private var taContext: CertificateRepositoryObjectValidationContext = _
 
   override def beforeEach() {
@@ -122,7 +122,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
     val result = subject.execute
     result.get(expiredCertificateLocation).exists(_.hasCheckKey(ValidationString.NOT_VALID_AFTER)) should be(true)
 
-    val fetcher = new RepoFetcher(storage, HttpFetcherStore.inMemory(TA_NAME), FetcherConfig()) {
+    val fetcher = new RepoFetcher(storage, HttpFetcherStore.inMemory, FetcherConfig()) {
       override def fetch(repoUri: URI): Seq[Fetcher.Error] = Seq()
     }
   }
@@ -318,7 +318,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach {
   }
 
   def createRepoService(storage: Storage): RepoService = {
-    new RepoService(new RepoFetcher(storage, HttpFetcherStore.inMemory(TA_NAME), FetcherConfig())) {
+    new RepoService(new RepoFetcher(storage, HttpFetcherStore.inMemory, FetcherConfig())) {
       override def visitRepo(repoUri: URI): Seq[Fetcher.Error] = Seq()
     }
   }

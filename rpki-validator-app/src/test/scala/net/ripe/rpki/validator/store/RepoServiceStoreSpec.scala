@@ -54,8 +54,8 @@ class RepoServiceStoreSpec extends PropSpec with GeneratorDrivenPropertyChecks w
 
   property("getLastFetchTime should return time of updateLastFetchTime") {
     forAll { (i: Instant, u: URI) =>
-      RepoServiceStore.updateLastFetchTime(u, "tag", i)
-      RepoServiceStore.getLastFetchTime(u, "tag") should be(i);
+      RepoServiceStore.updateLastFetchTime(u, i)
+      RepoServiceStore.getLastFetchTime(u) should be(i);
     }
   }
 

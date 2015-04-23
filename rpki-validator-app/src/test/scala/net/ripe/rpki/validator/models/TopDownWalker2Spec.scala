@@ -78,7 +78,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
   private val DEFAULT_MANIFEST_NUMBER: BigInteger = BigInteger.valueOf(68)
 
-  private val storage = new CacheStore(DataSources.InMemoryDataSource, TA_NAME)
+  private val storage = new CacheStore(DataSources.InMemoryDataSource)
   private var rootResourceCertificate: X509ResourceCertificate = _
   private var taContext: CertificateRepositoryObjectValidationContext = _
   private var taCrl: X509Crl = _
@@ -639,7 +639,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   def createRepoService(storage: Storage, errors: Seq[Fetcher.Error] = Seq()): RepoService = {
-    new RepoService(new RepoFetcher(storage, HttpFetcherStore.inMemory(TA_NAME), FetcherConfig("", TA_NAME))) {
+    new RepoService(new RepoFetcher(storage, HttpFetcherStore.inMemory, FetcherConfig(""))) {
       override def visitRepo(repoUri: URI): Seq[Fetcher.Error] = {
         errors
       }

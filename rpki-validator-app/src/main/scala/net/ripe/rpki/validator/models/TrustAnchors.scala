@@ -209,8 +209,8 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   validationOptions.setMaxStaleDays(maxStaleDays)
   validationOptions.setLooseValidationEnabled(enableLooseValidation)
 
-  val store = DurableCaches(storageDirectory, taName)
-  val repoService = new RepoService(RepoFetcher(storageDirectory, FetcherConfig(rsyncDir, taName)))
+  val store = DurableCaches(storageDirectory)
+  val repoService = new RepoService(RepoFetcher(storageDirectory, FetcherConfig(rsyncDir)))
 
   override def extractTrustAnchorLocator(): ValidatedObject = {
     val uri = trustAnchorLocator.getCertificateLocation
