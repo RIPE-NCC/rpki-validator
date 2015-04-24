@@ -59,15 +59,12 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
     store.storeCertificate(certificate)
 
-    val certificates = store.getCertificates(certificate.aki)
-    certificates should have length 1
-
-    val head = certificates.head
-    head.url should be(certificate.url)
-    head.aki should be(certificate.aki)
-    head.ski should be(certificate.ski)
-    head.encoded should be(certificate.encoded)
-    head.hash should be(certificate.hash)
+    val obj = store.getObject(stringify(certificate.hash)).get.asInstanceOf[CertificateObject]
+    obj.url should be(certificate.url)
+    obj.aki should be(certificate.aki)
+    obj.ski should be(certificate.ski)
+    obj.encoded should be(certificate.encoded)
+    obj.hash should be(certificate.hash)
   }
 
   test("Store a crl") {
@@ -75,14 +72,12 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
     store.storeCrl(crl)
 
-    val crls: Seq[CrlObject] = store.getCrls(crl.aki)
-    crls should have length 1
+    val obj = store.getObject(stringify(crl.hash)).get.asInstanceOf[CrlObject]
 
-    val head = crls.head
-    head.url should be(crl.url)
-    head.aki should be(crl.aki)
-    head.encoded should be(crl.encoded)
-    head.hash should be(crl.hash)
+    obj.url should be(crl.url)
+    obj.aki should be(crl.aki)
+    obj.encoded should be(crl.encoded)
+    obj.hash should be(crl.hash)
   }
 
 
@@ -106,14 +101,12 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
     store.storeRoa(roa)
 
-    val roas: Seq[RoaObject] = store.getRoas(roa.aki)
-    roas should have length 1
+    val obj = store.getObject(stringify(roa.hash)).get.asInstanceOf[RoaObject]
 
-    val head = roas.head
-    head.url should be(roa.url)
-    head.aki should be(roa.aki)
-    head.encoded should be(roa.encoded)
-    head.hash should be(roa.hash)
+    obj.url should be(roa.url)
+    obj.aki should be(roa.aki)
+    obj.encoded should be(roa.encoded)
+    obj.hash should be(roa.hash)
   }
 
   test("Do not store the same object twice") {
@@ -121,7 +114,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     store.storeRoa(roa)
     store.storeRoa(roa)
 
-    store.getRoas(roa.aki) should have length 1
+    store.getObject(stringify(roa.hash)).get
   }
 
   test("Do not store the same certificate twice") {
@@ -130,7 +123,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     store.storeCertificate(certificate)
     store.storeCertificate(certificate)
 
-    store.getCertificates(certificate.aki) should have length 1
+    store.getObject(stringify(certificate.hash)).get
   }
 
   test("Update validation timestamp") {
@@ -143,13 +136,11 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val newTime = Instant.now
     store.updateValidationTimestamp(Seq(roa.url, certificate.url), newTime)
 
-    val roas = store.getRoas(roa.aki)
-    roas should have length 1
-    roas.head.validationTime should be(Some(newTime))
+    val roaObject = store.getObject(stringify(roa.hash)).get
+    roaObject.validationTime should be(Some(newTime))
 
-    val certificates = store.getCertificates(certificate.aki)
-    certificates should have length 1
-    certificates.head.validationTime should be(Some(newTime))
+    val certificateObject = store.getObject(stringify(certificate.hash)).get
+    certificateObject.validationTime should be(Some(newTime))
   }
 
   test("Delete old objects") {
@@ -165,11 +156,9 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
     store.clearObjects(Instant.now)
 
-    val roas = store.getRoas(roa.aki)
-    roas should have length 0
+    store.getObject(stringify(roa.hash)).isEmpty should be(true)
 
-    val certificates = store.getCertificates(certificate.aki)
-    certificates should have length 0
+    store.getObject(stringify(certificate.hash)).isEmpty should be(true)
   }
 
   test("Delete objects never validated") {
@@ -184,11 +173,9 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
     store.clearObjects(timeInTheFuture)
 
-    val roas = store.getRoas(roa.aki)
-    roas should have length 0
+    store.getObject(stringify(roa.hash)).isEmpty should be(true)
 
-    val certificates = store.getCertificates(certificate.aki)
-    certificates should have length 0
+    store.getObject(stringify(certificate.hash)).isEmpty should be(true)
   }
 
   test("Should return both objects and certificates matching the url") {
