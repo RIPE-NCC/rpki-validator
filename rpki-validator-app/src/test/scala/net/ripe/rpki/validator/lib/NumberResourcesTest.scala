@@ -30,13 +30,8 @@
 package net.ripe.rpki.validator
 package lib
 
-import org.scalatest.FunSpec
-import org.scalatest.matchers.ShouldMatchers
-
-import NumberResources.NumberResourceInterval
-import NumberResources.NumberResourceIntervalTree
-import net.ripe.ipresource.Asn
-import net.ripe.ipresource.IpRange
+import net.ripe.ipresource.{Asn, IpRange}
+import net.ripe.rpki.validator.lib.NumberResources.{NumberResourceInterval, NumberResourceIntervalTree}
 import net.ripe.rpki.validator.models.RtrPrefix
 import net.ripe.rpki.validator.support.ValidatorTestCase
 

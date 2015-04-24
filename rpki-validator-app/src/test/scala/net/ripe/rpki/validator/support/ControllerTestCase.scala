@@ -33,14 +33,13 @@ package support
 import org.junit.runner.RunWith
 import org.scalatest._
 import org.scalatest.junit.JUnitRunner
-import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.mock.MockitoSugar
 import org.scalatra.ScalatraFilter
 import org.scalatra.test.scalatest.ScalatraFunSuite
 
 
 @RunWith(classOf[JUnitRunner])
-abstract class ControllerTestCase extends JunitLog4JSetup with ScalatraFunSuite with ShouldMatchers with MockitoSugar {
+abstract class ControllerTestCase extends ScalatraFunSuite with JunitLog4JSetup with Matchers with MockitoSugar {
   /**
    * The result of the last render action.
    */
@@ -56,9 +55,9 @@ abstract class ControllerTestCase extends JunitLog4JSetup with ScalatraFunSuite 
     }
   }
 
-  protected override def runTest(testName: String, reporter: Reporter, stopper: Stopper, configMap: Map[String, Any], tracker: Tracker) {
+  protected override def runTest(testName: String, args: Args): Status = {
     result = null
-    super.runTest(testName, reporter, stopper, configMap, tracker)
+    super.runTest(testName, args)
   }
 
   /**

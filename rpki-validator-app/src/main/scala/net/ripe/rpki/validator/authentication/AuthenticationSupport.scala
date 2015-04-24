@@ -29,6 +29,8 @@
  */
 package net.ripe.rpki.validator.authentication
 
+import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
+
 import org.scalatra.ScalatraBase
 import org.scalatra.auth.strategy.{BasicAuthSupport, BasicAuthStrategy}
 import org.scalatra.auth.{ScentryConfig, ScentrySupport}
@@ -46,9 +48,9 @@ object AdminLoginStrategy {
  */
 class AdminLoginStrategy (protected override val app: ScalatraBase, realm: String) extends BasicAuthStrategy[User](app, realm) {
 
-  override protected def getUserId(user: User): String = user.id
+  override protected def getUserId(user: User)(implicit request: HttpServletRequest, response: HttpServletResponse): String = user.id
 
-  override protected def validate(userName: String, password: String): Option[User] = {
+  override protected def validate(userName: String, password: String)(implicit request: HttpServletRequest, response: HttpServletResponse): Option[User] = {
     if (userName == ApplicationOptions.httpKioskUser && password == ApplicationOptions.httpKioskPass) {
       Some(User(userName))
     } else {
