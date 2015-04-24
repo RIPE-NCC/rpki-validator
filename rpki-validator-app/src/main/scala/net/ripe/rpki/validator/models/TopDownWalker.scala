@@ -45,6 +45,7 @@ import net.ripe.rpki.validator.store.Storage
 import org.apache.commons.lang.Validate
 import org.joda.time.Instant
 
+import scala.language.reflectiveCalls
 import scala.collection.JavaConverters._
 
 class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext,
