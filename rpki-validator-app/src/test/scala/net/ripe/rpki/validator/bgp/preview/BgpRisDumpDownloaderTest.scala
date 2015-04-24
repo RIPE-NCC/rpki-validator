@@ -29,17 +29,17 @@
  */
 package net.ripe.rpki.validator.bgp.preview
 
-import org.scalatest.BeforeAndAfterAll
 import javax.servlet.http.HttpServletResponse._
-import org.apache.http.ProtocolVersion
-import org.apache.http.message._
-import org.apache.http.entity._
-import org.apache.http.impl.cookie.DateUtils
-import org.joda.time.DateTime
-import java.util.Date
-import org.scalatest.mock.MockitoSugar
-import org.apache.http.client.HttpClient
+
 import net.ripe.rpki.validator.support.ValidatorTestCase
+import org.apache.http.ProtocolVersion
+import org.apache.http.client.HttpClient
+import org.apache.http.entity._
+import org.apache.http.client.utils.DateUtils
+import org.apache.http.message._
+import org.joda.time.LocalDate
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.mock.MockitoSugar
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class BgpRisDumpDownloaderTest extends ValidatorTestCase with BeforeAndAfterAll with MockitoSugar {
@@ -99,7 +99,7 @@ class BgpRisDumpDownloaderTest extends ValidatorTestCase with BeforeAndAfterAll 
     val entity = new StringEntity("not gzip format")
     entity.setContentType("application/x-gzip")
 
-    val lastMidnight = new Date(new DateTime().toDateMidnight.getMillis) // Need something truncated at second
+    val lastMidnight = LocalDate.now().toDate // Need something truncated at second
 
     response.setEntity(entity)
     response.setHeader("Last-Modified", DateUtils.formatDate(lastMidnight))

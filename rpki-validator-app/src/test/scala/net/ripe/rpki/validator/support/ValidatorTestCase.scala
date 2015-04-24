@@ -30,10 +30,9 @@
 package net.ripe.rpki.validator
 package support
 
-import org.scalatest.FunSuite
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.{FunSuite, Matchers}
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-abstract class ValidatorTestCase extends JunitLog4JSetup with FunSuite with ShouldMatchers {
+abstract class ValidatorTestCase extends FunSuite with JunitLog4JSetup with Matchers {
 
 }

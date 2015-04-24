@@ -71,7 +71,8 @@ class ExportControllerTest extends ControllerTestCase {
 
       status should equal(200)
       body should equal(expectedResponse)
-      header("Content-Type") should equal("text/csv;charset=UTF-8")
+      header("Content-Type") should startWith("text/csv")
+      header("Content-Type") should endWith("charset=UTF-8")
       header("Pragma") should equal("public")
       header("Cache-Control") should equal("no-cache")
     }
@@ -81,7 +82,8 @@ class ExportControllerTest extends ControllerTestCase {
     get("/export.json") {
       status should equal(200)
       body should equal( """{"roas":[{"asn":"AS6500","prefix":"10.0.0.0/8","maxLength":8},{"asn":"AS6501","prefix":"10.0.0.0/16","maxLength":18},{"asn":"AS6502","prefix":"2001:43e8::/32","maxLength":32}]}""")
-      header("Content-Type") should equal("text/json;charset=UTF-8")
+      header("Content-Type") should startWith("text/json")
+      header("Content-Type") should endWith("charset=UTF-8")
       header("Pragma") should equal("public")
       header("Cache-Control") should equal("no-cache")
     }
@@ -171,7 +173,8 @@ class ExportControllerTest extends ControllerTestCase {
 
       status should equal(200)
       body should equal(expectedResponse)
-      header("Content-Type") should equal("text/plain;charset=UTF-8")
+      header("Content-Type") should startWith("text/plain")
+      header("Content-Type") should endWith("charset=UTF-8")
       header("Pragma") should equal("public")
       header("Cache-Control") should equal("no-cache")
     }

@@ -33,11 +33,10 @@ import java.net.URI
 
 import org.joda.time.Instant
 import org.scalacheck.{Arbitrary, Gen}
-import org.scalatest.PropSpec
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.{Matchers, PropSpec}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
-class RepoServiceStoreSpec extends PropSpec with GeneratorDrivenPropertyChecks with ShouldMatchers {
+class RepoServiceStoreSpec extends PropSpec with GeneratorDrivenPropertyChecks with Matchers {
 
   val instantGenerator: Gen[Instant] = for {
     long <- Arbitrary.arbitrary[Long]
