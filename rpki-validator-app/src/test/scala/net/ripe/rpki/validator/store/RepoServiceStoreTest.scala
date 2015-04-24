@@ -29,6 +29,8 @@
  */
 package net.ripe.rpki.validator.store
 
+import scala.language.implicitConversions
+
 import java.net.URI
 
 import net.ripe.rpki.validator.support.ValidatorTestCase
