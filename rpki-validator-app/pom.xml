@@ -272,6 +272,8 @@
                             <goal>testCompile</goal>
                         </goals>
                         <configuration>
+                            <scalaVersion>${scala.version}</scalaVersion>
+                            <scalaCompatVersion>${scala.binary.version}</scalaCompatVersion>
                             <checkMultipleScalaVersions>true</checkMultipleScalaVersions>
                             <jvmArgs>
                                 <arg>-XX:+TieredCompilation</arg> <!-- Much faster Scala compilation -->
