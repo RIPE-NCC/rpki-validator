@@ -248,8 +248,9 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   test("should update validation time for validated objects") {
 
     val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
-    val crl = createCrlWithEntry(certificate)
-    createMftWithCrlAndEntries(crl.getEncoded, (certificateLocation, certificate.getEncoded))
+    val cert = CertificateObject("", certificate)
+    val crl = CrlObject("", createCrlWithEntry(certificate))
+    val mft = ManifestObject("", createMftWithCrlAndEntries(crl.encoded, (certificateLocation, certificate.getEncoded))._2)
 
     val validationTime: Instant = new DateTime().minusDays(1).toInstant // before objects are put in the Storage
     val now = Instant.now()
@@ -257,13 +258,13 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     subject.execute
 
-    val certs = storage.getCertificate(certificateLocation.toString)
-    val mfts = storage.getManifests(certificate.getAuthorityKeyIdentifier)
-    val crls = storage.getCrls(certificate.getAuthorityKeyIdentifier)
+    val certObj = storage.getObject(stringify(cert.hash)).get
+    val crlObj = storage.getObject(stringify(crl.hash)).get
+    val mftObj = storage.getObject(stringify(mft.hash)).get
 
-    certs.forall(_.validationTime.exists(!now.isAfter(_))) should be(true)
-    mfts.forall(_.validationTime.exists(!now.isAfter(_))) should be(true)
-    crls.forall(_.validationTime.exists(!now.isAfter(_))) should be(true)
+    certObj.validationTime.exists(!now.isAfter(_)) should be(true)
+    crlObj.validationTime.exists(!now.isAfter(_)) should be(true)
+    mftObj.validationTime.exists(!now.isAfter(_)) should be(true)
   }
 
   test("should give error when fetch fails") {

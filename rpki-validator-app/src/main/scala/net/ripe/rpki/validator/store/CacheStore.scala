@@ -101,10 +101,6 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     )
   }.toOption
 
-  def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, crlObjectType) { (url, bytes, validationTime) =>
-    CrlObject.parse(url, bytes).copy(validationTime = validationTime)
-  }
-
   def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, manifestObjectType) { (url, bytes, validationTime) =>
     ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
   }

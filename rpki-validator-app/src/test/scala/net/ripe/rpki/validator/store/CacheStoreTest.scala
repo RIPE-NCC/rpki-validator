@@ -72,14 +72,12 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
     store.storeCrl(crl)
 
-    val crls: Seq[CrlObject] = store.getCrls(crl.aki)
-    crls should have length 1
+    val obj = store.getObject(stringify(crl.hash)).get.asInstanceOf[CrlObject]
 
-    val head = crls.head
-    head.url should be(crl.url)
-    head.aki should be(crl.aki)
-    head.encoded should be(crl.encoded)
-    head.hash should be(crl.hash)
+    obj.url should be(crl.url)
+    obj.aki should be(crl.aki)
+    obj.encoded should be(crl.encoded)
+    obj.hash should be(crl.hash)
   }
 
 
