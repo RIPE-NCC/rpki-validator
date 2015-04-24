@@ -111,16 +111,16 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
     val checkMap = checks.groupBy(_.location)
 
-    val validatedChildren = childrenCertificates.view.map { c =>
+    val validatedCerts = childrenCertificates.map { c =>
       val v = validatedObject(checkMap)(c)
-      (c, v, c.decoded.isObjectIssuer && v._2.isValid)
+      new { val cert = c; val validatedObject = v; val valid = c.decoded.isObjectIssuer && v._2.isValid; }
     }
 
     val everythingValidated = Seq(roas.map(validatedObject(checkMap)),
-      validatedChildren.map(_._2).force,
+      validatedCerts.map(_.validatedObject),
       crlList.map(validatedObject(checkMap)),
       Seq(manifest).map(validatedObject(checkMap)),
-      validatedChildren.filter(_._3).map(_._1).force.flatMap(stepDown)
+      validatedCerts.filter(_.valid).map(_.cert).flatMap(stepDown)
     )
 
     mergeTwiceValidatedObjects(everythingValidated)
@@ -228,12 +228,12 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
 
   private def getCrlChecks(mft: ManifestObject, crl: Either[Check, CrlObject]) = crl match {
     case Right(c) => toChecks(location(c), _validateCrl(c))
-    case _ => List[Check]() //List(error(location(mft), CRL_REQUIRED))
+    case _ => List[Check]()
   }
 
   private def getMftChecks(mft: ManifestObject, crl: Either[Check, CrlObject]) = crl match {
     case Right(c) =>
-      val checks = toChecks(location(c), _validateMft(c, mft))
+      val checks = toChecks(location(c), validateMft(c, mft))
       if (!HashUtil.equals(c.aki, mft.aki))
         error(location(c), CRL_AKI_MISMATCH) :: checks
       else
@@ -254,7 +254,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       val (mftObjects, errors, _) = getManifestObjects(mft)
       val crlsOnManifest = mftObjects.collect { case c: CrlObject => c }
 
-      val crlOrError = crossCheckCrls(crlsOnManifest, location(mft))
+      val crlOrError = getCrl(crlsOnManifest, location(mft))
 
       val crlChecks = getCrlChecks(mft, crlOrError)
       val mftChecks = getMftChecks(mft, crlOrError)
@@ -281,7 +281,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
       yield (mft, crl, mftObjects, allChecks)
   }
 
-  private def _validateMft(crl: CrlObject, mft: ManifestObject): ValidationResult =
+  private def validateMft(crl: CrlObject, mft: ManifestObject): ValidationResult =
     validateObject(mft) { validationResult =>
       mft.decoded.validate(mft.url, certificateContext, crlLocator(crl), validationOptions, validationResult)
     }
@@ -310,7 +310,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     }
   }
 
-  private def crossCheckCrls(manifestCrlEntries: Seq[CrlObject], validationLocation: ValidationLocation): Either[Check, CrlObject] = {
+  private def getCrl(manifestCrlEntries: Seq[CrlObject], validationLocation: ValidationLocation): Either[Check, CrlObject] = {
     if (manifestCrlEntries.isEmpty) {
       Left(error(validationLocation, VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE, "*.crl"))
     } else if (manifestCrlEntries.size > 1) {
