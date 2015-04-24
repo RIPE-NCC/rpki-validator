@@ -11,7 +11,7 @@
     </parent>
 
     <properties>
-        <jetty.version>8.1.3.v20120416</jetty.version>
+        <jetty.version>9.2.9.v20150224</jetty.version>
         <yammer.version>3.0.2</yammer.version>
         <main.class>net.ripe.rpki.validator.config.Main</main.class>
     </properties>
