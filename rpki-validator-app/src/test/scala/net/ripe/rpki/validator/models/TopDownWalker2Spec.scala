@@ -310,7 +310,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
   }
 
   test("should find recent valid manifest with valid CRL in case there is second invalid more recent manifest") {
-    testWithBrokenManifest(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)), 3)
+    testWithBrokenManifest(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)), 2)
   }
 
   test("should find recent valid manifest with valid CRL in case there is second invalid older manifest") {
