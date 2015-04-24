@@ -113,10 +113,6 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
   }
 
-  def getRoas(aki: Array[Byte]) = getRepoObject[RoaObject](aki, roaObjectType) { (url, bytes, validationTime) =>
-    RoaObject.parse(url, bytes).copy(validationTime = validationTime)
-  }
-
   private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte], Option[Instant]) => T) =
     template.query(
       """SELECT url, encoded, validation_time

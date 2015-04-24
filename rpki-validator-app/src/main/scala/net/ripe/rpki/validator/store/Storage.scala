@@ -53,8 +53,6 @@ trait Storage extends Logging {
 
   def getCrls(aki: Array[Byte]): Seq[CrlObject]
 
-  def getRoas(aki: Array[Byte]): Seq[RoaObject]
-
   def getManifests(aki: Array[Byte]): Seq[ManifestObject]
 
   def delete(url: String, hash: String)

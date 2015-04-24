@@ -106,14 +106,12 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
     store.storeRoa(roa)
 
-    val roas: Seq[RoaObject] = store.getRoas(roa.aki)
-    roas should have length 1
+    val obj = store.getObject(stringify(roa.hash)).get.asInstanceOf[RoaObject]
 
-    val head = roas.head
-    head.url should be(roa.url)
-    head.aki should be(roa.aki)
-    head.encoded should be(roa.encoded)
-    head.hash should be(roa.hash)
+    obj.url should be(roa.url)
+    obj.aki should be(roa.aki)
+    obj.encoded should be(roa.encoded)
+    obj.hash should be(roa.hash)
   }
 
   test("Do not store the same object twice") {
@@ -121,7 +119,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     store.storeRoa(roa)
     store.storeRoa(roa)
 
-    store.getRoas(roa.aki) should have length 1
+    store.getObject(stringify(roa.hash))
   }
 
   test("Do not store the same certificate twice") {
@@ -143,9 +141,8 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val newTime = Instant.now
     store.updateValidationTimestamp(Seq(roa.url, certificate.url), newTime)
 
-    val roas = store.getRoas(roa.aki)
-    roas should have length 1
-    roas.head.validationTime should be(Some(newTime))
+    val roaObject = store.getObject(stringify(roa.hash)).get
+    roaObject.validationTime should be(Some(newTime))
 
     val certificates = store.getCertificates(certificate.aki)
     certificates should have length 1
@@ -165,8 +162,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
     store.clearObjects(Instant.now)
 
-    val roas = store.getRoas(roa.aki)
-    roas should have length 0
+    store.getObject(stringify(roa.hash)).isEmpty should be(true)
 
     val certificates = store.getCertificates(certificate.aki)
     certificates should have length 0
@@ -184,8 +180,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
     store.clearObjects(timeInTheFuture)
 
-    val roas = store.getRoas(roa.aki)
-    roas should have length 0
+    store.getObject(stringify(roa.hash)).isEmpty should be(true)
 
     val certificates = store.getCertificates(certificate.aki)
     certificates should have length 0
