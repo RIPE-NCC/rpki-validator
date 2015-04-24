@@ -49,8 +49,6 @@ trait Storage extends Logging {
 
   def getCertificate(uri: String): Option[CertificateObject]
 
-  def getCertificates(aki: Array[Byte]): Seq[CertificateObject]
-
   def getCrls(aki: Array[Byte]): Seq[CrlObject]
 
   def getManifests(aki: Array[Byte]): Seq[ManifestObject]

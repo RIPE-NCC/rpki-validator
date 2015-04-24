@@ -257,7 +257,7 @@ class TopDownWalker2Spec extends ValidatorTestCase with BeforeAndAfterEach with 
 
     subject.execute
 
-    val certs = storage.getCertificates(certificate.getAuthorityKeyIdentifier)
+    val certs = storage.getCertificate(certificateLocation.toString)
     val mfts = storage.getManifests(certificate.getAuthorityKeyIdentifier)
     val crls = storage.getCrls(certificate.getAuthorityKeyIdentifier)
 

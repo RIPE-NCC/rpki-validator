@@ -101,10 +101,6 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     )
   }.toOption
 
-  def getCertificates(aki: Array[Byte]): Seq[CertificateObject] = getRepoObject[CertificateObject](aki, certificateObjectType) { (url, bytes, validationTime) =>
-    CertificateObject.parse(url, bytes).copy(validationTime = validationTime)
-  }
-
   def getCrls(aki: Array[Byte]) = getRepoObject[CrlObject](aki, crlObjectType) { (url, bytes, validationTime) =>
     CrlObject.parse(url, bytes).copy(validationTime = validationTime)
   }
