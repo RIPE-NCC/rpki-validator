@@ -29,6 +29,8 @@
  */
 package net.ripe.rpki.validator.models.validation
 
+import net.ripe.rpki.commons.crypto.cms.ghostbuster.{GhostbustersCms, GhostbustersCmsParser}
+
 import scala.language.existentials
 import java.io.File
 import java.net.URI
@@ -119,6 +121,23 @@ object CertificateObject extends Parsing {
   }
 }
 
+object GhostbustersObject extends Parsing {
+
+  private def makeParser(url: String, bytes: Array[Byte]) = {
+    val parser = new GhostbustersCmsParser
+    parser.parse(url, bytes)
+    parser
+  }
+
+  def parse(url: String, bytes: Array[Byte]) = GhostbustersObject(url, makeParser(url, bytes).getGhostbustersCms)
+
+  def tryParse(url: String, bytes: Array[Byte]) = {
+    val parser = makeParser(url, bytes)
+
+    //We don't care if it's not successfully parsed
+    Right(GhostbustersObject(url, parser.getGhostbustersCms))
+  }
+}
 
 object ManifestObject extends Parsing {
 
@@ -164,6 +183,13 @@ case class CertificateObject(override val url: String,
   def encoded = decoded.getEncoded
   def aki = decoded.getAuthorityKeyIdentifier
   def ski = decoded.getSubjectKeyIdentifier
+}
+
+case class GhostbustersObject(override val url: String,
+                              override val decoded: GhostbustersCms,
+                              override val validationTime: Option[Instant] = None) extends RepositoryObject[GhostbustersCms] {
+  def encoded = decoded.getEncoded
+  def aki = "GBR_AKI".getBytes
 }
 
 case class ManifestObject(override val url: String,
@@ -235,6 +261,7 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
             case c: CrlObject => storage.storeCrl(c)
             case c: ManifestObject => storage.storeManifest(c)
             case c: RoaObject => storage.storeRoa(c)
+            case c: GhostbustersObject => storage.storeGhostbusters(c)
           }
         }
 

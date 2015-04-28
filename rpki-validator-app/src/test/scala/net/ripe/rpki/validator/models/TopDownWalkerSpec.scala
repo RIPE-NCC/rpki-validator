@@ -42,13 +42,10 @@ import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
 import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateInformationAccessDescriptor, X509ResourceCertificate, X509ResourceCertificateBuilder}
-import net.ripe.rpki.commons.validation
 import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.commons.validation.{ValidationStatus, ValidationOptions, ValidationString}
 import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
-import net.ripe.rpki.validator.models.ValidatedObject
-import net.ripe.rpki.validator.models.validation.RepositoryObject.ROType
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.{CacheStore, DataSources, HttpFetcherStore, Storage}
 import net.ripe.rpki.validator.support.ValidatorTestCase

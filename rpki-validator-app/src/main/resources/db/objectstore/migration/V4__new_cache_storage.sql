@@ -11,7 +11,7 @@ CREATE TABLE repo_objects (
   download_time   TIMESTAMP               NOT NULL DEFAULT NOW(),
   validation_time TIMESTAMP,
   PRIMARY KEY (url, hash),
-  CHECK (object_type IN ('crl', 'mft', 'roa', 'cer'))
+  CHECK (object_type IN ('crl', 'mft', 'roa', 'cer', 'gbr'))
 );
 
 CREATE INDEX idx_repo_obj_url ON repo_objects (url);

@@ -45,7 +45,9 @@ trait Storage extends Logging {
 
   def storeCrl(crl: CrlObject)
 
-  def storeRoa(Roa: RoaObject)
+  def storeRoa(roa: RoaObject)
+
+  def storeGhostbusters(ghostbusters: GhostbustersObject)
 
   def getCertificate(uri: String): Option[CertificateObject]
 

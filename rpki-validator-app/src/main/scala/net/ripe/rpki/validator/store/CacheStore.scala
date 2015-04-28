@@ -60,6 +60,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   private val manifestObjectType = "mft"
   private val crlObjectType = "crl"
   private val certificateObjectType = "cer"
+  private val ghostbustersObjectType = "gbr"
 
   private val deletionDelay = 2
 
@@ -68,6 +69,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   override def storeCertificate(certificate: CertificateObject) = storeRepoObject(certificate, certificateObjectType)
 
   override def storeRoa(roa: RoaObject) = storeRepoObject(roa, roaObjectType)
+
+  override def storeGhostbusters(ghostbusters: GhostbustersObject) = storeRepoObject(ghostbusters, ghostbustersObjectType)
 
   override def storeManifest(manifest: ManifestObject) = storeRepoObject(manifest, manifestObjectType)
 
@@ -130,6 +133,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
               case "roa" => RoaObject.parse(url, bytes).copy(validationTime = validationTime)
               case "mft" => ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
               case "crl" => CrlObject.parse(url, bytes).copy(validationTime = validationTime)
+              case "gbr" => GhostbustersObject.parse(url, bytes).copy(validationTime = validationTime)
             }
           }
         })

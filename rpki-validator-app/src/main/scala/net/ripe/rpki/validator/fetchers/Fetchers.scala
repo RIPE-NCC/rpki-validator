@@ -65,8 +65,7 @@ trait Fetcher extends Hashing {
         case "mft" => checkIfBroken(ManifestObject.tryParse(uriStr, bytes))
         case "crl" => checkIfBroken(CrlObject.tryParse(uriStr, bytes))
         case "roa" => checkIfBroken(RoaObject.tryParse(uriStr, bytes))
-        case "gbr" =>
-          Left(Error(uri, "We don't support GBR records yet"))
+        case "gbr" => checkIfBroken(GhostbustersObject.tryParse(uriStr, bytes))
         case _ =>
           Left(Error(uri, "Found unknown file $f"))
       }

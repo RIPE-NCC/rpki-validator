@@ -30,8 +30,6 @@
 package net.ripe.rpki.validator
 package controllers
 
-import java.io.PrintWriter
-
 import net.ripe.ipresource._
 import net.ripe.rpki.commons.validation.roa.AllowedRoute
 import org.joda.time.DateTime
@@ -39,8 +37,6 @@ import org.joda.time.format.ISODateTimeFormat
 import views.ExportView
 import models.RtrPrefix
 import net.liftweb.json._
-
-import scala.collection.mutable
 
 trait ExportController extends ApplicationController {
 
