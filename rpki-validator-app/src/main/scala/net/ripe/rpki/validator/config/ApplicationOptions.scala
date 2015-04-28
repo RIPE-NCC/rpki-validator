@@ -67,6 +67,7 @@ object ApplicationOptions {
 
   def dataFileLocation = safeConf(s => resolveFile(config.getString(s), "data.json"))("locations.datadir")
   def talDirLocation = safeConf(s => new File(config.getString(s)))("locations.taldir")
+  def trustedSslCertsLocation = safeConf(s => new File(config.getString(s)))("locations.trusted.ssl.dir")
   def workDirLocation = safeConf(s => new File(config.getString(s)))("locations.workdir")
   def rsyncDirLocation = safeConf(config.getString)("locations.rsyncdir")
 

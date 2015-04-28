@@ -31,12 +31,15 @@ package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
 
-import net.ripe.rpki.validator.config.Http
+import grizzled.slf4j.Logging
+import net.ripe.rpki.validator.config.{ApplicationOptions, Http}
 import net.ripe.rpki.validator.store.HttpFetcherStore
 import org.apache.commons.io.IOUtils
 import org.apache.http.client.methods.HttpGet
 
-class SingleObjectHttpFetcher(store: HttpFetcherStore) extends Fetcher with Http {
+class SingleObjectHttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
+  override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
+
   def fetchRepo(uri: URI, process: FetcherListener): Seq[Fetcher.Error] = {
     tryTo(uri) {
       val response = http.execute(new HttpGet(uri.toString))

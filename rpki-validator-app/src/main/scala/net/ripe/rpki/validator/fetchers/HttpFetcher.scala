@@ -32,14 +32,15 @@ package net.ripe.rpki.validator.fetchers
 import java.net.URI
 
 import com.google.common.io.BaseEncoding
-import net.ripe.rpki.validator.config.Http
+import grizzled.slf4j.Logging
+import net.ripe.rpki.validator.config.{ApplicationOptions, Http}
 import net.ripe.rpki.validator.store.HttpFetcherStore
 import org.apache.http.client.methods.HttpGet
 
 import scala.math.BigInt
 import scala.xml.Elem
 
-class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http {
+class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Logging {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
@@ -63,6 +64,8 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http {
   case class Snapshot(snapshotDef: SnapshotDef, publishes: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
 
   private val base64 = BaseEncoding.base64()
+
+  override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
 
   override def fetchRepo(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
 
