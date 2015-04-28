@@ -92,9 +92,7 @@ trait ExportController extends ApplicationController {
       val dateTime = ISODateTimeFormat.dateTimeNoMillis().withZoneUTC().print(DateTime.now)
 
       val allowedRoute = new AllowedRoute(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
-      val possibleRoutes = getAllRoutesFor(allowedRoute.getPrefix, allowedRoute.getMaximumLength)
-
-      possibleRoutes.foreach { range =>
+      forAllRanges(allowedRoute.getPrefix, allowedRoute.getMaximumLength) { range: IpRange =>
         val version = if(IpResourceType.IPv6 == range.getType) "6" else ""
 
         writer.write(s"""
@@ -111,31 +109,24 @@ trait ExportController extends ApplicationController {
     }
   }
 
-
-  def getAllRoutesFor(prefix: IpRange, maxPrefixLength: Int) = {
+  private def forAllRanges(prefix: IpRange, maxPrefixLength: Int)(printRange: IpRange => Unit) {
     import scala.collection.JavaConversions._
     val ips = prefix.splitToPrefixes().map(_.getStart)
 
-    ips.flatMap { ip =>
-      getAllRangesFor(ip.lowerBoundForPrefix(prefix.getPrefixLength), prefix.getPrefixLength, maxPrefixLength)
+    ips.foreach { ip =>
+      walkAllRanges(ip.lowerBoundForPrefix(prefix.getPrefixLength), prefix.getPrefixLength, maxPrefixLength, printRange)
     }
   }
 
-
-  def getAllRangesFor(ip: IpAddress, prefixLength: Int, maxPrefixLength:Int): Seq[IpRange] = {
+  private def walkAllRanges(ip: IpAddress, prefixLength: Int, maxPrefixLength:Int, printRange: IpRange => Unit) {
     val lower = ip.lowerBoundForPrefix(prefixLength)
     val upper = ip.upperBoundForPrefix(prefixLength)
 
-    val route = IpRange.range(lower, upper)
+    printRange(IpRange.range(lower, upper))
 
     if(prefixLength < maxPrefixLength) {
-      Seq.concat(
-        Seq(route),
-        getAllRangesFor(lower, prefixLength + 1, maxPrefixLength),
-        getAllRangesFor(upper, prefixLength + 1, maxPrefixLength)
-      )
-    } else {
-      Seq(route)
+      walkAllRanges(lower, prefixLength + 1, maxPrefixLength, printRange)
+      walkAllRanges(upper, prefixLength + 1, maxPrefixLength, printRange)
     }
   }
 
