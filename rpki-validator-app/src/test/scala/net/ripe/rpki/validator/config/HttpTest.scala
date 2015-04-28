@@ -95,7 +95,7 @@ class HttpTest extends ValidatorTestCase with JunitLog4JSetup with BeforeAndAfte
 
     val sslContextFactory = new SslContextFactory()
     sslContextFactory.setKeyStore(customKeyStore)
-    sslContextFactory.setKeyManagerPassword("jetty")
+    sslContextFactory.setKeyManagerPassword("jetty.key")
 
     val https_config = new HttpConfiguration(http_config)
     https_config.addCustomizer(new SecureRequestCustomizer())
