@@ -240,6 +240,10 @@
                             <mainClass>${main.class}</mainClass>
                         </manifest>
                     </archive>
+                    <archiverConfig>
+                        <directoryMode>493</directoryMode> <!-- 493(dec) = 755(oct) -->
+                        <defaultDirectoryMode>493</defaultDirectoryMode>
+                    </archiverConfig>
                 </configuration>
                 <executions>
                     <execution>
