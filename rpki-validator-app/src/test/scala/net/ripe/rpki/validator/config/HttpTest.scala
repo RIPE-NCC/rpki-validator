@@ -42,7 +42,6 @@ import org.scalatest.{Ignore, BeforeAndAfterAll}
 
 import scala.util.Try
 
-@Ignore
 class HttpTest extends ValidatorTestCase with JunitLog4JSetup with BeforeAndAfterAll {
 
   override def beforeAll() {
@@ -54,7 +53,9 @@ class HttpTest extends ValidatorTestCase with JunitLog4JSetup with BeforeAndAfte
   }
 
   val subject = new Http with Logging {
-    override def trustedCertsLocation: File = new File("/Users/oleg/dev/checkouts/rpki/rpki-validator/rpki-validator-app/src/test/resources/trusted.ssl.certs")
+    override def trustedCertsLocation: File = {
+      Seq("rpki-validator-app/src/test/resources/trusted.ssl.certs", "src/test/resources/trusted.ssl.certs").map(f => new File(f)).filter(_.isDirectory).head
+    }
   }
 
   test("Should connect to http server") {
@@ -112,7 +113,7 @@ class HttpTest extends ValidatorTestCase with JunitLog4JSetup with BeforeAndAfte
 
     def start(): Unit = {
       if (server.isStopped) server.start()
-//server.join()
+//server.join() // handy for manual tests
     }
 
     def stop(): Unit = {
