@@ -45,9 +45,10 @@ import net.ripe.rpki.validator.store.Storage
 import org.apache.commons.lang.Validate
 import org.joda.time.Instant
 
+import scala.language.reflectiveCalls
 import scala.collection.JavaConverters._
 
-class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationContext,
+class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext,
                      store: Storage,
                      repoService: RepoService,
                      validationOptions: ValidationOptions,
@@ -197,7 +198,7 @@ class TopDownWalker2(certificateContext: CertificateRepositoryObjectValidationCo
     } else {
       val childResources = if (childCert.isResourceSetInherited) getResourcesOfType(childCert.getInheritedResourceTypes, certificateContext.getResources) else childCert.getResources
       val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), childCert, childResources)
-      val nextLevelWalker = new TopDownWalker2(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
+      val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
       nextLevelWalker.validateContext
     }
   }

@@ -254,7 +254,7 @@
                 <groupId>com.atlassian.maven.plugins</groupId>
                 <artifactId>maven-clover2-plugin</artifactId>
                 <configuration>
-                    <jdk>1.6</jdk>
+                    <jdk>1.7</jdk>
                     <licenseLocation>${clover2.licenseLocation}</licenseLocation>
                     <generateXml>true</generateXml>
                     <includesTestSourceRoots>false</includesTestSourceRoots>
