@@ -38,10 +38,11 @@ import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server._
 import org.eclipse.jetty.util.ssl.SslContextFactory
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{Ignore, BeforeAndAfterAll}
 
 import scala.util.Try
 
+@Ignore
 class HttpTest extends ValidatorTestCase with JunitLog4JSetup with BeforeAndAfterAll {
 
   override def beforeAll() {
