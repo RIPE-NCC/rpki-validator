@@ -134,7 +134,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
     val validatedObjects = validatedObjectMap.keySet.map(_.toString)
     validatedObjects.foreach { uri =>
-      logger.info("Setting validation time for the object: " + uri)
+      logger.debug("Setting validation time for the object: " + uri)
     }
     store.updateValidationTimestamp(validatedObjects)
   }
