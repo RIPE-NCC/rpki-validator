@@ -1,4 +1,0 @@
-prefetch.uris = http://localhost:8888/rpki-ca/notify/notify.xml
-certificate.location = http://localhost:8888/rpki-ca/ta/ta.cer
-ca.name = RRDP Test on 8888
-public.key.info = MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsq9DGnCXR5RQE81BMO1BsXwMFAy8o6j+B+P0kuOJpS5s7Zh+yzxgQlcU0LUfzk9rndBjkj/Q/mjywk67w64YdS+ZNcGQjMmaUgnXnf1bjo4bAJX/zSeAIu53m5IXOZrB/ptYJjtMzU2tyFWod0uABTjsh19Dylrd5MLq6yY3l2WuzMAXUClEzH7s7XuZKJp2a6LsSFbtI+S4T1l6AgipKiwwRShfG8Y/TYMxRyO5UsMr2LRSVqkEawhhJ4x80egoXgl6NCjzXuMxXFaYIh0eOoSjJKo/a0TW3LiJsUxn1SiFaDBMVz2CO8UTE7IfmB0GqV7uRaavL5NKJPKxqNlZcwIDAQAB
