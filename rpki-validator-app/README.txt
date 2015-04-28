@@ -25,11 +25,14 @@ Requirements
   uses the following rsync(1) options: --update, --times, --copy-links, --recursive, and
   --delete.
   
-= Oracle JDK 7
+= Oracle JDK 7 or 8
 
   This software was developed and tested using Oracle JDK 7. This Java version should be
   available without restrictions for all major platforms, though it may not be included 
   in your distribution by default.
+  
+  Oracle JDK 8 should also work. Please let us know if you should run into any issues
+  using this.
 
   You can check which version of Java you have by running:
 
@@ -231,6 +234,11 @@ Known Issues
 
 Version History
 ---------------
+
+2.18 - 28 April 2015
+
+= Added initial support for new RPKI data retrieval protocol. Documented here:
+  https://datatracker.ietf.org/doc/draft-ietf-sidr-delta-protocol/
 
 2.17 - 3 July 2014
 = Added a configuration file option to manually set the update interval of the 
