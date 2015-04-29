@@ -118,8 +118,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)))
       }).toSeq
 
-  override def getObject(hash: String): Option[RepositoryObject.ROType] =
-    Try {
+  override def getObject(hash: String): Option[RepositoryObject.ROType] = {
+    val a = Try {
       template.queryForObject(
         """SELECT encoded, validation_time, object_type, url
         FROM repo_objects
@@ -137,7 +137,11 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
             }
           }
         })
-    }.toOption
+    }
+    a.isSuccess
+    a.toOption
+  }
+
 
   def clear() = {
     template.update(s"TRUNCATE TABLE repo_objects", Map.empty[String, Object])
