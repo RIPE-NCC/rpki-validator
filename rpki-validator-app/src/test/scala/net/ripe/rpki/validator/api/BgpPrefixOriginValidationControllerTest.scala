@@ -93,7 +93,8 @@ class BgpPrefixOriginValidationControllerTest extends ValidatorTestCase with Sca
     get(s"$basePath/AS65536.0/10.0.0.0/8") {
       status should be(400)
       header("Set-Cookie") should be(null)
-      header("Content-Type") should be("text/json;charset=UTF-8")
+      header("Content-Type") should startWith("text/json")
+      header("Content-Type") should endWith("charset=UTF-8")
       body should be("""{
                        |  "message":"'AS65536.0' is not a valid ASN"
                        |}""".stripMargin)
@@ -104,7 +105,8 @@ class BgpPrefixOriginValidationControllerTest extends ValidatorTestCase with Sca
     get(s"$basePath/AS65535.0/10.0.0.0/33") {
       status should be(400)
       header("Set-Cookie") should be(null)
-      header("Content-Type") should be("text/json;charset=UTF-8")
+      header("Content-Type") should startWith("text/json")
+      header("Content-Type") should endWith("charset=UTF-8")
       body should be("""{
                        |  "message":"'10.0.0.0/33' is not a valid IPv4 or IPv6 prefix"
                        |}""".stripMargin)
@@ -112,7 +114,8 @@ class BgpPrefixOriginValidationControllerTest extends ValidatorTestCase with Sca
     get(s"$basePath/AS65535.0/::/129") {
       status should be(400)
       header("Set-Cookie") should be(null)
-      header("Content-Type") should be("text/json;charset=UTF-8")
+      header("Content-Type") should startWith("text/json")
+      header("Content-Type") should endWith("charset=UTF-8")
       body should be("""{
                        |  "message":"'::/129' is not a valid IPv4 or IPv6 prefix"
                        |}""".stripMargin)
@@ -126,7 +129,8 @@ class BgpPrefixOriginValidationControllerTest extends ValidatorTestCase with Sca
     get(s"$basePath/AS65001/10.0.0.0/8") {
       status should be(200)
       header("Set-Cookie") should be(null)
-      header("Content-Type") should be("text/json;charset=UTF-8")
+      header("Content-Type") should startWith("text/json")
+      header("Content-Type") should endWith("charset=UTF-8")
       body should be("""{
                        |  "validated_route":{
                        |    "route":{
@@ -154,7 +158,8 @@ class BgpPrefixOriginValidationControllerTest extends ValidatorTestCase with Sca
     get(s"$basePath/AS65001/10.0.0.0/20") {
       status should be(200)
       header("Set-Cookie") should be(null)
-      header("Content-Type") should be("text/json;charset=UTF-8")
+      header("Content-Type") should startWith("text/json")
+      header("Content-Type") should endWith("charset=UTF-8")
       body should be("""{
                        |  "validated_route":{
                        |    "route":{
@@ -198,7 +203,8 @@ class BgpPrefixOriginValidationControllerTest extends ValidatorTestCase with Sca
     get(s"$basePath/AS65001/10.0.0.0/8") {
       status should be(200)
       header("Set-Cookie") should be(null)
-      header("Content-Type") should be("text/json;charset=UTF-8")
+      header("Content-Type") should startWith("text/json")
+      header("Content-Type") should endWith("charset=UTF-8")
       body should be("""{
                        |  "validated_route":{
                        |    "route":{
@@ -231,7 +237,8 @@ class BgpPrefixOriginValidationControllerTest extends ValidatorTestCase with Sca
     get(s"$basePath/AS65001/10.0.0.0/24") {
       status should be(200)
       header("Set-Cookie") should be(null)
-      header("Content-Type") should be("text/json;charset=UTF-8")
+      header("Content-Type") should startWith("text/json")
+      header("Content-Type") should endWith("charset=UTF-8")
       body should be("""{
                        |  "validated_route":{
                        |    "route":{

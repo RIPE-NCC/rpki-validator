@@ -33,7 +33,6 @@ package models
 import lib.Java
 import scala.collection.JavaConverters._
 import java.net.URI
-import grizzled.slf4j.Logger
 import net.ripe.rpki.validator.util._
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
@@ -47,7 +46,8 @@ sealed trait ValidatedObject {
 
   def validationStatus: ValidationStatus = {
     val statuses = checks.map(_.getStatus)
-    if (statuses.contains(ValidationStatus.ERROR)) ValidationStatus.ERROR
+    if (statuses.contains(ValidationStatus.FETCH_ERROR)) ValidationStatus.FETCH_ERROR
+    else if (statuses.contains(ValidationStatus.ERROR)) ValidationStatus.ERROR
     else if (statuses.contains(ValidationStatus.WARNING)) ValidationStatus.WARNING
     else ValidationStatus.PASSED
   }

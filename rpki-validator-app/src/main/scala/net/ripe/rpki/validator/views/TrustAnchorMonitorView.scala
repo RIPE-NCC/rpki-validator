@@ -32,15 +32,14 @@ package views
 
 import scala.xml.Text
 import lib.Validation._
-import net.ripe.rpki.validator.models
 import models._
-import net.ripe.rpki.commons.validation.{ValidationString, ValidationStatus}
+import net.ripe.rpki.commons.validation.ValidationStatus
 
 class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAnchorValidations, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
 
   val MaximumErrorCount = 10
   val MaximumErrorFraction = .1
-  val MaximumRsyncErrors = 10
+  val MaximumFetchErrors = 1
 
   def tab = Tabs.TrustAnchorsTab
   def title = Text(s"Monitoring for ${ta.name}")
@@ -62,11 +61,11 @@ class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAncho
     totalObjects != 0 && objectsInError.toFloat / totalObjects > MaximumErrorFraction
   }
 
-  val hasTooManyRsyncFetchFailures = validatedObjects.flatMap(_.checks).count(_.getKey == ValidationString.VALIDATOR_RSYNC_COMMAND) >= MaximumRsyncErrors
+  val hasFetchFailures = validatedObjects.flatMap(_.checks).count(_.getStatus == ValidationStatus.FETCH_ERROR) > 0
 
   val hasWarningsOrErrors = numberOfObjectsWithStatus(ValidationStatus.WARNING) + numberOfObjectsWithStatus(ValidationStatus.ERROR) > 0
 
-  val overallHealthy = !hasProblemValidatingTa && !hasUnexpectedDrop && !hasTooManyErrors && !hasTooHighErrorFraction && !hasTooManyRsyncFetchFailures
+  val overallHealthy = !hasProblemValidatingTa && !hasUnexpectedDrop && !hasTooManyErrors && !hasTooHighErrorFraction
 
   def badge(level: String, text: String, opaque: Boolean = false) = {
     val clazz = "object-counter label " + level
@@ -91,6 +90,38 @@ class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAncho
   def numberBadge(level: String, number: Int) = {
     badge(level, number.toString, number == 0)
   }
+
+
+  def renderFetchDetails = {
+    <h3>Fetch error</h3>
+      <table id="fetch-details-table" class="zebra-striped" style="display: none;" data-source={ s"${Tabs.TrustAnchorMonitorTab.url}/fetch-detail/${ta.identifierHash}" }>
+        <thead>
+          <tr>
+            <th>URI</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+      <script>
+        {
+        <!--
+$(document).ready(function() {
+  $('[rel=twipsy]').twipsy({
+    "live": true
+  });
+  $('#fetch-details-table').dataTable({
+        "sPaginationType": "full_numbers",
+        "bProcessing": true,
+        "bServerSide": true,
+        "sAjaxSource": $('#fetch-details-table').attr('data-source')
+    }).show();
+});
+// -->}
+      </script>
+  }
+
 
   def renderValidationDetails = {
     <h3>Validation violations</h3>
@@ -136,7 +167,7 @@ $(document).ready(function() {
           <tr><td>Object count has not dropped more than 10% since the last validation</td><td> { checkToYesOrAlertBadge(!hasUnexpectedDrop) } </td></tr>
           <tr><td>Fewer than { MaximumErrorCount } validation errors</td><td> { checkToYesOrAlertBadge(!hasTooManyErrors) } </td></tr>
           <tr><td>Less than { (MaximumErrorFraction * 100).round }% of objects have a validation error</td><td> { checkToYesOrAlertBadge(!hasTooHighErrorFraction) } </td></tr>
-          <tr><td>Fewer than { MaximumRsyncErrors } rsync connection failures</td><td> { checkToYesOrAlertBadge(!hasTooManyRsyncFetchFailures) } </td></tr>
+          <tr><td>All objects fetched successfully</td><td> { if(hasFetchFailures) badge("warning", "WARNING") else badge("success", "YES") } </td></tr>
         </table>
 
       <h3>Statistics for the last validation run</h3>
@@ -147,6 +178,7 @@ $(document).ready(function() {
       </table>
 
       { if (hasWarningsOrErrors) { renderValidationDetails } }
+      { if (hasFetchFailures) { renderFetchDetails } }
 
     </div>
   }

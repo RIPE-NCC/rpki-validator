@@ -56,8 +56,7 @@ public class TopDownWalkerWorkQueue {
     }
 
     public void add(CertificateRepositoryObjectValidationContext context) {
-        Validate.isTrue(context.getCertificate() instanceof X509ResourceCertificate, "Top down walker can only handle resource certs");
-        if (added.add((X509ResourceCertificate) context.getCertificate())) {
+        if (added.add(context.getCertificate())) {
             queue.add(context);
         }
     }

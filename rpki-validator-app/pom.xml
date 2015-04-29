@@ -11,7 +11,7 @@
     </parent>
 
     <properties>
-        <jetty.version>8.1.3.v20120416</jetty.version>
+      <jetty.version>9.2.10.v20150310</jetty.version>
         <yammer.version>3.0.2</yammer.version>
         <main.class>net.ripe.rpki.validator.config.Main</main.class>
     </properties>
@@ -30,6 +30,10 @@
 
     <dependencies>
         <!-- our stuff -->
+        <dependency>
+            <groupId>net.ripe.rpki</groupId>
+            <artifactId>rpki-commons</artifactId>
+        </dependency>
         <dependency>
             <groupId>net.ripe.rpki</groupId>
             <artifactId>rpki-commons</artifactId>
@@ -175,7 +179,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>1.3.167</version>
+            <version>1.4.185</version>
         </dependency>
 
         <dependency>
@@ -197,6 +201,11 @@
             <version>${scalatra.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.scalacheck</groupId>
+            <artifactId>scalacheck_${scala.binary.version}</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -231,6 +240,10 @@
                             <mainClass>${main.class}</mainClass>
                         </manifest>
                     </archive>
+                    <archiverConfig>
+                        <directoryMode>493</directoryMode> <!-- 493(dec) = 755(oct) -->
+                        <defaultDirectoryMode>493</defaultDirectoryMode>
+                    </archiverConfig>
                 </configuration>
                 <executions>
                     <execution>
@@ -263,6 +276,8 @@
                             <goal>testCompile</goal>
                         </goals>
                         <configuration>
+                            <scalaVersion>${scala.version}</scalaVersion>
+                            <scalaCompatVersion>${scala.binary.version}</scalaCompatVersion>
                             <checkMultipleScalaVersions>true</checkMultipleScalaVersions>
                             <jvmArgs>
                                 <arg>-XX:+TieredCompilation</arg> <!-- Much faster Scala compilation -->
@@ -294,6 +309,7 @@
                         <exclude>.idea/**</exclude>
                         <exclude>.worksheet/**</exclude>
                         <exclude>log/**</exclude>
+                        <exclude>**/*.log</exclude>
                         <exclude>tmp/**</exclude>
                         <exclude>**/*.conf</exclude>
                         <exclude>**/*.jmx</exclude>

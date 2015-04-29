@@ -42,12 +42,12 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 class BgpAnnouncementValidatorTest extends ValidatorTestCase with BeforeAndAfterAll {
 
   import scala.language.implicitConversions
-  implicit def LongToAsn(asn: Long) = new Asn(asn)
-  implicit def StringToAsn(asn: String) = Asn.parse(asn)
-  implicit def StringToIpRange(prefix: String) = IpRange.parse(prefix)
-  implicit def TupleToBgpAnnouncement(x: (Int, String)) = BgpAnnouncement(x._1, x._2)
-  implicit def TupleToRtrPrefix(x: (Int, String)) = RtrPrefix(x._1, x._2)
-  implicit def TupleToRtrPrefix(x: (Int, String, Int)) = RtrPrefix(x._1, x._2, Some(x._3))
+  implicit def IntToAsn(asn: Int): Asn = new Asn(asn)
+  implicit def StringToAsn(asn: String): Asn = Asn.parse(asn)
+  implicit def StringToIpRange(prefix: String): IpRange = IpRange.parse(prefix)
+  implicit def TupleToBgpAnnouncement(x: (Int, String)): BgpAnnouncement = BgpAnnouncement(x._1, x._2)
+  implicit def TupleToRtrPrefix(x: (Int, String)): RtrPrefix = RtrPrefix(x._1, x._2)
+  implicit def TupleToRtrPrefix(x: (Int, String, Int)): RtrPrefix = RtrPrefix(x._1, x._2, Some(x._3))
 
   implicit val actorSystem = akka.actor.ActorSystem()
   private val subject = new BgpAnnouncementValidator
@@ -106,7 +106,7 @@ class BgpAnnouncementValidatorTest extends ValidatorTestCase with BeforeAndAfter
     val announcement = (65001, "10.0.1.0/24"): BgpAnnouncement
     val invalidsAsn = Seq[RtrPrefix]((65002, "10.0.1.0/24"))
 
-    val e = evaluating { BgpValidatedAnnouncement(announcement, invalidsLength = invalidsAsn) } should produce [IllegalArgumentException]
+    val e = the [IllegalArgumentException] thrownBy { BgpValidatedAnnouncement(announcement, invalidsLength = invalidsAsn) }
     e.getMessage should equal ("requirement failed: invalidsLength must only contain VRPs that refer to the same ASN")
   }
 
@@ -114,7 +114,7 @@ class BgpAnnouncementValidatorTest extends ValidatorTestCase with BeforeAndAfter
     val announcement = (65001, "10.0.1.0/24"): BgpAnnouncement
     val invalidsLength = Seq[RtrPrefix]((65001, "10.0.0.0/16", 20))
 
-    val e = evaluating { BgpValidatedAnnouncement(announcement, invalidsAsn = invalidsLength) } should produce [IllegalArgumentException]
+    val e = the [IllegalArgumentException] thrownBy { BgpValidatedAnnouncement(announcement, invalidsAsn = invalidsLength) }
     e.getMessage should equal ("requirement failed: invalidsAsn must not contain the announced ASN")
   }
 

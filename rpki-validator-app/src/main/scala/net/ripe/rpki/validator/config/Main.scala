@@ -30,36 +30,29 @@
 package net.ripe.rpki.validator
 package config
 
-import org.apache.http.client.methods.HttpGet
-
-import scala.collection.JavaConverters._
-import org.apache.commons.io.FileUtils
-import org.eclipse.jetty.server.Server
-import org.joda.time.DateTime
-import grizzled.slf4j.Logger
-import rtr.Pdu
-import rtr.RTRServer
-import lib._
-import models._
-import bgp.preview._
-import scala.concurrent.stm._
-import scala.concurrent.Future
-import scala.math.Ordering.Implicits._
-import org.apache.http.impl.client.{HttpClientBuilder, SystemDefaultHttpClient}
-import net.ripe.rpki.validator.util.TrustAnchorLocator
-import org.apache.http.params.HttpConnectionParams
 import java.util.EnumSet
 import javax.servlet.DispatcherType
-import scala.Predef._
-import scalaz.Failure
-import net.ripe.rpki.validator.models.TrustAnchorData
-import net.ripe.rpki.validator.models.Idle
-import net.ripe.rpki.validator.lib.UserPreferences
-import scalaz.Success
-import net.ripe.rpki.validator.models.IgnoreFilter
-import net.ripe.rpki.validator.api.RestApi
+
 import com.codahale.metrics.servlets.HealthCheckServlet
+import grizzled.slf4j.Logging
+import net.ripe.rpki.validator.api.RestApi
+import net.ripe.rpki.validator.bgp.preview._
 import net.ripe.rpki.validator.config.health.HealthChecks
+import net.ripe.rpki.validator.lib.{UserPreferences, _}
+import net.ripe.rpki.validator.models.{Idle, IgnoreFilter, TrustAnchorData, _}
+import net.ripe.rpki.validator.rtr.{Pdu, RTRServer}
+import net.ripe.rpki.validator.util.TrustAnchorLocator
+import org.apache.commons.io.FileUtils
+import org.apache.http.client.methods.HttpGet
+import org.eclipse.jetty.server.Server
+import org.joda.time.DateTime
+
+import scala.Predef._
+import scala.collection.JavaConverters._
+import scala.concurrent.Future
+import scala.concurrent.stm._
+import scala.math.Ordering.Implicits._
+import scalaz.{Failure, Success}
 
 object Main {
   private val sessionId: Pdu.SessionId = Pdu.randomSessionid
@@ -71,10 +64,8 @@ object Main {
   }
 }
 
-class Main() { main =>
+class Main extends Http with Logging { main =>
   import scala.concurrent.duration._
-
-  val logger = Logger[this.type]
 
   implicit val actorSystem = akka.actor.ActorSystem()
   import actorSystem.dispatcher
@@ -93,14 +84,11 @@ class Main() { main =>
   val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
   val roas = ValidatedObjects(new TrustAnchors(trustAnchors.filter(ta => ta.enabled)))
 
+  override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
+
   val userPreferences = Ref(data.userPreferences)
 
-  val httpClient = new SystemDefaultHttpClient()
-  val httpParams = httpClient.getParams
-  HttpConnectionParams.setConnectionTimeout(httpParams, 2 * 60 * 1000)
-  HttpConnectionParams.setSoTimeout(httpParams, 2 * 60 * 1000)
-
-  val bgpRisDumpDownloader = new BgpRisDumpDownloader(httpClient)
+  val bgpRisDumpDownloader = new BgpRisDumpDownloader(http)
 
   val memoryImage = Ref(
     MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors), roas))
@@ -159,18 +147,23 @@ class Main() { main =>
     val maxStaleDays = userPreferences.single.get.maxStaleDays
     val trustAnchors = memoryImage.single.get.trustAnchors.all
 
-    val taLocators = trustAnchorNames.flatMap { name => trustAnchors.find(_.name == name) }.map(_.locator)
+    val taLocators = trustAnchorNames.flatMap { name => trustAnchors.find(_.name == name) }
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val process = new TrustAnchorValidationProcess(trustAnchorLocator, maxStaleDays,  ApplicationOptions.workDirLocation, ApplicationOptions.enableLooseValidation) with TrackValidationProcess with ValidationProcessLogger {
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator.locator, maxStaleDays,
+          ApplicationOptions.workDirLocation,
+          ApplicationOptions.rsyncDirLocation,
+          trustAnchorLocator.name,
+          ApplicationOptions.enableLooseValidation
+        ) with TrackValidationProcess with ValidationProcessLogger {
           override val memoryImage = main.memoryImage
         }
         try {
           process.runProcess() match {
             case Success(validatedObjectsByUri) =>
               val validatedObjects = validatedObjectsByUri.values.toSeq
-              updateMemoryImage(_.updateValidatedObjects(trustAnchorLocator, validatedObjects))
+              updateMemoryImage(_.updateValidatedObjects(trustAnchorLocator.locator, validatedObjects))
             case Failure(_) =>
           }
         } finally {
@@ -213,10 +206,9 @@ class Main() { main =>
   }
 
   private def setup(server: Server): Server = {
-    import org.eclipse.jetty.servlet._
-    import org.eclipse.jetty.server.handler.RequestLogHandler
-    import org.eclipse.jetty.server.handler.HandlerCollection
     import org.eclipse.jetty.server.NCSARequestLog
+    import org.eclipse.jetty.server.handler.{HandlerCollection, RequestLogHandler}
+    import org.eclipse.jetty.servlet._
     import org.scalatra._
 
     val webFilter = new WebFilter {
@@ -257,7 +249,7 @@ class Main() { main =>
       override def newVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version,
         () => {
           val get = new HttpGet("https://lirportal.ripe.net/certification/content/static/validator/latest-version.properties")
-          val response = httpClient.execute(get)
+          val response = http.execute(get)
           scala.io.Source.fromInputStream(response.getEntity.getContent).mkString
         })
 

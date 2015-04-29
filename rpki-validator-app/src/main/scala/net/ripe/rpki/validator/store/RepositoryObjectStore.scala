@@ -27,24 +27,21 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator
-package store
+package net.ripe.rpki.validator.store
 
+import java.io.File
 import java.net.URI
 import java.sql.ResultSet
-import org.apache.commons.dbcp.BasicDataSource
-import org.joda.time.DateTime
-import org.springframework.dao.DuplicateKeyException
-import org.springframework.dao.EmptyResultDataAccessException
-import org.springframework.jdbc.core.RowMapper
-import org.springframework.jdbc.core.JdbcTemplate
-import com.googlecode.flyway.core.Flyway
-import akka.util.ByteString
 import javax.sql.DataSource
-import models.StoredRepositoryObject
-import org.joda.time.DateTimeZone
-import java.io.File
+
+import akka.util.ByteString
 import com.google.common.io.BaseEncoding
+import com.googlecode.flyway.core.Flyway
+import net.ripe.rpki.validator.models.StoredRepositoryObject
+import org.apache.commons.dbcp.BasicDataSource
+import org.joda.time.{DateTime, DateTimeZone}
+import org.springframework.dao.{DuplicateKeyException, EmptyResultDataAccessException}
+import org.springframework.jdbc.core.{JdbcTemplate, RowMapper}
 
 /**
  * Used to store/retrieve consistent sets of rpki objects seen for certificate authorities
@@ -85,13 +82,13 @@ class RepositoryObjectStore(datasource: DataSource) {
     template.update("truncate table retrieved_objects")
   }
 
-  def getLatestByUrl(url: URI) = {
+  def getLatestByUrl(url: URI): Option[StoredRepositoryObject] = {
     val selectString = "select * from retrieved_objects where uri = ? order by update_order desc limit 1"
     val selectArgs = Array[Object](url.toString)
     getOptionalResult(selectString, selectArgs)
   }
 
-  def getByHash(hash: Array[Byte]) = {
+  def getByHash(hash: Array[Byte]): Option[StoredRepositoryObject] = {
     val encodedHash = base64.encode(hash)
     val selectString = "select * from retrieved_objects where hash = ?"
     val selectArgs = Array[Object](encodedHash)
@@ -110,33 +107,35 @@ class RepositoryObjectStore(datasource: DataSource) {
     override def mapRow(rs: ResultSet, rowNum: Int) = {
       StoredRepositoryObject(
         hash = ByteString(base64.decode(rs.getString("hash"))),
-        uri = URI.create(rs.getString("uri")),
+        uri = new URI(rs.getString("uri")),
         binaryObject = ByteString(base64.decode(rs.getString("encoded_object"))),
         expires = new DateTime(rs.getTimestamp("expires")).withZone(DateTimeZone.UTC))
     }
   }
-
 }
 
 object DataSources {
-  /**
-   * Store data on disk.
-   */
-  def DurableDataSource(dataDirBasePath: File) = {
+
+  private object DSSingletons extends SimpleSingletons[String, DataSource]({ dataDirBasePath =>
     val result = new BasicDataSource
-    result.setUrl("jdbc:h2:" + dataDirBasePath + File.separator + "rpki-object-cache")
+    result.setUrl("jdbc:h2:" + dataDirBasePath + File.separator + "rpki-object-cache;MVCC=TRUE")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
     migrate(result)
     result
-  }
+  })
+
+  /**
+   * Store data on disk.
+   */
+  def DurableDataSource(dataDirBasePath: File) = DSSingletons(dataDirBasePath.getAbsolutePath)
 
   /**
    * For unit testing
    */
   def InMemoryDataSource = {
     val result = new BasicDataSource
-    result.setUrl("jdbc:h2:mem:rpki-object-cache")
+    result.setUrl("jdbc:h2:mem:rpki-object-cache;MVCC=TRUE")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
     migrate(result)

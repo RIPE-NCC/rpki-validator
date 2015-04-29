@@ -44,10 +44,10 @@ object ApplicationOptions {
   // anchors.
   private val minimumValidationInterval = 10.minutes
 
-  def httpPort: Int = config.getInt("ui.http.port")
-  def httpKioskEnabled: Boolean = config.getBoolean("ui.kiosk.enable")
-  def httpKioskUser: String = config.getString("ui.kiosk.user")
-  def httpKioskPass: String = config.getString("ui.kiosk.pass")
+  def httpPort: Int = safeConf(config.getInt)("ui.http.port")
+  def httpKioskEnabled: Boolean = safeConf(config.getBoolean)("ui.kiosk.enable")
+  def httpKioskUser: String = safeConf(config.getString)("ui.kiosk.user")
+  def httpKioskPass: String = safeConf(config.getString)("ui.kiosk.pass")
 
   lazy val validationInterval: FiniteDuration = {
     val interval = FiniteDuration(config.getDuration("validation.interval", TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
@@ -59,20 +59,30 @@ object ApplicationOptions {
     }
   }
 
-  def rtrPort: Int = config.getInt("rtr.port")
-  def rtrCloseOnError: Boolean = config.getBoolean("rtr.close-on-error")
-  def rtrSendNotify: Boolean = config.getBoolean("rtr.send-notify")
+  def rtrPort: Int = safeConf(config.getInt)("rtr.port")
+  def rtrCloseOnError: Boolean = safeConf(config.getBoolean)("rtr.close-on-error")
+  def rtrSendNotify: Boolean = safeConf(config.getBoolean)("rtr.send-notify")
 
   private def resolveFile(path: String, fileName: String): File = new File(path + File.separator + fileName)
 
-  def dataFileLocation = resolveFile(config.getString("locations.datadir"), "data.json")
-  def talDirLocation = new File(config.getString("locations.taldir"))
-  def workDirLocation = new File(config.getString("locations.workdir"))
+  def dataFileLocation = safeConf(s => resolveFile(config.getString(s), "data.json"))("locations.datadir")
+  def talDirLocation = safeConf(s => new File(config.getString(s)))("locations.taldir")
+  def trustedSslCertsLocation = safeConf(s => new File(config.getString(s)))("locations.trusted.ssl.dir")
+  def workDirLocation = safeConf(s => new File(config.getString(s)))("locations.workdir")
+  def rsyncDirLocation = safeConf(config.getString)("locations.rsyncdir")
 
-  def applicationLogFileName = config.getString("logging.application.file")
-  def rtrLogFileName = config.getString("logging.rtr.file")
-  def accessLogFileName = config.getString("logging.access.file")
+  def applicationLogFileName = safeConf(config.getString)("logging.application.file")
+  def rtrLogFileName = safeConf(config.getString)("logging.rtr.file")
+  def accessLogFileName = safeConf(config.getString)("logging.access.file")
 
-  def enableLooseValidation = config.getBoolean("validation.loose")
+  def enableLooseValidation = safeConf(config.getBoolean)("validation.loose")
+
+  private def safeConf[T](f: String => T)(name: String) : T = try {
+    f(name)
+  } catch {
+    case e: Throwable =>
+      logger.error("Couldn't extract property " + name, e)
+      throw e
+  }
 
 }

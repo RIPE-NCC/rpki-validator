@@ -31,47 +31,43 @@ package net.ripe.rpki.validator.models
 
 import java.io.File
 import java.net.URI
-import scala.collection.JavaConverters._
-import scala.concurrent.stm.Ref
-import scala.concurrent.stm.atomic
-import scala.math.Ordering.Implicits._
-import org.joda.time.DateTime
-import grizzled.slf4j.Logger
-import grizzled.slf4j.Logging
-import net.ripe.rpki.validator.commands.TopDownWalker
-import net.ripe.rpki.validator.util.TrustAnchorLocator
-import net.ripe.rpki.validator.util.UriToFileMapper
+
+import grizzled.slf4j.{Logger, Logging}
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
-import net.ripe.rpki.commons.rsync.Rsync
-import net.ripe.rpki.commons.validation.ValidationLocation
-import net.ripe.rpki.commons.validation.ValidationOptions
-import net.ripe.rpki.commons.validation.ValidationResult
-import net.ripe.rpki.commons.validation.ValidationString
+import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceCertificate}
+import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationOptions, ValidationResult, ValidationString}
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.rpki.commons.crypto.x509cert.X509CertificateUtil
-import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.validator.config.{ApplicationOptions, MemoryImage}
 import net.ripe.rpki.validator.fetchers._
 import net.ripe.rpki.validator.lib.HashSupport
+import net.ripe.rpki.validator.models.validation.{CertificateObject, RepoFetcher}
+import net.ripe.rpki.validator.store.{CacheStore, DataSources}
+import net.ripe.rpki.validator.util.TrustAnchorLocator
+import org.joda.time.{Instant, DateTime}
+
+import scala.collection.JavaConverters._
+import scala.concurrent.stm.{Ref, atomic}
+import scala.math.Ordering.Implicits._
+import scalaz.{Failure, Success, Validation}
 
 // Ignore unused warning for implicit def from net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.rpki.validator.lib.DateAndTime._
-import net.ripe.rpki.validator.store.DataSources
-import net.ripe.rpki.validator.store.RepositoryObjectStore
-import scalaz._
+
+import net.ripe.rpki.validator.store.{DurableCaches, CacheStore, DataSources, RepositoryObjectStore}
 import org.apache.commons.io.FileUtils
+
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
   def isRunning: Boolean = !isIdle
 }
 case class Idle(nextUpdate: DateTime, errorMessage: Option[String] = None) extends ProcessingStatus {
-  def isIdle = true
+  val isIdle = true
 }
 case class Running(description: String) extends ProcessingStatus {
-  def isIdle = false
+  val isIdle = false
 }
 
 case class TrustAnchorData(enabled: Boolean = true)
@@ -201,89 +197,59 @@ trait ValidationProcess {
   def shutdown(): Unit = {}
 }
 
-class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int, workingDirectory: File, enableLooseValidation: Boolean = false) extends ValidationProcess {
+class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int,
+                                   storageDirectory: File,
+                                   rsyncDir: String,
+                                   taName: String,
+                                   enableLooseValidation: Boolean = false)
+  extends ValidationProcess {
 
   private val validationOptions = new ValidationOptions()
-  private val RsyncDiskCacheBasePath = workingDirectory.toString + File.separator + "cache" + File.separator
-  private val RepositoryObjectStore = DataSources.DurableDataSource(workingDirectory)
 
   validationOptions.setMaxStaleDays(maxStaleDays)
   validationOptions.setLooseValidationEnabled(enableLooseValidation)
 
-  override def extractTrustAnchorLocator() = {
+  val store = DurableCaches(storageDirectory)
+  val repoService = new RepoService(RepoFetcher(storageDirectory, FetcherConfig(rsyncDir)))
+
+  override def extractTrustAnchorLocator(): ValidatedObject = {
     val uri = trustAnchorLocator.getCertificateLocation
 
     val validationResult = ValidationResult.withLocation(uri)
 
-    consistentObjectFetcher.getTrustAnchorCertificate(uri, validationResult) match {
-      case Some(certificate) =>
-        validationResult.rejectIfFalse(trustAnchorLocator.getPublicKeyInfo == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.getCertificate), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
-        if (validationResult.hasFailureForCurrentLocation) {
-          InvalidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
-        } else {
-          ValidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, certificate)
-        }
-      case None =>
-        InvalidObject(uri, validationResult.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
+    val errors = repoService.visitObject(uri)
+    errors.foreach(e => validationResult.error(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, e.toString))
+
+    val certificate = store.getCertificate(uri.toString)
+    if (certificate.isDefined) {
+      validationResult.rejectIfFalse(keyInfoMatches(certificate.get), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
+    } else {
+      validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, "Trust Anchor Certificate")
     }
+
+    if (validationResult.hasFailureForCurrentLocation)
+      InvalidObject(uri, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
+    else
+      ValidObject(uri, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet, certificate.get.decoded)
   }
 
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    val builder = Map.newBuilder[URI, ValidatedObject]
-    val fetcher = createFetcher(new RoaCollector(trustAnchorLocator, builder) +: objectFetcherListeners: _*)
+    val startTime = Instant.now
+    trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
+    val walker = new TopDownWalker(certificate, store, repoService, validationOptions, startTime)(scala.collection.mutable.Set())
+    val result: Map[URI, ValidatedObject] = walker.execute
+    store.clearObjects(startTime)
+    result
+  }
 
-    // purge cache
-    val cache = new RepositoryObjectStore(RepositoryObjectStore)
-    cache.purgeExpired(maxStaleDays)
-
-    trustAnchorLocator.getPrefetchUris.asScala.foreach { prefetchUri =>
-
-      logger.info("Prefetching '" + prefetchUri + "'")
-      val validationResult = ValidationResult.withLocation(prefetchUri)
-
-      fetcher.prefetch(prefetchUri, validationResult)
-      logger.info("Done prefetching for '" + prefetchUri + "'")
-    }
-
-    val walker = new TopDownWalker(fetcher)
-    walker.addTrustAnchor(certificate)
-    walker.execute()
-
-    builder.result()
+  private def keyInfoMatches(certificate: CertificateObject): Boolean = {
+    trustAnchorLocator.getPublicKeyInfo == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.decoded.getCertificate)
   }
 
   def wipeRsyncDiskCache() {
-    val diskCache = new File(RsyncDiskCacheBasePath)
+    val diskCache = new File(ApplicationOptions.rsyncDirLocation)
     if (diskCache.isDirectory) {
       FileUtils.cleanDirectory(diskCache)
-    }
-  }
-
-  private def createFetcher(listeners: NotifyingCertificateRepositoryObjectFetcher.Listener*): CertificateRepositoryObjectFetcher = {
-    val validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(consistentObjectFetcher, validationOptions)
-    val notifyingFetcher = new NotifyingCertificateRepositoryObjectFetcher(validatingFetcher)
-    val cachingFetcher = new CachingCertificateRepositoryObjectFetcher(notifyingFetcher)
-    validatingFetcher.setOuterMostDecorator(cachingFetcher)
-
-    listeners.foreach(notifyingFetcher.addCallback)
-
-    cachingFetcher
-  }
-
-  private[this] lazy val consistentObjectFetcher = {
-    val rsync = new Rsync()
-    rsync.setTimeoutInSeconds(300)
-    val rsyncFetcher = new RsyncRpkiRepositoryObjectFetcher(rsync, new UriToFileMapper(new File(RsyncDiskCacheBasePath  + trustAnchorLocator.getFile.getName)))
-    new ConsistentObjectFetcher(rsyncFetcher, new RepositoryObjectStore(RepositoryObjectStore))
-  }
-
-  private class RoaCollector(trustAnchor: TrustAnchorLocator, objects: collection.mutable.Builder[(URI, ValidatedObject), _]) extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
-    override def afterFetchFailure(uri: URI, result: ValidationResult) {
-      objects += uri -> new InvalidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet)
-    }
-
-    override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
-      objects += uri -> new ValidObject(uri, result.getAllValidationChecksForLocation(new ValidationLocation(uri)).asScala.toSet, obj)
     }
   }
 }

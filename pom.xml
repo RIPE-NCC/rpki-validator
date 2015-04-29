@@ -47,8 +47,8 @@
         <build.number>${project.version}</build.number>
         <scala.version>2.10.4</scala.version>
         <scala.binary.version>2.10</scala.binary.version>
-        <scalatra.version>2.2.0</scalatra.version>
-        <rpki.commons.version>1.0.40</rpki.commons.version>
+        <scalatra.version>2.3.1</scalatra.version>
+        <rpki.commons.version>1.1.0-SNAPSHOT</rpki.commons.version>
         <org.springframework.version>3.1.1.RELEASE</org.springframework.version>
         <commons.io.version>2.4</commons.io.version>
         <jodatime.version>1.6.2</jodatime.version>
@@ -238,6 +238,13 @@
                 <scope>test</scope>
             </dependency>
 
+            <dependency>
+                <groupId>org.scalacheck</groupId>
+                <artifactId>scalacheck_${scala.binary.version}</artifactId>
+                <version>1.10.1</version>
+                <scope>test</scope>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -247,7 +254,7 @@
                 <groupId>com.atlassian.maven.plugins</groupId>
                 <artifactId>maven-clover2-plugin</artifactId>
                 <configuration>
-                    <jdk>1.6</jdk>
+                    <jdk>1.7</jdk>
                     <licenseLocation>${clover2.licenseLocation}</licenseLocation>
                     <generateXml>true</generateXml>
                     <includesTestSourceRoots>false</includesTestSourceRoots>
@@ -343,10 +350,10 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.1</version>
+                    <version>3.3</version>
                     <configuration>
-                        <source>1.6</source>
-                        <target>1.6</target>
+                        <source>1.7</source>
+                        <target>1.7</target>
                         <encoding>UTF-8</encoding>
                     </configuration>
                 </plugin>
@@ -354,7 +361,7 @@
                 <plugin>
                     <groupId>net.alchim31.maven</groupId>
                     <artifactId>scala-maven-plugin</artifactId>
-                    <version>3.1.6</version>
+                    <version>3.2.0</version>
                     <configuration>
                         <scalaVersion>${scala.version}</scalaVersion>
                     </configuration>

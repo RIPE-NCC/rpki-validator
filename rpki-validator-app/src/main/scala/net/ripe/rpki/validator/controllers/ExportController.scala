@@ -30,6 +30,10 @@
 package net.ripe.rpki.validator
 package controllers
 
+import net.ripe.ipresource._
+import net.ripe.rpki.commons.validation.roa.AllowedRoute
+import org.joda.time.DateTime
+import org.joda.time.format.ISODateTimeFormat
 import views.ExportView
 import models.RtrPrefix
 import net.liftweb.json._
@@ -69,6 +73,57 @@ trait ExportController extends ApplicationController {
         ("maxLength" -> rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
     )
     response.getWriter.write(compact(render(("roas" -> roas))))
+  }
+
+  get("/export.rpsl") {
+
+    contentType = "text/plain"
+    response.addHeader("Pragma", "public")
+    response.addHeader("Cache-Control", "no-cache")
+
+    val writer = response.getWriter
+    getRtrPrefixes.foreach { rtr =>
+
+      val caName = if(rtr.trustAnchorLocator.isEmpty) "UNKNOWN" else rtr.trustAnchorLocator.get.getCaName.replace(' ', '-').toUpperCase
+      val dateTime = ISODateTimeFormat.dateTimeNoMillis().withZoneUTC().print(DateTime.now)
+
+      val allowedRoute = new AllowedRoute(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
+      forAllRanges(allowedRoute.getPrefix, allowedRoute.getMaximumLength) { range: IpRange =>
+        val version = if(IpResourceType.IPv6 == range.getType) "6" else ""
+
+        writer.write(s"""
+                   |route$version: $range
+                   |origin: ${allowedRoute.getAsn}
+                   |descr: exported from ripe ncc validator
+                   |mnt-by: NA
+                   |created: $dateTime
+                   |last-modified: $dateTime
+                   |source: ROA-$caName
+                   |""".stripMargin)
+
+      }
+    }
+  }
+
+  private def forAllRanges(prefix: IpRange, maxPrefixLength: Int)(printRange: IpRange => Unit) {
+    import scala.collection.JavaConversions._
+    val ips = prefix.splitToPrefixes().map(_.getStart)
+
+    ips.foreach { ip =>
+      walkAllRanges(ip.lowerBoundForPrefix(prefix.getPrefixLength), prefix.getPrefixLength, maxPrefixLength, printRange)
+    }
+  }
+
+  private def walkAllRanges(ip: IpAddress, prefixLength: Int, maxPrefixLength:Int, printRange: IpRange => Unit) {
+    val lower = ip.lowerBoundForPrefix(prefixLength)
+    val upper = ip.upperBoundForPrefix(prefixLength)
+
+    printRange(IpRange.range(lower, upper))
+
+    if(prefixLength < maxPrefixLength) {
+      walkAllRanges(lower, prefixLength + 1, maxPrefixLength, printRange)
+      walkAllRanges(upper, prefixLength + 1, maxPrefixLength, printRange)
+    }
   }
 
 }

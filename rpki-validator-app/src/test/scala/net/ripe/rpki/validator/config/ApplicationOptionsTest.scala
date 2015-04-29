@@ -72,6 +72,10 @@ class ApplicationOptionsTest extends ValidatorTestCase {
     ApplicationOptions.talDirLocation should equal(new File("conf/tal"))
   }
 
+  test("Should use conf/ssl as default trusted ssl certificates dir") {
+    ApplicationOptions.trustedSslCertsLocation should equal(new File("conf/ssl"))
+  }
+
   test("Should use tmp as default work directory") {
     ApplicationOptions.workDirLocation should equal(new File("tmp"))
   }
@@ -89,6 +93,10 @@ class ApplicationOptionsTest extends ValidatorTestCase {
   }
 
   test("Should use 3 hours as the default interval for validation") {
-    ApplicationOptions.validationInterval should equal(3.hours)
+    ApplicationOptions.validationInterval should equal(10.minutes)
+  }
+
+  test("Should use data/rsync as the default directory for rsync-based repositories") {
+    ApplicationOptions.rsyncDirLocation should equal("data/rsync")
   }
 }
