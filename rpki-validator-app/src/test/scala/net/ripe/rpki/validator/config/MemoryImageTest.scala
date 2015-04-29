@@ -120,4 +120,10 @@ class MemoryImageTest extends ValidatorTestCase with BeforeAndAfterAll with Befo
     distinctRoaPrefixes should contain (ASN2_TO_ROA_PREFIX_V4_1)
     distinctRoaPrefixes should contain (ASN3_TO_WHITELIST1)
   }
+
+  test("Should have default data if no trust anchor exists/is enabled and there is not data") {
+    subject = MemoryImage(Filters(), Whitelist(), new TrustAnchors(Seq.empty), new ValidatedObjects(Map.empty))
+    subject.version should be(0)
+    subject.getDistinctRtrPrefixes should be('empty)
+  }
 }
