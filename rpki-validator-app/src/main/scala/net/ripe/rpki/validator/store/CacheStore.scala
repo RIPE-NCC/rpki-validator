@@ -90,7 +90,6 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
            WHERE NOT EXISTS (
              SELECT * FROM repo_objects
              WHERE hash = :hash
-             AND   url  = :url
            )
         """, params)
     }
