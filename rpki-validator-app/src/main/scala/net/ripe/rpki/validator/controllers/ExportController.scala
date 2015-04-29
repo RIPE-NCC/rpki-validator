@@ -30,7 +30,7 @@
 package net.ripe.rpki.validator
 package controllers
 
-import net.ripe.ipresource._
+import net.ripe.ipresource.{IpResourceType, IpAddress, IpRange}
 import net.ripe.rpki.commons.validation.roa.AllowedRoute
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
@@ -87,7 +87,9 @@ trait ExportController extends ApplicationController {
       val caName = if(rtr.trustAnchorLocator.isEmpty) "UNKNOWN" else rtr.trustAnchorLocator.get.getCaName.replace(' ', '-').toUpperCase
       val dateTime = ISODateTimeFormat.dateTimeNoMillis().withZoneUTC().print(DateTime.now)
 
-      val allowedRoute = new AllowedRoute(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
+      val maximumLengthForExport = getMaximumLengthForExport(rtr.prefix.getPrefixLength, rtr.maxPrefixLength)
+      val allowedRoute = new AllowedRoute(rtr.asn, rtr.prefix, maximumLengthForExport)
+
       forAllRanges(allowedRoute.getPrefix, allowedRoute.getMaximumLength) { range: IpRange =>
         val version = if(IpResourceType.IPv6 == range.getType) "6" else ""
 
@@ -102,6 +104,17 @@ trait ExportController extends ApplicationController {
                    |""".stripMargin)
 
       }
+    }
+  }
+
+  private def getMaximumLengthForExport(prefixLength:Int, maxPrefixLength: Option[Int]) = {
+    val delta = 8
+    val ml = maxPrefixLength.getOrElse(prefixLength)
+
+    if((ml-prefixLength) > delta) {
+      prefixLength+delta
+    } else {
+      ml
     }
   }
 
