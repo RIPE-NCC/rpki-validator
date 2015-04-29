@@ -181,6 +181,67 @@ e.g.
 Full documentation can be found here:
 
   https://www.ripe.net/developers/rpki-validator-api
+  
+RPSL route object output (beta)
+-------------------------------
+
+With version 2.18 we have added beta support for exporting the full validated ROA set
+in RPSL route object format: http://yourhost:http-port/export.rpsl
+
+This beta feature is intended to make it easier to integrate using ROA data in an existing
+RPSL based tool chain. When using this feature please keep the following in mind:
+
+ 1) Mandatory attributes missing from ROAs
+ 
+    ROAs do not have data for all mandatory attributes in (RIPE) route objects.
+    Generated 'pseudo' route objects currently look like this:
+    
+      route: 10.0.0.0/24
+      origin: AS65001
+      descr: exported from ripe ncc validator
+      mnt-by: NA
+      created: 2015-04-28T09:57:21Z
+      last-modified: 2015-04-28T09:57:21Z
+      source: ROA-TRUST-ANCHOR-NAME
+    
+    The 'route:' and 'origin:' values are taken from the ROA, and the 'source:' reflects
+    the Trust Anchor where the ROA was found.
+    
+    The 'mnt-by:' value is meant to indicate 'not applicable'. And the values for 'created:'
+    and 'last-modified:' use the time of the export.
+
+ 2) ROAs can have a 'maximum length' attribute
+ 
+    The maximum length parameter in ROAs can be used as a shorthand in case a prefix has
+    de-aggregated announcements from a single ASN. Rather than having to create ROAs for
+    each prefix the ROA can specify a maximum length. For example:
+    
+      prefix: 10.0.0.0/22
+      max length: 24
+      ASN: 65001
+      
+      Implies that 10.0.0.0/22 can be announced from AS65001, but also 10.0.0.0/23 and
+      10.0.2.0/23, as well as 10.0.0.0/24, 10.0.1.0/24, 10.0.2.0/24 and 10.0.3.0/24.
+      
+    When converting ROAs to route objects we currently generate objects for each more
+    specific announcement. However, since this could result in an enourmous amount of
+    more specifics, we have to put limits on this. Especially in IPv6 space this could
+    result in millions of objects. Therefore we currently only create objects for the
+    prefix itself and more specifics up to 8 bits.
+
+ 3) Difference in authorisation model
+ 
+    In contrast to ROUTE objects ROAs are only authorised by the holder of the prefix,
+    not the holder of the ASN. The reasoning behind this is that it's the holder of the
+    prefix who gets to authorise an ASN to announce the space, but the authorisation by
+    the ASN is implicit by them actually announcing this space, or not.
+    
+    If this distinction is important to your decision process then you may not want to
+    use this feature.
+
+Please let us know what you think.
+  
+
 
 Deep Links
 ----------
@@ -236,9 +297,14 @@ Version History
 ---------------
 
 2.18 - 28 April 2015
-
+= Updated validation algorithm in preperation of alternative RPKI data retrieval protocol
 = Added initial support for new RPKI data retrieval protocol. Documented here:
   https://datatracker.ietf.org/doc/draft-ietf-sidr-delta-protocol/
+= Added beta support for exporting ROAs in RPSL route object format. Feedback welcome!
+= Improved some error handling and reporting
+    - rejecting expired TA certificate
+    - report on retrieval errors separate from validation errors
+
 
 2.17 - 3 July 2014
 = Added a configuration file option to manually set the update interval of the 
