@@ -138,7 +138,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
           }
         })
     }
-    a.isSuccess
+    println(a.isSuccess)
     a.toOption
   }
 
