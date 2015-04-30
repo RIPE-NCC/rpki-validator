@@ -224,7 +224,7 @@ RPSL based tool chain. When using this feature please keep the following in mind
       10.0.2.0/23, as well as 10.0.0.0/24, 10.0.1.0/24, 10.0.2.0/24 and 10.0.3.0/24.
       
     When converting ROAs to route objects we currently generate objects for each more
-    specific announcement. However, since this could result in an enourmous amount of
+    specific announcement. However, since this could result in an enormous amount of
     more specifics, we have to put limits on this. Especially in IPv6 space this could
     result in millions of objects. Therefore we currently only create objects for the
     prefix itself and more specifics up to 8 bits.

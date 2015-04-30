@@ -38,8 +38,9 @@ class ExportView extends View with ViewHelpers {
     <h2>Export</h2>
       <p>
         Here you are able to export the complete ROA data set for use in an existing BGP decision making workflow. The
-        output will be in CSV or JSON format and consist of all validated ROAs, minus your ignore filter entries,
-        plus your whitelist additions.
+        output will be in CSV, JSON or RPSL format and consist of all validated ROAs, minus your ignore filter entries,
+        plus your whitelist additions. The output in RPSL format is in <strong>beta</strong>, please refer to the
+        README for details.
       </p>
       <div class="alert-actions">
         <a href="export.csv" class="btn">Get CSV</a>
