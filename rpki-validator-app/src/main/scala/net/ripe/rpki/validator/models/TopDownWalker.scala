@@ -342,15 +342,16 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
     entries.foreach { e =>
       val (uri, hash) = e
-      val obj = store.getObject(HashUtil.stringify(hash))
+      var hashStr: String = HashUtil.stringify(hash)
+      val obj = store.getObject(hashStr)
 
       if (obj.isEmpty)
-        errors += error(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, certificateSkiHex)
+        errors += error(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, hashStr)
       else
         obj.foreach { o =>
           foundObjects += o
           if (o.url != uri.toString) {
-            errors += error(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, certificateSkiHex)
+            errors += error(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, hashStr)
           }
         }
     }

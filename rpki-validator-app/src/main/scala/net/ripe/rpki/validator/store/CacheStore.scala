@@ -45,7 +45,7 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.{TransactionCallback, TransactionTemplate}
 
 import scala.collection.JavaConversions._
-import scala.util.Try
+import scala.util.{Success, Failure, Try}
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
@@ -90,6 +90,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
            WHERE NOT EXISTS (
              SELECT * FROM repo_objects
              WHERE hash = :hash
+             AND   url  = :url
            )
         """, params)
     }
@@ -118,7 +119,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       }).toSeq
 
   override def getObject(hash: String): Option[RepositoryObject.ROType] = {
-    val a = Try {
+    Try {
       template.queryForObject(
         """SELECT encoded, validation_time, object_type, url
         FROM repo_objects
@@ -136,8 +137,12 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
             }
           }
         })
+    } match {
+      case Success(obj) => Some(obj)
+      case Failure(err) =>
+        logger.error(err.toString)
+        None
     }
-    a.toOption
   }
 
   def clear() = {
