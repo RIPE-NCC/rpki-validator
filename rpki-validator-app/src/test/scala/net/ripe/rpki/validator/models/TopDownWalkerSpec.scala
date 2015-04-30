@@ -162,14 +162,14 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     storage.storeCrl(CrlObject(URI.create("rsync://foo.host/bar/child.crl").toString, childCrl))
 
     createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
-      childCrl.getEncoded, (certificateLocation, certificate.getEncoded))     // Note that the child Mft holds a reference to its parent certificate
+      childCrl.getEncoded, (rootResourceCertificate.getRepositoryUri, rootResourceCertificate.getEncoded))     // Note that the child Mft holds a reference to the root certificate
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
 
-    result.get(certificateLocation).get.checks should not be ('empty)
-    result.get(certificateLocation).get.isValid should be(false)
+    result.get(childManifestLocation).get.checks should not be ('empty)
+    result.get(childManifestLocation).get.isValid should be(false)
   }
 
   test("should give error when object referenced in manifest is not found by its hash") {
