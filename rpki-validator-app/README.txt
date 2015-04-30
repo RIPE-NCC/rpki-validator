@@ -296,8 +296,8 @@ Known Issues
 Version History
 ---------------
 
-2.18 - 28 April 2015
-= Updated validation algorithm in preperation of alternative RPKI data retrieval protocol
+2.18 - 30 April 2015
+= Updated validation algorithm in preparation of alternative RPKI data retrieval protocol
 = Added initial support for new RPKI data retrieval protocol. Documented here:
   https://datatracker.ietf.org/doc/draft-ietf-sidr-delta-protocol/
 = Added beta support for exporting ROAs in RPSL route object format. Feedback welcome!
