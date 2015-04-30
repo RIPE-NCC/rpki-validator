@@ -137,10 +137,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
           }
         })
     }
-    println(a.isSuccess)
     a.toOption
   }
-
 
   def clear() = {
     template.update(s"TRUNCATE TABLE repo_objects", Map.empty[String, Object])

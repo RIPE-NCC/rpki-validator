@@ -117,36 +117,28 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       new { val cert = c; val validatedObject = v; val valid = c.decoded.isObjectIssuer && v._2.isValid; }
     }
 
-    val everythingValidated = Seq(roas.map(validatedObject(checkMap)),
-      validatedCerts.map(_.validatedObject),
-      crlList.map(validatedObject(checkMap)),
-      Seq(manifest).map(validatedObject(checkMap)),
-      validatedCerts.filter(_.valid).map(_.cert).flatMap(stepDown)
-    )
+    val everythingValidated = roas.map(validatedObject(checkMap)) ++
+      validatedCerts.map(_.validatedObject) ++
+      crlList.map(validatedObject(checkMap)) ++
+      Seq(manifest).map(validatedObject(checkMap)) ++
+      validatedCerts.filter(_.valid).map(_.cert).flatMap(stepDown(manifest))
 
     mergeTwiceValidatedObjects(everythingValidated)
   }
 
-  def mergeTwiceValidatedObjects(everythingValidated: Seq[Seq[(URI, ValidatedObject)]]): Map[URI, ValidatedObject] = {
-    everythingValidated.map(_.toMap).fold(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
+  def mergeTwiceValidatedObjects(everythingValidated: Seq[(URI, ValidatedObject)]): Map[URI, ValidatedObject] = {
+    everythingValidated.foldLeft(Map[URI, ValidatedObject]()) { (objects, m) => merge(objects, m) }
   }
 
-  private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
-    val validatedObjects = validatedObjectMap.keySet.map(_.toString)
-    validatedObjects.foreach { uri =>
-      logger.debug("Setting validation time for the object: " + uri)
+  private def merge(m: Map[URI, ValidatedObject], v: (URI, ValidatedObject)): Map[URI, ValidatedObject] = {
+    val (uri, obj) = v
+    val existingEntry = m.get(uri)
+    if (existingEntry.isDefined) {
+      val merged = merge(existingEntry.get, obj)
+      m.updated(uri, merged)
+    } else {
+      m + v
     }
-    store.updateValidationTimestamp(validatedObjects)
-  }
-
-  private def merge(m1: Map[URI, ValidatedObject], m2: Map[URI, ValidatedObject]): Map[URI, ValidatedObject] = {
-    m1.map { e1 =>
-      val (u1, v1) = e1
-      m2.get(u1) match {
-        case None => e1
-        case Some(v2) => (u1, merge(v1, v2))
-      }
-    } ++ m2.filterKeys(!m1.contains(_))
   }
 
   private def merge(vo1: ValidatedObject, vo2: ValidatedObject): ValidatedObject = {
@@ -156,6 +148,14 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       case (ValidObject(u1, checks1, _), InvalidObject(u2, checks2)) => InvalidObject(u1, checks1 ++ checks2)
       case (ValidObject(u1, checks1, obj1), ValidObject(u2, checks2, obj2)) => ValidObject(u1, checks1 ++ checks2, obj1)
     }
+  }
+
+  private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
+    val validatedObjects = validatedObjectMap.keySet.map(_.toString)
+    validatedObjects.foreach { uri =>
+      logger.debug("Setting validation time for the object: " + uri)
+    }
+    store.updateValidationTimestamp(validatedObjects)
   }
 
   private def validatedObject(checkMap: Map[ValidationLocation, List[Check]])(r: RepositoryObject.ROType): (URI, ValidatedObject) = {
@@ -189,12 +189,19 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     new IpResourceSet(resources)
   }
 
-  private def stepDown(cert: RepositoryObject[X509ResourceCertificate]): Map[URI, ValidatedObject] = {
+  private def stepDown(parentManifest: ManifestObject)(cert: RepositoryObject[X509ResourceCertificate]): Map[URI, ValidatedObject] = {
     val childCert = cert.decoded
-    val ski: String = HashUtil.stringify(childCert.getSubjectKeyIdentifier)
+    val ski = HashUtil.stringify(childCert.getSubjectKeyIdentifier)
     if (seen.contains(ski)) {
-      logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
-      Map()
+      val mftUri = new URI(parentManifest.url)
+      if (childCert.isRoot) {
+        val check = new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_ROOT_CERTIFICATE_INCLUDED_IN_MANIFEST)
+        Map(mftUri -> ValidObject(mftUri, Set(check), childCert))
+      } else {
+        logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
+        val check = new ValidationCheck(ValidationStatus.ERROR, VALIDATOR_CIRCULAR_REFERENCE, certificateContext.getLocation.toString, cert.url.toString)
+        Map(mftUri -> InvalidObject(mftUri, Set(check)))
+      }
     } else {
       val childResources = if (childCert.isResourceSetInherited) getResourcesOfType(childCert.getInheritedResourceTypes, certificateContext.getResources) else childCert.getResources
       val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), childCert, childResources)
