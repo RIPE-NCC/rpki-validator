@@ -1,0 +1,2 @@
+If you have additional (not known by your Java installation) SSL certificates
+that you want to trust, copy them in this directory.
