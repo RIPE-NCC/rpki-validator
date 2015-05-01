@@ -262,6 +262,7 @@
                     maven-assembly-plugin. In order to avoid double packaging we exclude them from the final jar -->
                     <excludes>
                         <exclude>tal/</exclude>
+                        <exclude>ssl/</exclude>
                         <exclude>**/application.conf</exclude>
                     </excludes>
                 </configuration>
@@ -318,10 +319,12 @@
                         <exclude>**/*.IPv4</exclude>
                         <exclude>**/*.IPv6</exclude>
                         <exclude>**/*.sql</exclude>
+                        <exclude>**/*.keystore</exclude>
                         <exclude>pom.xslt</exclude>
                         <exclude>src/main/resources/public/javascript/datatables/**</exclude>
                         <exclude>src/main/resources/public/javascript/bootstrap/**</exclude>
                         <exclude>src/main/resources/public/stylesheets/bootstrap/**</exclude>
+                        <exclude>src/test/resources/trusted.ssl.certs/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>
