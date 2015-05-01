@@ -342,7 +342,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
     entries.foreach { e =>
       val (uri, hash) = e
-      var hashStr: String = HashUtil.stringify(hash)
+      val hashStr: String = HashUtil.stringify(hash)
       val obj = store.getObject(hashStr)
 
       if (obj.isEmpty)
