@@ -19,3 +19,9 @@ rpki-validator-app/.cache
 rpki-validator-app/data
 
 .pregenerated-test-key-pairs.keystore
+
+# Mac OS X
+.DS_Store
+
+# ARIN TAL, can't go into the repository
+rpki-validator-app/conf/tal/arin.tal
