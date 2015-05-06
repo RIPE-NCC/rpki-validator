@@ -49,6 +49,10 @@ object Layouts {
     <html lang="en">
       <head>
         <meta charset="utf-8"/>
+        <meta name="description" content="Publicly available RPKI validator provided by NZRS to ensure routers can perform prefix origin verification"/>
+        <meta name="keywords" content="RPKI validator,NZRS,RIR,Prefix origin verification,Resouce Public Key Infrastructure,RFC 6810"/>
+        <meta name="author" content="NZRS"/>
+
         <title>NZRS RPKI Validator - { view.title }</title>
         <link rel="shortcut icon" href="/favicon.ico"/>
         <link rel="stylesheet" href="/stylesheets/bootstrap/1.3.0/bootstrap.css"/>
@@ -69,6 +73,13 @@ object Layouts {
             $(".dropdown").dropdown();
              });
         // --></script>
+        <!-- Google Analytics -->
+        <script type="text/javascript">
+          (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o), m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+          ga('create', 'UA-31742468-13', 'auto');
+          ga('send', 'pageview');
+        </script>
       </head>
       <body>
         <div class="">
@@ -76,7 +87,7 @@ object Layouts {
             <div class="row" style="position: relative;">
               <div class="span4 nzrs-header-logo">
                 <a href="https://nzrs.net.nz/" title=".nz Registry Services" target="_blank">
-                  <img src="/images/nzrs-logo.png" width="171" height="70"/>
+                  <img src="/images/nzrs-logo.png" alt="NZRS" width="171" height="70"/>
                 </a>
               </div>
 
