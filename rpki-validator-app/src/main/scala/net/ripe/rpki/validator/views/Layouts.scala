@@ -63,7 +63,7 @@ object Layouts {
         <script src="/javascript/bootstrap/1.3.0/bootstrap-twipsy.js"/>
         <script src="/javascript/bootstrap/1.3.0/bootstrap-popover.js"/>
         <script src="/javascript/bootstrap/1.4.0/bootstrap-dropdown.js"/>
-        <script type="text/javascript" charset="utf-8"><!--
+        <script type="text/javascript"><!--
             $(document).ready(function(){
                 $("#feedbackButton").hover(function(){
                         $(this).css("left","0px");
@@ -138,7 +138,7 @@ object Layouts {
           </div>
         </footer>
         <div id="feedbackButton">
-          <a href="mailto:rpki@nzrs.net.nz?subject=RPKI Validator Feedback"><img src="/images/feedback.png" width="41" height="111" alt="Feedback"/></a>
+          <a href="mailto:rpki@nzrs.net.nz?subject=RPKI%20Validator%20Feedback"><img src="/images/feedback.png" width="41" height="111" alt="Feedback"/></a>
         </div>
       </body>
     </html>
