@@ -87,7 +87,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     var objects = List[RepositoryObject.ROType]()
     var withdraws = List[(URI, String)]()
 
-    val errors: Seq[Fetcher.Error] = fetcher.fetchRepo(new URI(rootUrl), new FetcherListener {
+    val errors: Seq[Fetcher.Error] = fetcher.fetch(new URI(rootUrl), new FetcherListener {
       override def processObject(repoObj: RepositoryObject.ROType) = {
         objects = repoObj :: objects
       }

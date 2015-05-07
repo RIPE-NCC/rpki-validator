@@ -40,7 +40,7 @@ import org.apache.http.client.methods.HttpGet
 class SingleObjectHttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
   override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
 
-  def fetchRepo(uri: URI, process: FetcherListener): Seq[Fetcher.Error] = {
+  def fetch(uri: URI, process: FetcherListener): Seq[Fetcher.Error] = {
     tryTo(uri) {
       val response = http.execute(new HttpGet(uri.toString))
       IOUtils.toByteArray(response.getEntity.getContent)

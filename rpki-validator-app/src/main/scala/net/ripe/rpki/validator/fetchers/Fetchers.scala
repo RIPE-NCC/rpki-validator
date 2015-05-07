@@ -48,7 +48,7 @@ trait Fetcher extends Hashing {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
-  def fetchRepo(url: URI, process: FetcherListener): Seq[Error]
+  def fetch(url: URI, process: FetcherListener): Seq[Error]
 
   protected def processObject(uri: URI, bytes: Array[Byte], fetcherListener: FetcherListener): Either[Error, Unit] = {
     def checkIfBroken[T](parsed: => Either[BrokenObject, T]) =

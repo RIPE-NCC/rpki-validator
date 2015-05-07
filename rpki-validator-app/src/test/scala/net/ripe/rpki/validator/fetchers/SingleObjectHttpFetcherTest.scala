@@ -85,7 +85,7 @@ class SingleObjectHttpFetcherTest extends ValidatorTestCase with BeforeAndAfter 
   def fetchRepo(fetcher: SingleObjectHttpFetcher, rootUrl: String) = {
     var objects = List[RepositoryObject.ROType]()
 
-    val errors: Seq[Fetcher.Error] = fetcher.fetchRepo(new URI(rootUrl), new FetcherListener {
+    val errors: Seq[Fetcher.Error] = fetcher.fetch(new URI(rootUrl), new FetcherListener {
       override def processObject(repoObj: RepositoryObject.ROType) = {
         objects = repoObj :: objects
       }

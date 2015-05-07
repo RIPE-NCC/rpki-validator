@@ -48,7 +48,7 @@ class RepoService(fetcher: RepoFetcher) {
   private val locker = RepoService.locker
 
   def visitRepo(uri: URI): Seq[Fetcher.Error] = fetchAndUpdateTime(uri) {
-    fetcher.fetch(uri)
+    fetcher.fetchRepo(uri)
   }
 
   def lastFetchTime(uri: URI): Instant = locker.locked(uri) {

@@ -234,7 +234,7 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
 
   def fetchObject(objectUri: URI): Seq[Fetcher.Error] = {
     val fetcher = objectUri.getScheme match {
-      case "rsync" => new RsyncFetcher(config)
+      case "rsync" => new SingleObjectRsyncFetcher(config)
       case "http" | "https" => new SingleObjectHttpFetcher(httpStore)
       case _ => throw new Exception(s"No fetcher for the object $objectUri")
     }
@@ -242,7 +242,7 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
     fetch(objectUri, fetcher)
   }
 
-  def fetch(repoUri: URI): Seq[Fetcher.Error] = {
+  def fetchRepo(repoUri: URI): Seq[Fetcher.Error] = {
     val fetcher = repoUri.getScheme match {
       case "rsync" => new RsyncFetcher(config)
       case "http" | "https" => new HttpFetcher(httpStore)
@@ -254,7 +254,7 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
 
   private def fetch(repoUri: URI, fetcher: Fetcher): Seq[Fetcher.Error] = {
     storage.atomic {
-      fetcher.fetchRepo(repoUri, new FetcherListener {
+      fetcher.fetch(repoUri, new FetcherListener {
         override def processObject(repoObj: RepositoryObject.ROType) = {
           repoObj match {
             case c: CertificateObject => storage.storeCertificate(c)

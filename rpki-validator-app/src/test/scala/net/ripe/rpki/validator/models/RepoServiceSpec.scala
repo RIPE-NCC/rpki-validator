@@ -51,7 +51,7 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
     val uri = new URI("http://foo.bar/bla")
 
     repoService1.visitRepo(uri)
-    Mockito.verify(fetcher1).fetch(uri)
+    Mockito.verify(fetcher1).fetchRepo(uri)
   }
 
   test("should NOT fetch if URI was just visited") {
@@ -60,7 +60,7 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
     repoService1.visitRepo(uri)
     repoService1.visitRepo(uri)
 
-    Mockito.verify(fetcher1).fetch(uri)
+    Mockito.verify(fetcher1).fetchRepo(uri)
     Mockito.verifyNoMoreInteractions(fetcher1)
   }
 

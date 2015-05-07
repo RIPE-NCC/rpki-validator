@@ -33,18 +33,13 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Files
 
-import net.ripe.rpki.commons.rsync.Rsync
 import org.apache.log4j.Logger
 
-import scala.collection.JavaConversions._
-
-class RsyncFetcher(config: FetcherConfig) extends Fetcher {
+class RsyncFetcher(config: FetcherConfig) extends Fetcher with RsyncSupport {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
   private val logger: Logger = Logger.getLogger(classOf[RsyncFetcher])
-
-  private val OPTIONS = Seq("--update", "--times", "--copy-links", "--recursive", "--delete")
 
   private def walkTree[T1, T2](d: File)(f: File => Either[T1, T2]): Seq[T1] = {
     if (d.isDirectory) {
@@ -53,18 +48,7 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
   }
 
   private[this] def withRsyncDir[T](url: URI)(f: File => T) = {
-    val urlToPath = {
-      val path = url.toString.replaceAll("rsync://", "")
-      val extension = path.takeRight(4).toLowerCase
-
-      val objectExtensions = Set(".cer", ".roa", ".mft", ".crl", ".gbr")
-      if (objectExtensions.contains(extension)) {
-        val lastSlashIndex = path.lastIndexOf("/")
-        path.dropRight(path.length - lastSlashIndex)
-      } else
-        path
-    }
-
+    val urlToPath = url.toString.replaceAll("rsync://", "")
     def destDir = {
       val rsyncPath = new File(config.rsyncDir + "/" + urlToPath)
       if (!rsyncPath.exists) {
@@ -76,21 +60,8 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
     f(destDir)
   }
 
-  def rsyncMethod(url: URI, destDir: File): Option[Error] = {
-    val r = new Rsync(url.toString, destDir.getAbsolutePath)
-    r.addOptions(OPTIONS)
-    try {
-      r.execute match {
-        case 0 => None
-        case code => Some(Error(url, s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}"""))
-      }
-    } catch {
-      case e: Exception => Some(Error(url, s"""Failed with exception, ${e.getMessage}"""))
-    }
-  }
-
-  override def fetchRepo(url: URI, fetcherListener: FetcherListener): Seq[Error] =
-    fetchRepo(url, rsyncMethod, fetcherListener)
+  override def fetch(url: URI, fetcherListener: FetcherListener): Seq[Error] =
+    fetchRepo(url, rsync, fetcherListener)
 
   def fetchRepo(url: URI, method: (URI, File) => Option[Error], fetcherListener: FetcherListener): Seq[Error] = withRsyncDir(url) {
     destDir =>
@@ -111,10 +82,12 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
         f.getAbsolutePath.replaceAll(tmpRoot.getAbsolutePath, replacement))
 
     walkTree(tmpRoot) { file =>
-      processObject(rsyncUrl(file), readFile(file), fetcherListener)
+      readFile(file).right.map { bytes =>
+        processObject(rsyncUrl(file), bytes, fetcherListener)
+      }
     }
   }
 
-  private def readFile(f: File) = Files.readAllBytes(f.toPath)
+  override def options: Seq[String] = Seq("--update", "--times", "--copy-links", "--recursive", "--delete")
 }
 

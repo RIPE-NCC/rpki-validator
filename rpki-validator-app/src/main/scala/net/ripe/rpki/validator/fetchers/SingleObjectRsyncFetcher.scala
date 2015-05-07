@@ -27,29 +27,40 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.models.validation
+package net.ripe.rpki.validator.fetchers
 
 import java.io.File
 import java.net.URI
 
-import net.ripe.rpki.validator.config.ApplicationOptions
-import net.ripe.rpki.validator.fetchers.FetcherConfig
-import net.ripe.rpki.validator.store.{DataSources, CacheStore}
-import net.ripe.rpki.validator.support.ValidatorTestCase
-import org.scalatest.mock.MockitoSugar
+import grizzled.slf4j.Logging
 
-@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
+class SingleObjectRsyncFetcher(config: FetcherConfig) extends Fetcher with RsyncSupport with Logging {
 
-  val storage = new CacheStore(DataSources.InMemoryDataSource)
+  def fetch(uri: URI, fetcherListener: FetcherListener): Seq[Fetcher.Error] = {
 
-  test("Should create different directories for different repo URLs") {
-    val fetcher = RepoFetcher.inMemory(FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation))
-    fetcher.fetchRepo(new URI("rsync://repo1/x/z"))
-    fetcher.fetchRepo(new URI("rsync://repo2/y"))
+    val (fullPath, dirPath) = {
+      val path = uri.toString.replaceAll("rsync://", "")
+      val lastSlashIndex = path.lastIndexOf("/")
+      (path, path.dropRight(path.length - lastSlashIndex))
+    }
 
-    new File(ApplicationOptions.rsyncDirLocation + "/repo1/x").exists should be(true)
-    new File(ApplicationOptions.rsyncDirLocation + "/repo2/y").exists should be(true)
+    def destDir = {
+      val rsyncPath = new File(config.rsyncDir + "/" + dirPath)
+      if (!rsyncPath.exists) {
+        rsyncPath.mkdirs
+      }
+      rsyncPath
+    }
+
+    val error = for {
+      error <- rsync(uri, destDir).toLeft(()).right
+      bytes <- readFile(new File(config.rsyncDir + "/" + fullPath)).right
+      processResult <- processObject(uri, bytes, fetcherListener).right
+    } yield processResult
+
+    error.left.toSeq
   }
 
+
+  override def options: Seq[String] = Seq("--update", "--times", "--copy-links")
 }

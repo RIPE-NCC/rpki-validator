@@ -67,7 +67,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
 
   override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
 
-  override def fetchRepo(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
+  override def fetch(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
 
     val notificationXml = getXml(notificationUrl)
     val notificationDef = notificationXml >>= fetchNotification(notificationUrl)
