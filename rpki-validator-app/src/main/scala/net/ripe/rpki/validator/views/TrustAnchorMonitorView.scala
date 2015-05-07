@@ -93,7 +93,7 @@ class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAncho
 
 
   def renderFetchDetails = {
-    <h3>Fetch error</h3>
+    <h3>Fetch errors</h3>
       <table id="fetch-details-table" class="zebra-striped" style="display: none;" data-source={ s"${Tabs.TrustAnchorMonitorTab.url}/fetch-detail/${ta.identifierHash}" }>
         <thead>
           <tr>
