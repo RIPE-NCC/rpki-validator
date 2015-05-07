@@ -58,14 +58,14 @@ trait Fetcher extends Hashing {
 
     val uriStr = uri.toString
     tryTo(uri) {
-      uriStr.takeRight(3).toLowerCase
+      uriStr.takeRight(4).toLowerCase
     }.right.flatMap { extension =>
       val repoObject = extension match {
-        case "cer" => checkIfBroken(CertificateObject.tryParse(uriStr, bytes))
-        case "mft" => checkIfBroken(ManifestObject.tryParse(uriStr, bytes))
-        case "crl" => checkIfBroken(CrlObject.tryParse(uriStr, bytes))
-        case "roa" => checkIfBroken(RoaObject.tryParse(uriStr, bytes))
-        case "gbr" => checkIfBroken(GhostbustersObject.tryParse(uriStr, bytes))
+        case ".cer" => checkIfBroken(CertificateObject.tryParse(uriStr, bytes))
+        case ".mft" => checkIfBroken(ManifestObject.tryParse(uriStr, bytes))
+        case ".crl" => checkIfBroken(CrlObject.tryParse(uriStr, bytes))
+        case ".roa" => checkIfBroken(RoaObject.tryParse(uriStr, bytes))
+        case ".gbr" => checkIfBroken(GhostbustersObject.tryParse(uriStr, bytes))
         case _ =>
           Left(Error(uri, "Found unknown file $f"))
       }
