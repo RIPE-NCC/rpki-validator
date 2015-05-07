@@ -232,14 +232,14 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
       _.mkString("", "/", "/")
     }
 
-  def fetchObject(repoUri: URI): Seq[Fetcher.Error] = {
-    val fetcher = repoUri.getScheme match {
+  def fetchObject(objectUri: URI): Seq[Fetcher.Error] = {
+    val fetcher = objectUri.getScheme match {
       case "rsync" => new RsyncFetcher(config)
       case "http" | "https" => new SingleObjectHttpFetcher(httpStore)
-      case _ => throw new Exception(s"No fetcher for the object $repoUri")
+      case _ => throw new Exception(s"No fetcher for the object $objectUri")
     }
 
-    fetch(repoUri, fetcher)
+    fetch(objectUri, fetcher)
   }
 
   def fetch(repoUri: URI): Seq[Fetcher.Error] = {

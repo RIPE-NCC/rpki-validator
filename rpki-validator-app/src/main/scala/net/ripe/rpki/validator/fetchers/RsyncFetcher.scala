@@ -53,7 +53,18 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher {
   }
 
   private[this] def withRsyncDir[T](url: URI)(f: File => T) = {
-    def urlToPath = url.toString.replaceAll("rsync://", "")
+    val urlToPath = {
+      val path = url.toString.replaceAll("rsync://", "")
+      val extension = path.takeRight(4).toLowerCase
+
+      val objectExtensions = Set(".cer", ".roa", ".mft", ".crl", ".gbr")
+      if (objectExtensions.contains(extension)) {
+        val lastSlashIndex = path.lastIndexOf("/")
+        path.dropRight(path.length - lastSlashIndex)
+      } else
+        path
+    }
+
     def destDir = {
       val rsyncPath = new File(config.rsyncDir + "/" + urlToPath)
       if (!rsyncPath.exists) {
