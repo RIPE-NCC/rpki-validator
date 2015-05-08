@@ -62,7 +62,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   private val certificateObjectType = "cer"
   private val ghostbustersObjectType = "gbr"
 
-  private val deletionDelay = 2
+  val deletionDelay = 24 * 7
 
   private val locker = new Locker
 
