@@ -351,7 +351,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         obj.foreach { o =>
           foundObjects += o
           if (o.url != uri.toString) {
-            errors += error(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, hashStr)
+            errors += error(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, hashStr, o.url)
           }
         }
     }

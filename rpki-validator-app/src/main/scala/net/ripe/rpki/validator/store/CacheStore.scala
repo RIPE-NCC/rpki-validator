@@ -77,21 +77,23 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   override def storeCrl(crl: CrlObject) = storeRepoObject(crl, crlObjectType)
 
   private def storeRepoObject[T <: CertificateRepositoryObject](obj: RepositoryObject[T], objType: String) =
-    locker.locked(obj.url) {
+    locker.locked(obj.hash) {
       val params = Map("aki" -> stringify(obj.aki),
         "hash" -> stringify(obj.hash),
         "url" -> obj.url,
         "encoded" -> obj.encoded,
         "object_type" -> objType)
 
-      template.update(
-        """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
-           SELECT :aki, :hash, :url, :encoded, :object_type
-           WHERE NOT EXISTS (
-             SELECT * FROM repo_objects
-             WHERE hash = :hash
-           )
-        """, params)
+      val updated = template.update(
+        "UPDATE repo_objects SET url = :url WHERE hash = :hash",
+        params)
+
+      if (updated == 0) {
+        template.update(
+          """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
+           VALUES(:aki, :hash, :url, :encoded, :object_type)
+          """, params)
+      }
     }
 
   override def getCertificate(url: String): Option[CertificateObject] = Try {
