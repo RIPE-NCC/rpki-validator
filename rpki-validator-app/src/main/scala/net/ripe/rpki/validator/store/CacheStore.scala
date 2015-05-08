@@ -78,21 +78,28 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   private def storeRepoObject[T <: CertificateRepositoryObject](obj: RepositoryObject[T], objType: String) =
     locker.locked(obj.hash) {
-      val params = Map("aki" -> stringify(obj.aki),
-        "hash" -> stringify(obj.hash),
-        "url" -> obj.url,
-        "encoded" -> obj.encoded,
-        "object_type" -> objType)
+      try {
+        val params = Map("aki" -> stringify(obj.aki),
+          "hash" -> stringify(obj.hash),
+          "url" -> obj.url,
+          "encoded" -> obj.encoded,
+          "object_type" -> objType)
 
-      val updated = template.update(
-        "UPDATE repo_objects SET url = :url WHERE hash = :hash",
-        params)
+        val updated = template.update(
+          "UPDATE repo_objects SET url = :url WHERE hash = :hash",
+          params)
 
-      if (updated == 0) {
-        template.update(
-          """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
-           VALUES(:aki, :hash, :url, :encoded, :object_type)
-          """, params)
+        if (updated == 0) {
+          template.update(
+            """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
+               VALUES(:aki, :hash, :url, :encoded, :object_type)""",
+            params)
+        }
+      } catch {
+        case e: Exception =>
+          logger.error(s"An error occurred while inserting an object: " +
+            s"url = ${obj.url}, hash = ${stringify(obj.hash)}", e)
+          throw e
       }
     }
 
