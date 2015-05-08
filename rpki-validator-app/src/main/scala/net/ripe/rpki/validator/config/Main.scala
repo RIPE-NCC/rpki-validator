@@ -30,6 +30,7 @@
 package net.ripe.rpki.validator
 package config
 
+import java.io.File
 import java.util.EnumSet
 import javax.servlet.DispatcherType
 
@@ -106,12 +107,11 @@ class Main extends Http with Logging { main =>
     }
   }
 
+  wipeRsyncDiskCache()
+
   val rtrServer = runRtrServer()
 
-
-
   runWebServer()
-
 
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 10.seconds) { runValidator() }
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 2.hours) { refreshRisDumps() }
@@ -292,6 +292,13 @@ class Main extends Http with Logging { main =>
     handlers.addHandler(requestLogHandler)
     server.setHandler(handlers)
     server
+  }
+
+  private def wipeRsyncDiskCache() {
+    val diskCache = new File(ApplicationOptions.rsyncDirLocation)
+    if (diskCache.isDirectory) {
+      FileUtils.cleanDirectory(diskCache)
+    }
   }
 
 }

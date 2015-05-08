@@ -245,13 +245,6 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   private def keyInfoMatches(certificate: CertificateObject): Boolean = {
     trustAnchorLocator.getPublicKeyInfo == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.decoded.getCertificate)
   }
-
-  def wipeRsyncDiskCache() {
-    val diskCache = new File(ApplicationOptions.rsyncDirLocation)
-    if (diskCache.isDirectory) {
-      FileUtils.cleanDirectory(diskCache)
-    }
-  }
 }
 
 trait TrackValidationProcess extends ValidationProcess {
