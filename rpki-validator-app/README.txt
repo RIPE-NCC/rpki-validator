@@ -295,6 +295,8 @@ Known Issues
 
 Version History
 ---------------
+2.19 - 12 May 2015
+= General improvements
 
 2.18 - 30 April 2015
 = Updated validation algorithm in preparation of alternative RPKI data retrieval protocol
@@ -304,7 +306,6 @@ Version History
 = Improved some error handling and reporting
     - rejecting expired TA certificate
     - report on retrieval errors separate from validation errors
-
 
 2.17 - 3 July 2014
 = Added a configuration file option to manually set the update interval of the 
