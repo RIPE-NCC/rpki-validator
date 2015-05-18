@@ -42,9 +42,8 @@ import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
 import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateInformationAccessDescriptor, X509ResourceCertificate, X509ResourceCertificateBuilder}
-import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.rpki.commons.validation.{ValidationStatus, ValidationOptions, ValidationString}
+import net.ripe.rpki.commons.validation.{ValidationOptions, ValidationStatus, ValidationString}
 import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.{CacheStore, DataSources, HttpFetcherStore, Storage}
@@ -337,7 +336,10 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get._3 should have size 1
     result.get._3.head.url should be("rsync://foo.host/bar/ta.crl")
     result.get._3.head.decoded should be(crl)
-    result.get._4 should have size errorNumber
+    result.get._4 should have size 0
+    // result.get._5 should have size 1
+    // TODO verify the invalid object(s)
+    //result.get._4 should have size errorNumber
   }
 
   test("should find recent valid manifest in case there is second manifest with invalid CRL") {
@@ -363,10 +365,56 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get._3 should have size 1
     result.get._3.head.url should be("rsync://foo.host/bar/ta.crl")
     result.get._3.head.decoded should be(goodCrl)
-    result.get._4 should have size 3
-    result.get._4.exists(ch => ch.impl.getKey == CRL_AKI_MISMATCH) should be(true)
-    result.get._4.exists(ch => ch.impl.getKey == CRL_SIGNATURE_VALID) should be(true)
-    result.get._4.exists(ch => ch.impl.getKey == VALIDATOR_MANIFEST_URI_MISMATCH) should be(true)
+    result.get._4 should have size 0
+    result.get._5 should have size 2
+    // TODO verify both InvalidObjects in ._5
+//    result.get._5.exists(ch => ch.impl.getKey == CRL_AKI_MISMATCH) should be(true)
+//    result.get._5.exists(ch => ch.impl.getKey == CRL_SIGNATURE_VALID) should be(true)
+//    result.get._5.exists(ch => ch.impl.getKey == VALIDATOR_MANIFEST_URI_MISMATCH) should be(true)
+  }
+
+  test("should validate only the CRL of the most recent (valid) manifest") {
+    val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
+    val goodCrl = createCrlWithEntry(certificate)
+    val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, ROOT_CRL_LOCATION.toString)// "bad_manifest_crl.crl")
+    val (manifestLocation, _) = createMftWithCrlAndEntries(goodCrl.getEncoded)
+
+    // add some broken CRL to the older manifest
+    val bogusManifestBuilder = createMftBuilder(ROOT_KEY_PAIR, ROOT_CERTIFICATE_NAME)
+    bogusManifestBuilder.addFile(ROOT_CRL_LOCATION.toString, bogusMftCrl.getEncoded)
+    bogusManifestBuilder.withManifestNumber(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(-1)))
+    val bogusManifest = bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate)
+    storage.storeManifest(ManifestObject("rsync://host.net/bad_manifest.mft", bogusManifest))
+
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result should have size 2 // Only the valid recent manifest and its crl should be here
+    result.get(manifestLocation).get.isValid should be(true)
+    result.get(ROOT_CRL_LOCATION).get.isValid should be(true)
+  }
+
+  test("should skip the recent manifest if its Crl is invalid but return a warning") {
+    val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
+    val goodCrl = createCrlWithEntry(certificate)
+    val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, "rsync://host.net/bad_manifest_crl.crl")
+    val (manifestLocation, _) = createMftWithCrlAndEntries(goodCrl.getEncoded)
+
+    // add some broken CRL to the older manifest
+    val bogusManifestBuilder = createMftBuilder(ROOT_KEY_PAIR, ROOT_CERTIFICATE_NAME)
+    bogusManifestBuilder.addFile("rsync://host.net/bad_manifest_crl.crl", bogusMftCrl.getEncoded)
+    bogusManifestBuilder.withManifestNumber(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)))
+    val bogusManifest = bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate)
+    storage.storeManifest(ManifestObject("rsync://host.net/bad_manifest.mft", bogusManifest))
+
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val result = subject.execute
+
+    result should have size 4
+    result.get(manifestLocation).get.isValid should be(true)
+    result.get(ROOT_CRL_LOCATION).get.isValid should be(true)
   }
 
   test("should give overclaim warning if a child certificate claims more resources than its parent") {
