@@ -422,7 +422,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     result should have size 3
     result.get(manifestLocation).get.isValid should be(true)
-    result.get(manifestLocation).get.checks should have size 2
+    result.get(manifestLocation).get.checks should have size 1
     result.get(ROOT_CRL_LOCATION).get.isValid should be(true)
     result.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.isValid should be(false)
   }
