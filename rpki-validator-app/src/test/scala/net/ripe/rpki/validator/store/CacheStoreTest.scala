@@ -67,6 +67,19 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     obj.hash should be(certificate.hash)
   }
 
+  test("Store a certificate and get it by URL") {
+    val certificate = CertificateObject(url = "rsync://bla", decoded = testCertificate)
+
+    store.storeCertificate(certificate)
+
+    val obj = store.getCertificate("rsync://bla").get
+    obj.url should be(certificate.url)
+    obj.aki should be(certificate.aki)
+    obj.ski should be(certificate.ski)
+    obj.encoded should be(certificate.encoded)
+    obj.hash should be(certificate.hash)
+  }
+
   test("Store a crl") {
     val crl = CrlObject(url = "rsync://bla", decoded = testCrl)
 
@@ -134,7 +147,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     store.storeCertificate(certificate)
 
     val newTime = Instant.now
-    store.updateValidationTimestamp(Seq(roa.url, certificate.url), newTime)
+    store.updateValidationTimestamp(Seq(roa.hash, certificate.hash), newTime)
 
     val roaObject = store.getObject(stringify(roa.hash)).get
     roaObject.validationTime should be(Some(newTime))
@@ -152,7 +165,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     store.storeCertificate(certificate)
 
     val timeInThePast = Instant.now.minus(3600 * 1000 * (store.deletionDelay + 1))
-    store.updateValidationTimestamp(Seq(roa.url, certificate.url), timeInThePast)
+    store.updateValidationTimestamp(Seq(roa.hash, certificate.hash), timeInThePast)
 
     store.clearObjects(Instant.now)
 

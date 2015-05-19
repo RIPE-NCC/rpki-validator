@@ -104,7 +104,12 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
 
   override def getCertificate(url: String): Option[CertificateObject] = Try {
-    template.queryForObject("SELECT url, encoded FROM repo_objects WHERE url = :url AND object_type = :object_type",
+    template.queryForObject(
+      """SELECT url, encoded FROM repo_objects
+         WHERE url = :url AND object_type = :object_type
+         ORDER BY download_time DESC
+         LIMIT 1
+      """,
       Map("url" -> url, "object_type" -> certificateObjectType),
       new RowMapper[CertificateObject] {
         override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(2))
@@ -173,14 +178,14 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       Map("hash" -> hash, "url" -> url))
   }
 
-  def updateValidationTimestamp(urls: Iterable[String], t: Instant) = {
+  def updateValidationTimestamp(hashes: Iterable[Array[Byte]], t: Instant) = {
     val tt = timestamp(t)
     // That has to be as fast as possible to prevent
     // other threads from being locked. That's why
     // we do all that dancing.
-    val sqls = urls.grouped(99).map { group =>
+    val sqls = hashes.map(stringify).grouped(99).map { group =>
       val inClause = group.map("'" + _ + "'").mkString("(", ",", ")")
-      s"UPDATE repo_objects SET validation_time = '$tt' WHERE url IN $inClause"
+      s"UPDATE repo_objects SET validation_time = '$tt' WHERE hash IN $inClause"
     }
 
     if (sqls.nonEmpty) {

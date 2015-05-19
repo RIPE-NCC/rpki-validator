@@ -59,7 +59,7 @@ trait Storage extends Logging {
 
   def atomic[T](f: => T): T
 
-  def updateValidationTimestamp(urls: Iterable[String], t: Instant = Instant.now())
+  def updateValidationTimestamp(urls: Iterable[Array[Byte]], t: Instant = Instant.now())
 
 }
 
