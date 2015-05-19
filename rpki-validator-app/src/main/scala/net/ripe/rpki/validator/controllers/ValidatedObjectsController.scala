@@ -33,7 +33,7 @@ package controllers
 import models._
 import grizzled.slf4j.Logging
 import views._
-import net.ripe.rpki.commons.validation.ValidationStatus
+import net.ripe.rpki.commons.validation.{ValidationString, ValidationCheck, ValidationStatus}
 
 trait ValidatedObjectsController extends ApplicationController with Logging {
   protected def validatedObjects: ValidatedObjects
@@ -94,11 +94,15 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
     records.seq.toIndexedSeq
   }
 
+  // TODO Temporary fix to make sure that valid objects without checks can still be found in the UI.
+  //      A better solution would be to show all checks for an object in the same row, where the number of checks could also be zero.
+  def emptyCheck: ValidationCheck = new ValidationCheck(ValidationStatus.PASSED, ValidationString.KNOWN_OBJECT_TYPE)
+
   def getValidationDetails = {
     val records = for {
       taValidation <- validatedObjects.all.values.par
       validatedObject <- taValidation.validatedObjects
-      check <- validatedObject.checks
+      check <- if (validatedObject.checks.isEmpty) Seq(emptyCheck) else validatedObject.checks
     } yield {
       ValidatedObjectDetail(validatedObject.uri, validatedObject.isValid, check)
     }
