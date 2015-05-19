@@ -297,14 +297,15 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest)
     val result = subject.findRecentValidMftWithCrl(Seq(manifestObject))
 
-    result.get._1 should be (manifestObject)
-    result.get._2.decoded should be (crl)
-    result.get._2.url should be ("rsync://foo.host/bar/ta.crl")
-    result.get._2.decoded should be (crl)
-    result.get._3 should have size 1
-    result.get._3.head.url should be ("rsync://foo.host/bar/ta.crl")
-    result.get._3.head.decoded should be (crl)
-    result.get._4 should have size 0
+    result.get.manifest should be (manifestObject)
+    result.get.crl.decoded should be (crl)
+    result.get.crl.url should be ("rsync://foo.host/bar/ta.crl")
+    result.get.crl.decoded should be (crl)
+    result.get.manifestObjects should have size 1
+    result.get.manifestObjects.head.url should be ("rsync://foo.host/bar/ta.crl")
+    result.get.manifestObjects.head.decoded should be (crl)
+    result.get.checksForManifest should have size 0
+    result.get.skippedObjects should have size 0
   }
 
   test("should find recent valid manifest with valid CRL in case there is second invalid more recent manifest") {
@@ -330,20 +331,20 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val badManifestObject = ManifestObject("rsync://host.net/bad_manifest.mft", badManifestBuilder.build(ROOT_KEY_PAIR.getPrivate))
     val result = subject.findRecentValidMftWithCrl(Seq(manifestObject, badManifestObject))
 
-    result.get._1 should be(manifestObject)
-    result.get._2.decoded should be(crl)
-    result.get._2.url should be("rsync://foo.host/bar/ta.crl")
-    result.get._2.decoded should be(crl)
-    result.get._3 should have size 1
-    result.get._3.head.url should be("rsync://foo.host/bar/ta.crl")
-    result.get._3.head.decoded should be(crl)
-    result.get._4 should have size 0
+    result.get.manifest should be(manifestObject)
+    result.get.crl.decoded should be(crl)
+    result.get.crl.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.crl.decoded should be(crl)
+    result.get.manifestObjects should have size 1
+    result.get.manifestObjects.head.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.manifestObjects.head.decoded should be(crl)
+    result.get.checksForManifest should have size 0
 
     if (errorNumber > 0) {
-      result.get._5 should have size 1
-      result.get._5.toMap.get(new URI(badManifestObject.url)).get.checks should have size errorNumber
+      result.get.skippedObjects should have size 1
+      result.get.skippedObjects.toMap.get(new URI(badManifestObject.url)).get.checks should have size errorNumber
     } else {
-      result.get._5 should have size 0
+      result.get.skippedObjects should have size 0
     }
   }
 
@@ -363,21 +364,21 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val badManifestObject = ManifestObject("rsync://host.net/bad_manifest.mft", bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate))
     val result = subject.findRecentValidMftWithCrl(Seq(manifestObject, badManifestObject))
 
-    result.get._1 should be(manifestObject)
-    result.get._2.decoded should be(goodCrl)
-    result.get._2.url should be("rsync://foo.host/bar/ta.crl")
-    result.get._2.decoded should be(goodCrl)
-    result.get._3 should have size 1
-    result.get._3.head.url should be("rsync://foo.host/bar/ta.crl")
-    result.get._3.head.decoded should be(goodCrl)
-    result.get._4 should have size 0
-    result.get._5 should have size 2
-    result.get._5.toMap.get(new URI(badManifestObject.url)).get.checks should have size 1
-    result.get._5.toMap.get(new URI(badManifestObject.url)).get.checks.head.getKey should be (ValidationString.VALIDATOR_MANIFEST_IS_INVALID)
-    result.get._5.toMap.get(new URI(badManifestObject.url)).get.checks.head.getStatus should be (ValidationStatus.WARNING)
-    result.get._5.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks should have size 2
-    result.get._5.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_AKI_MISMATCH) should be(true)
-    result.get._5.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_SIGNATURE_VALID) should be(true)
+    result.get.manifest should be(manifestObject)
+    result.get.crl.decoded should be(goodCrl)
+    result.get.crl.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.crl.decoded should be(goodCrl)
+    result.get.manifestObjects should have size 1
+    result.get.manifestObjects.head.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.manifestObjects.head.decoded should be(goodCrl)
+    result.get.checksForManifest should have size 0
+    result.get.skippedObjects should have size 2
+    result.get.skippedObjects.toMap.get(new URI(badManifestObject.url)).get.checks should have size 1
+    result.get.skippedObjects.toMap.get(new URI(badManifestObject.url)).get.checks.head.getKey should be (ValidationString.VALIDATOR_MANIFEST_IS_INVALID)
+    result.get.skippedObjects.toMap.get(new URI(badManifestObject.url)).get.checks.head.getStatus should be (ValidationStatus.WARNING)
+    result.get.skippedObjects.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks should have size 2
+    result.get.skippedObjects.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_AKI_MISMATCH) should be(true)
+    result.get.skippedObjects.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_SIGNATURE_VALID) should be(true)
   }
 
   test("should validate only the CRL of the most recent (valid) manifest") {
@@ -406,7 +407,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   test("should skip the recent manifest if its Crl is invalid but return a warning for the manifest and for the crl") {
     val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
     val goodCrl = createCrlWithEntry(certificate)
-    val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, ROOT_CRL_LOCATION.toString())
+    val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, ROOT_CRL_LOCATION.toString)
     val (manifestLocation, _) = createMftWithCrlAndEntries(goodCrl.getEncoded)
 
     // add some broken CRL to the newer manifest
