@@ -403,15 +403,15 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get(ROOT_CRL_LOCATION).get.isValid should be(true)
   }
 
-  test("should skip the recent manifest if its Crl is invalid but return a warning") {
+  test("should skip the recent manifest if its Crl is invalid but return a warning for the manifest and for the crl") {
     val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
     val goodCrl = createCrlWithEntry(certificate)
-    val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, "rsync://host.net/bad_manifest_crl.crl")
+    val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, ROOT_CRL_LOCATION.toString())
     val (manifestLocation, _) = createMftWithCrlAndEntries(goodCrl.getEncoded)
 
     // add some broken CRL to the newer manifest
     val bogusManifestBuilder = createMftBuilder(ROOT_KEY_PAIR, ROOT_CERTIFICATE_NAME)
-    bogusManifestBuilder.addFile("rsync://host.net/bad_manifest_crl.crl", bogusMftCrl.getEncoded)
+    bogusManifestBuilder.addFile(ROOT_CRL_LOCATION.toString(), bogusMftCrl.getEncoded)
     bogusManifestBuilder.withManifestNumber(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)))
     val bogusManifest = bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate)
     storage.storeManifest(ManifestObject(ROOT_MANIFEST_LOCATION.toString, bogusManifest))
@@ -420,11 +420,11 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val result = subject.execute
 
-    result should have size 3
+    result should have size 2
     result.get(manifestLocation).get.isValid should be(true)
     result.get(manifestLocation).get.checks should have size 1
     result.get(ROOT_CRL_LOCATION).get.isValid should be(true)
-    result.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.isValid should be(false)
+    result.get(ROOT_CRL_LOCATION).get.checks should have size 2
   }
 
   test("should give overclaim warning if a child certificate claims more resources than its parent") {

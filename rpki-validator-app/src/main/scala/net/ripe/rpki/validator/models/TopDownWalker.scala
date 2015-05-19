@@ -142,6 +142,13 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
+  private def errorsToWarnings(checks: Set[ValidationCheck]): Set[ValidationCheck] = {
+    checks.map(c =>
+      if (c.getStatus == ValidationStatus.ERROR) {
+        new ValidationCheck(ValidationStatus.WARNING, c.getKey, c.getParams: _*)
+      } else c)
+  }
+
   /**
    * Merges 2 validated objects which have a matching URI.
    * If they also have the same hash, the following merging rules apply:
@@ -152,7 +159,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
    *
    * If one of them is invalid, and they have different hashes (but the same URI), or if either of them has no hash at all, it is assumed that
    * the invalid object was skipped and that another valid object was found with the same URI that could be used instead.
-   * Therefore the resulting ValidatedObject will be valid.
+   * Therefore the resulting ValidatedObject will be valid. We also upgrade any error-checks in the InvalidObject to warnings, to that we do not
+   * end up with a ValidObject that includes errors.
    * The merged object gets 'None' as its hash.
    * So in this case, the merging rules are:
    *
@@ -171,8 +179,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     } else {
       (vo1, vo2) match {
         case (InvalidObject(u1, _, checks1), InvalidObject(u2, _, checks2)) => InvalidObject(u1, None, checks1 ++ checks2)
-        case (InvalidObject(u1, _, checks1), ValidObject(u2, _, checks2, obj)) => ValidObject(u1, None, checks1 ++ checks2, obj)
-        case (ValidObject(u1, _, checks1, obj), InvalidObject(u2, _, checks2)) => ValidObject(u1, None, checks1 ++ checks2, obj)
+        case (InvalidObject(u1, _, checks1), ValidObject(u2, _, checks2, obj)) => ValidObject(u1, None, errorsToWarnings(checks1 ++ checks2), obj)
+        case (ValidObject(u1, _, checks1, obj), InvalidObject(u2, _, checks2)) => ValidObject(u1, None, errorsToWarnings(checks1 ++ checks2), obj)
         case (ValidObject(u1, _, checks1, obj1), ValidObject(u2, _, checks2, obj2)) => ValidObject(u1, None, checks1 ++ checks2, obj1)  // TODO this case should never happen, but how to handle it?
       }
     }
