@@ -227,6 +227,8 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
       validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, "Trust Anchor Certificate")
     }
 
+    store.updateValidationTimestamp(Seq(uri.toString))
+
     if (validationResult.hasFailureForCurrentLocation)
       InvalidObject(uri, None, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
     else
