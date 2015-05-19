@@ -91,15 +91,15 @@ object TestingObjectMother {
 
     val roa1: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes1.asJava, validityPeriod, ASN1)
     val roa1Uri: URI = URI.create("rsync://example.com/roa1.roa")
-    val validatedRoa1 = ValidObject(roa1Uri, Set.empty[ValidationCheck], roa1)
+    val validatedRoa1 = ValidObject(roa1Uri, Some(Array[Byte](1)), Set.empty[ValidationCheck], roa1)
 
     val roa2: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes2.asJava, validityPeriod, ASN2)
     val roa2Uri: URI = URI.create("rsync://example.com/roa2.roa")
-    val validatedRoa2 = ValidObject(roa2Uri, Set.empty[ValidationCheck], roa2)
+    val validatedRoa2 = ValidObject(roa2Uri, Some(Array[Byte](2)), Set.empty[ValidationCheck], roa2)
 
     val roa3: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes3.asJava, validityPeriod, ASN1)
     val roa3Uri: URI = URI.create("rsync://example.com/roa3.roa")
-    val validatedRoa3 = ValidObject(roa3Uri, Set.empty[ValidationCheck], roa3)
+    val validatedRoa3 = ValidObject(roa3Uri, Some(Array[Byte](3)), Set.empty[ValidationCheck], roa3)
 
     val roas = Seq(validatedRoa1, validatedRoa2, validatedRoa3)
     new ValidatedObjects(Map(TAL -> TrustAnchorValidations(roas)))

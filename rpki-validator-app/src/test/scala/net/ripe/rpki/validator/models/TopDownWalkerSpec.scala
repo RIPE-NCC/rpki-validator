@@ -341,7 +341,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     if (errorNumber > 0) {
       result.get._5 should have size 1
-      result.get._5.get(new URI(badManifestObject.url)).get.checks should have size errorNumber
+      result.get._5.toMap.get(new URI(badManifestObject.url)).get.checks should have size errorNumber
     } else {
       result.get._5 should have size 0
     }
@@ -372,12 +372,12 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get._3.head.decoded should be(goodCrl)
     result.get._4 should have size 0
     result.get._5 should have size 2
-    result.get._5.get(new URI(badManifestObject.url)).get.checks should have size 1
-    result.get._5.get(new URI(badManifestObject.url)).get.checks.head.getKey should be (ValidationString.VALIDATOR_MANIFEST_IS_INVALID)
-    result.get._5.get(new URI(badManifestObject.url)).get.checks.head.getStatus should be (ValidationStatus.WARNING)
-    result.get._5.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks should have size 2
-    result.get._5.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_AKI_MISMATCH) should be(true)
-    result.get._5.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_SIGNATURE_VALID) should be(true)
+    result.get._5.toMap.get(new URI(badManifestObject.url)).get.checks should have size 1
+    result.get._5.toMap.get(new URI(badManifestObject.url)).get.checks.head.getKey should be (ValidationString.VALIDATOR_MANIFEST_IS_INVALID)
+    result.get._5.toMap.get(new URI(badManifestObject.url)).get.checks.head.getStatus should be (ValidationStatus.WARNING)
+    result.get._5.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks should have size 2
+    result.get._5.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_AKI_MISMATCH) should be(true)
+    result.get._5.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_SIGNATURE_VALID) should be(true)
   }
 
   test("should validate only the CRL of the most recent (valid) manifest") {
@@ -399,6 +399,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     result should have size 2 // Only the valid recent manifest and its crl should be here
     result.get(manifestLocation).get.isValid should be(true)
+    result.get(manifestLocation).get.checks should have size 0
     result.get(ROOT_CRL_LOCATION).get.isValid should be(true)
   }
 
@@ -408,20 +409,22 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, "rsync://host.net/bad_manifest_crl.crl")
     val (manifestLocation, _) = createMftWithCrlAndEntries(goodCrl.getEncoded)
 
-    // add some broken CRL to the older manifest
+    // add some broken CRL to the newer manifest
     val bogusManifestBuilder = createMftBuilder(ROOT_KEY_PAIR, ROOT_CERTIFICATE_NAME)
     bogusManifestBuilder.addFile("rsync://host.net/bad_manifest_crl.crl", bogusMftCrl.getEncoded)
     bogusManifestBuilder.withManifestNumber(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)))
     val bogusManifest = bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate)
-    storage.storeManifest(ManifestObject("rsync://host.net/bad_manifest.mft", bogusManifest))
+    storage.storeManifest(ManifestObject(ROOT_MANIFEST_LOCATION.toString, bogusManifest))
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute
 
-    result should have size 4
+    result should have size 3
     result.get(manifestLocation).get.isValid should be(true)
+    result.get(manifestLocation).get.checks should have size 2
     result.get(ROOT_CRL_LOCATION).get.isValid should be(true)
+    result.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.isValid should be(false)
   }
 
   test("should give overclaim warning if a child certificate claims more resources than its parent") {

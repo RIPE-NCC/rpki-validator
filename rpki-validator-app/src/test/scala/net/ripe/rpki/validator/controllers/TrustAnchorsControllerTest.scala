@@ -45,7 +45,7 @@ import net.ripe.rpki.validator.util.TrustAnchorLocator
 class TrustAnchorsControllerTest extends ControllerTestCase {
   private val ta = TestingObjectMother.TA
   private val message = "some message"
-  private val invalidObject: InvalidObject = InvalidObject(URI.create("rsync://some.host/obj.o"), Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, ValidationString.VALIDATOR_REPO_EXECUTION, message)))
+  private val invalidObject: InvalidObject = InvalidObject(URI.create("rsync://some.host/obj.o"), None, Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, ValidationString.VALIDATOR_REPO_EXECUTION, message)))
   private val invalidObjects = Seq(invalidObject)
 
   override def controller = new ControllerFilter with TrustAnchorsController {

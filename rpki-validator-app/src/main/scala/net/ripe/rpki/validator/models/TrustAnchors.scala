@@ -99,13 +99,13 @@ case class TrustAnchor(
       case Success(validatedObjects) =>
         val nextUpdate = now.plus(ApplicationOptions.validationInterval.toMillis)
         val trustAnchor = validatedObjects.get(locator.getCertificateLocation).collect {
-          case ValidObject(_, _, certificate: X509ResourceCertificate) => certificate
+          case ValidObject(_, _, _, certificate: X509ResourceCertificate) => certificate
         }
         val manifest = trustAnchor.flatMap(ta => validatedObjects.get(ta.getManifestUri)).collect {
-          case ValidObject(_, _, manifest: ManifestCms) => manifest
+          case ValidObject(_, _, _, manifest: ManifestCms) => manifest
         }
         val crl = manifest.flatMap(mft => validatedObjects.get(mft.getCrlUri)).collect {
-          case ValidObject(_, _, crl: X509Crl) => crl
+          case ValidObject(_, _, _, crl: X509Crl) => crl
         }
 
         copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = trustAnchor, manifest = manifest, crl = crl)
@@ -169,7 +169,7 @@ trait ValidationProcess {
     try {
       val certificate = extractTrustAnchorLocator()
       certificate match {
-        case ValidObject(uri, checks, trustAnchor: X509ResourceCertificate) =>
+        case ValidObject(uri, _, checks, trustAnchor: X509ResourceCertificate) =>
           val context = new CertificateRepositoryObjectValidationContext(uri, trustAnchor)
           Success(validateObjects(context) + (uri -> certificate))
         case _ =>
@@ -228,9 +228,9 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     }
 
     if (validationResult.hasFailureForCurrentLocation)
-      InvalidObject(uri, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
+      InvalidObject(uri, None, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
     else
-      ValidObject(uri, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet, certificate.get.decoded)
+      ValidObject(uri, Some(certificate.get.hash), validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet, certificate.get.decoded)
   }
 
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {

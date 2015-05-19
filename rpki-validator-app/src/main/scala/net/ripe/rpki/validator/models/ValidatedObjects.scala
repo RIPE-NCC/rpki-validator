@@ -41,6 +41,7 @@ import org.joda.time.DateTime
 
 sealed trait ValidatedObject {
   val uri: URI
+  val hash: Option[Array[Byte]]
   val checks: Set[ValidationCheck]
   val isValid: Boolean
 
@@ -57,10 +58,10 @@ sealed trait ValidatedObject {
   }
 
 }
-case class InvalidObject(uri: URI, checks: Set[ValidationCheck]) extends ValidatedObject {
+case class InvalidObject(uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) extends ValidatedObject {
   override val isValid = false
 }
-case class ValidObject(uri: URI, checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) extends ValidatedObject {
+case class ValidObject(uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) extends ValidatedObject {
   override val isValid = true
 }
 
@@ -121,7 +122,7 @@ class ValidatedObjects(val all: Map[TrustAnchorLocator, TrustAnchorValidations])
   def getValidatedRtrPrefixes = {
     for {
       (locator, taValidations) <- all
-      ValidObject(_, _, roa: RoaCms) <- taValidations.validatedObjects
+      ValidObject(_, _, _, roa: RoaCms) <- taValidations.validatedObjects
       roaPrefix <- roa.getPrefixes.asScala
     } yield {
       RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(locator))

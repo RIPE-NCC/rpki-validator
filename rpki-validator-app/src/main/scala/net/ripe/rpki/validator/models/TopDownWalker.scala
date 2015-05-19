@@ -92,17 +92,17 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     val mftList = fetchMftsByAKI
     val validatedObjects = findRecentValidMftWithCrl(mftList) match {
       case Some((manifest, crl, mftObjects, mftCrlChecks, skippedObjects)) =>
-        validateManifestChildren(manifest, crl, mftObjects, mftCrlChecks) ++ skippedObjects
+        validateManifestChildren(manifest, crl, mftObjects, mftCrlChecks, skippedObjects)
 
       case None =>
-        Map(certificateContext.getLocation -> InvalidObject(certificateContext.getLocation,
+        Map(certificateContext.getLocation -> InvalidObject(certificateContext.getLocation, None,
           Set(new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex))))
     }
 
     fetchErrors ++ validatedObjects
   }
 
-  def validateManifestChildren(manifest: ManifestObject, crl: CrlObject, mftObjects: Seq[ROType], mftCrlChecks: Seq[Check]): Map[URI, ValidatedObject] = {
+  def validateManifestChildren(manifest: ManifestObject, crl: CrlObject, mftObjects: Seq[ROType], mftCrlChecks: Seq[Check], skippedObjects: Seq[(URI, InvalidObject)]): Map[URI, ValidatedObject] = {
     val ClassifiedObjects(roas, childrenCertificates, crlList) = classify(mftObjects)
 
     val checks = checkManifestUrlOnCertMatchesLocationInRepo(manifest).toList ++
@@ -121,6 +121,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       validatedCerts.map(_.validatedObject) ++
       crlList.map(validatedObject(checkMap)) ++
       Seq(manifest).map(validatedObject(checkMap)) ++
+      skippedObjects ++
       validatedCerts.filter(_.valid).map(_.cert).flatMap(stepDown(manifest))
 
     mergeTwiceValidatedObjects(everythingValidated)
@@ -141,12 +142,39 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
+  /**
+   * Merges 2 validated objects which have a matching URI.
+   * If they also have the same hash, the following merging rules apply:
+   *
+   * Valid + Valid = Valid
+   * Valid + Invalid = Invalid
+   * Invalid + Invalid = Invalid
+   *
+   * If one of them is invalid, and they have different hashes (but the same URI), or if either of them has no hash at all, it is assumed that
+   * the invalid object was skipped and that another valid object was found with the same URI that could be used instead.
+   * Therefore the resulting ValidatedObject will be valid.
+   * The merged object gets 'None' as its hash.
+   * So in this case, the merging rules are:
+   *
+   * Valid + Valid = Valid
+   * Valid + Invalid = Valid
+   * Invalid + Invalid = Invalid
+   */
   private def merge(vo1: ValidatedObject, vo2: ValidatedObject): ValidatedObject = {
-    (vo1, vo2) match {
-      case (InvalidObject(u1, checks1), InvalidObject(u2, checks2)) => InvalidObject(u1, checks1 ++ checks2)
-      case (InvalidObject(u1, checks1), ValidObject(u2, checks2, _)) => InvalidObject(u1, checks1 ++ checks2)
-      case (ValidObject(u1, checks1, _), InvalidObject(u2, checks2)) => InvalidObject(u1, checks1 ++ checks2)
-      case (ValidObject(u1, checks1, obj1), ValidObject(u2, checks2, obj2)) => ValidObject(u1, checks1 ++ checks2, obj1)
+    if (vo1.hash.isDefined && vo2.hash.isDefined && vo1.hash.get.equals(vo2.hash.get)) {
+      (vo1, vo2) match {
+        case (InvalidObject(u1, hash1, checks1), InvalidObject(u2, _, checks2)) => InvalidObject(u1, hash1, checks1 ++ checks2)
+        case (InvalidObject(u1, hash1, checks1), ValidObject(u2, _, checks2, _)) => InvalidObject(u1, hash1, checks1 ++ checks2)
+        case (ValidObject(u1, hash1, checks1, _), InvalidObject(u2, _, checks2)) => InvalidObject(u1, hash1, checks1 ++ checks2)
+        case (ValidObject(u1, hash1, checks1, obj1), ValidObject(u2, _, checks2, obj2)) => ValidObject(u1, hash1, checks1 ++ checks2, obj1)
+      }
+    } else {
+      (vo1, vo2) match {
+        case (InvalidObject(u1, _, checks1), InvalidObject(u2, _, checks2)) => InvalidObject(u1, None, checks1 ++ checks2)
+        case (InvalidObject(u1, _, checks1), ValidObject(u2, _, checks2, obj)) => ValidObject(u1, None, checks1 ++ checks2, obj)
+        case (ValidObject(u1, _, checks1, obj), InvalidObject(u2, _, checks2)) => ValidObject(u1, None, checks1 ++ checks2, obj)
+        case (ValidObject(u1, _, checks1, obj1), ValidObject(u2, _, checks2, obj2)) => ValidObject(u1, None, checks1 ++ checks2, obj1)  // TODO this case should never happen, but how to handle it?
+      }
     }
   }
 
@@ -163,9 +191,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     val validationChecks = checkMap.get(new ValidationLocation(uri)).map(_.map(_.impl).toSet)
     val hasErrors = validationChecks.exists(c => !c.forall(_.isOk))
     if (hasErrors) {
-      uri -> InvalidObject(uri, validationChecks.get)
+      uri -> InvalidObject(uri, Some(r.hash), validationChecks.get)
     } else {
-      uri -> ValidObject(uri, validationChecks.getOrElse(Set()), r.decoded)
+      uri -> ValidObject(uri, Some(r.hash), validationChecks.getOrElse(Set()), r.decoded)
     }
   }
 
@@ -196,11 +224,11 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       val mftUri = new URI(parentManifest.url)
       if (childCert.isRoot) {
         val check = new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_ROOT_CERTIFICATE_INCLUDED_IN_MANIFEST)
-        Map(mftUri -> ValidObject(mftUri, Set(check), childCert))
+        Map(mftUri -> ValidObject(mftUri, Some(parentManifest.hash), Set(check), childCert))
       } else {
         logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
         val check = new ValidationCheck(ValidationStatus.ERROR, VALIDATOR_CIRCULAR_REFERENCE, certificateContext.getLocation.toString, cert.url.toString)
-        Map(mftUri -> InvalidObject(mftUri, Set(check)))
+        Map(mftUri -> InvalidObject(mftUri, Some(parentManifest.hash), Set(check)))
       }
     } else {
       val childResources = if (childCert.isResourceSetInherited) getResourcesOfType(childCert.getInheritedResourceTypes, certificateContext.getResources) else childCert.getResources
@@ -212,7 +240,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   private def prefetch(uri: URI) = {
     repoService.visitRepo(uri).map { error =>
-      InvalidObject(error.url, Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, VALIDATOR_REPO_EXECUTION, error.message)))
+      InvalidObject(error.url, None, Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, VALIDATOR_REPO_EXECUTION, error.message)))
     }
   }
 
@@ -250,7 +278,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       _ => List[Check]()
   }
 
-  def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): Option[(ManifestObject, CrlObject, Seq[RepositoryObject.ROType], Seq[Check], Map[URI, InvalidObject])] = {
+  def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): Option[(ManifestObject, CrlObject, Seq[RepositoryObject.ROType], Seq[Check], Seq[(URI, InvalidObject)])] = {
     // sort manifests chronologically so that
     // the latest one goes first
     val recentFirstManifests = mftList.sortBy(_.decoded.getNumber.negate())
@@ -270,7 +298,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
 
     // Add warnings and retain the errors for the cases when we have to move from one invalid manifest to an older one.
-    var checksForSkippedMfts = Map[URI, InvalidObject]()
+    var checksForSkippedMfts = Seq[(URI, InvalidObject)]()
     var checksForValidMft = Seq[Check]()
     val mostRecentValidMft = validatedManifestData.iterator.find { x =>
       val (mft, crl, _, nonFatalChecks, fatalChecks) = x
@@ -284,12 +312,12 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         val crlChecks = skippedChecks.filter(c => crl.isDefined && c.location.getName.equals(crl.get.url))
         val mftUri = new URI(mft.url)
 
-        var skippedChecksByURI: Seq[(URI, InvalidObject)] = Seq(mftUri -> InvalidObject(mftUri, mftChecks.map(c => c.impl).toSet))
+        var skippedChecksByURI: Seq[(URI, InvalidObject)] = Seq(mftUri -> InvalidObject(mftUri, Some(mft.hash), mftChecks.map(c => c.impl).toSet))
         if (crlChecks.nonEmpty) {
-          val invalidObject = new InvalidObject(new URI(crl.get.url), crlChecks.map(c => c.impl).toSet)
+          val invalidObject = new InvalidObject(new URI(crl.get.url), Some(crl.get.hash), crlChecks.map(c => c.impl).toSet)
           skippedChecksByURI ++= Seq(new URI(crl.get.url) -> invalidObject)
         }
-        checksForSkippedMfts ++= skippedChecksByURI.toMap
+        checksForSkippedMfts ++= skippedChecksByURI
       } else {
         checksForValidMft = nonFatalChecks
       }

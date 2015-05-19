@@ -41,6 +41,7 @@ object ValidatedObjectsTest {
   def makeListOfValidObjects(number: Int) = for (nr <- 1 until number + 1) yield {
     ValidObject(
       URI.create(s"rsync://some.host/repo/valid-$nr.unk"),
+      Some(Array[Byte](4, nr.toByte)),
       Set(new ValidationCheck(ValidationStatus.PASSED, ValidationString.VALIDATOR_READ_FILE)),
       new UnknownCertificateRepositoryObject(new Array[Byte](0)))
   }
@@ -48,6 +49,7 @@ object ValidatedObjectsTest {
   def makeListOfInvalidObjects(number: Int) = for (nr <- 1 until number + 1) yield {
     InvalidObject(
       URI.create(s"rsync://some.host/repo/invalid-$nr.unk"),
+      Some(Array[Byte](5, nr.toByte)),
       Set(new ValidationCheck(ValidationStatus.ERROR, ValidationString.VALIDATOR_READ_FILE)))
   }
 }
