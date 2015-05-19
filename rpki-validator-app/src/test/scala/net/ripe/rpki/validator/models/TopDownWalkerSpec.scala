@@ -51,6 +51,7 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.{DateTime, Instant}
 import org.scalatest._
+import net.ripe.rpki.commons.validation.ValidationString._
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with Hashing {
@@ -307,7 +308,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   }
 
   test("should find recent valid manifest with valid CRL in case there is second invalid more recent manifest") {
-    testWithBrokenManifest(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)), 2)
+    testWithBrokenManifest(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)), 3)
   }
 
   test("should find recent valid manifest with valid CRL in case there is second invalid older manifest") {
@@ -337,15 +338,19 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get._3.head.url should be("rsync://foo.host/bar/ta.crl")
     result.get._3.head.decoded should be(crl)
     result.get._4 should have size 0
-    // result.get._5 should have size 1
-    // TODO verify the invalid object(s)
-    //result.get._4 should have size errorNumber
+
+    if (errorNumber > 0) {
+      result.get._5 should have size 1
+      result.get._5.get(new URI(badManifestObject.url)).get.checks should have size errorNumber
+    } else {
+      result.get._5 should have size 0
+    }
   }
 
   test("should find recent valid manifest in case there is second manifest with invalid CRL") {
     val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
     val goodCrl = createCrlWithEntry(certificate)
-    val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, "bad_manifest_crl.crl")
+    val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, "rsync://host.net/bad_manifest_crl.crl")
     val (_, manifest1) = createMftWithCrlAndEntries(goodCrl.getEncoded)
 
     // add some broken CRL to the bad manifest
@@ -367,10 +372,12 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get._3.head.decoded should be(goodCrl)
     result.get._4 should have size 0
     result.get._5 should have size 2
-    // TODO verify both InvalidObjects in ._5
-//    result.get._5.exists(ch => ch.impl.getKey == CRL_AKI_MISMATCH) should be(true)
-//    result.get._5.exists(ch => ch.impl.getKey == CRL_SIGNATURE_VALID) should be(true)
-//    result.get._5.exists(ch => ch.impl.getKey == VALIDATOR_MANIFEST_URI_MISMATCH) should be(true)
+    result.get._5.get(new URI(badManifestObject.url)).get.checks should have size 1
+    result.get._5.get(new URI(badManifestObject.url)).get.checks.head.getKey should be (ValidationString.VALIDATOR_MANIFEST_IS_INVALID)
+    result.get._5.get(new URI(badManifestObject.url)).get.checks.head.getStatus should be (ValidationStatus.WARNING)
+    result.get._5.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks should have size 2
+    result.get._5.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_AKI_MISMATCH) should be(true)
+    result.get._5.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_SIGNATURE_VALID) should be(true)
   }
 
   test("should validate only the CRL of the most recent (valid) manifest") {
