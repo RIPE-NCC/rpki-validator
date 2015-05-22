@@ -135,7 +135,7 @@ object DataSources {
    */
   def InMemoryDataSource = {
     val result = new BasicDataSource
-    result.setUrl("jdbc:h2:mem:rpki-object-cache;MVCC=TRUE")
+    result.setUrl("jdbc:h2:mem:rpki-object-cache;MVCC=TRUE;LOCK_TIMEOUT=10000")
     result.setDriverClassName("org.h2.Driver")
     result.setDefaultAutoCommit(true)
     migrate(result)
