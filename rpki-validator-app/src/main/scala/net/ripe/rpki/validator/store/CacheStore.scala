@@ -29,6 +29,8 @@
  */
 package net.ripe.rpki.validator.store
 
+import net.ripe.rpki.validator.config.ApplicationOptions
+
 import scala.language.existentials
 import java.io.File
 import java.sql.{ResultSet, Timestamp}
@@ -62,7 +64,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   private val certificateObjectType = "cer"
   private val ghostbustersObjectType = "gbr"
 
-  val deletionDelay = 24
+  val deletionDelay = ApplicationOptions.removeOldObjectTimeoutInHours.toHours.toInt
 
   private val locker = new Locker
 

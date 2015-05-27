@@ -77,12 +77,24 @@ object ApplicationOptions {
 
   def enableLooseValidation = safeConf(config.getBoolean)("validation.loose")
 
+  def removeOldObjectTimeoutInHours = confOrElse {
+    c => FiniteDuration(config.getDuration(c, TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
+  }("validation.remove_old_objects.interval", FiniteDuration(7, TimeUnit.DAYS))
+
   private def safeConf[T](f: String => T)(name: String) : T = try {
     f(name)
   } catch {
     case e: Throwable =>
       logger.error("Couldn't extract property " + name, e)
       throw e
+  }
+
+  private def confOrElse[T](f: String => T)(name: String, default: T) : T = try {
+    f(name)
+  } catch {
+    case e: Throwable =>
+      logger.error("Couldn't extract property " + name, e)
+      default
   }
 
 }
