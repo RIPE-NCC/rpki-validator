@@ -34,6 +34,7 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ApplicationOptionsTest extends ValidatorTestCase {
+
   import scala.concurrent.duration._
 
   test("Should use 8080 as default http port") {
@@ -99,4 +100,9 @@ class ApplicationOptionsTest extends ValidatorTestCase {
   test("Should use data/rsync as the default directory for rsync-based repositories") {
     ApplicationOptions.rsyncDirLocation should equal("data/rsync")
   }
+
+  test("Should set interval between old object removals") {
+    ApplicationOptions.removeOldObjectTimeoutInHours should equal(7.days)
+  }
+
 }
