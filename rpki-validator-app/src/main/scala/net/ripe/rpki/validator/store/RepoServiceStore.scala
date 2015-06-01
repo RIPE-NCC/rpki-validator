@@ -34,6 +34,7 @@ import java.net.URI
 import org.joda.time.Instant
 
 object RepoServiceStore {
+
   var times = Map[String, Instant]()
 
   @inline
@@ -51,4 +52,7 @@ object RepoServiceStore {
   def updateLastFetchTime(uri: URI, instant: Instant) = synchronized {
     times = times + (norm(uri) -> instant)
   }
+
+  def reset() =
+    times = Map.empty
 }
