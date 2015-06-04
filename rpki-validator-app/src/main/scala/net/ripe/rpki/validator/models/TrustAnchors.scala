@@ -37,15 +37,15 @@ import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceCertificate}
-import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationOptions, ValidationResult, ValidationString}
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationOptions, ValidationResult, ValidationString}
 import net.ripe.rpki.validator.config.{ApplicationOptions, MemoryImage}
 import net.ripe.rpki.validator.fetchers._
 import net.ripe.rpki.validator.lib.HashSupport
 import net.ripe.rpki.validator.lib.Structures._
 import net.ripe.rpki.validator.models.validation.{CertificateObject, RepoFetcher}
 import net.ripe.rpki.validator.util.TrustAnchorLocator
-import org.joda.time.{Instant, DateTime}
+import org.joda.time.{DateTime, Instant, Period}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.stm.{Ref, atomic}
@@ -54,7 +54,6 @@ import scalaz.{Failure, Success, Validation}
 
 // Ignore unused warning for implicit def from net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.rpki.validator.lib.DateAndTime._
-
 import net.ripe.rpki.validator.store.DurableCaches
 
 sealed trait ProcessingStatus {
@@ -279,8 +278,10 @@ trait ValidationProcessLogger extends ValidationProcess {
 
   abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
     logger.info("Loaded trust anchor " + trustAnchorLocator.getCaName + " from location " + certificate.getLocation + ", starting validation")
+    val begin = Instant.now()
     val objects = super.validateObjects(certificate)
-    logger.info("Finished validating " + trustAnchorLocator.getCaName + ", fetched " + objects.size + " valid Objects")
+    val elapsed = new Period(begin, Instant.now())
+    logger.info(s"Finished validating ${trustAnchorLocator.getCaName}, ${objects.size} valid objects; spent $elapsed.")
     objects
   }
 
