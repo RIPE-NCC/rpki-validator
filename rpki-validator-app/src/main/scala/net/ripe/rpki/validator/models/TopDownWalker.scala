@@ -123,7 +123,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       crlList.map(validatedObject(checkMap)) ++
       Seq(manifest).map(validatedObject(checkMap)) ++
       skippedObjects ++
-      validatedCerts.filter(_.valid).map(_.cert).flatMap(stepDown(manifest))
+      validatedCerts.filter(_.valid).map(_.cert).par.flatMap(stepDown(manifest))
 
     mergeTwiceValidatedObjects(everythingValidated)
   }
