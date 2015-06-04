@@ -170,10 +170,10 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     val tt = timestamp(olderThan.toDateTime.minusHours(deletionDelay).toInstant)
     atomic {
       val i = template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt'", Map.empty[String, Object])
-      info(s"Clear Old Objects -> $i object(s) older than $olderThan deleted from repo_objects")
+      info(s"Clear old objects -> $i object(s) older than $olderThan deleted from repo_objects")
 
       val j = template.update(s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '$tt'", Map.empty[String, Object])
-      info(s"Clear Old Objects -> $j object(s) downloaded 2 hours before $olderThan deleted from repo_objects")
+      info(s"Clear old objects -> $j object(s) downloaded 2 hours before $olderThan deleted from repo_objects")
     }
   }
 
@@ -194,7 +194,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
     if (sqls.nonEmpty) {
       atomic {
-        new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
+        val counts = new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
+        info(s"Updated validationTime for ${counts.sum} objects.")
       }
     }
   }
@@ -210,7 +211,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
     if (sqls.nonEmpty) {
       atomic {
-        new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
+        val counts = new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
+        info(s"Removed ${counts.sum} objects for which exist a valid alternative.")
       }
     }
   }
