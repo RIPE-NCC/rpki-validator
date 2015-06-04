@@ -29,16 +29,13 @@
  */
 package net.ripe.rpki.validator.store
 
-import java.net.URI
-
-import net.ripe.rpki.validator.config.ApplicationOptions
-
-import scala.language.existentials
 import java.io.File
+import java.net.URI
 import java.sql.{ResultSet, Timestamp}
 import javax.sql.DataSource
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
@@ -49,7 +46,8 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.{TransactionCallback, TransactionTemplate}
 
 import scala.collection.JavaConversions._
-import scala.util.{Success, Failure, Try}
+import scala.language.existentials
+import scala.util.{Failure, Success, Try}
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
@@ -166,14 +164,17 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     template.update(s"TRUNCATE TABLE repo_objects", Map.empty[String, Object])
   }
 
-  def clearObjects(olderThan: Instant) = {
-    val tt = timestamp(olderThan.toDateTime.minusHours(deletionDelay).toInstant)
+  def clearObjects(baseTime: Instant) = {
+    val thresholdTime = baseTime.toDateTime.minusHours(deletionDelay).toInstant
+    val tt = timestamp(thresholdTime)
     atomic {
       val i = template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt'", Map.empty[String, Object])
-      info(s"Clear old objects -> $i object(s) older than $olderThan deleted from repo_objects")
+      info(s"Clear old objects -> deleted $i object(s) last time validated before $thresholdTime")
 
-      val j = template.update(s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '$tt'", Map.empty[String, Object])
-      info(s"Clear old objects -> $j object(s) downloaded 2 hours before $olderThan deleted from repo_objects")
+      val hoursForBogusObjects: Int = 24
+      val twoHoursAgo = baseTime.toDateTime.minusHours(hoursForBogusObjects).toInstant
+      val j = template.update(s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '${timestamp(twoHoursAgo)}'", Map.empty[String, Object])
+      info(s"Clear old objects -> deleted $j object(s) downloaded $hoursForBogusObjects hours before $baseTime and never validated")
     }
   }
 
