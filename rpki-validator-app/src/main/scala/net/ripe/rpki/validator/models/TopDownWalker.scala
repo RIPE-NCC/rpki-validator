@@ -42,6 +42,7 @@ import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryOb
 import net.ripe.rpki.validator.models.validation.RepositoryObject.ROType
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.Storage
+import net.ripe.rpki.validator.lib.Structures._
 import org.apache.commons.lang.Validate
 import org.joda.time.Instant
 
@@ -76,10 +77,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   private def location(o: RepositoryObject.ROType) = new ValidationLocation(o.url)
 
-  def execute: Map[URI, ValidatedObject] = {
-    val validatedObjects = validateContext
-    updateValidationTimes(validatedObjects)
-    validatedObjects
+  def execute: Map[URI, ValidatedObject] = fBlock(validateContext) { vo =>
+    updateValidationTimes(vo)
   }
 
   private def validateContext = {
@@ -189,13 +188,15 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   }
 
   private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
-    val hashes = validatedObjectMap.values.view.map(_.hash).collect {
-      case Some(h) => h
-    }.force
-    hashes.foreach { hash =>
+    val hashes = validatedObjectMap.values.filter(_.hash.isDefined).map(o => (o.uri, o.hash.get))
+    val uriMap: Map[URI, Iterable[(URI, Array[Byte])]] = hashes.groupBy(_._1)
+
+    val hashesOnly = hashes.map(_._2)
+    hashesOnly.foreach { hash =>
       logger.debug("Setting validation time for the object: " + HashUtil.stringify(hash))
     }
-    store.updateValidationTimestamp(hashes)
+    store.updateValidationTimestamp(hashesOnly, Instant.now())
+    store.cleanOutdated(uriMap)
   }
 
   private def validatedObject(checkMap: Map[ValidationLocation, List[Check]])(r: RepositoryObject.ROType): (URI, ValidatedObject) = {
@@ -211,10 +212,10 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   private def check(objects: Seq[RepositoryObject.ROType], crl: CrlObject): List[Check] = {
     objects.map { o =>
-      val location = new ValidationLocation(o.url)
-      val result = ValidationResult.withLocation(location)
+      val loc = location(o)
+      val result = ValidationResult.withLocation(loc)
       o.decoded.validate(o.url, certificateContext, crlLocator(crl), validationOptions, result)
-      toChecks(location, result)
+      toChecks(loc, result)
     }.flatten.toList
   }
 
@@ -256,11 +257,10 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
-  private def validateObject(obj: RepositoryObject.ROType)(validate: ValidationResult => Unit) = {
-    val validationResult = ValidationResult.withLocation(location(obj))
-    validate(validationResult)
-    validationResult
-  }
+  private def validateObject(obj: RepositoryObject.ROType)(validate: ValidationResult => Unit) =
+    fBlock(ValidationResult.withLocation(location(obj))) { validationResult =>
+      validate(validationResult)
+    }
 
   private def _validateCrl(crl: CrlObject): ValidationResult =
     validateObject(crl) { validationResult =>

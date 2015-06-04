@@ -29,6 +29,8 @@
  */
 package net.ripe.rpki.validator.store
 
+import java.net.URI
+
 import net.ripe.rpki.validator.config.ApplicationOptions
 
 import scala.language.existentials
@@ -199,6 +201,19 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   private def timestamp(timestamp: Instant)= new Timestamp(timestamp.getMillis)
   private def instant(d: java.util.Date) = Option(d).map(d => new Instant(d.getTime))
+
+  override def cleanOutdated(uriMap: Map[URI, Iterable[(URI, Array[Byte])]]) = {
+    val sqls = uriMap.map { x =>
+      val (uri, hashes) = x
+      val inClause = hashes.map(p => "'" + stringify(p._2) + "'").mkString("(", ",", ")")
+      s"DELETE FROM repo_objects WHERE url = '$uri' AND hash NOT IN $inClause"
+    }
+    if (sqls.nonEmpty) {
+      atomic {
+        new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
+      }
+    }
+  }
 }
 
 object DurableCaches extends SimpleSingletons[String, CacheStore]({

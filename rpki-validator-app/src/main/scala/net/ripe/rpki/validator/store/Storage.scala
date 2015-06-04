@@ -29,6 +29,8 @@
  */
 package net.ripe.rpki.validator.store
 
+import java.net.URI
+
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
@@ -59,7 +61,9 @@ trait Storage extends Logging {
 
   def atomic[T](f: => T): T
 
-  def updateValidationTimestamp(urls: Iterable[Array[Byte]], t: Instant = Instant.now())
+  def updateValidationTimestamp(urls: Iterable[Array[Byte]], t: Instant)
+
+  def cleanOutdated(uriMap: Map[URI, Iterable[(URI, Array[Byte])]])
 
 }
 

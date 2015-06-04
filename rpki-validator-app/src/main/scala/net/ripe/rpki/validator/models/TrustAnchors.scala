@@ -42,8 +42,8 @@ import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryOb
 import net.ripe.rpki.validator.config.{ApplicationOptions, MemoryImage}
 import net.ripe.rpki.validator.fetchers._
 import net.ripe.rpki.validator.lib.HashSupport
+import net.ripe.rpki.validator.lib.Structures._
 import net.ripe.rpki.validator.models.validation.{CertificateObject, RepoFetcher}
-import net.ripe.rpki.validator.store.{CacheStore, DataSources}
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.joda.time.{Instant, DateTime}
 
@@ -55,9 +55,7 @@ import scalaz.{Failure, Success, Validation}
 // Ignore unused warning for implicit def from net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.rpki.validator.lib.DateAndTime._
 
-import net.ripe.rpki.validator.store.{DurableCaches, CacheStore, DataSources, RepositoryObjectStore}
-import org.apache.commons.io.FileUtils
-
+import net.ripe.rpki.validator.store.DurableCaches
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -223,7 +221,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val certificate = store.getCertificate(uri.toString)
     if (certificate.isDefined) {
       validationResult.rejectIfFalse(keyInfoMatches(certificate.get), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
-      store.updateValidationTimestamp(Seq(certificate.get.hash))
+      store.updateValidationTimestamp(Seq(certificate.get.hash), Instant.now())
     } else {
       validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, "Trust Anchor Certificate")
     }
@@ -239,9 +237,9 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val startTime = Instant.now
     trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
     val walker = new TopDownWalker(certificate, store, repoService, validationOptions, startTime)(scala.collection.mutable.Set())
-    val result: Map[URI, ValidatedObject] = walker.execute
-    store.clearObjects(startTime)
-    result
+    block(walker.execute) {
+      store.clearObjects(startTime)
+    }
   }
 
   private def keyInfoMatches(certificate: CertificateObject): Boolean = {

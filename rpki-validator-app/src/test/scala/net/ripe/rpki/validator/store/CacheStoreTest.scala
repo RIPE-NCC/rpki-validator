@@ -29,6 +29,9 @@
  */
 package net.ripe.rpki.validator.store
 
+import java.math.BigInteger
+import java.net.URI
+
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCmsTest
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsTest
 import net.ripe.rpki.commons.crypto.crl.X509CrlTest
@@ -47,6 +50,8 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
   val testCrl = X509CrlTest.createCrl
   val testManifest = ManifestCmsTest.getRootManifestCms
+  val testManifest1 = ManifestCmsTest.getRootManifestBuilder.withManifestNumber(new BigInteger("222")).
+    build(ManifestCmsTest.MANIFEST_KEY_PAIR.getPrivate)
   val testRoa = RoaCmsTest.getRoaCms
   val testCertificate = X509ResourceCertificateTest.createSelfSignedCaResourceCertificate
 
@@ -219,8 +224,24 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
   test("Should return an empty Seq when nothing matches the url") {
     val objects = store.getObject("rsync:bla")
+    objects should be(None)
+  }
 
-//    objects should have size 0
+  test("Should delete older object with the same URI") {
+    val mft1 = ManifestObject(url = "rsync://bla.mft", decoded = testManifest)
+    val mft2 = ManifestObject(url = "rsync://bla.mft", decoded = testManifest1)
+    store.storeManifest(mft1)
+    store.storeManifest(mft2)
+
+    store.getManifests(mft1.aki) should have size 2
+
+    val uri = new URI("rsync://bla.mft")
+    store.cleanOutdated(Map(uri -> Seq((uri, mft1.hash))))
+
+    val manifests = store.getManifests(mft1.aki)
+    manifests should have size 1
+    manifests.head.hash should be(mft1.hash)
+
   }
 
 }
