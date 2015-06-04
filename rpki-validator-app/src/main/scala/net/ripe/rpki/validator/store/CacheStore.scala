@@ -213,7 +213,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     if (sqls.nonEmpty) {
       atomic {
         val counts = new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
-        info(s"Removed ${counts.sum} objects for which exist a valid alternative.")
+        info(s"Removed ${counts.sum} objects for which exists a valid alternative.")
       }
     }
   }
