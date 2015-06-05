@@ -295,6 +295,10 @@ Known Issues
 
 Version History
 ---------------
+2.20 - 5 June 2015
+= Improvements to the caching system; previous versions could use a lot of disk space
+= Multithreading improvements; application is up to 50% faster
+
 2.19 - 12 May 2015
 = General improvements
 
