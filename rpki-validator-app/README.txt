@@ -55,8 +55,8 @@ Requirements
   allowing the tool to work faster by doing tasks in parallel.
   
   
-Usage
------
+Manual Installation
+-------------------
 
 = Decompress the downloaded package
 = Run the RPKI Validator script from the root folder to start, run (in foreground), stop
@@ -75,7 +75,12 @@ Usage
   
   http://yourhost:http-port/    (e.g. http://localhost:8080/)
 
-                           
+Using Puppet
+------------
+
+ARIN created a puppet module for this application that may be useful to you.
+It can be found here: https://github.com/arinlabs/puppet-rpki_validator
+
 Configuration file
 ------------------
 
