@@ -60,17 +60,17 @@ class HttpFetcherStore(dataSource: DataSource) {
         "serial_number" -> serial.toString))
 
     if (count == 0) {
-      template.update(
-        """INSERT INTO latest_http_snapshot(url, session_id, serial_number)
-           SELECT :url, :session_id, :serial_number
-           WHERE NOT EXISTS (
-             SELECT * FROM latest_http_snapshot s
-             WHERE s.url = :url
-           )
-      """,
-        Map("url" -> url.toString,
-          "session_id" -> sessionId,
-          "serial_number" -> serial.toString))
+      val urlCount = template.queryForInt("""SELECT COUNT(*) FROM latest_http_snapshot s WHERE s.url = :url""",  Map("url" -> url.toString))
+      if (urlCount == 0) {
+          template.update(
+            """INSERT INTO latest_http_snapshot(url, session_id, serial_number)
+             VALUES(:url, :session_id, :serial_number)
+        """,
+          Map(
+            "url" -> url.toString,
+            "session_id" -> sessionId,
+            "serial_number" -> serial.toString))
+        }
       }
   }
 

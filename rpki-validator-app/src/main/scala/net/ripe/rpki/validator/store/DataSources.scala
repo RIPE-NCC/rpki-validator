@@ -27,30 +27,48 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.models.validation
+package net.ripe.rpki.validator.store
 
 import java.io.File
-import java.net.URI
+import javax.sql.DataSource
 
-import net.ripe.rpki.validator.config.ApplicationOptions
-import net.ripe.rpki.validator.fetchers.FetcherConfig
-import net.ripe.rpki.validator.store.{DataSources, CacheStore}
-import net.ripe.rpki.validator.support.ValidatorTestCase
-import org.scalatest.mock.MockitoSugar
+import com.googlecode.flyway.core.Flyway
+import org.apache.commons.dbcp.BasicDataSource
 
-@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
+object DataSources {
 
-  val storage = new CacheStore(DataSources.InMemoryDataSource)
+  System.setProperty("derby.system.home", "/Users/misja/ripe/rpki-validator/rpki-validator-app/src/main/resources")
 
-  test("Should create different directories for different repo URLs") {
-    val fetcher = RepoFetcher.inMemory(FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation))
+  private object DSSingletons extends SimpleSingletons[String, DataSource]({ dataDirBasePath =>
+    val result = new BasicDataSource
+    result.setUrl("jdbc:derby:" + dataDirBasePath + File.separator + "rpki-object-cache")
+    result.setDriverClassName("org.apache.derby.jdbc.EmbeddedDriver")
+    result.setDefaultAutoCommit(true)
+    migrate(result)
+    result
+  })
 
-    fetcher.fetchRepo(new URI("rsync://repo1/x/z"))
-    fetcher.fetchRepo(new URI("rsync://repo2/y"))
+  /**
+   * Store data on disk.
+   */
+  def DurableDataSource(dataDirBasePath: File) = DSSingletons(dataDirBasePath.getAbsolutePath)
 
-    new File(ApplicationOptions.rsyncDirLocation + "/repo1/x").exists should be(true)
-    new File(ApplicationOptions.rsyncDirLocation + "/repo2/y").exists should be(true)
+  /**
+   * For unit testing
+   */
+  def InMemoryDataSource = {
+    val result = new BasicDataSource
+    result.setUrl("jdbc:derby:memory:rpki-object-cache;create=true") //;LOCK_TIMEOUT=10000")   TODO configure this somehow
+    result.setDriverClassName("org.apache.derby.jdbc.EmbeddedDriver")
+    result.setDefaultAutoCommit(true)
+    migrate(result)
+    result
   }
 
+  private def migrate(dataSource: DataSource) {
+    val flyway = new Flyway
+    flyway.setDataSource(dataSource)
+    flyway.setLocations("/db/objectstore/migration")
+    flyway.migrate
+  }
 }

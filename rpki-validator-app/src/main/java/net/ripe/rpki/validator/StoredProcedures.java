@@ -1,7 +1,7 @@
 /**
  * The BSD License
  *
- * Copyright (c) 2010-2012 RIPE NCC
+ * Copyright (c) 2010-2015 RIPE NCC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,30 +27,28 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.models.validation
 
-import java.io.File
-import java.net.URI
+package net.ripe.rpki.validator;
 
-import net.ripe.rpki.validator.config.ApplicationOptions
-import net.ripe.rpki.validator.fetchers.FetcherConfig
-import net.ripe.rpki.validator.store.{DataSources, CacheStore}
-import net.ripe.rpki.validator.support.ValidatorTestCase
-import org.scalatest.mock.MockitoSugar
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
-@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
+public class StoredProcedures {
 
-  val storage = new CacheStore(DataSources.InMemoryDataSource)
-
-  test("Should create different directories for different repo URLs") {
-    val fetcher = RepoFetcher.inMemory(FetcherConfig(rsyncDir = ApplicationOptions.rsyncDirLocation))
-
-    fetcher.fetchRepo(new URI("rsync://repo1/x/z"))
-    fetcher.fetchRepo(new URI("rsync://repo2/y"))
-
-    new File(ApplicationOptions.rsyncDirLocation + "/repo1/x").exists should be(true)
-    new File(ApplicationOptions.rsyncDirLocation + "/repo2/y").exists should be(true)
-  }
-
+    public static void dropTableIfExists(String tableName) throws SQLException {
+        try (Connection conn = DriverManager.getConnection("jdbc:default:connection")) {
+            DatabaseMetaData dbmd = conn.getMetaData();
+            ResultSet rs = dbmd.getTables(null, null, tableName, null);
+            if (rs.next()) {
+                String sql = "DROP TABLE " + tableName;
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.executeUpdate();
+                }
+            }
+        }
+    }
 }
