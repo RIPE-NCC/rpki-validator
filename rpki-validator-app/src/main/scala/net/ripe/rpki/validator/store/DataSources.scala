@@ -33,11 +33,12 @@ import java.io.File
 import javax.sql.DataSource
 
 import com.googlecode.flyway.core.Flyway
+import net.ripe.rpki.validator.config.ApplicationOptions
 import org.apache.commons.dbcp.BasicDataSource
 
 object DataSources {
 
-  System.setProperty("derby.system.home", "/Users/misja/ripe/rpki-validator/rpki-validator-app/src/main/resources")
+  System.setProperty("derby.system.home", ApplicationOptions.workDirLocation.getCanonicalPath)
 
   private object DSSingletons extends SimpleSingletons[String, DataSource]({ dataDirBasePath =>
     val result = new BasicDataSource
@@ -58,7 +59,7 @@ object DataSources {
    */
   def InMemoryDataSource = {
     val result = new BasicDataSource
-    result.setUrl("jdbc:derby:memory:rpki-object-cache;create=true") //;LOCK_TIMEOUT=10000")   TODO configure this somehow
+    result.setUrl("jdbc:derby:memory:rpki-object-cache;create=true")
     result.setDriverClassName("org.apache.derby.jdbc.EmbeddedDriver")
     result.setDefaultAutoCommit(true)
     migrate(result)

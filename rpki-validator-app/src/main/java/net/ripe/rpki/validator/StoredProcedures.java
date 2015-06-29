@@ -1,7 +1,7 @@
 /**
  * The BSD License
  *
- * Copyright (c) 2010-2015 RIPE NCC
+ * Copyright (c) 2010-2012 RIPE NCC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 package net.ripe.rpki.validator;
 
 import java.sql.Connection;
