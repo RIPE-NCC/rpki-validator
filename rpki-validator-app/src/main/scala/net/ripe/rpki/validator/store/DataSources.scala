@@ -42,7 +42,7 @@ object DataSources {
 
   private object DSSingletons extends SimpleSingletons[String, DataSource]({ dataDirBasePath =>
     val result = new BasicDataSource
-    result.setUrl("jdbc:derby:" + dataDirBasePath + File.separator + "rpki-object-cache")
+    result.setUrl("jdbc:derby:" + dataDirBasePath + File.separator + "rpki-object-cache;create=true")
     result.setDriverClassName("org.apache.derby.jdbc.EmbeddedDriver")
     result.setDefaultAutoCommit(true)
     migrate(result)
