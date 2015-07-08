@@ -1,21 +1,23 @@
-BEGIN;
+CREATE PROCEDURE DROP_TABLE_IF_EXISTS(IN TABLE_NAME VARCHAR(64))
+PARAMETER STYLE JAVA MODIFIES SQL DATA LANGUAGE JAVA EXTERNAL NAME
+  'net.ripe.rpki.validator.StoredProcedures.dropTableIfExists';
 
-DROP TABLE IF EXISTS repo_objects;
+CALL DROP_TABLE_IF_EXISTS('REPO_OBJECTS');
 
-CREATE TABLE repo_objects (
-  aki             CHARACTER VARYING(40)   NOT NULL,
-  hash            CHARACTER VARYING(64)   NOT NULL,
-  url             CHARACTER VARYING(2000) NOT NULL,
-  object_type     CHARACTER (3)           NOT NULL,
-  encoded         BYTEA                   NOT NULL,
-  download_time   TIMESTAMP               NOT NULL DEFAULT NOW(),
+CREATE TABLE REPO_OBJECTS (
+  aki             VARCHAR(40)   NOT NULL,
+  hash            VARCHAR(64)   NOT NULL,
+  url             VARCHAR(2000) NOT NULL,
+  object_type     CHAR (3)           NOT NULL,
+  encoded         BLOB                   NOT NULL,
+  download_time   TIMESTAMP               NOT NULL DEFAULT CURRENT_TIMESTAMP,
   validation_time TIMESTAMP,
   PRIMARY KEY (url, hash),
   CHECK (object_type IN ('crl', 'mft', 'roa', 'cer', 'gbr'))
 );
 
-CREATE INDEX idx_repo_obj_url ON repo_objects (url);
-CREATE INDEX idx_repo_obj_hash ON repo_objects (hash);
-CREATE INDEX idx_repo_obj_aki_type ON repo_objects (aki, object_type);
+CREATE INDEX idx_repo_obj_url ON REPO_OBJECTS (url);
+CREATE INDEX idx_repo_obj_hash ON REPO_OBJECTS (hash);
+CREATE INDEX idx_repo_obj_aki_type ON REPO_OBJECTS (aki, object_type);
 
-COMMIT;
+DROP PROCEDURE DROP_TABLE_IF_EXISTS;

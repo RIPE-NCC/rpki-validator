@@ -110,7 +110,6 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       """SELECT url, encoded FROM repo_objects
          WHERE url = :url AND object_type = :object_type
          ORDER BY download_time DESC
-         LIMIT 1
       """,
       Map("url" -> url, "object_type" -> certificateObjectType),
       new RowMapper[CertificateObject] {
