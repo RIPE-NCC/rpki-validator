@@ -201,7 +201,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
   }
 
-  private def timestamp(timestamp: Instant)= new Timestamp(timestamp.getMillis)
+  private def timestamp(timestamp: Instant) = new Timestamp(timestamp.getMillis)
   private def instant(d: java.util.Date) = Option(d).map(d => new Instant(d.getTime))
 
   override def cleanOutdated(uriMap: Map[URI, Iterable[(URI, Array[Byte])]]) = {
