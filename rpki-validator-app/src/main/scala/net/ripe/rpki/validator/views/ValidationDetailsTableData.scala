@@ -32,7 +32,7 @@ package views
 
 import java.net.URI
 import grizzled.slf4j.Logging
-import net.ripe.rpki.commons.validation.{ValidationMessage, ValidationCheck}
+import net.ripe.rpki.commons.validation.{ValidationStatus, ValidationMessage, ValidationCheck}
 
 abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] with Logging {
   
@@ -69,6 +69,8 @@ abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDe
   
 }
 
+object AllChecksPassed extends ValidationCheck(ValidationStatus.PASSED, "")
+
 case class ValidatedObjectDetail(uri: URI, isValid: Boolean, check: ValidationCheck) {
-  lazy val message = ValidationMessage.getMessage(check)
+  lazy val message = if (check == AllChecksPassed) "All checks passed" else ValidationMessage.getMessage(check)
 }

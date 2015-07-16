@@ -80,7 +80,7 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
           record.isValid,
           record.check.getKey,
           record.check.isOk
-      ))
+        ))
     }
   }
 
@@ -89,23 +89,20 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
       (trustAnchorLocator, taValidation) <- validatedObjects.all.par
       validatedObject <- taValidation.validatedObjects.filterNot(_.validationStatus == ValidationStatus.PASSED)
     } yield {
-      ValidatedObjectResult(trustAnchorLocator.getCaName, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
-    }
+        ValidatedObjectResult(trustAnchorLocator.getCaName, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
+      }
     records.seq.toIndexedSeq
   }
 
-  // TODO Temporary fix to make sure that valid objects without checks can still be found in the UI.
-  //      A better solution would be to show all checks for an object in the same row, where the number of checks could also be zero.
-  def emptyCheck: ValidationCheck = new ValidationCheck(ValidationStatus.PASSED, ValidationString.KNOWN_OBJECT_TYPE)
 
   def getValidationDetails = {
     val records = for {
       taValidation <- validatedObjects.all.values.par
       validatedObject <- taValidation.validatedObjects
-      check <- if (validatedObject.checks.isEmpty) Seq(emptyCheck) else validatedObject.checks
+      check <- if (validatedObject.checks.isEmpty) Seq(AllChecksPassed) else validatedObject.checks
     } yield {
-      ValidatedObjectDetail(validatedObject.uri, validatedObject.isValid, check)
-    }
+        ValidatedObjectDetail(validatedObject.uri, validatedObject.isValid, check)
+      }
     records.seq.toIndexedSeq
   }
 }
