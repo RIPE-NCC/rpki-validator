@@ -139,7 +139,7 @@ $(function () {
   });
   var refresh = function() {
     $.ajax({
-      url: "/trust-anchors",
+      url: "/trust-anchors/refresh",
       dataType: "html",
       success: function (data) {
         var updatedTable = $(data).filter("#trust-anchors");

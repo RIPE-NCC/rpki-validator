@@ -46,6 +46,10 @@ trait TrustAnchorsController extends ApplicationController {
   protected def validatedObjects: ValidatedObjects
   protected def startTrustAnchorValidation(trustAnchors: Seq[String])
 
+  get(s"${Tabs.TrustAnchorsTab.url}/refresh") {
+    new views.TrustAnchorsView(trustAnchors, validatedObjects.validationStatusCountByTal, messages = feedbackMessages)
+  }
+
   get(s"${Tabs.TrustAnchorsTab.url}") {
     new views.TrustAnchorsView(trustAnchors, validatedObjects.validationStatusCountByTal, messages = feedbackMessages)
   }
