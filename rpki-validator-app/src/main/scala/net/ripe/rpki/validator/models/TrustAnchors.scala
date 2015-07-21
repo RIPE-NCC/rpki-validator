@@ -211,20 +211,20 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
 
   override def extractTrustAnchorLocator(): ValidatedObject = {
     val uri = trustAnchorLocator.getCertificateLocation
-
     val validationResult = ValidationResult.withLocation(uri)
 
     val errors = repoService.visitObject(uri)
     errors.foreach(e => validationResult.warn(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, e.toString))
 
-    val certificate = store.getCertificate(uri.toString)
+    val certificates = store.getCertificate(uri.toString)
+    val certificate = certificates.find(keyInfoMatches)
+
     if (certificate.isDefined) {
       validationResult.rejectIfFalse(keyInfoMatches(certificate.get), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
       store.updateValidationTimestamp(Seq(certificate.get.hash), Instant.now())
     } else {
       validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, "Trust Anchor Certificate")
     }
-
 
     if (validationResult.hasFailureForCurrentLocation)
       InvalidObject(uri, None, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)

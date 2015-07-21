@@ -105,8 +105,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       }
     }
 
-  override def getCertificate(url: String): Option[CertificateObject] = Try {
-    template.queryForObject(
+  override def getCertificate(url: String): Seq[CertificateObject] = {
+    template.query(
       """SELECT url, encoded FROM repo_objects
          WHERE url = :url AND object_type = :object_type
          ORDER BY download_time DESC
@@ -115,8 +115,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       new RowMapper[CertificateObject] {
         override def mapRow(rs: ResultSet, i: Int) = CertificateObject.parse(rs.getString(1), rs.getBytes(2))
       }
-    )
-  }.toOption
+    ).toSeq
+  }
 
   def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, manifestObjectType) { (url, bytes, validationTime) =>
     ManifestObject.parse(url, bytes).copy(validationTime = validationTime)

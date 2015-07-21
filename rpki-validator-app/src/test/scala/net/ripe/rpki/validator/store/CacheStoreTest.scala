@@ -77,7 +77,9 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
     store.storeCertificate(certificate)
 
-    val obj = store.getCertificate("rsync://bla").get
+    val seq = store.getCertificate("rsync://bla")
+    seq should not be empty
+    val obj = seq.head
     obj.url should be(certificate.url)
     obj.aki should be(certificate.aki)
     obj.ski should be(certificate.ski)
