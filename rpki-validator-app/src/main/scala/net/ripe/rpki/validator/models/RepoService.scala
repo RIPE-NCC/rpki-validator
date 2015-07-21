@@ -47,6 +47,8 @@ class RepoService(fetcher: RepoFetcher) {
 
   private val locker = RepoService.locker
 
+  private var lastErrors: Seq[Fetcher.Error] = Seq()
+
   def visitRepo(uri: URI): Seq[Fetcher.Error] = fetchAndUpdateTime(uri) {
     fetcher.fetchRepo(uri)
   }
@@ -57,12 +59,12 @@ class RepoService(fetcher: RepoFetcher) {
 
   protected[models] def fetchAndUpdateTime(uri: URI)(block: => Seq[Fetcher.Error]): Seq[Fetcher.Error] =
     locker.locked(uri) {
-      if (haveRecentDataInStore(uri)) Seq()
+      if (haveRecentDataInStore(uri)) lastErrors
       else {
         val fetchTime = Instant.now()
-        val result = block
+        lastErrors = block
         RepoServiceStore.updateLastFetchTime(uri, fetchTime)
-        result
+        lastErrors
       }
     }
 
