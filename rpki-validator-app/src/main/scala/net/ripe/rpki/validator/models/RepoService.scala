@@ -41,7 +41,7 @@ class RepoService(fetcher: RepoFetcher) {
 
   private def interval(uri: URI) =
     if (uri.getScheme == "rsync")
-      Duration.standardMinutes(1)
+      Duration.standardMinutes(10)
     else
       Duration.standardMinutes(1)
 
