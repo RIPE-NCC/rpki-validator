@@ -31,6 +31,7 @@ package net.ripe.rpki.validator.models
 
 import java.net.URI
 
+import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.fetchers.Fetcher
 import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation.RepoFetcher
@@ -46,9 +47,9 @@ class RepoService(fetcher: RepoFetcher) {
 
   private def interval(uri: URI) =
     if (uri.getScheme == "rsync")
-      Duration.standardMinutes(10)
+      ApplicationOptions.rsyncFetcherInterval
     else
-      Duration.standardMinutes(1)
+      ApplicationOptions.rddpFetcherInterval
 
   private val locker = RepoService.locker
 

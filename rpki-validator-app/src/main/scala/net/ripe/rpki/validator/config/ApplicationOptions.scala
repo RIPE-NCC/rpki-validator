@@ -31,7 +31,8 @@ package net.ripe.rpki.validator.config
 
 import java.io.File
 import java.util.concurrent.TimeUnit
-import com.typesafe.config.{ConfigFactory, Config}
+
+import com.typesafe.config.{Config, ConfigFactory}
 import grizzled.slf4j.Logger
 
 object ApplicationOptions {
@@ -80,6 +81,9 @@ object ApplicationOptions {
   def removeOldObjectTimeoutInHours = confOrElse {
     c => FiniteDuration(config.getDuration(c, TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
   }("validation.remove_old_objects.interval", FiniteDuration(7, TimeUnit.DAYS))
+
+  def rddpFetcherInterval = org.joda.time.Duration.standardMinutes(safeConf(config.getInt)("fetch.rddp.interval"))
+  def rsyncFetcherInterval = org.joda.time.Duration.standardMinutes(safeConf(config.getInt)("fetch.rsync.interval"))
 
   private def safeConf[T](f: String => T)(name: String) : T = try {
     f(name)
