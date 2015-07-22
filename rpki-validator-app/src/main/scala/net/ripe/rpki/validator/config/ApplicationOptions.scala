@@ -82,8 +82,8 @@ object ApplicationOptions {
     c => FiniteDuration(config.getDuration(c, TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
   }("validation.remove_old_objects.interval", FiniteDuration(7, TimeUnit.DAYS))
 
-  def rddpFetcherInterval = org.joda.time.Duration.standardMinutes(safeConf(config.getInt)("fetch.rddp.interval"))
-  def rsyncFetcherInterval = org.joda.time.Duration.standardMinutes(safeConf(config.getInt)("fetch.rsync.interval"))
+  def rddpFetcherInterval = org.joda.time.Duration.standardMinutes(confOrElse(config.getInt)("fetch.rddp.interval", 1))
+  def rsyncFetcherInterval = org.joda.time.Duration.standardMinutes(confOrElse(config.getInt)("fetch.rsync.interval", 10))
 
   private def safeConf[T](f: String => T)(name: String) : T = try {
     f(name)
