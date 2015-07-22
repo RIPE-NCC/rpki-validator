@@ -36,6 +36,11 @@ import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation.RepoFetcher
 import net.ripe.rpki.validator.store.RepoServiceStore
 import org.joda.time.{Duration, Instant}
+import scala.collection._
+
+object RepoServiceErrors {
+  val lastErrors: mutable.Map[URI, Seq[Fetcher.Error]] = mutable.Map.empty
+}
 
 class RepoService(fetcher: RepoFetcher) {
 
@@ -47,8 +52,6 @@ class RepoService(fetcher: RepoFetcher) {
 
   private val locker = RepoService.locker
 
-  private var lastErrors: Seq[Fetcher.Error] = Seq()
-
   def visitRepo(uri: URI): Seq[Fetcher.Error] = fetchAndUpdateTime(uri) {
     fetcher.fetchRepo(uri)
   }
@@ -59,13 +62,12 @@ class RepoService(fetcher: RepoFetcher) {
 
   protected[models] def fetchAndUpdateTime(uri: URI)(block: => Seq[Fetcher.Error]): Seq[Fetcher.Error] =
     locker.locked(uri) {
-      if (haveRecentDataInStore(uri)) lastErrors
-      else {
+      if (!haveRecentDataInStore(uri)) {
         val fetchTime = Instant.now()
-        lastErrors = block
+        RepoServiceErrors.lastErrors(uri) = block
         RepoServiceStore.updateLastFetchTime(uri, fetchTime)
-        lastErrors
       }
+      RepoServiceErrors.lastErrors.getOrElse(uri, Seq.empty)
     }
 
   def visitObject(uri: URI) = fetchAndUpdateTime(uri) {
