@@ -696,7 +696,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   }
 
   def createRepoService(storage: Storage, errors: Seq[Fetcher.Error] = Seq()): RepoService = {
-    new RepoService(new RepoFetcher(storage, HttpFetcherStore.inMemory, FetcherConfig(""))) {
+    new RepoService(new RepoFetcher(storage, new Fetchers(HttpFetcherStore.inMemory, FetcherConfig("")))) {
       override def visitRepo(repoUri: URI): Seq[Fetcher.Error] = {
         errors
       }

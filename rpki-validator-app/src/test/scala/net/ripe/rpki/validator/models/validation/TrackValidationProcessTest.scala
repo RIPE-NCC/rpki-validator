@@ -27,19 +27,22 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.models
+package net.ripe.rpki.validator.models.validation
 
-import org.scalatest.BeforeAndAfter
-import scalaz.Failure
-import java.net.URI
-import scala.concurrent.stm._
-import net.ripe.rpki.validator.util.TrustAnchorLocator
-import net.ripe.rpki.validator.config.MemoryImage
-import org.joda.time.DateTime
 import java.io.File
+import java.net.URI
 import java.util.Collections
+
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
+import net.ripe.rpki.validator.config.MemoryImage
+import net.ripe.rpki.validator.models._
 import net.ripe.rpki.validator.support.ValidatorTestCase
+import net.ripe.rpki.validator.util.TrustAnchorLocator
+import org.joda.time.DateTime
+import org.scalatest.BeforeAndAfter
+
+import scala.concurrent.stm._
+import scalaz.Failure
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TrackValidationProcessTest extends ValidatorTestCase with BeforeAndAfter {
@@ -55,21 +58,21 @@ class TrackValidationProcessTest extends ValidatorTestCase with BeforeAndAfter {
     val subject = new MyTrackValidationProcessTrustAnchor(Seq.empty[TrustAnchor])
 
     val result = subject.runProcess()
-    result should equal(Failure("Trust anchor not idle or enabled"));
+    result should equal(Failure("Trust anchor not idle or enabled"))
   }
 
   test("should not process disabled trust anchors") {
     val subject = new MyTrackValidationProcessTrustAnchor(Seq(TrustAnchor(tal, Idle(new DateTime()), false)))
 
     val result = subject.runProcess()
-    result should equal(Failure("Trust anchor not idle or enabled"));
+    result should equal(Failure("Trust anchor not idle or enabled"))
   }
 
   test("should not process already running trust anchors") {
     val subject = new MyTrackValidationProcessTrustAnchor(Seq(TrustAnchor(tal, Running(""), true)))
 
     val result = subject.runProcess()
-    result should equal(Failure("Trust anchor not idle or enabled"));
+    result should equal(Failure("Trust anchor not idle or enabled"))
   }
 }
 

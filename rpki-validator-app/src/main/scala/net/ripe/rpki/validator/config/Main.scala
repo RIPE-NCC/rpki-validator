@@ -39,9 +39,12 @@ import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.api.RestApi
 import net.ripe.rpki.validator.bgp.preview._
 import net.ripe.rpki.validator.config.health.HealthChecks
+import net.ripe.rpki.validator.fetchers.FetcherConfig
 import net.ripe.rpki.validator.lib.{UserPreferences, _}
+import net.ripe.rpki.validator.models.validation.{RepoFetcher, TrackValidationProcess, ValidationProcessLogger, TrustAnchorValidationProcess}
 import net.ripe.rpki.validator.models.{Idle, IgnoreFilter, TrustAnchorData, _}
 import net.ripe.rpki.validator.rtr.{Pdu, RTRServer}
+import net.ripe.rpki.validator.store.DurableCaches
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.apache.commons.io.FileUtils
 import org.apache.http.client.methods.HttpGet
@@ -151,9 +154,14 @@ class Main extends Http with Logging { main =>
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val process = new TrustAnchorValidationProcess(trustAnchorLocator.locator, maxStaleDays,
-          ApplicationOptions.workDirLocation,
-          ApplicationOptions.rsyncDirLocation,
+
+        val store = DurableCaches(ApplicationOptions.workDirLocation)
+        val repoService = new RepoService(RepoFetcher(ApplicationOptions.workDirLocation, FetcherConfig(ApplicationOptions.rsyncDirLocation)))
+
+        val process = new TrustAnchorValidationProcess(trustAnchorLocator.locator,
+          store,
+          repoService,
+          maxStaleDays,
           trustAnchorLocator.name,
           ApplicationOptions.enableLooseValidation
         ) with TrackValidationProcess with ValidationProcessLogger {

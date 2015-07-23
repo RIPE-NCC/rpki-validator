@@ -71,8 +71,8 @@ class RepoService(fetcher: RepoFetcher) {
       RepoServiceErrors.lastErrors.getOrElse(uri, Seq.empty)
     }
 
-  def visitObject(uri: URI) = fetchAndUpdateTime(uri) {
-    fetcher.fetchObject(uri)
+  def visitTrustAnchorCertificate(uri: URI) = fetchAndUpdateTime(uri) {
+    fetcher.fetchTrustAnchorCertificate(uri)
   }
 
   private def haveRecentDataInStore(uri: URI) =

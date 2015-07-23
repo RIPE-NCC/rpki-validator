@@ -105,7 +105,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       }
     }
 
-  override def getCertificate(url: String): Seq[CertificateObject] = {
+  override def getCertificates(url: String): Seq[CertificateObject] = {
     template.query(
       """SELECT url, encoded FROM repo_objects
          WHERE url = :url AND object_type = :object_type
@@ -180,6 +180,11 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   override def delete(url: String, hash: String) = locker.locked(url) {
     template.update(s"DELETE FROM repo_objects WHERE url = :url AND hash = :hash",
       Map("hash" -> hash, "url" -> url))
+  }
+
+  override def delete(uri: URI) = locker.locked(uri.toString) {
+    template.update(s"DELETE FROM repo_objects WHERE url = :url",
+      Map("url" -> uri.toString))
   }
 
   def updateValidationTimestamp(hashes: Iterable[Array[Byte]], t: Instant) = {

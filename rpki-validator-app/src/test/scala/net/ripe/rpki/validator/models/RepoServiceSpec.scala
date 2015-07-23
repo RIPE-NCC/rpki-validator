@@ -67,18 +67,18 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
   test("should fetch object if URI was never visited") {
     val uri = new URI("http://foo.bar/bla.cer")
 
-    repoService1.visitObject(uri)
+    repoService1.visitTrustAnchorCertificate(uri)
 
-    Mockito.verify(fetcher1).fetchObject(uri)
+    Mockito.verify(fetcher1).fetchTrustAnchorCertificate(uri)
   }
 
   test("should not fetch object if URI was already visited") {
     val uri: URI = new URI("http://foo.bar/bla.cer")
 
-    repoService1.visitObject(uri)
-    repoService1.visitObject(uri)
+    repoService1.visitTrustAnchorCertificate(uri)
+    repoService1.visitTrustAnchorCertificate(uri)
 
-    Mockito.verify(fetcher1, Mockito.times(1)).fetchObject(uri)
+    Mockito.verify(fetcher1, Mockito.times(1)).fetchTrustAnchorCertificate(uri)
   }
 
   test("fetch time should be recent") {

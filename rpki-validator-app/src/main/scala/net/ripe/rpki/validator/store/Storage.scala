@@ -51,11 +51,13 @@ trait Storage extends Logging {
 
   def storeGhostbusters(ghostbusters: GhostbustersObject)
 
-  def getCertificate(uri: String): Seq[CertificateObject]
+  def getCertificates(uri: String): Seq[CertificateObject]
 
   def getManifests(aki: Array[Byte]): Seq[ManifestObject]
 
   def delete(url: String, hash: String)
+
+  def delete(uri: URI)
 
   def clear()
 

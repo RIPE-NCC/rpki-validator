@@ -32,29 +32,21 @@ package net.ripe.rpki.validator.models
 import java.io.File
 import java.net.URI
 
-import grizzled.slf4j.{Logger, Logging}
-import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
-import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceCertificate}
-import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationOptions, ValidationResult, ValidationString}
-import net.ripe.rpki.validator.config.{ApplicationOptions, MemoryImage}
-import net.ripe.rpki.validator.fetchers._
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
+import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.lib.HashSupport
-import net.ripe.rpki.validator.lib.Structures._
-import net.ripe.rpki.validator.models.validation.{CertificateObject, RepoFetcher}
 import net.ripe.rpki.validator.util.TrustAnchorLocator
-import org.joda.time.{DateTime, Instant, Period}
+import org.joda.time.DateTime
 
 import scala.collection.JavaConverters._
-import scala.concurrent.stm.{Ref, atomic}
 import scala.math.Ordering.Implicits._
 import scalaz.{Failure, Success, Validation}
 
 // Ignore unused warning for implicit def from net.ripe.rpki.validator.lib.DateAndTime._
 import net.ripe.rpki.validator.lib.DateAndTime._
-import net.ripe.rpki.validator.store.DurableCaches
 
 sealed trait ProcessingStatus {
   def isIdle: Boolean
@@ -154,155 +146,5 @@ object TrustAnchors extends Logging {
         crl = None)
     }
     new TrustAnchors(trustAnchors)
-  }
-}
-
-trait ValidationProcess {
-  protected[this] val logger = Logger[ValidationProcess]
-
-  def trustAnchorLocator: TrustAnchorLocator
-
-  def runProcess(): Validation[String, Map[URI, ValidatedObject]] = {
-    try {
-      val certificate = extractTrustAnchorLocator()
-      certificate match {
-        case ValidObject(uri, _, checks, trustAnchor: X509ResourceCertificate) =>
-          val context = new CertificateRepositoryObjectValidationContext(uri, trustAnchor)
-          Success(validateObjects(context) + (uri -> certificate))
-        case _ =>
-          Success(Map(certificate.uri -> certificate))
-      }
-    } catch {
-      exceptionHandler
-    } finally {
-      finishProcessing()
-    }
-  }
-
-  def exceptionHandler: PartialFunction[Throwable, Validation[String, Nothing]] = {
-    case e: Exception =>
-      val message = if (e.getMessage != null) e.getMessage else e.toString
-      Failure(message)
-  }
-
-  def objectFetcherListeners: Seq[NotifyingCertificateRepositoryObjectFetcher.Listener] = Seq.empty
-
-  def extractTrustAnchorLocator(): ValidatedObject
-  def validateObjects(certificate: CertificateRepositoryObjectValidationContext): Map[URI, ValidatedObject]
-  def finishProcessing(): Unit = {}
-
-  def shutdown(): Unit = {}
-}
-
-class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorLocator, maxStaleDays: Int,
-                                   storageDirectory: File,
-                                   rsyncDir: String,
-                                   taName: String,
-                                   enableLooseValidation: Boolean = false)
-  extends ValidationProcess {
-
-  private val validationOptions = new ValidationOptions()
-
-  validationOptions.setMaxStaleDays(maxStaleDays)
-  validationOptions.setLooseValidationEnabled(enableLooseValidation)
-
-  val store = DurableCaches(storageDirectory)
-  val repoService = new RepoService(RepoFetcher(storageDirectory, FetcherConfig(rsyncDir)))
-
-  override def extractTrustAnchorLocator(): ValidatedObject = {
-    val uri = trustAnchorLocator.getCertificateLocation
-    val validationResult = ValidationResult.withLocation(uri)
-
-    val errors = repoService.visitObject(uri)
-    errors.foreach(e => validationResult.warn(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, e.toString))
-
-    val certificates = store.getCertificate(uri.toString)
-    val certificate = certificates.find(keyInfoMatches)
-
-    if (certificate.isDefined) {
-      validationResult.rejectIfFalse(keyInfoMatches(certificate.get), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
-      store.updateValidationTimestamp(Seq(certificate.get.hash), Instant.now())
-    } else {
-      validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, "Trust Anchor Certificate")
-    }
-
-    if (validationResult.hasFailureForCurrentLocation)
-      InvalidObject(uri, None, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
-    else
-      ValidObject(uri, Some(certificate.get.hash), validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet, certificate.get.decoded)
-  }
-
-  override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    val startTime = Instant.now
-    trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
-    val walker = new TopDownWalker(certificate, store, repoService, validationOptions, startTime)(scala.collection.mutable.Set())
-    block(walker.execute) {
-      store.clearObjects(startTime)
-    }
-  }
-
-  private def keyInfoMatches(certificate: CertificateObject): Boolean = {
-    trustAnchorLocator.getPublicKeyInfo == X509CertificateUtil.getEncodedSubjectPublicKeyInfo(certificate.decoded.getCertificate)
-  }
-}
-
-trait TrackValidationProcess extends ValidationProcess {
-  def memoryImage: Ref[MemoryImage]
-
-  abstract override def runProcess() = {
-    val start = atomic { implicit transaction =>
-      (for (
-        ta <- memoryImage().trustAnchors.all.find(_.locator == trustAnchorLocator)
-        if ta.status.isIdle && ta.enabled
-      ) yield {
-        memoryImage.transform { _.startProcessingTrustAnchor(ta.locator, "Updating certificate") }
-      }).isDefined
-    }
-    if (start) {
-      val result = super.runProcess()
-      memoryImage.single.transform {
-        _.finishedProcessingTrustAnchor(trustAnchorLocator, result)
-      }
-      result
-    } else Failure("Trust anchor not idle or enabled")
-  }
-
-  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    memoryImage.single.transform { _.startProcessingTrustAnchor(trustAnchorLocator, "Updating ROAs") }
-    super.validateObjects(certificate)
-  }
-}
-
-trait ValidationProcessLogger extends ValidationProcess {
-  override def objectFetcherListeners = super.objectFetcherListeners :+ ObjectFetcherLogger
-
-  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    logger.info("Loaded trust anchor " + trustAnchorLocator.getCaName + " from location " + certificate.getLocation + ", starting validation")
-    val begin = Instant.now()
-    val objects = super.validateObjects(certificate)
-    val elapsed = new Period(begin, Instant.now())
-    logger.info(s"Finished validating ${trustAnchorLocator.getCaName}, ${objects.size} valid objects; spent $elapsed.")
-    objects
-  }
-
-  abstract override def exceptionHandler = {
-    case e: Exception =>
-      logger.error("Error while validating trust anchor " + trustAnchorLocator.getCaName + ": " + e.getStackTraceString, e)
-      super.exceptionHandler(e)
-  }
-
-  private object ObjectFetcherLogger extends NotifyingCertificateRepositoryObjectFetcher.ListenerAdapter {
-    override def afterPrefetchFailure(uri: URI, result: ValidationResult) {
-      logger.warn("Failed to prefetch '" + uri + "'")
-    }
-    override def afterPrefetchSuccess(uri: URI, result: ValidationResult) {
-      logger.debug("Prefetched '" + uri + "'")
-    }
-    override def afterFetchFailure(uri: URI, result: ValidationResult) {
-      logger.warn("Failed to validate '" + uri + "': " + result.getFailuresForCurrentLocation.asScala.map(_.toString).mkString(", "))
-    }
-    override def afterFetchSuccess(uri: URI, obj: CertificateRepositoryObject, result: ValidationResult) {
-      logger.debug("Validated OBJECT '" + uri + "'")
-    }
   }
 }

@@ -29,12 +29,10 @@
  */
 package net.ripe.rpki.validator.models.validation
 
-import net.ripe.rpki.commons.crypto.cms.ghostbuster.{GhostbustersCms, GhostbustersCmsParser}
-
-import scala.language.existentials
 import java.io.File
 import java.net.URI
 
+import net.ripe.rpki.commons.crypto.cms.ghostbuster.{GhostbustersCms, GhostbustersCmsParser}
 import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsParser}
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
@@ -45,6 +43,7 @@ import net.ripe.rpki.validator.store._
 import org.joda.time.Instant
 
 import scala.collection.JavaConversions._
+import scala.language.existentials
 
 
 trait Hashing {
@@ -214,8 +213,28 @@ case class RoaObject(override val url: String,
   def encoded = decoded.getEncoded
 }
 
+class Fetchers(httpStore: HttpFetcherStore, config: FetcherConfig) {
 
-class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: FetcherConfig) {
+  def singleObjectFetcher(objectUri: URI): Fetcher = {
+    val fetcher = objectUri.getScheme match {
+      case "rsync" => new SingleObjectRsyncFetcher(config)
+      case "http" | "https" => new SingleObjectHttpFetcher(httpStore)
+      case _ => throw new Exception(s"No fetcher for the object $objectUri")
+    }
+    fetcher
+  }
+
+  def fetcher(repoUri: URI): Fetcher = {
+    val fetcher = repoUri.getScheme match {
+      case "rsync" => new RsyncFetcher(config)
+      case "http" | "https" => new HttpFetcher(httpStore)
+      case _ => throw new Exception(s"No fetcher for the uri $repoUri")
+    }
+    fetcher
+  }
+}
+
+class RepoFetcher(storage: Storage, fetchers: Fetchers) {
 
   val rsyncUrlPool = scala.collection.mutable.Set[String]()
   val httpUrlPool = scala.collection.mutable.Set[String]()
@@ -232,43 +251,43 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
       _.mkString("", "/", "/")
     }
 
-  def fetchObject(objectUri: URI): Seq[Fetcher.Error] = {
-    val fetcher = objectUri.getScheme match {
-      case "rsync" => new SingleObjectRsyncFetcher(config)
-      case "http" | "https" => new SingleObjectHttpFetcher(httpStore)
-      case _ => throw new Exception(s"No fetcher for the object $objectUri")
-    }
+  private def storeObject(repoObj: RepositoryObject.ROType) = repoObj match {
+    case c: CertificateObject => storage.storeCertificate(c)
+    case c: CrlObject => storage.storeCrl(c)
+    case c: ManifestObject => storage.storeManifest(c)
+    case c: RoaObject => storage.storeRoa(c)
+    case c: GhostbustersObject => storage.storeGhostbusters(c)
+  }
 
-    fetch(objectUri, fetcher)
+  def fetchTrustAnchorCertificate(objectUri: URI): Seq[Fetcher.Error] = {
+    val fetcher = fetchers.singleObjectFetcher(objectUri)
+
+    fetch(objectUri, fetcher, new FetcherListener {
+      override def processObject(repoObj: RepositoryObject.ROType) = {
+        storage.delete(objectUri)
+        storeObject(repoObj)
+      }
+
+      override def withdraw(url: URI, hash: String): Unit = {
+        storage.delete(url.toString, hash)
+      }
+    })
   }
 
   def fetchRepo(repoUri: URI): Seq[Fetcher.Error] = {
-    val fetcher = repoUri.getScheme match {
-      case "rsync" => new RsyncFetcher(config)
-      case "http" | "https" => new HttpFetcher(httpStore)
-      case _ => throw new Exception(s"No fetcher for the uri $repoUri")
-    }
+    val fetcher = fetchers.fetcher(repoUri)
 
-    fetch(repoUri, fetcher)
+    fetch(repoUri, fetcher, new FetcherListener {
+      override def processObject(repoObj: RepositoryObject.ROType) = storeObject(repoObj)
+
+      override def withdraw(url: URI, hash: String) = {
+        storage.delete(url.toString, hash)
+      }
+    })
   }
-
-  private def fetch(repoUri: URI, fetcher: Fetcher): Seq[Fetcher.Error] = {
+  private def fetch(repoUri: URI, fetcher: Fetcher, fetcherListener: FetcherListener): Seq[Fetcher.Error] = {
     storage.atomic {
-      fetcher.fetch(repoUri, new FetcherListener {
-        override def processObject(repoObj: RepositoryObject.ROType) = {
-          repoObj match {
-            case c: CertificateObject => storage.storeCertificate(c)
-            case c: CrlObject => storage.storeCrl(c)
-            case c: ManifestObject => storage.storeManifest(c)
-            case c: RoaObject => storage.storeRoa(c)
-            case c: GhostbustersObject => storage.storeGhostbusters(c)
-          }
-        }
-
-        override def withdraw(url: URI, hash: String) = {
-          storage.delete(url.toString, hash)
-        }
-      })
+      fetcher.fetch(repoUri, fetcherListener)
     }
   }
 }
@@ -276,10 +295,6 @@ class RepoFetcher(storage: Storage, httpStore: HttpFetcherStore, config: Fetcher
 object RepoFetcher {
   def apply(storageDirectory: File, config: FetcherConfig) = {
     val path = storageDirectory.getAbsolutePath
-    new RepoFetcher(DurableCaches(path), HttpFetcherStore(path), config)
-  }
-  def inMemory(config: FetcherConfig) = {
-    val dataSource = DataSources.InMemoryDataSource
-    new RepoFetcher(new CacheStore(dataSource), new HttpFetcherStore(dataSource), config)
+    new RepoFetcher(DurableCaches(path), new Fetchers(HttpFetcherStore(path), config))
   }
 }
