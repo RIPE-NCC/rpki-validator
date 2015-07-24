@@ -39,8 +39,8 @@ import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
+import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
-import org.springframework.jdbc.core.{JdbcTemplate, RowMapper}
 import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.{TransactionCallback, TransactionTemplate}
@@ -199,7 +199,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
     if (sqls.nonEmpty) {
       atomic {
-        val counts = new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
+        val counts = template.getJdbcOperations.batchUpdate(sqls.toArray)
         info(s"Updated validationTime for ${counts.sum} objects.")
       }
     }
@@ -216,8 +216,9 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
     if (sqls.nonEmpty) {
       atomic {
-        val counts = new JdbcTemplate(dataSource).batchUpdate(sqls.toArray)
-        info(s"Removed ${counts.sum} objects for which exists a valid alternative.")
+        val counts = template.getJdbcOperations.batchUpdate(sqls.toArray)
+        val sum = counts.sum
+        if (sum > 0) info(s"Removed $sum objects for which exists a valid alternative.")
       }
     }
   }
