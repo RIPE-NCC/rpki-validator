@@ -177,12 +177,12 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
   }
 
-  override def delete(url: String, hash: String) = locker.locked(url) {
+  override def delete(url: String, hash: String) = {
     template.update(s"DELETE FROM repo_objects WHERE url = :url AND hash = :hash",
       Map("hash" -> hash, "url" -> url))
   }
 
-  override def delete(uri: URI) = locker.locked(uri.toString) {
+  override def delete(uri: URI) = {
     template.update(s"DELETE FROM repo_objects WHERE url = :url",
       Map("url" -> uri.toString))
   }

@@ -57,9 +57,7 @@ class RepoService(fetcher: RepoFetcher) {
     fetcher.fetchRepo(uri)
   }
 
-  def lastFetchTime(uri: URI): Instant = locker.locked(uri) {
-    RepoServiceStore.getLastFetchTime(uri)
-  }
+  def lastFetchTime(uri: URI): Instant = RepoServiceStore.getLastFetchTime(uri)
 
   protected[models] def fetchAndUpdateTime(uri: URI)(block: => Seq[Fetcher.Error]): Seq[Fetcher.Error] =
     locker.locked(uri) {
