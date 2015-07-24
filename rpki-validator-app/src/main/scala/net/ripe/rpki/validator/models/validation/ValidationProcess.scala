@@ -183,7 +183,7 @@ trait ValidationProcessLogger extends ValidationProcess {
 
   abstract override def exceptionHandler = {
     case e: Exception =>
-      logger.error("Error while validating trust anchor " + trustAnchorLocator.getCaName + ": " + e.getStackTraceString, e)
+      logger.error("Error while validating trust anchor " + trustAnchorLocator.getCaName, e)
       super.exceptionHandler(e)
   }
 
