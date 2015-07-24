@@ -82,7 +82,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   }
 
   private def validateContext = {
-    logger.info(s"Validating ${certificateContext.getLocation}")
+    logger.debug(s"Validating ${certificateContext.getLocation}")
 
     val fetchErrors = preferredFetchLocation.map {
       prefetch(_).map(e => e.uri -> e).toMap
