@@ -70,7 +70,7 @@ class Locker extends Logging {
 
   @inline
   private def _locked[T, X](lock: AccessibleLock)(g: => T): T = {
-    if (! lock.tryLock(61, TimeUnit.SECONDS)) {
+    if (! lock.tryLock(25, TimeUnit.SECONDS)) {
       val key: Object = locks.find(l => l._2 == lock).get._1
       val lockOwner = lock.getOwningThread
       if (lockOwner != null) {
