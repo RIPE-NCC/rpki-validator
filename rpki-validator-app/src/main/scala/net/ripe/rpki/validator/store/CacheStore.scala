@@ -168,7 +168,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     val tt = timestamp(thresholdTime)
     atomic {
       val i = template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt'", Map.empty[String, Object])
-      info(s"Clear old objects -> deleted $i object(s) last time validated before $thresholdTime")
+      if (i != 0) info(s"Clear old objects -> deleted $i object(s) last time validated before $thresholdTime")
 
       val hoursForBogusObjects: Int = 24
       val twoHoursAgo = baseTime.toDateTime.minusHours(hoursForBogusObjects).toInstant
@@ -218,7 +218,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       atomic {
         val counts = template.getJdbcOperations.batchUpdate(sqls.toArray)
         val sum = counts.sum
-        if (sum > 0) info(s"Removed $sum objects for which exists a valid alternative.")
+        if (sum > 0) info(s"Clear old objects -> deleted $sum objects for which exists a valid alternative.")
       }
     }
   }
