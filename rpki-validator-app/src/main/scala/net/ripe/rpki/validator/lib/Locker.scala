@@ -30,21 +30,32 @@
 package net.ripe.rpki.validator.lib
 
 
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
+
+import grizzled.slf4j.Logging
 
 import scala.collection.mutable
 
 /**
  * Execute a function while acquiring a lock by a key.
  */
-class Locker {
+class Locker extends Logging {
 
-  private val locks = mutable.Map[Object, ReentrantLock]()
-  private val globalLock = new ReentrantLock()
+  private class AccessibleLock extends ReentrantLock {
+    def getOwningThread = getOwner
+  }
+
+  private val locks = mutable.Map[Object, AccessibleLock]()
+  private val globalLock = new AccessibleLock()
+
+  private def getStackTrace(thread: Thread) =
+    thread.getStackTrace.dropWhile(_.getClassName.startsWith(classOf[Locker].getName))
+      .map(s => s.getFileName + ":" + s.getLineNumber + "\t\t\t" + s.getClassName).mkString("\n\t","\n\t","\n")
 
   def locked[T](key: Object)(f: => T): T = {
-    val lock: ReentrantLock = _locked(globalLock) {
-      locks.getOrElseUpdate(key, new ReentrantLock())
+    val lock = _locked(globalLock) {
+      locks.getOrElseUpdate(key, new AccessibleLock())
     }
     try {
       _locked(lock) {
@@ -58,8 +69,16 @@ class Locker {
   }
 
   @inline
-  private def _locked[T, X](lock: ReentrantLock)(g: => T): T = {
-    lock.lock()
+  private def _locked[T, X](lock: AccessibleLock)(g: => T): T = {
+    if (! lock.tryLock(61, TimeUnit.SECONDS)) {
+      val key: Object = locks.find(l => l._2 == lock).get._1
+      val lockOwner = lock.getOwningThread
+      if (lockOwner != null) {
+        logger.info(s"waiting in ${Thread.currentThread()} on ${key} from ${getStackTrace(Thread.currentThread())}")
+        logger.info(s"Locked by $lockOwner: ${getStackTrace(lockOwner)}")
+      }
+      lock.lock()
+    }
     try {
       g
     } finally {
