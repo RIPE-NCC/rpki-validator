@@ -163,15 +163,13 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   def clearObjects(baseTime: Instant) = {
     val thresholdTime = baseTime.toDateTime.minusHours(deletionDelay).toInstant
     val tt = timestamp(thresholdTime)
-    atomic {
-      val i = template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt'", Map.empty[String, Object])
-      if (i != 0) info(s"Clear old objects -> deleted $i object(s) last time validated before $thresholdTime")
+    val i = template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt'", Map.empty[String, Object])
+    if (i != 0) info(s"Clear old objects -> deleted $i object(s) last time validated before $thresholdTime")
 
-      val hoursForBogusObjects: Int = 24
-      val twoHoursAgo = baseTime.toDateTime.minusHours(hoursForBogusObjects).toInstant
-      val j = template.update(s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '${timestamp(twoHoursAgo)}'", Map.empty[String, Object])
-      info(s"Clear old objects -> deleted $j object(s) downloaded $hoursForBogusObjects hours before $baseTime and never validated")
-    }
+    val hoursForBogusObjects: Int = 24
+    val twoHoursAgo = baseTime.toDateTime.minusHours(hoursForBogusObjects).toInstant
+    val j = template.update(s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '${timestamp(twoHoursAgo)}'", Map.empty[String, Object])
+    if (j != 0) info(s"Clear old objects -> deleted $j object(s) downloaded $hoursForBogusObjects hours before $baseTime and never validated")
   }
 
   override def delete(url: String, hash: String) = {
@@ -195,10 +193,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
 
     if (sqls.nonEmpty) {
-      atomic {
-        val counts = template.getJdbcOperations.batchUpdate(sqls.toArray)
-        info(s"Updated validationTime for ${counts.sum} objects.")
-      }
+      val counts = template.getJdbcOperations.batchUpdate(sqls.toArray)
+      info(s"Updated validationTime for ${counts.sum} objects.")
     }
   }
 
@@ -212,11 +208,9 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       s"DELETE FROM repo_objects WHERE url = '$uri' AND hash NOT IN $inClause"
     }
     if (sqls.nonEmpty) {
-      atomic {
-        val counts = template.getJdbcOperations.batchUpdate(sqls.toArray)
-        val sum = counts.sum
-        if (sum > 0) info(s"Clear old objects -> deleted $sum objects for which exists a valid alternative.")
-      }
+      val counts = template.getJdbcOperations.batchUpdate(sqls.toArray)
+      val sum = counts.sum
+      if (sum > 0) info(s"Clear old objects -> deleted $sum objects for which exists a valid alternative.")
     }
   }
 }
