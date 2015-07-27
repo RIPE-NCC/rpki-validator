@@ -50,8 +50,9 @@ class Locker extends Logging {
   private val globalLock = new AccessibleLock()
 
   private def getStackTrace(thread: Thread) =
-    thread.getStackTrace.dropWhile(_.getClassName.startsWith(classOf[Locker].getName))
-      .map(s => s.getFileName + ":" + s.getLineNumber + "\t\t\t" + s.getClassName).mkString("\n\t","\n\t","\n")
+    thread.getStackTrace
+      .map(e => s"${e.getFileName}:${e.getLineNumber}\t\t\t${e.getMethodName}\t\t${e.getClassName}")
+      .mkString("\n\t","\n\t","\n")
 
   def locked[T](key: Object)(f: => T): T = {
     val lock = _locked(globalLock) {
