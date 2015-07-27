@@ -34,16 +34,16 @@ import javax.sql.DataSource
 
 import com.googlecode.flyway.core.Flyway
 import net.ripe.rpki.validator.config.ApplicationOptions
-import org.apache.derby.jdbc.EmbeddedDataSource
+import org.springframework.jdbc.datasource.DriverManagerDataSource
 
 object DataSources {
 
   System.setProperty("derby.system.home", ApplicationOptions.workDirLocation.getCanonicalPath)
 
   private object DSSingletons extends SimpleSingletons[String, DataSource]({ dataDirBasePath =>
-    val result = new EmbeddedDataSource()
-    result.setDatabaseName(dataDirBasePath + File.separator + "rpki-object-cache")
-    result.setCreateDatabase("create")
+    val result = new DriverManagerDataSource
+    result.setUrl("jdbc:derby:" + dataDirBasePath + File.separator + "rpki-object-cache;create=true")
+    result.setDriverClassName("org.apache.derby.jdbc.EmbeddedDriver")
     migrate(result)
     result
   })
@@ -57,9 +57,9 @@ object DataSources {
    * For unit testing
    */
   def InMemoryDataSource = {
-    val result = new EmbeddedDataSource()
-    result.setDatabaseName("memory:rpki-object-cache")
-    result.setCreateDatabase("create")
+    val result = new DriverManagerDataSource
+    result.setUrl("jdbc:derby:memory:rpki-object-cache;create=true")
+    result.setDriverClassName("org.apache.derby.jdbc.EmbeddedDriver")
     migrate(result)
     result
   }
