@@ -36,7 +36,6 @@ import javax.sql.DataSource
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.config.ApplicationOptions
-import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
 import org.springframework.jdbc.core.RowMapper
@@ -66,8 +65,6 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   val deletionDelay = ApplicationOptions.removeOldObjectTimeoutInHours.toHours.toInt
 
-  private val locker = new Locker
-
   override def storeCertificate(certificate: CertificateObject) = storeRepoObject(certificate, certificateObjectType)
 
   override def storeRoa(roa: RoaObject) = storeRepoObject(roa, roaObjectType)
@@ -79,7 +76,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   override def storeCrl(crl: CrlObject) = storeRepoObject(crl, crlObjectType)
 
   private def storeRepoObject[T <: CertificateRepositoryObject](obj: RepositoryObject[T], objType: String) =
-    locker.locked(obj.hash) {
+    atomic {
       try {
         val params = Map("aki" -> stringify(obj.aki),
           "hash" -> stringify(obj.hash),

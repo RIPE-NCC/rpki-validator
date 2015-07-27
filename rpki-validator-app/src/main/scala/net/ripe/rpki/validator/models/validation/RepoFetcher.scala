@@ -262,10 +262,12 @@ class RepoFetcher(storage: Storage, fetchers: Fetchers) {
   def fetchTrustAnchorCertificate(objectUri: URI): Seq[Fetcher.Error] = {
     val fetcher = fetchers.singleObjectFetcher(objectUri)
 
-    fetch(objectUri, fetcher, new FetcherListener {
+    fetcher.fetch(objectUri, new FetcherListener {
       override def processObject(repoObj: RepositoryObject.ROType) = {
-        storage.delete(objectUri)
-        storeObject(repoObj)
+        storage.atomic {
+          storage.delete(objectUri)
+          storeObject(repoObj)
+        }
       }
 
       override def withdraw(url: URI, hash: String): Unit = {
@@ -277,18 +279,13 @@ class RepoFetcher(storage: Storage, fetchers: Fetchers) {
   def fetchRepo(repoUri: URI): Seq[Fetcher.Error] = {
     val fetcher = fetchers.fetcher(repoUri)
 
-    fetch(repoUri, fetcher, new FetcherListener {
+    fetcher.fetch(repoUri, new FetcherListener {
       override def processObject(repoObj: RepositoryObject.ROType) = storeObject(repoObj)
 
       override def withdraw(url: URI, hash: String) = {
         storage.delete(url.toString, hash)
       }
     })
-  }
-  private def fetch(repoUri: URI, fetcher: Fetcher, fetcherListener: FetcherListener): Seq[Fetcher.Error] = {
-    storage.atomic {
-      fetcher.fetch(repoUri, fetcherListener)
-    }
   }
 }
 
