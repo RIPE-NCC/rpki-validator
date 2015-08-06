@@ -32,6 +32,7 @@ package net.ripe.rpki.validator.models
 import java.net.URI
 import java.util
 
+import com.google.common.collect.Lists
 import grizzled.slf4j.Logging
 import net.ripe.ipresource.{IpResourceSet, IpResourceType}
 import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509Crl}
@@ -245,7 +246,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       }
     } else {
       val childResources = if (childCert.isResourceSetInherited) getResourcesOfType(childCert.getInheritedResourceTypes, certificateContext.getResources) else childCert.getResources
-      val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), childCert, childResources)
+      val childSubjectChain = Lists.newArrayList(certificateContext.getSubjectChain)
+      childSubjectChain.add(childCert.getSubject.getName)
+      val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), childCert, childResources, childSubjectChain)
       val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
       nextLevelWalker.validateContext
     }

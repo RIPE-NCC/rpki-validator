@@ -29,6 +29,7 @@
  */
 package net.ripe.rpki.validator.fetchers;
 
+import com.google.common.collect.Lists;
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject;
 import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms;
 import net.ripe.rpki.commons.crypto.crl.X509Crl;
@@ -253,7 +254,8 @@ public class ValidatingCertificateRepositoryObjectFetcherTest {
         X509Crl crl = getChildCrl();
 
         Specification<byte[]> fileContentSpecification = null;
-        CertificateRepositoryObjectValidationContext context = new CertificateRepositoryObjectValidationContext(FIRST_CHILD_CERTIFICATE_LOCATION, childCertificate, ROOT_RESOURCE_SET);
+        CertificateRepositoryObjectValidationContext context = new CertificateRepositoryObjectValidationContext(
+            FIRST_CHILD_CERTIFICATE_LOCATION, childCertificate, ROOT_RESOURCE_SET, Lists.newArrayList(childCertificate.getSubject().getName()));
         when(rsyncFetcher.getObject(SECOND_CHILD_CERTIFICATE_LOCATION, context, fileContentSpecification, result)).thenReturn(grandchildCertificate);
         when(decorator.getCrl(FIRST_CHILD_MANIFEST_CRL_LOCATION, context, result)).thenReturn(crl);
 
