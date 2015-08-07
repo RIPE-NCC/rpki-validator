@@ -42,6 +42,7 @@ import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
 import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateInformationAccessDescriptor, X509ResourceCertificate, X509ResourceCertificateBuilder}
+import net.ripe.rpki.commons.validation
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.commons.validation.{ValidationOptions, ValidationStatus, ValidationString}
 import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
@@ -97,7 +98,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 3
 
@@ -126,7 +127,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 6
 
@@ -145,7 +146,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 3
     result.get(certificateLocation).get.checks should not be ('empty)
@@ -166,7 +167,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result.get(childManifestLocation).get.checks should not be ('empty)
     result.get(childManifestLocation).get.isValid should be(false)
@@ -178,7 +179,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 2
     result.get(manifestLocation).exists(o => o.hasCheckKey(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)) should be (true)
@@ -191,7 +192,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 3
     result.get(manifestLocation).exists(o => o.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_URI_MISMATCH)) should be (true)
@@ -205,7 +206,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result.get(expiredCertificateLocation).exists(o => o.hasCheckKey(ValidationString.NOT_VALID_AFTER) && o.uri == expiredCertificateLocation) should be(true)
   }
@@ -218,7 +219,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result.get(certificateLocation) should be('empty)
   }
@@ -231,7 +232,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result.get(ROOT_MANIFEST_LOCATION).filter(_.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE)) should be('empty)
   }
@@ -278,7 +279,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val result = subject.execute
 
-    val invalidObjects = result.collect { case (_, validatedObject: InvalidObject) => validatedObject }
+    val invalidObjects = result.filter(!_.isValid)
     invalidObjects.size should be(1)
     invalidObjects.head.uri should be(uri)
     invalidObjects.head.checks foreach { invalidObject =>
@@ -340,11 +341,12 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.manifestObjects.head.decoded should be(crl)
     result.get.checksForManifest should have size 0
 
+    val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
     if (errorNumber > 0) {
-      result.get.skippedObjects should have size 1
-      result.get.skippedObjects.toMap.get(new URI(badManifestObject.url)).get.checks should have size errorNumber
+      skippedObjectsMap should have size 1
+      skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks should have size errorNumber
     } else {
-      result.get.skippedObjects should have size 0
+      skippedObjectsMap should have size 0
     }
   }
 
@@ -373,12 +375,13 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.manifestObjects.head.decoded should be(goodCrl)
     result.get.checksForManifest should have size 0
     result.get.skippedObjects should have size 2
-    result.get.skippedObjects.toMap.get(new URI(badManifestObject.url)).get.checks should have size 1
-    result.get.skippedObjects.toMap.get(new URI(badManifestObject.url)).get.checks.head.getKey should be (ValidationString.VALIDATOR_MANIFEST_IS_INVALID)
-    result.get.skippedObjects.toMap.get(new URI(badManifestObject.url)).get.checks.head.getStatus should be (ValidationStatus.WARNING)
-    result.get.skippedObjects.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks should have size 2
-    result.get.skippedObjects.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_AKI_MISMATCH) should be(true)
-    result.get.skippedObjects.toMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_SIGNATURE_VALID) should be(true)
+    val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
+    skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks should have size 1
+    skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks.head.getKey should be (ValidationString.VALIDATOR_MANIFEST_IS_INVALID)
+    skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks.head.getStatus should be (ValidationStatus.WARNING)
+    skippedObjectsMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks should have size 2
+    skippedObjectsMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_AKI_MISMATCH) should be(true)
+    skippedObjectsMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_SIGNATURE_VALID) should be(true)
   }
 
   test("should validate only the CRL of the most recent (valid) manifest") {
@@ -396,7 +399,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 2 // Only the valid recent manifest and its crl should be here
     result.get(manifestLocation).get.isValid should be(true)
@@ -412,19 +415,20 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     // add some broken CRL to the newer manifest
     val bogusManifestBuilder = createMftBuilder(ROOT_KEY_PAIR, ROOT_CERTIFICATE_NAME)
-    bogusManifestBuilder.addFile(ROOT_CRL_LOCATION.toString(), bogusMftCrl.getEncoded)
+    bogusManifestBuilder.addFile(ROOT_CRL_LOCATION.toString, bogusMftCrl.getEncoded)
     bogusManifestBuilder.withManifestNumber(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)))
     val bogusManifest = bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate)
-    storage.storeManifest(ManifestObject(ROOT_MANIFEST_LOCATION.toString, bogusManifest))
+    storage.storeManifest(ManifestObject(manifestLocation.toString, bogusManifest))
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 2
-    result.get(manifestLocation).get.isValid should be(true)
+    result.get(manifestLocation).get.isValid should be(false)
     result.get(manifestLocation).get.checks should have size 1
-    result.get(ROOT_CRL_LOCATION).get.isValid should be(true)
+    result.get(manifestLocation).get.checks.head.getStatus should be(ValidationStatus.WARNING)
+    result.get(ROOT_CRL_LOCATION).get.isValid should be(false)
     result.get(ROOT_CRL_LOCATION).get.checks should have size 2
   }
 
@@ -448,7 +452,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 6
     result.get(childCertificateLocation).get.isValid should be(false)
@@ -473,7 +477,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
-    val result = subject.execute
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 6
     result.get(certificateLocation).get.isValid should be(true)

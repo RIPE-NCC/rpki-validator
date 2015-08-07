@@ -81,20 +81,21 @@ case class TrustAnchor(
 
   def crlNextUpdateTime: Option[DateTime] = crl.map(_.getNextUpdateTime)
 
-  def finishProcessing(result: Validation[String, Map[URI, ValidatedObject]]) = {
+  def finishProcessing(result: Validation[String, Seq[ValidatedObject]]) = {
     val now = new DateTime
 
     result match {
       case Success(validatedObjects) =>
+        val validatedObjectsByUri = validatedObjects.map(vo => vo.uri -> vo).toMap
         val nextUpdate = now.plus(ApplicationOptions.validationInterval.toMillis)
-        val trustAnchor = validatedObjects.get(locator.getCertificateLocation).collect {
-          case ValidObject(_, _, _, certificate: X509ResourceCertificate) => certificate
+        val trustAnchor = validatedObjectsByUri.get(locator.getCertificateLocation).collect {
+          case ValidObject(_, _, _, _, certificate: X509ResourceCertificate) => certificate
         }
-        val manifest = trustAnchor.flatMap(ta => validatedObjects.get(ta.getManifestUri)).collect {
-          case ValidObject(_, _, _, manifest: ManifestCms) => manifest
+        val manifest = trustAnchor.flatMap(ta => validatedObjectsByUri.get(ta.getManifestUri)).collect {
+          case ValidObject(_, _, _, _, manifest: ManifestCms) => manifest
         }
-        val crl = manifest.flatMap(mft => validatedObjects.get(mft.getCrlUri)).collect {
-          case ValidObject(_, _, _, crl: X509Crl) => crl
+        val crl = manifest.flatMap(mft => validatedObjectsByUri.get(mft.getCrlUri)).collect {
+          case ValidObject(_, _, _, _, crl: X509Crl) => crl
         }
 
         copy(lastUpdated = Some(now), status = Idle(nextUpdate), certificate = trustAnchor, manifest = manifest, crl = crl)
@@ -113,7 +114,7 @@ class TrustAnchors(anchors: Seq[TrustAnchor]) {
       else ta
     })
   }
-  def finishedProcessing(locator: TrustAnchorLocator, result: Validation[String, Map[URI, ValidatedObject]]): TrustAnchors = {
+  def finishedProcessing(locator: TrustAnchorLocator, result: Validation[String, Seq[ValidatedObject]]): TrustAnchors = {
     new TrustAnchors(all.map { ta =>
       if (ta.locator == locator)
         ta.finishProcessing(result)

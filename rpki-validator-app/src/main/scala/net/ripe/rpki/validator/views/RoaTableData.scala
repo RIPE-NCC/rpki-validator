@@ -45,12 +45,12 @@ abstract class RoaTableData(validatedObjects: ValidatedObjects) extends DataTabl
       case iprange: IpRange => _.prefix.overlaps(iprange)
       case asn: Asn => _.asn == asn
       case searchString: String =>
-        (record =>
+        record =>
           searchString.isEmpty ||
             record.asn.toString.contains(searchString) ||
             record.prefix.toString.contains(searchString) ||
             record.maxPrefixLength.toString.contains(searchString) ||
-            record.trustAnchorLocator.map(_.getCaName.toUpperCase.contains(searchString)).getOrElse(false))
+            record.trustAnchorLocator.exists(_.getCaName.toUpperCase.contains(searchString))
       case _ => _ => true
     }
   }

@@ -92,7 +92,7 @@ trait TrustAnchorsController extends ApplicationController {
         val records = for {
           validatedObject: ValidatedObject <- validatedObjectsForTa if filter(validatedObject.validationStatus)
         } yield {
-          ValidatedObjectResult(trustAnchor.name, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filter(check => filter(check.getStatus)))
+          ValidatedObjectResult(trustAnchor.name, validatedObject.subjectChain, validatedObject.validationStatus, validatedObject.checks.filter(check => filter(check.getStatus)))
         }
         records.seq.toIndexedSeq
       }

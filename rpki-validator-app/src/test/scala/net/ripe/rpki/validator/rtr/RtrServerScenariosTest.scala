@@ -121,7 +121,7 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     val roa: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes.asJava, validityPeriod, RoaCmsObjectMother.TEST_ASN)
     val roaUri: URI = URI.create("rsync://example.com/roa.roa")
 
-    val validatedRoa = new ValidObject(roaUri, Some(Array[Byte](6)), Set.empty[ValidationCheck], roa)
+    val validatedRoa = new ValidObject("roa", roaUri, Some(Array[Byte](6)), Set.empty[ValidationCheck], roa)
 
     val roas = Seq(validatedRoa)
 

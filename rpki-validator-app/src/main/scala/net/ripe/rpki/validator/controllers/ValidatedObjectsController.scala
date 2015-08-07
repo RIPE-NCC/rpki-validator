@@ -76,7 +76,7 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
     records.foreach {
       record =>
         writer.print(RowFormat.format(
-          record.uri,
+          record.subjectChain,
           record.isValid,
           record.check.getKey,
           record.check.isOk
@@ -89,7 +89,7 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
       (trustAnchorLocator, taValidation) <- validatedObjects.all.par
       validatedObject <- taValidation.validatedObjects.filterNot(_.validationStatus == ValidationStatus.PASSED)
     } yield {
-        ValidatedObjectResult(trustAnchorLocator.getCaName, validatedObject.uri, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
+        ValidatedObjectResult(trustAnchorLocator.getCaName, validatedObject.subjectChain, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
       }
     records.seq.toIndexedSeq
   }
@@ -101,7 +101,7 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
       validatedObject <- taValidation.validatedObjects
       check <- if (validatedObject.checks.isEmpty) Seq(AllChecksPassed) else validatedObject.checks
     } yield {
-        ValidatedObjectDetail(validatedObject.uri, validatedObject.isValid, check)
+        ValidatedObjectDetail(validatedObject.subjectChain, validatedObject.isValid, check)
       }
     records.seq.toIndexedSeq
   }

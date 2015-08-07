@@ -169,8 +169,7 @@ class Main extends Http with Logging { main =>
         }
         try {
           process.runProcess() match {
-            case Success(validatedObjectsByUri) =>
-              val validatedObjects = validatedObjectsByUri.values.toSeq
+            case Success(validatedObjects) =>
               updateMemoryImage(_.updateValidatedObjects(trustAnchorLocator.locator, validatedObjects))
             case Failure(_) =>
           }

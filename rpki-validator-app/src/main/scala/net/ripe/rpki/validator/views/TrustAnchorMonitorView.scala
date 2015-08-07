@@ -49,7 +49,7 @@ class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAncho
 
   def numberOfObjectsWithStatus(status: ValidationStatus) = validatedObjects.count(vo => vo.validationStatus.equals(status))
 
-  val hasProblemValidatingTa = validatedObjects.exists(vo => vo.uri == ta.locator.getCertificateLocation && !vo.isValid)
+  val hasProblemValidatingTa = validatedObjects.exists(vo => vo.subjectChain == ta.locator.getCertificateLocation && !vo.isValid)
 
   val hasUnexpectedDrop = trustAnchorValidations.objectCountDropObserved.isDefined
 

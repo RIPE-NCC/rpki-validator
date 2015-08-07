@@ -39,7 +39,7 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
 
   def startProcessingTrustAnchor(locator: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(locator, description))
 
-  def finishedProcessingTrustAnchor(locator: TrustAnchorLocator, result: Validation[String, Map[URI, ValidatedObject]]) =
+  def finishedProcessingTrustAnchor(locator: TrustAnchorLocator, result: Validation[String, Seq[ValidatedObject]]) =
     copy(trustAnchors = trustAnchors.finishedProcessing(locator, result))
 
   def updateValidatedObjects(locator: TrustAnchorLocator, newValidatedObjects: Seq[ValidatedObject]) = {

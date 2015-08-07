@@ -82,7 +82,7 @@ class MyValidationProcess extends ValidationProcess {
   override def exceptionHandler = {
     case e: Exception => Failure("")
   }
-  override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = Map.empty[URI, ValidatedObject]
+  override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = Seq.empty[ValidatedObject]
   override def finishProcessing() {}
   override val trustAnchorLocator = new TrustAnchorLocator(new File(""), "caName", certificateUri, "publicKeyInfo", Collections.emptyList())
   override def extractTrustAnchorLocator() = { throw new RuntimeException("Make validation process fail") }

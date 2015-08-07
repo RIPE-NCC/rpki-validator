@@ -30,6 +30,8 @@
 package net.ripe.rpki.validator
 package models
 
+import java.util
+
 import lib.Java
 import scala.collection.JavaConverters._
 import java.net.URI
@@ -41,6 +43,7 @@ import org.joda.time.DateTime
 
 sealed trait ValidatedObject {
   val uri: URI
+  val subjectChain: String
   val hash: Option[Array[Byte]]
   val checks: Set[ValidationCheck]
   val isValid: Boolean
@@ -56,13 +59,23 @@ sealed trait ValidatedObject {
   def hasCheckKey(key: String): Boolean = {
     checks.map(_.getKey).contains(key)
   }
-
 }
-case class InvalidObject(uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) extends ValidatedObject {
+
+case class InvalidObject(subjectChain: String, uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) extends ValidatedObject {
   override val isValid = false
 }
-case class ValidObject(uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) extends ValidatedObject {
+case class ValidObject(subjectChain: String, uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) extends ValidatedObject {
   override val isValid = true
+}
+
+object ValidatedObject {
+  def flattenSubjectChain(subjectChain: util.List[String]): String = subjectChain.asScala.reduce(_ + " " + _)
+
+  def invalid(subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) =
+    InvalidObject(flattenSubjectChain(subjectChain), uri, hash, checks)
+
+  def valid (subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) =
+    ValidObject(flattenSubjectChain(subjectChain), uri, hash, checks, repositoryObject)
 }
 
 case class ObjectCountDrop(previousNumber: Int, firstObserved: DateTime = new DateTime())
@@ -122,7 +135,7 @@ class ValidatedObjects(val all: Map[TrustAnchorLocator, TrustAnchorValidations])
   def getValidatedRtrPrefixes = {
     for {
       (locator, taValidations) <- all
-      ValidObject(_, _, _, roa: RoaCms) <- taValidations.validatedObjects
+      ValidObject(_, _, _, _, roa: RoaCms) <- taValidations.validatedObjects
       roaPrefix <- roa.getPrefixes.asScala
     } yield {
       RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(locator))

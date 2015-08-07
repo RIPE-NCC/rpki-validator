@@ -31,6 +31,7 @@ package net.ripe.rpki.validator.models.validation
 
 import java.net.URI
 
+import com.google.common.collect.Lists
 import grizzled.slf4j.Logger
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceCertificate}
@@ -54,15 +55,15 @@ trait ValidationProcess {
 
   def trustAnchorLocator: TrustAnchorLocator
 
-  def runProcess(): Validation[String, Map[URI, ValidatedObject]] = {
+  def runProcess(): Validation[String, Seq[ValidatedObject]] = {
     try {
       val certificate = extractTrustAnchorLocator()
       certificate match {
-        case ValidObject(uri, _, checks, trustAnchor: X509ResourceCertificate) =>
+        case ValidObject(_, uri, _, checks, trustAnchor: X509ResourceCertificate) =>
           val context = new CertificateRepositoryObjectValidationContext(uri, trustAnchor)
-          Success(validateObjects(context) + (uri -> certificate))
+          Success(validateObjects(context) :+ certificate)
         case _ =>
-          Success(Map(certificate.uri -> certificate))
+          Success(Seq(certificate))
       }
     } catch {
       exceptionHandler
@@ -73,6 +74,7 @@ trait ValidationProcess {
 
   def exceptionHandler: PartialFunction[Throwable, Validation[String, Nothing]] = {
     case e: Exception =>
+      println(e.getStackTrace.mkString("\n"))
       val message = if (e.getMessage != null) e.getMessage else e.toString
       Failure(message)
   }
@@ -80,7 +82,7 @@ trait ValidationProcess {
   def objectFetcherListeners: Seq[NotifyingCertificateRepositoryObjectFetcher.Listener] = Seq.empty
 
   def extractTrustAnchorLocator(): ValidatedObject
-  def validateObjects(certificate: CertificateRepositoryObjectValidationContext): Map[URI, ValidatedObject]
+  def validateObjects(certificate: CertificateRepositoryObjectValidationContext): Seq[ValidatedObject]
   def finishProcessing(): Unit = {}
 
   def shutdown(): Unit = {}
@@ -123,9 +125,12 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     }
 
     if (validationResult.hasFailureForCurrentLocation)
-      InvalidObject(uri, None, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
-    else
-      ValidObject(uri, Some(matchingCertificates.head.hash), validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet, matchingCertificates.head.decoded)
+      ValidatedObject.invalid(Lists.newArrayList("No trust anchor certificate"), uri, None, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
+    else {
+      val taCertificate = matchingCertificates.head
+      ValidatedObject.valid(Lists.newArrayList(taCertificate.decoded.getSubject.getName), uri,
+        Some(taCertificate.hash), validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet, taCertificate.decoded)
+    }
   }
 
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
