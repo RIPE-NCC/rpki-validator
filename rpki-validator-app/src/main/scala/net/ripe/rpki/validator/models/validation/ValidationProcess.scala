@@ -125,10 +125,10 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     }
 
     if (validationResult.hasFailureForCurrentLocation)
-      ValidatedObject.invalid(Lists.newArrayList("No trust anchor certificate"), uri, None, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
+      ValidatedObject.invalid(None, Lists.newArrayList("No trust anchor certificate"), uri, None, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
     else {
       val taCertificate = matchingCertificates.head
-      ValidatedObject.valid(Lists.newArrayList(taCertificate.decoded.getSubject.getName), uri,
+      ValidatedObject.valid(Some(taCertificate), Lists.newArrayList(taCertificate.decoded.getSubject.getName), uri,
         Some(taCertificate.hash), validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet, taCertificate.decoded)
     }
   }
