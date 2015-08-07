@@ -42,7 +42,7 @@ import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
 import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateInformationAccessDescriptor, X509ResourceCertificate, X509ResourceCertificateBuilder}
-import net.ripe.rpki.commons.validation
+import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.commons.validation.{ValidationOptions, ValidationStatus, ValidationString}
 import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
@@ -52,7 +52,6 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.{DateTime, Instant}
 import org.scalatest._
-import net.ripe.rpki.commons.validation.ValidationString._
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with Hashing {
@@ -152,7 +151,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 3
-    result.get(certificateLocation).get.checks should not be ('empty)
+    result.get(certificateLocation).get.checks should not be 'empty
   }
 
   test("should give error when a cycle between a manifest and a certificate is found") {
@@ -172,8 +171,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
-    result.get(childManifestLocation).get.checks should not be ('empty)
-    result.get(childManifestLocation).get.isValid should be(false)
+    result.get(childManifestLocation).get.checks should not be 'empty
+    result.get(childManifestLocation).get should not be 'isValid
   }
 
   test("should give error when object referenced in manifest is not found by its hash") {
@@ -186,7 +185,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     result should have size 2
     result.get(manifestLocation).exists(o => o.hasCheckKey(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE)) should be (true)
-    result.get(manifestLocation).get.isValid should be(false)
+    result.get(manifestLocation).get should not be 'isValid
   }
 
   test("should give error when object is found by hash but location doesnt match with location in manifest") {
@@ -199,7 +198,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     result should have size 3
     result.get(manifestLocation).exists(o => o.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_URI_MISMATCH)) should be (true)
-    result.get(manifestLocation).get.isValid should be(false)
+    result.get(manifestLocation).get should not be 'isValid
   }
 
   test("should warn about expired certificates that are on the manifest") {
@@ -288,7 +287,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     invalidObjects.head.checks foreach { invalidObject =>
       invalidObject.getStatus should be(ValidationStatus.FETCH_ERROR)
       invalidObject.getKey should be(ValidationString.VALIDATOR_REPO_EXECUTION)
-      invalidObject.getParams.contains(message) should be(true)
+      invalidObject.getParams should contain(message)
     }
   }
 
@@ -405,9 +404,9 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 2 // Only the valid recent manifest and its crl should be here
-    result.get(manifestLocation).get.isValid should be(true)
+    result.get(manifestLocation).get should be('isValid)
     result.get(manifestLocation).get.checks should have size 0
-    result.get(ROOT_CRL_LOCATION).get.isValid should be(true)
+    result.get(ROOT_CRL_LOCATION).get should be('isValid)
   }
 
   test("should skip the recent manifest if its Crl is invalid but return a warning for the manifest and for the crl") {
@@ -428,10 +427,10 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 2
-    result.get(manifestLocation).get.isValid should be(false)
+    result.get(manifestLocation).get should not be 'isValid
     result.get(manifestLocation).get.checks should have size 1
     result.get(manifestLocation).get.checks.head.getStatus should be(ValidationStatus.WARNING)
-    result.get(ROOT_CRL_LOCATION).get.isValid should be(false)
+    result.get(ROOT_CRL_LOCATION).get should not be 'isValid
     result.get(ROOT_CRL_LOCATION).get.checks should have size 2
   }
 
@@ -447,8 +446,9 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val childCrl = getCrl(new X500Principal("CN=For Testing Only, CN=RIPE NCC, C=NL"), CERTIFICATE_KEY_PAIR)
     storage.storeCrl(CrlObject(URI.create("rsync://foo.host/bar/child.crl").toString, childCrl))
 
-    val (childCertificateLocation, childCertificate) = createOverClaimingResourceCertificate(childKeyPair, CERTIFICATE_KEY_PAIR, "validChild.cer", ROOT_MANIFEST_LOCATION, new X500Principal("CN=124"), CERTIFICATE_NAME,
-      new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false)
+    val (childCertificateLocation, childCertificate) = createOverClaimingResourceCertificate(childKeyPair, CERTIFICATE_KEY_PAIR,
+      "validChild.cer", ROOT_MANIFEST_LOCATION, new X500Principal("CN=124"), CERTIFICATE_NAME,
+      new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), isObjectIssuer = false)
 
     createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
       childCrl.getEncoded, (childCertificateLocation, childCertificate.getEncoded))
@@ -458,7 +458,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 6
-    result.get(childCertificateLocation).get.isValid should be(false)
+    result.get(childCertificateLocation).get should not be 'isValid
   }
 
   test("should not give invalid overclaim warning if a certificate inherits its parents resources") {
@@ -483,9 +483,9 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 6
-    result.get(certificateLocation).get.isValid should be(true)
+    result.get(certificateLocation).get should be('isValid)
     result.get(certificateLocation).get.checks should be ('empty)
-    result.get(childCertificateLocation).get.isValid should be(true)
+    result.get(childCertificateLocation).get should be('isValid)
     result.get(childCertificateLocation).get.checks should be ('empty)
   }
 
@@ -590,27 +590,33 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   }
 
   def createExpiredResourceCertificate(keyPair: KeyPair, locationName: String) = {
-    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, ROOT_MANIFEST_LOCATION, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)), true, false)
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, ROOT_MANIFEST_LOCATION, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME,
+      new ValidityPeriod(NOW.minusYears(2), NOW.minusYears(1)), isObjectIssuer = true, inheritResources = false)
   }
 
   def createInheritingResourceCertificate(keyPair: KeyPair, locationName: String, manifestLocation: URI) = {
-    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, manifestLocation, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), true, true)
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, manifestLocation, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME,
+      new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), isObjectIssuer = true, inheritResources = true)
   }
 
   def createValidResourceCertificate(keyPair: KeyPair, locationName: String, manifestLocation: URI) = {
-    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, manifestLocation, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), true, false)
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, manifestLocation, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME,
+      new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), isObjectIssuer = true, inheritResources = false)
   }
 
   def createLeafResourceCertificate(keyPair: KeyPair, locationName: String) = {
-    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, ROOT_MANIFEST_LOCATION, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false, false)
+    createResourceCertificate(keyPair, ROOT_KEY_PAIR, locationName, ROOT_MANIFEST_LOCATION, CERTIFICATE_NAME, ROOT_CERTIFICATE_NAME,
+      new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), isObjectIssuer = false, inheritResources = false)
   }
 
   def createChildResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, certificateName: X500Principal, parentName: X500Principal) = {
-    createResourceCertificate(keyPair, parentKeyPair, locationName, ROOT_MANIFEST_LOCATION, certificateName, parentName, new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), false, false)
+    createResourceCertificate(keyPair, parentKeyPair, locationName, ROOT_MANIFEST_LOCATION, certificateName, parentName,
+      new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), isObjectIssuer = false, inheritResources = false)
   }
 
-  def createOverClaimingResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, manifestLocation: URI, certificateName: X500Principal, parentName: X500Principal,
-                                validityPeriod: ValidityPeriod, isObjectIssuer: Boolean): (URI, X509ResourceCertificate) = {
+  def createOverClaimingResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String,
+                                            manifestLocation: URI, certificateName: X500Principal, parentName: X500Principal,
+                                            validityPeriod: ValidityPeriod, isObjectIssuer: Boolean): (URI, X509ResourceCertificate) = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withValidityPeriod(validityPeriod)
 
