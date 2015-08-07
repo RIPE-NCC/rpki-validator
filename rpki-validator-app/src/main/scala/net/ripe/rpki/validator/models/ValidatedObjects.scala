@@ -70,10 +70,12 @@ case class ValidObject(subjectChain: String, uri: URI, hash: Option[Array[Byte]]
 }
 
 object ValidatedObject {
-  def flattenSubjectChain(subjectChain: util.List[String]): String = subjectChain.asScala.reduce(_ + " " + _)
+  val separator = " - "
+
+  def flattenSubjectChain(subjectChain: util.List[String]): String = subjectChain.asScala.reduce(_ + separator + _)
 
   def objectName(obj: Option[RepositoryObject.ROType]): String = obj match {
-    case Some(RoaObject(_, decoded, _)) => "roa" // TODO better name?
+    case Some(RoaObject(_, decoded, _)) => "roa" // TODO should have better name
     case Some(ManifestObject(_, _, _)) => "manifest"
     case Some(CrlObject(_, _, _)) => "crl"
     case Some(CertificateObject(_, _, _)) => "certificate"
@@ -82,10 +84,10 @@ object ValidatedObject {
   }
 
   def invalid(obj: Option[RepositoryObject.ROType], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) =
-    InvalidObject(flattenSubjectChain(subjectChain) + " " + objectName(obj), uri, hash, checks)
+    InvalidObject(flattenSubjectChain(subjectChain) + separator + objectName(obj), uri, hash, checks)
 
   def valid (obj: Option[RepositoryObject.ROType], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) =
-    ValidObject(flattenSubjectChain(subjectChain) + " " + objectName(obj), uri, hash, checks, repositoryObject)
+    ValidObject(flattenSubjectChain(subjectChain) + separator + objectName(obj), uri, hash, checks, repositoryObject)
 }
 
 case class ObjectCountDrop(previousNumber: Int, firstObserved: DateTime = new DateTime())
