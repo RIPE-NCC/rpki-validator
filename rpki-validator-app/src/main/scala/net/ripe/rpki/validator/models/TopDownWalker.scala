@@ -228,8 +228,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         error(location(c), CRL_AKI_MISMATCH) :: checks
       else
         checks
-    case
-      _ => List[Check]()
+    case _ =>
+      List[Check]()
   }
 
   case class ManifestSearchResult(manifest: ManifestObject,
@@ -352,7 +352,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         obj.foreach { o =>
           foundObjects += o
           if (o.url != uri.toString) {
-            errors += error(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, hashStr, o.url)
+            errors += warning(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, hashStr, o.url)
           }
         }
     }

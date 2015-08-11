@@ -107,7 +107,7 @@ public class TrustAnchorLocator {
         for (String uri : uris) {
             uri = uri.trim();
             if (StringUtils.isNotBlank(uri)) {
-                if (!uri.endsWith("/")) {
+                if (!uri.endsWith("/") && uri.startsWith("rsync://")) {
                     uri += "/";
                 }
                 prefetchUris.add(new URI(uri));
