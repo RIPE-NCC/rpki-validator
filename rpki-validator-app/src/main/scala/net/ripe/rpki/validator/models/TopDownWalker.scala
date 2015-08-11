@@ -93,8 +93,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         validateManifestChildren(mftSearchResult)
 
       case None =>
-        Seq(ValidatedObject.invalid(None, certificateContext.getSubjectChain, certificateContext.getLocation, None,
-          Set(new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex))))
+        val subjectChain = ValidatedObject.flattenSubjectChain(certificateContext.getSubjectChain) + ValidatedObject.separator + "cert"
+        val check = new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex)
+        Seq(InvalidObject(subjectChain, certificateContext.getLocation, None, Set(check)))
     }
 
     fetchErrors ++ validatedObjects

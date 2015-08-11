@@ -65,6 +65,7 @@ sealed trait ValidatedObject {
 case class InvalidObject(subjectChain: String, uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) extends ValidatedObject {
   override val isValid = false
 }
+
 case class ValidObject(subjectChain: String, uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) extends ValidatedObject {
   override val isValid = true
 }
@@ -86,7 +87,8 @@ object ValidatedObject {
   def invalid(obj: Option[RepositoryObject.ROType], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) =
     InvalidObject(flattenSubjectChain(subjectChain) + separator + objectName(obj), uri, hash, checks)
 
-  def valid (obj: Option[RepositoryObject.ROType], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) =
+  def valid(obj: Option[RepositoryObject.ROType], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck],
+            repositoryObject: CertificateRepositoryObject) =
     ValidObject(flattenSubjectChain(subjectChain) + separator + objectName(obj), uri, hash, checks, repositoryObject)
 }
 
@@ -99,7 +101,7 @@ object TrustAnchorValidations {
 
   def crossedDropThreshold(previousNumber: Int, newValidatedObjects: Seq[ValidatedObject]): Boolean = {
     previousNumber * DropThresholdMinObjectCountFactor >= newValidatedObjects.size &&
-    ValidatedObjects.statusCounts(newValidatedObjects).getOrElse(ValidationStatus.ERROR, 0) >= DropThresholdMaxErrors
+      ValidatedObjects.statusCounts(newValidatedObjects).getOrElse(ValidationStatus.ERROR, 0) >= DropThresholdMaxErrors
   }
 }
 
