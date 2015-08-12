@@ -113,17 +113,15 @@ case class TrustAnchorValidations(validatedObjects: Seq[ValidatedObject] = Seq.e
       val previousNumber = validatedObjects.size
       if (crossedDropThreshold(previousNumber, newValidatedObjects)) {
         Some(ObjectCountDrop(previousNumber))
-      } else {
+      } else
         None
-      }
     }
 
     def checkForObjectDropRecovery(newValidatedObjects: Seq[ValidatedObject], existingDrop: ObjectCountDrop): Option[ObjectCountDrop] = {
       if (crossedDropThreshold(existingDrop.previousNumber, newValidatedObjects)) {
         Some(existingDrop)
-      } else {
+      } else
         None
-      }
     }
 
     if (validatedObjects.isEmpty) {
@@ -134,7 +132,6 @@ case class TrustAnchorValidations(validatedObjects: Seq[ValidatedObject] = Seq.e
         case Some(drop) => TrustAnchorValidations(newValidatedObjects, checkForObjectDropRecovery(newValidatedObjects, drop))
       }
     }
-
   }
 }
 
