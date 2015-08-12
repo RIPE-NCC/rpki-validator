@@ -129,9 +129,9 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)))
       }).toSeq
 
-  override def getObject(hash: String): Option[RepositoryObject.ROType] = {
+  override def getObjects(hash: String): Seq[RepositoryObject.ROType] = {
     Try {
-      template.queryForObject(
+      template.query(
         """SELECT encoded, validation_time, object_type, url
         FROM repo_objects
         WHERE hash = :hash""",
@@ -149,10 +149,10 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
           }
         })
     } match {
-      case Success(obj) => Some(obj)
+      case Success(obj) => obj
       case Failure(err) =>
         logger.error(err.toString)
-        None
+        Seq()
     }
   }
 

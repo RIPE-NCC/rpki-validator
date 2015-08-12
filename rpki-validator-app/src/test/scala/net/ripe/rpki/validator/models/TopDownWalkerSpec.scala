@@ -188,7 +188,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get(manifestLocation).get should not be 'isValid
   }
 
-  test("should give error when object is found by hash but location doesnt match with location in manifest") {
+  test("should give error when object is found by hash but location doesn't match location in manifest") {
     val (_, certificate) = createLeafResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer")
     val (manifestLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (new URI(REPO_LOCATION + "missing.cer"), certificate.getEncoded))
 
@@ -197,8 +197,9 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 3
-    result.get(manifestLocation).exists(o => o.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_URI_MISMATCH)) should be (true)
-    result.get(manifestLocation).get should not be 'isValid
+    val mft = result.get(manifestLocation)
+    mft.exists(_.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_URI_MISMATCH)) should be (true)
+    mft.exists(_.isValid) should be (true)
   }
 
   test("should warn about expired certificates that are on the manifest") {
@@ -258,13 +259,13 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     subject.execute
 
-    val certObj = storage.getObject(stringify(cert.hash)).get
-    val crlObj = storage.getObject(stringify(crl.hash)).get
-    val mftObj = storage.getObject(stringify(mft.hash)).get
+    val certObj = storage.getObjects(stringify(cert.hash))
+    val crlObj = storage.getObjects(stringify(crl.hash))
+    val mftObj = storage.getObjects(stringify(mft.hash))
 
-    certObj.validationTime.exists(!now.isAfter(_)) should be(true)
-    crlObj.validationTime.exists(!now.isAfter(_)) should be(true)
-    mftObj.validationTime.exists(!now.isAfter(_)) should be(true)
+    certObj.head.validationTime.exists(!now.isAfter(_)) should be(true)
+    crlObj.head.validationTime.exists(!now.isAfter(_)) should be(true)
+    mftObj.head.validationTime.exists(!now.isAfter(_)) should be(true)
   }
 
   test("should give error when fetch fails") {

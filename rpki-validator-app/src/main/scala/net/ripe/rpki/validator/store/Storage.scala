@@ -39,7 +39,7 @@ import scala.collection.mutable
 
 trait Storage extends Logging {
 
-  def getObject(hash: String) : Option[RepositoryObject.ROType]
+  def getObjects(hash: String) : Seq[RepositoryObject.ROType]
 
   def storeCertificate(certificate: CertificateObject)
 
