@@ -38,6 +38,7 @@ import javax.security.auth.x500.X500Principal
 import net.ripe.ipresource.{IpResourceSet, IpResourceType}
 import net.ripe.rpki.commons.crypto.ValidityPeriod
 import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsBuilder}
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
 import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
@@ -52,9 +53,10 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.{DateTime, Instant}
 import org.scalatest._
+import org.scalatest.mock.MockitoSugar
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with Hashing {
+class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with Hashing with MockitoSugar {
 
   private val REPO_LOCATION: URI = URI.create("rsync://foo.host/bar/")
   private val RRDP_NOTIFICATION_LOCATION: URI = URI.create("http://foo.host/bar/notification.xml")
@@ -305,8 +307,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.crl.url should be ("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be (crl)
     result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head.url should be ("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head.decoded should be (crl)
+    result.get.manifestObjects.head._2.url should be ("rsync://foo.host/bar/ta.crl")
+    result.get.manifestObjects.head._2.decoded should be (crl)
     result.get.checksForManifest should have size 0
     result.get.skippedObjects should have size 0
   }
@@ -339,8 +341,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.crl.url should be("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be(crl)
     result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head.url should be("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head.decoded should be(crl)
+    result.get.manifestObjects.head._2.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.manifestObjects.head._2.decoded should be(crl)
     result.get.checksForManifest should have size 0
 
     val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
@@ -373,8 +375,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.crl.url should be("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be(goodCrl)
     result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head.url should be("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head.decoded should be(goodCrl)
+    result.get.manifestObjects.head._2.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.manifestObjects.head._2.decoded should be(goodCrl)
     result.get.checksForManifest should have size 0
     result.get.skippedObjects should have size 2
     val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
@@ -487,6 +489,17 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get(certificateLocation).get.checks should be ('empty)
     result.get(childCertificateLocation).get should be('isValid)
     result.get(childCertificateLocation).get.checks should be ('empty)
+  }
+
+  test ("shouldClassifyObjectsCorrectly") {
+    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+
+    val objects = Seq(("bla", new RoaObject("url", mock[RoaCms], None)), ("blah", new CertificateObject("url", getRootResourceCertificate, None)))
+
+    val subject.ClassifiedObjects(roas, certificates, crls) = subject.classify(objects)
+
+    roas.size should be(1)
+    certificates.size should be(1)
   }
 
   def getRootResourceCertificate: X509ResourceCertificate = {

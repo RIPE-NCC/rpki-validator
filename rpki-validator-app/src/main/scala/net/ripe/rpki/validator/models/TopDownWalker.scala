@@ -113,15 +113,16 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
     val checkMap = checks.groupBy(_.location)
 
-    val validatedCerts = childrenCertificates.map { c =>
-      val v = validatedObject(checkMap)(c)
-      new { val cert = c; val validatedObject = v; val valid = c.decoded.isObjectIssuer && v.isValid; }
+    val validatedCerts = childrenCertificates.map { pair =>
+      val (_, certObject) = pair
+      val v = validatedObject(checkMap)(pair)
+      new { val cert = certObject; val validatedObject = v; val valid = certObject.decoded.isObjectIssuer && v.isValid; }
     }
 
     val everythingValidated = roas.map(validatedObject(checkMap)) ++
       validatedCerts.map(_.validatedObject) ++
       crlList.map(validatedObject(checkMap)) ++
-      Seq(manifest).map(validatedObject(checkMap)) ++
+      Seq(("mft", manifest)).map(validatedObject(checkMap)) ++
       skippedObjects ++
       validatedCerts.filter(_.valid).map(_.cert).par.flatMap(stepDown(manifest))
 
@@ -140,19 +141,21 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     store.cleanOutdated(uriMap)
   }
 
-  private def validatedObject(checkMap: Map[ValidationLocation, List[Check]])(r: RepositoryObject.ROType): ValidatedObject = {
-    val uri = new URI(r.url)
+  private def validatedObject(checkMap: Map[ValidationLocation, List[Check]])(r: (String, RepositoryObject.ROType)): ValidatedObject = {
+    val (name, obj) = r
+    val uri = new URI(obj.url)
     val validationChecks = checkMap.get(new ValidationLocation(uri)).map(_.map(_.impl).toSet)
     val hasErrors = validationChecks.exists(c => !c.forall(_.isOk))
     if (hasErrors) {
-      ValidatedObject.invalid(Some(r), certificateContext.getSubjectChain, uri, Some(r.hash), validationChecks.get)
+      ValidatedObject.invalid(Some(r), certificateContext.getSubjectChain, uri, Some(obj.hash), validationChecks.get)
     } else {
-      ValidatedObject.valid(Some(r), certificateContext.getSubjectChain, uri, Some(r.hash), validationChecks.getOrElse(Set()), r.decoded)
+      ValidatedObject.valid(Some(r), certificateContext.getSubjectChain, uri, Some(obj.hash), validationChecks.getOrElse(Set()), obj.decoded)
     }
   }
 
-  private def check(objects: Seq[RepositoryObject.ROType], crl: CrlObject): List[Check] = {
-    objects.flatMap { o =>
+  private def check(objects: Seq[(String, RepositoryObject.ROType)], crl: CrlObject): List[Check] = {
+    objects.flatMap { pair =>
+      val (_, o) = pair
       val loc = location(o)
       val result = ValidationResult.withLocation(loc)
       o.decoded.validate(o.url, certificateContext, crlLocator(crl), validationOptions, result)
@@ -178,11 +181,11 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       val mftUri = new URI(parentManifest.url)
       if (childCert.isRoot) {
         val check = new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_ROOT_CERTIFICATE_INCLUDED_IN_MANIFEST)
-        Seq(ValidatedObject.valid(Some(cert), certificateContext.getSubjectChain, mftUri, Some(parentManifest.hash), Set(check), childCert))
+        Seq(ValidatedObject.valid(Some(("cert", cert)), certificateContext.getSubjectChain, mftUri, Some(parentManifest.hash), Set(check), childCert))
       } else {
         logger.error(s"Found circular reference of certificates: from ${certificateContext.getLocation} [$certificateSkiHex] to ${cert.url} [$ski]")
         val check = new ValidationCheck(ValidationStatus.ERROR, VALIDATOR_CIRCULAR_REFERENCE, certificateContext.getLocation.toString, cert.url.toString)
-        Seq(ValidatedObject.invalid(Some(cert), certificateContext.getSubjectChain, mftUri, Some(parentManifest.hash), Set(check)))
+        Seq(ValidatedObject.invalid(Some(("cert", cert)), certificateContext.getSubjectChain, mftUri, Some(parentManifest.hash), Set(check)))
       }
     } else {
       val childResources = if (childCert.isResourceSetInherited) getResourcesOfType(childCert.getInheritedResourceTypes, certificateContext.getResources) else childCert.getResources
@@ -235,7 +238,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   case class ManifestSearchResult(manifest: ManifestObject,
                                   crl: CrlObject,
-                                  manifestObjects: Seq[RepositoryObject.ROType],
+                                  manifestObjects: Seq[(String, RepositoryObject.ROType)],
                                   checksForManifest: Seq[Check],
                                   skippedObjects: Seq[InvalidObject])
 
@@ -248,8 +251,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     // avoid checking every existing manifest
     val validatedManifestData = recentFirstManifests.view.map { mft =>
       // get CRLs on the manifest
-      val (mftObjects, errors, _) = getManifestObjects(mft)
-      val crlsOnManifest = mftObjects.collect { case c: CrlObject => c }
+      val ManifestObjects(mftObjects, errors) = getManifestObjects(mft)
+      val crlsOnManifest = mftObjects.collect { case (_, c: CrlObject) => c }
 
       val crlOrError = getCrl(crlsOnManifest, location(mft))
 
@@ -273,9 +276,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         val crlChecks = skippedChecks.filter(c => crl.isDefined && c.location.getName.equals(crl.get.url))
         val mftUri = new URI(mft.url)
 
-        var skippedInvalidObjects: Seq[InvalidObject] = Seq(ValidatedObject.invalid(Some(mft), certificateContext.getSubjectChain, mftUri, Some(mft.hash), mftChecks.map(c => c.impl).toSet))
+        var skippedInvalidObjects: Seq[InvalidObject] = Seq(ValidatedObject.invalid(Some(("mft", mft)), certificateContext.getSubjectChain, mftUri, Some(mft.hash), mftChecks.map(c => c.impl).toSet))
         if (crlChecks.nonEmpty) {
-          val invalidObject = ValidatedObject.invalid(Some(mft), certificateContext.getSubjectChain, new URI(crl.get.url), Some(crl.get.hash), crlChecks.map(c => c.impl).toSet)
+          val invalidObject = ValidatedObject.invalid(Some(("mft", mft)), certificateContext.getSubjectChain, new URI(crl.get.url), Some(crl.get.hash), crlChecks.map(c => c.impl).toSet)
           skippedInvalidObjects ++= Seq(invalidObject)
         }
         checksForSkippedMfts ++= skippedInvalidObjects
@@ -296,15 +299,19 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       mft.decoded.validate(mft.url, certificateContext, crlLocator(crl), validationOptions, validationResult)
     }
 
-  case class ClassifiedObjects(roas: Seq[RoaObject], certificates: Seq[CertificateObject], crls: Seq[CrlObject])
+  case class ClassifiedObjects(roas: Seq[(String, RoaObject)], certificates: Seq[(String, CertificateObject)], crls: Seq[(String, CrlObject)])
 
-  private def classify(objects: Seq[RepositoryObject.ROType]) = {
-    var (roas, certificates, crls) = (List[RoaObject](), List[CertificateObject](), List[CrlObject]())
-    objects.foreach {
-      case roa: RoaObject => roas = roa :: roas
-      case cer: CertificateObject => certificates = cer :: certificates
-      case crl: CrlObject => crls = crl :: crls
-      case _ =>
+  def classify(objects: Seq[(String, RepositoryObject.ROType)]) = {
+    var (roas, certificates, crls) = (List[(String, RoaObject)](), List[(String, CertificateObject)](), List[(String, CrlObject)]())
+    objects.foreach { obj => {
+      val (_, repoObject) = obj
+      repoObject match {
+        case RoaObject(_, _, _) => roas = obj.asInstanceOf[(String, RoaObject)] :: roas
+        case CertificateObject(_, _, _) => certificates = obj.asInstanceOf[(String, CertificateObject)] :: certificates
+        case CrlObject(_, _, _) => crls = obj.asInstanceOf[(String, CrlObject)] :: crls
+        case _ =>
+      }
+    }
     }
     ClassifiedObjects(roas.toSeq, certificates.toSeq, crls.toSeq)
   }
@@ -331,19 +338,19 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
-  def getManifestObjects(manifest: ManifestObject): (Seq[ROType], Seq[Check], Map[URI, Array[Byte]]) = {
+  case class ManifestObjects(objects: Seq[(String, ROType)], errors: Seq[Check])
+  
+  def getManifestObjects(manifest: ManifestObject): ManifestObjects = {
     val repositoryUri = certificateContext.getRepositoryURI
     val validationLocation = location(manifest)
 
     val errors = scala.collection.mutable.Buffer[Check]()
-    val foundObjects = scala.collection.mutable.Buffer[ROType]()
-
-    val entries = manifest.decoded.getHashes.entrySet().asScala.map { e =>
-        (repositoryUri.resolve(e.getKey), e.getValue)
-    }.toMap
+    val foundObjects = scala.collection.mutable.Buffer[(String, ROType)]()
+    val entries = manifest.decoded.getHashes.asScala.toMap
 
     entries.foreach { e =>
-      val (uri, hash) = e
+      val (name, hash) = e
+      val uri = repositoryUri.resolve(name)
       val hashStr: String = HashUtil.stringify(hash)
       val obj = store.getObject(hashStr)
 
@@ -351,12 +358,12 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         errors += error(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, hashStr)
       else
         obj.foreach { o =>
-          foundObjects += o
+          foundObjects += Tuple2(name, o)
           if (o.url != uri.toString) {
             errors += warning(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, hashStr, o.url)
           }
         }
     }
-    (foundObjects.toSeq, errors.toSeq, entries)
+    ManifestObjects(foundObjects.toSeq, errors.toSeq)
   }
 }

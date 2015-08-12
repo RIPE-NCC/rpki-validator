@@ -75,19 +75,19 @@ object ValidatedObject {
 
   def flattenSubjectChain(subjectChain: util.List[String]): String = subjectChain.asScala.reduce(_ + separator + _)
 
-  def objectName(obj: Option[RepositoryObject.ROType]): String = obj match {
-    case Some(RoaObject(_, decoded, _)) => "roa" // TODO should have better name
-    case Some(ManifestObject(_, _, _)) => "manifest"
-    case Some(CrlObject(_, _, _)) => "crl"
-    case Some(CertificateObject(_, _, _)) => "certificate"
+  def objectName(obj: Option[(String, RepositoryObject.ROType)]): String = obj match {
+    case Some((name: String, r: RoaObject)) => name
+    case Some((_, m: ManifestObject)) => "manifest"
+    case Some((_, c: CrlObject)) => "crl"
+    case Some((_, c: CertificateObject)) => "certificate"
     case None => ""
     case _ => "Unknown object"
   }
 
-  def invalid(obj: Option[RepositoryObject.ROType], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) =
+  def invalid(obj: Option[(String, RepositoryObject.ROType)], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) =
     InvalidObject(flattenSubjectChain(subjectChain) + separator + objectName(obj), uri, hash, checks)
 
-  def valid(obj: Option[RepositoryObject.ROType], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck],
+  def valid(obj: Option[(String, RepositoryObject.ROType)], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck],
             repositoryObject: CertificateRepositoryObject) =
     ValidObject(flattenSubjectChain(subjectChain) + separator + objectName(obj), uri, hash, checks, repositoryObject)
 }
