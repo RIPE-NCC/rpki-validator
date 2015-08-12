@@ -35,10 +35,10 @@ import java.security.KeyPair
 import java.util
 import javax.security.auth.x500.X500Principal
 
-import net.ripe.ipresource.{IpResourceSet, IpResourceType}
+import net.ripe.ipresource.{Asn, IpRange, IpResourceSet, IpResourceType}
 import net.ripe.rpki.commons.crypto.ValidityPeriod
 import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsBuilder}
-import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
+import net.ripe.rpki.commons.crypto.cms.roa.{RoaCms, RoaCmsBuilder, RoaPrefix}
 import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
 import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
@@ -95,13 +95,15 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   test("should not give warnings when all entries are present in the manifest") {
 
     val (certificateLocation, certificate) = createLeafResourceCertificate(ROOT_KEY_PAIR, "valid.cer")
-    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
+    val roaLocation = new URI("rsync://foo.host/bar/roa123")
+    val roa = createRoa(certificate, ROOT_KEY_PAIR, "rsync://foo.host/bar/roa123")
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded), (roaLocation, roa.getEncoded))
 
     val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
-    result should have size 3
+    result should have size 4
 
     result.get(certificateLocation).get.checks should be ('empty)
     result.get(certificateLocation).get.subjectChain should be("CN=For Testing Only,CN=RIPE NCC,C=NL - certificate")
@@ -109,6 +111,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get(ROOT_CRL_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - crl")
     result.get(ROOT_MANIFEST_LOCATION).get.checks should be ('empty)
     result.get(ROOT_MANIFEST_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - manifest")
+    result.get(roaLocation).get.checks should be ('empty)
+    result.get(roaLocation).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - roa123")
   }
 
   test("should not give warnings for valid certificate with child objects") {
@@ -500,6 +504,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     roas.size should be(1)
     certificates.size should be(1)
+    crls.size should be(0)
   }
 
   def getRootResourceCertificate: X509ResourceCertificate = {
@@ -528,6 +533,19 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
   private def extractFileName(uri: URI): String = {
     uri.toString.split('/').last
+  }
+
+  def createRoa(certificate: X509ResourceCertificate, keyPair: KeyPair, uri: String): RoaCms = {
+    val roaBuilder = new RoaCmsBuilder()
+    roaBuilder.withCertificate(certificate)
+    roaBuilder.withAsn(new Asn(42l))
+    val prefixes = new util.ArrayList[RoaPrefix]()
+    prefixes.add(new RoaPrefix(IpRange.parse("10.64.0.0/12"), 24))
+    roaBuilder.withPrefixes(prefixes)
+    roaBuilder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER)
+    val roa = roaBuilder.build(keyPair.getPrivate)
+    storage.storeRoa(RoaObject(uri, roa))
+    roa
   }
 
   def createEmptyCrl(keyPair: KeyPair) = {
