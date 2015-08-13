@@ -71,6 +71,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   private val ROOT_KEY_PAIR: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val ROOT_KEY_PAIR_2: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val CERTIFICATE_KEY_PAIR: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
+  private val CERTIFICATE_KEY_PAIR_2: KeyPair = PregeneratedKeyPairFactory.getInstance.generate
   private val DEFAULT_VALIDATION_OPTIONS: ValidationOptions = new ValidationOptions
 
   private val DEFAULT_MANIFEST_NUMBER: BigInteger = BigInteger.valueOf(68)
@@ -95,7 +96,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val (certificateLocation, certificate) = createLeafResourceCertificate(ROOT_KEY_PAIR, "valid.cer")
     createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -127,7 +128,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
       childCrl.getEncoded, (childCertificateLocation, childCertificate.getEncoded))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -146,7 +147,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
     createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -167,7 +168,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
       childCrl.getEncoded, (rootResourceCertificate.getRepositoryUri, rootResourceCertificate.getEncoded))     // Note that the child Mft holds a reference to the root certificate
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -179,7 +180,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val missingHash = Array[Byte] (1, 2, 3, 4)
     val (manifestLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, ( new URI(REPO_LOCATION + "missing.cer"), missingHash))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -192,7 +193,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val (_, certificate) = createLeafResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer")
     val (manifestLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (new URI(REPO_LOCATION + "missing.cer"), certificate.getEncoded))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -207,7 +208,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val (expiredCertificateLocation, cert) = createExpiredResourceCertificate(CERTIFICATE_KEY_PAIR, "expired.cer")
     createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (expiredCertificateLocation, cert.getEncoded))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -220,7 +221,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val crl = createCrlWithEntry(certificate)
     createMftWithCrlAndEntries(crl.getEncoded)
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -233,7 +234,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val crl = createCrlWithEntry(certificate)
     createMftWithCrlAndEntries(crl.getEncoded)
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -241,7 +242,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   }
 
   test("Should prefer rpkiNotify URI over caRepository URI") {
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     subject.preferredFetchLocation.get should be(RRDP_NOTIFICATION_LOCATION)
   }
@@ -255,7 +256,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val validationTime: Instant = new DateTime().minusDays(1).toInstant // before objects are put in the Storage
     val now = Instant.now()
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, validationTime)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, validationTime)
 
     subject.execute
 
@@ -278,7 +279,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val message = "Some message"
 
     val errors = Seq[Fetcher.Error](new Fetcher.Error(uri, message))
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage, errors), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage, errors), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute
 
@@ -297,7 +298,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val crl = createCrlWithEntry(certificate)
     val (_, manifest) = createMftWithCrlAndEntries(crl.getEncoded)
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
     val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest)
     val result = subject.findRecentValidMftWithCrl(Seq(manifestObject))
 
@@ -330,7 +331,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     badManifestBuilder.addFile("rsync://host.net/bad_manifest_crl.crl", Array[Byte](1, 2, 3, 4))
     badManifestBuilder.withManifestNumber(manifestNumber)
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
     val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest)
     val badManifestObject = ManifestObject("rsync://host.net/bad_manifest.mft", badManifestBuilder.build(ROOT_KEY_PAIR.getPrivate))
     val result = subject.findRecentValidMftWithCrl(Seq(manifestObject, badManifestObject))
@@ -364,7 +365,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     bogusManifestBuilder.addFile("rsync://host.net/bad_manifest_crl.crl", bogusMftCrl.getEncoded)
     bogusManifestBuilder.withManifestNumber(DEFAULT_MANIFEST_NUMBER.add(BigInteger.valueOf(1)))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
     val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest1)
     val badManifestObject = ManifestObject("rsync://host.net/bad_manifest.mft", bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate))
     val result = subject.findRecentValidMftWithCrl(Seq(manifestObject, badManifestObject))
@@ -400,7 +401,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val bogusManifest = bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate)
     storage.storeManifest(ManifestObject("rsync://host.net/bad_manifest.mft", bogusManifest))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -423,7 +424,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val bogusManifest = bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate)
     storage.storeManifest(ManifestObject(manifestLocation.toString, bogusManifest))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -454,7 +455,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
       childCrl.getEncoded, (childCertificateLocation, childCertificate.getEncoded))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -479,7 +480,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
       childCrl.getEncoded, (childCertificateLocation, childCertificate.getEncoded))
 
-    val subject = new TopDownWalker(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)(scala.collection.mutable.Set())
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
@@ -489,6 +490,41 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get(childCertificateLocation).get should be('isValid)
     result.get(childCertificateLocation).get.checks should be ('empty)
   }
+
+  test("should give proper warnings in case of two identical objects with different locations") {
+    val childManifestLocation =  URI.create("rsync://foo.host/bar/childManifest.mft")
+
+    val (certificateLocation1, certificate1) = createInheritingResourceCertificate(CERTIFICATE_KEY_PAIR, "valid1.cer", childManifestLocation)
+
+    // put the same object to two different locations
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded,
+      (certificateLocation1, certificate1.getEncoded),
+      (URI.create("rysnc://someotherlocation.net/blabla1"), certificate1.getEncoded)
+    )
+
+    val childKeyPair1 = PregeneratedKeyPairFactory.getInstance.generate
+
+    val childCrlLocation = URI.create("rsync://foo.host/bar/child.crl")
+    val childCrl = getCrl(new X500Principal("CN=For Testing Only, CN=RIPE NCC, C=NL"), CERTIFICATE_KEY_PAIR)
+    storage.storeCrl(CrlObject(childCrlLocation.toString, childCrl))
+
+    val (childCertificateLocation, childCertificate) = createChildResourceCertificate(childKeyPair1,
+      CERTIFICATE_KEY_PAIR, "validChild.cer", new X500Principal("CN=124"), CERTIFICATE_NAME)
+
+    createChildMftWithCrlAndEntries(CERTIFICATE_KEY_PAIR, childManifestLocation, CERTIFICATE_NAME, childCrlLocation,
+      childCrl.getEncoded, (childCertificateLocation, childCertificate.getEncoded))
+
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
+
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
+
+//    result should have size 6
+    result.get(certificateLocation1).get should be('isValid)
+    result.get(certificateLocation1).get.checks should be ('empty)
+    result.get(childCertificateLocation).get should be('isValid)
+    result.get(childCertificateLocation).get.checks should be ('empty)
+  }
+
 
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder

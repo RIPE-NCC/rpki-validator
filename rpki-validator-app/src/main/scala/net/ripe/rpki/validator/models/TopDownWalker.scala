@@ -50,18 +50,26 @@ import org.joda.time.Instant
 import scala.collection.JavaConverters._
 import scala.language.reflectiveCalls
 
+object TopDownWalker {
+
+  def create(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, repoService: RepoService,
+             validationOptions: ValidationOptions, validationStartTime: Instant) =
+    new TopDownWalker(certificateContext, store, repoService, validationOptions, validationStartTime)(Set())
+}
+
 class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext,
                      store: Storage,
                      repoService: RepoService,
                      validationOptions: ValidationOptions,
-                     validationStartTime: Instant)(seen: scala.collection.mutable.Set[String])
+                     validationStartTime: Instant)(certificateTreeBranch: Set[String])
   extends Logging {
 
   private object HashUtil extends Hashing
 
-  private val certificateSkiHex: String = HashUtil.stringify(certificateContext.getSubjectKeyIdentifier)
+  private val certHash = HashUtil.getHash(certificateContext.getCertificate.getEncoded)
+  private val certificateSkiHex = HashUtil.stringify(certificateContext.getSubjectKeyIdentifier)
 
-  Validate.isTrue(seen.add(certificateSkiHex))
+  Validate.isTrue(!certificateTreeBranch.contains(certificateSkiHex))
   Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")
 
   private[models] def preferredFetchLocation: Option[URI] = Option(certificateContext.getRpkiNotifyURI).orElse(Option(certificateContext.getRepositoryURI))
@@ -173,7 +181,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   private def stepDown(parentManifest: ManifestObject)(cert: RepositoryObject[X509ResourceCertificate]): Seq[ValidatedObject] = {
     val childCert = cert.decoded
     val ski = HashUtil.stringify(childCert.getSubjectKeyIdentifier)
-    if (seen.contains(ski)) {
+    if (certificateTreeBranch.contains(ski)) {
       val mftUri = new URI(parentManifest.url)
       if (childCert.isRoot) {
         val check = new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_ROOT_CERTIFICATE_INCLUDED_IN_MANIFEST)
@@ -184,11 +192,14 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         Seq(ValidatedObject.invalid(Some(cert), certificateContext.getSubjectChain, mftUri, Some(parentManifest.hash), Set(check)))
       }
     } else {
-      val childResources = if (childCert.isResourceSetInherited) getResourcesOfType(childCert.getInheritedResourceTypes, certificateContext.getResources) else childCert.getResources
+      val childResources = if (childCert.isResourceSetInherited)
+        getResourcesOfType(childCert.getInheritedResourceTypes, certificateContext.getResources)
+      else
+        childCert.getResources
       val childSubjectChain = Lists.newArrayList(certificateContext.getSubjectChain)
       childSubjectChain.add(childCert.getSubject.getName)
       val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), childCert, childResources, childSubjectChain)
-      val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime)(seen)
+      val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime)(certificateTreeBranch + certificateSkiHex)
       nextLevelWalker.validateContext
     }
   }
@@ -200,9 +211,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   }
 
   private def validateObject(obj: RepositoryObject.ROType)(validate: ValidationResult => Unit) =
-    fBlock(ValidationResult.withLocation(location(obj))) { validationResult =>
-      validate(validationResult)
-    }
+    fBlock(ValidationResult.withLocation(location(obj)))(validate)
 
   private def _validateCrl(crl: CrlObject): ValidationResult =
     validateObject(crl) { validationResult =>
