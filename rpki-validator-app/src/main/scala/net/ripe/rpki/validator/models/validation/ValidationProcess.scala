@@ -128,7 +128,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
       ValidatedObject.invalid(None, Lists.newArrayList("No trust anchor certificate"), uri, None, validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet)
     else {
       val taCertificate = matchingCertificates.head
-      ValidatedObject.valid(Some(taCertificate), Lists.newArrayList(taCertificate.decoded.getSubject.getName), uri,
+      ValidatedObject.valid(Some("cert", taCertificate), Lists.newArrayList(taCertificate.decoded.getSubject.getName), uri,
         Some(taCertificate.hash), validationResult.getAllValidationChecksForCurrentLocation.asScala.toSet, taCertificate.decoded)
     }
   }

@@ -157,7 +157,6 @@ class ValidatedObjectsTest extends ValidatorTestCase with MockitoSugar {
 
     validatedObjectsAfterThirdRun.all.get(TAL) should not be (None)
     validatedObjectsAfterThirdRun.all.get(TAL).get.objectCountDropObserved should be (None)
-
   }
 
 }

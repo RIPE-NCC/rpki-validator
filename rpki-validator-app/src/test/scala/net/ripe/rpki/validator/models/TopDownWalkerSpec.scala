@@ -35,9 +35,10 @@ import java.security.KeyPair
 import java.util
 import javax.security.auth.x500.X500Principal
 
-import net.ripe.ipresource.{IpResourceSet, IpResourceType}
+import net.ripe.ipresource.{Asn, IpRange, IpResourceSet, IpResourceType}
 import net.ripe.rpki.commons.crypto.ValidityPeriod
 import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsBuilder}
+import net.ripe.rpki.commons.crypto.cms.roa.{RoaCms, RoaCmsBuilder, RoaPrefix}
 import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
 import net.ripe.rpki.commons.crypto.util.PregeneratedKeyPairFactory
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
@@ -52,9 +53,10 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.{DateTime, Instant}
 import org.scalatest._
+import org.scalatest.mock.MockitoSugar
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with Hashing {
+class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with Hashing with MockitoSugar {
 
   private val REPO_LOCATION: URI = URI.create("rsync://foo.host/bar/")
   private val RRDP_NOTIFICATION_LOCATION: URI = URI.create("http://foo.host/bar/notification.xml")
@@ -94,13 +96,15 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   test("should not give warnings when all entries are present in the manifest") {
 
     val (certificateLocation, certificate) = createLeafResourceCertificate(ROOT_KEY_PAIR, "valid.cer")
-    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded))
+    val roaLocation = new URI("rsync://foo.host/bar/roa123")
+    val roa = createRoa(certificate, ROOT_KEY_PAIR, "rsync://foo.host/bar/roa123")
+    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (certificateLocation, certificate.getEncoded), (roaLocation, roa.getEncoded))
 
     val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
-    result should have size 3
+    result should have size 4
 
     result.get(certificateLocation).get.checks should be ('empty)
     result.get(certificateLocation).get.subjectChain should be("CN=For Testing Only,CN=RIPE NCC,C=NL - certificate")
@@ -108,6 +112,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get(ROOT_CRL_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - crl")
     result.get(ROOT_MANIFEST_LOCATION).get.checks should be ('empty)
     result.get(ROOT_MANIFEST_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - manifest")
+    result.get(roaLocation).get.checks should be ('empty)
+    result.get(roaLocation).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - roa123")
   }
 
   test("should not give warnings for valid certificate with child objects") {
@@ -307,8 +313,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.crl.url should be ("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be (crl)
     result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head.url should be ("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head.decoded should be (crl)
+    result.get.manifestObjects.head._2.url should be ("rsync://foo.host/bar/ta.crl")
+    result.get.manifestObjects.head._2.decoded should be (crl)
     result.get.checksForManifest should have size 0
     result.get.skippedObjects should have size 0
   }
@@ -341,8 +347,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.crl.url should be("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be(crl)
     result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head.url should be("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head.decoded should be(crl)
+    result.get.manifestObjects.head._2.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.manifestObjects.head._2.decoded should be(crl)
     result.get.checksForManifest should have size 0
 
     val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
@@ -375,8 +381,8 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.crl.url should be("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be(goodCrl)
     result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head.url should be("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head.decoded should be(goodCrl)
+    result.get.manifestObjects.head._2.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.manifestObjects.head._2.decoded should be(goodCrl)
     result.get.checksForManifest should have size 0
     result.get.skippedObjects should have size 2
     val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
@@ -526,6 +532,19 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   }
 
 
+  test ("shouldClassifyObjectsCorrectly") {
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
+
+    val objects = Seq(("bla", new RoaObject("url", mock[RoaCms], None)), ("blah", new CertificateObject("url", getRootResourceCertificate, None)))
+
+    val subject.ClassifiedObjects(roas, certificates, crls) = subject.classify(objects)
+
+    roas.size should be(1)
+    certificates.size should be(1)
+    crls.size should be(0)
+  }
+
+
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withSubjectDN(ROOT_CERTIFICATE_NAME)
@@ -552,6 +571,19 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
   private def extractFileName(uri: URI): String = {
     uri.toString.split('/').last
+  }
+
+  def createRoa(certificate: X509ResourceCertificate, keyPair: KeyPair, uri: String): RoaCms = {
+    val roaBuilder = new RoaCmsBuilder()
+    roaBuilder.withCertificate(certificate)
+    roaBuilder.withAsn(new Asn(42l))
+    val prefixes = new util.ArrayList[RoaPrefix]()
+    prefixes.add(new RoaPrefix(IpRange.parse("10.64.0.0/12"), 24))
+    roaBuilder.withPrefixes(prefixes)
+    roaBuilder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER)
+    val roa = roaBuilder.build(keyPair.getPrivate)
+    storage.storeRoa(RoaObject(uri, roa))
+    roa
   }
 
   def createEmptyCrl(keyPair: KeyPair) = {
