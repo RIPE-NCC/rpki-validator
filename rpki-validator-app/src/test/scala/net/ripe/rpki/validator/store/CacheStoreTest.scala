@@ -204,7 +204,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val roa = RoaObject(url = myUrl, decoded = testRoa)
     val manifest = ManifestObject(url = myUrl, decoded = testManifest)
     val crl = CrlObject(url = myUrl, decoded = testCrl)
-    val someOtherCrl = CrlObject(url = "rsync:bla.bla", decoded = testCrl)
+    val someOtherCrl = CrlObject(url = "rsync://bla.bla", decoded = testCrl)
 
     store.storeCrl(crl)
     store.storeManifest(manifest)
