@@ -84,11 +84,11 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
           "encoded" -> obj.encoded,
           "object_type" -> objType)
 
-        val updated = template.update(
-          "UPDATE repo_objects SET url = :url WHERE hash = :hash",
-          params)
+        val found = template.queryForObject(
+          "SELECT COUNT(1) FROM repo_objects WHERE hash = :hash AND url = :url",
+          params, classOf[Integer])
 
-        if (updated == 0) {
+        if (found == 0) {
           template.update(
             """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
                VALUES(:aki, :hash, :url, :encoded, :object_type)""",

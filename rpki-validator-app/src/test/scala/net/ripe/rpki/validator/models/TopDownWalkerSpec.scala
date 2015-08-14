@@ -500,12 +500,14 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   test("should give proper warnings in case of two identical objects with different locations") {
     val childManifestLocation =  URI.create("rsync://foo.host/bar/childManifest.mft")
 
-    val (certificateLocation1, certificate1) = createInheritingResourceCertificate(CERTIFICATE_KEY_PAIR, "valid1.cer", childManifestLocation)
-
+    val (certificateLocation1, certificate) = createInheritingResourceCertificate(CERTIFICATE_KEY_PAIR, "valid1.cer", childManifestLocation)
     // put the same object to two different locations
+    val anotherLocation = URI.create("rysnc://someotherlocation.net/blabla1.cer")
+    storage.storeCertificate(CertificateObject(anotherLocation.toString, certificate))
+
     createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded,
-      (certificateLocation1, certificate1.getEncoded),
-      (URI.create("rysnc://someotherlocation.net/blabla1"), certificate1.getEncoded)
+      (certificateLocation1, certificate.getEncoded),
+      (anotherLocation, certificate.getEncoded)
     )
 
     val childKeyPair1 = PregeneratedKeyPairFactory.getInstance.generate
@@ -524,9 +526,11 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
-//    result should have size 6
+    result should have size 7
     result.get(certificateLocation1).get should be('isValid)
     result.get(certificateLocation1).get.checks should be ('empty)
+    result.get(anotherLocation).get should be('isValid)
+    result.get(anotherLocation).get.checks should be ('empty)
     result.get(childCertificateLocation).get should be('isValid)
     result.get(childCertificateLocation).get.checks should be ('empty)
   }
