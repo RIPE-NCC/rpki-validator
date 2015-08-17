@@ -205,7 +205,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     result should have size 3
     val mft = result.get(manifestLocation)
-    mft.exists(_.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_URI_MISMATCH)) should be (true)
+    mft.exists(_.hasCheckKey(ValidationString.VALIDATOR_REPOSITORY_NOT_AT_EXPECTED_LOCATION)) should be (true)
     mft.exists(_.isValid) should be (true)
   }
 

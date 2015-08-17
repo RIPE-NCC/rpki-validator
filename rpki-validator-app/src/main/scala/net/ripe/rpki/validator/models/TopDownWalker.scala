@@ -362,16 +362,18 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       val uri = repositoryUri.resolve(name)
       val hashStr: String = HashUtil.stringify(hash)
       val objs = store.getObjects(hashStr)
-
-      if (objs.isEmpty)
+      
+      if (objs.isEmpty) {
         errors += error(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, hashStr)
-      else
-        objs.foreach { o =>
-          foundObjects += ((name, o))
-          if (o.url != uri.toString) {
-            errors += warning(validationLocation, VALIDATOR_MANIFEST_URI_MISMATCH, uri.toString, hashStr, o.url)
-          }
+      } else {
+        val (found, mismatches) = objs.partition(_.url == uri.toString)
+        if (found.isEmpty) {
+          errors += warning(validationLocation, VALIDATOR_REPOSITORY_NOT_AT_EXPECTED_LOCATION, uri.toString, mismatches.map(_.url).mkString)
+        } else if (mismatches.nonEmpty) {
+          errors += warning(validationLocation, VALIDATOR_REPOSITORY_AT_EXPECTED_LOCATION_AND_ELSEWHERE, uri.toString, mismatches.map(_.url).mkString)
         }
+        foundObjects ++= objs.map((name, _))
+      }
     }
     ManifestObjects(foundObjects.toSeq, errors.toSeq)
   }
