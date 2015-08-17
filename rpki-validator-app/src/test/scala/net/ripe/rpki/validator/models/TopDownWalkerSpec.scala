@@ -195,7 +195,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get(manifestLocation).get should not be 'isValid
   }
 
-  test("should give error when object is found by hash but location doesn't match location in manifest") {
+  test("should give warning when object is found by hash but location doesn't match location in manifest") {
     val (_, certificate) = createLeafResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer")
     val (manifestLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded, (new URI(REPO_LOCATION + "missing.cer"), certificate.getEncoded))
 
@@ -206,6 +206,27 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result should have size 3
     val mft = result.get(manifestLocation)
     mft.exists(_.hasCheckKey(ValidationString.VALIDATOR_REPOSITORY_NOT_AT_EXPECTED_LOCATION)) should be (true)
+    mft.exists(_.isValid) should be (true)
+  }
+
+  test("should give warning when object is found by hash but there're more then one location") {
+    val (_, certificate) = createLeafResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer")
+
+    val certificateLocation = new URI(REPO_LOCATION + "valid.cer")
+    val secondLocation = new URI(REPO_LOCATION + "missing.cer")
+    storage.storeCertificate(CertificateObject(secondLocation.toString, certificate))
+
+    val (manifestLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded,
+      (secondLocation, certificate.getEncoded),
+      (certificateLocation, certificate.getEncoded)
+    )
+
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
+
+    result should have size 4
+    val mft = result.get(manifestLocation)
+    mft.exists(_.hasCheckKey(ValidationString.VALIDATOR_REPOSITORY_AT_EXPECTED_LOCATION_AND_ELSEWHERE)) should be (true)
     mft.exists(_.isValid) should be (true)
   }
 
@@ -547,7 +568,6 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     certificates.size should be(1)
     crls.size should be(0)
   }
-
 
   def getRootResourceCertificate: X509ResourceCertificate = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
