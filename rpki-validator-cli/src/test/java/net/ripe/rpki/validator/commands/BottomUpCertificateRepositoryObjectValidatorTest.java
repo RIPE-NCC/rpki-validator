@@ -62,7 +62,7 @@ public class BottomUpCertificateRepositoryObjectValidatorTest {
         validator.setSingleObjectWalker(singleObjectWalker);
 
         File tempDir = validator.getTempDirectory();
-        assertTrue(tempDir.exists());
+        assertTrue("Temp dir doesn't exist: " + tempDir.getAbsolutePath(), tempDir.exists());
         assertTrue(tempDir.canWrite());
 
         validator.validate();
