@@ -151,7 +151,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     } match {
       case Success(obj) => obj
       case Failure(err) =>
-        logger.error(err.toString)
+        logger.error(s"$err, hash = $hash")
         Seq()
     }
   }
