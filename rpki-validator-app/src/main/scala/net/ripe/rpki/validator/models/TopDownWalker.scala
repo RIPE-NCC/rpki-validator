@@ -368,9 +368,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       } else {
         val (found, mismatches) = objs.partition(_.url == uri.toString)
         if (found.isEmpty) {
-          errors += warning(validationLocation, VALIDATOR_REPOSITORY_NOT_AT_EXPECTED_LOCATION, uri.toString, mismatches.map(_.url).mkString)
+          errors += warning(validationLocation, VALIDATOR_REPOSITORY_NOT_AT_EXPECTED_LOCATION, uri.toString, mismatches.map(_.url).mkString(", "))
         } else if (mismatches.nonEmpty) {
-          errors += warning(validationLocation, VALIDATOR_REPOSITORY_AT_EXPECTED_LOCATION_AND_ELSEWHERE, uri.toString, mismatches.map(_.url).mkString)
+          errors += warning(validationLocation, VALIDATOR_REPOSITORY_AT_EXPECTED_LOCATION_AND_ELSEWHERE, uri.toString, mismatches.map(_.url).mkString(", "))
         }
         foundObjects ++= objs.map((name, _))
       }

@@ -45,7 +45,8 @@ import net.ripe.rpki.commons.crypto.x509cert.X509CertificateBuilderHelper._
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateInformationAccessDescriptor, X509ResourceCertificate, X509ResourceCertificateBuilder}
 import net.ripe.rpki.commons.validation.ValidationString._
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
-import net.ripe.rpki.commons.validation.{ValidationOptions, ValidationStatus, ValidationString}
+import net.ripe.rpki.commons.validation.{ValidationCheck, ValidationOptions, ValidationStatus, ValidationString}
+import net.ripe.rpki.commons.validation.ValidationStatus._
 import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig}
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.{CacheStore, DataSources, HttpFetcherStore, Storage}
@@ -520,13 +521,12 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
   test("should give proper warnings in case of two identical objects with different locations") {
     val childManifestLocation =  URI.create("rsync://foo.host/bar/childManifest.mft")
-
     val (certificateLocation1, certificate) = createInheritingResourceCertificate(CERTIFICATE_KEY_PAIR, "valid1.cer", childManifestLocation)
     // put the same object to two different locations
-    val anotherLocation = URI.create("rysnc://someotherlocation.net/blabla1.cer")
+    val anotherLocation = URI.create("rsync://someotherlocation.net/blabla1.cer")
     storage.storeCertificate(CertificateObject(anotherLocation.toString, certificate))
 
-    createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded,
+    val (mftLocation, _) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded,
       (certificateLocation1, certificate.getEncoded),
       (anotherLocation, certificate.getEncoded)
     )
@@ -548,6 +548,15 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result should have size 7
+    val mftChecks = result.get(mftLocation).get.checks
+    mftChecks.exists(c => c.getKey == VALIDATOR_REPOSITORY_NOT_AT_EXPECTED_LOCATION &&
+      c.getStatus == WARNING &&
+      c.getParams.toSeq == Seq("rsync://foo.host/bar/blabla1.cer", "rsync://foo.host/bar/valid1.cer, rsync://someotherlocation.net/blabla1.cer")
+    ) should be (true)
+    mftChecks.exists(c => c.getKey == VALIDATOR_REPOSITORY_AT_EXPECTED_LOCATION_AND_ELSEWHERE &&
+      c.getStatus == WARNING &&
+      c.getParams.toSeq == Seq("rsync://foo.host/bar/valid1.cer", "rsync://someotherlocation.net/blabla1.cer")
+    ) should be (true)
     result.get(certificateLocation1).get should be('isValid)
     result.get(certificateLocation1).get.checks should be ('empty)
     result.get(anotherLocation).get should be('isValid)
