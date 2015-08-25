@@ -566,6 +566,116 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   }
 
 
+
+  test("should give proper warnings in case of two identical objects in the 'merge' situation") {
+    /* TODO This test is suppposed to reproduce this kind of "merge" situation
+       https://owncloud.ripe.net/index.php/s/5CYaxF4quqpfE0W
+       It's not finished and doesn't really reflect the required configuratrion.
+       */
+    val manifestLocation = URI.create("rsync://foo.host/bar/manifest.mft")
+    val childManifestLocation1 = URI.create("rsync://foo.host/bar/childManifest1.mft")
+    val childManifestLocation2 = URI.create("rsync://foo.host/bar/childManifest2.mft")
+    val abnAmroMft = URI.create("rsync://foo.host/bar/abn.mft")
+    val evilMft = URI.create("rsync://foo.host/bar/evil.mft")
+
+    val xs4AllKeyPair = PregeneratedKeyPairFactory.getInstance.generate
+    val somebodyElseKeyPair = PregeneratedKeyPairFactory.getInstance.generate
+
+    val location1 = "xs4all.cer"
+    val parentName1 = new X500Principal("CN=111")
+    val (certificateLocation1, certificate1) = createResourceCertificate(
+      keyPair = xs4AllKeyPair,
+      parentKeyPair = ROOT_KEY_PAIR,
+      locationName = location1,
+      manifestLocation = manifestLocation,
+      certificateName = parentName1,
+      parentName = ROOT_CERTIFICATE_NAME,
+      validityPeriod = new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)),
+      isObjectIssuer = true,
+      inheritResources = false,
+      resourceSet = IpResourceSet.parse("10.1.0.0/16"))
+
+    val location2 = "somebodyElse.cer"
+    val parentName2 = new X500Principal("CN=222")
+    val (certificateLocation2, certificate2) = createResourceCertificate(
+      keyPair = somebodyElseKeyPair,
+      parentKeyPair = ROOT_KEY_PAIR,
+      locationName = location2,
+      manifestLocation = manifestLocation,
+      certificateName = parentName2,
+      parentName = ROOT_CERTIFICATE_NAME,
+      validityPeriod = new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)),
+      isObjectIssuer = true,
+      inheritResources = false,
+      resourceSet = IpResourceSet.parse("10.2.0.0/16"))
+
+
+    val (mainMftLocation, mainMft) = createMftWithCrlAndEntries(ROOT_KEY_PAIR, taCrl.getEncoded,
+      (certificateLocation1, certificate1.getEncoded),
+      (certificateLocation2, certificate2.getEncoded)
+    )
+
+    val abnAmroKeyPair1 = PregeneratedKeyPairFactory.getInstance.generate
+
+    val (goodLocation, goodCertificate) = createResourceCertificate(
+      keyPair = abnAmroKeyPair1,
+      parentKeyPair = xs4AllKeyPair,
+      locationName = "abnAmro.cer",
+      manifestLocation = manifestLocation,
+      certificateName = new X500Principal("CN=1111"),
+      parentName = parentName1,
+      validityPeriod = new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)),
+      isObjectIssuer = false,
+      inheritResources = false,
+      resourceSet = IpResourceSet.parse("10.1.1.0/24"))
+
+    val (evilLocation, evilCertificate) = createResourceCertificate(
+      keyPair = abnAmroKeyPair1,
+      parentKeyPair = somebodyElseKeyPair,
+      locationName = "evil.cer",
+      manifestLocation = manifestLocation,
+      certificateName = new X500Principal("CN=2222"),
+      parentName = parentName2,
+      validityPeriod = new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)),
+      isObjectIssuer = false,
+      inheritResources = false,
+      resourceSet = IpResourceSet.parse("10.2.1.0/24"))
+
+    val (childCrlLocation1, childCrlLocation2) = (URI.create("rsync://foo.host/bar/child1.crl"), URI.create("rsync://foo.host/bar/child2.crl"))
+
+    val childCrl1 = getCrl(new X500Principal("CN=For Testing Only, CN=RIPE NCC, C=NL"), xs4AllKeyPair)
+    storage.storeCrl(CrlObject(childCrlLocation1.toString, childCrl1))
+
+    val childCrl2 = getCrl(new X500Principal("CN=For Testing Only, CN=RIPE NCC, C=NL"), somebodyElseKeyPair)
+    storage.storeCrl(CrlObject(childCrlLocation2.toString, childCrl2))
+
+    createChildMftWithCrlAndEntries(xs4AllKeyPair, childManifestLocation1, CERTIFICATE_NAME, childCrlLocation1,
+      childCrl1.getEncoded, (goodLocation, goodCertificate.getEncoded))
+
+    createChildMftWithCrlAndEntries(somebodyElseKeyPair, childManifestLocation2, CERTIFICATE_NAME, childCrlLocation2,
+      childCrl2.getEncoded, (evilLocation, evilCertificate.getEncoded))
+
+    val (roa1Location, roa2Location) = ("rsync://foo.host/bar/roa123.roa", "rsync://foo.host/bar/roa456.roa")
+    val roa1 = createRoa(goodCertificate, abnAmroKeyPair1, roa1Location, IpRange.parse("10.1.1.0/24"))
+    val roa2 = createRoa(evilCertificate, abnAmroKeyPair1, roa2Location, IpRange.parse("10.2.1.0/24"))
+
+    createChildMftWithCrlAndEntries(abnAmroKeyPair1, abnAmroMft, CERTIFICATE_NAME, childCrlLocation2, childCrl2.getEncoded,
+      (goodLocation, goodCertificate.getEncoded),
+      (URI.create(roa1Location), roa1.getEncoded),
+      (URI.create(roa2Location), roa2.getEncoded))
+
+    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
+    val result = subject.execute.map(vo => vo.uri -> vo).toMap
+
+    result should have size 10
+    val mftChecks = result.get(mainMftLocation).get.checks
+//    result.get(certificateLocation1).get should be('isValid)
+//    result.get(certificateLocation1).get.checks should be ('empty)
+//    result.get(childCertificateLocation1).get should be('isValid)
+//    result.get(childCertificateLocation1).get.checks should be ('empty)
+  }
+
+
   test ("shouldClassifyObjectsCorrectly") {
     val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
@@ -606,18 +716,22 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     uri.toString.split('/').last
   }
 
-  def createRoa(certificate: X509ResourceCertificate, keyPair: KeyPair, uri: String): RoaCms = {
+  def createRoa(certificate: X509ResourceCertificate, keyPair: KeyPair, uri: String): RoaCms =
+    createRoa (certificate, keyPair, uri, IpRange.parse("10.64.0.0/12"))
+
+  def createRoa(certificate: X509ResourceCertificate, keyPair: KeyPair, uri: String, resources: IpRange): RoaCms = {
     val roaBuilder = new RoaCmsBuilder()
     roaBuilder.withCertificate(certificate)
     roaBuilder.withAsn(new Asn(42l))
     val prefixes = new util.ArrayList[RoaPrefix]()
-    prefixes.add(new RoaPrefix(IpRange.parse("10.64.0.0/12"), 24))
+    prefixes.add(new RoaPrefix(resources, 24))
     roaBuilder.withPrefixes(prefixes)
     roaBuilder.withSignatureProvider(DEFAULT_SIGNATURE_PROVIDER)
     val roa = roaBuilder.build(keyPair.getPrivate)
     storage.storeRoa(RoaObject(uri, roa))
     roa
   }
+
 
   def createEmptyCrl(keyPair: KeyPair) = {
     val taCrl = getCrl(ROOT_CERTIFICATE_NAME, keyPair)
@@ -716,6 +830,12 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
       new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), isObjectIssuer = false, inheritResources = false)
   }
 
+  def createChildResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, manifestLocation: URI,
+                                     certificateName: X500Principal, parentName: X500Principal) = {
+    createResourceCertificate(keyPair, parentKeyPair, locationName, manifestLocation, certificateName, parentName,
+      new ValidityPeriod(NOW.minusYears(2), NOW.plusYears(1)), isObjectIssuer = false, inheritResources = false)
+  }
+
   def createOverClaimingResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String,
                                             manifestLocation: URI, certificateName: X500Principal, parentName: X500Principal,
                                             validityPeriod: ValidityPeriod, isObjectIssuer: Boolean): (URI, X509ResourceCertificate) = {
@@ -755,14 +875,16 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     (certificateLocation, certificate)
   }
 
-  def createResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, manifestLocation: URI, certificateName: X500Principal, parentName: X500Principal,
-                                validityPeriod: ValidityPeriod, isObjectIssuer: Boolean, inheritResources: Boolean): (URI, X509ResourceCertificate) = {
+  def createResourceCertificate(keyPair: KeyPair, parentKeyPair: KeyPair, locationName: String, manifestLocation: URI,
+                                certificateName: X500Principal, parentName: X500Principal,
+                                validityPeriod: ValidityPeriod, isObjectIssuer: Boolean, inheritResources: Boolean,
+                                resourceSet: IpResourceSet = ROOT_RESOURCE_SET): (URI, X509ResourceCertificate) = {
     val builder: X509ResourceCertificateBuilder = new X509ResourceCertificateBuilder
     builder.withValidityPeriod(validityPeriod)
     if (inheritResources) {
       builder.withInheritedResourceTypes(util.EnumSet.allOf(classOf[IpResourceType]))
     } else {
-      builder.withResources(ROOT_RESOURCE_SET)
+      builder.withResources(resourceSet)
     }
     builder.withIssuerDN(parentName)
     builder.withSubjectDN(certificateName)
@@ -812,9 +934,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
   def createRepoService(storage: Storage, errors: Seq[Fetcher.Error] = Seq()): RepoService = {
     new RepoService(new RepoFetcher(storage, new Fetchers(HttpFetcherStore.inMemory, FetcherConfig("")))) {
-      override def visitRepo(repoUri: URI): Seq[Fetcher.Error] = {
-        errors
-      }
+      override def visitRepo(repoUri: URI): Seq[Fetcher.Error] = errors
     }
   }
 
