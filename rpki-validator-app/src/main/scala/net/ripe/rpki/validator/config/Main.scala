@@ -286,10 +286,11 @@ class Main extends Http with Logging { main =>
     val requestLogHandler = {
       val handler = new RequestLogHandler()
       val requestLog = new NCSARequestLog(ApplicationOptions.accessLogFileName)
-      requestLog.setRetainDays(90)
       requestLog.setAppend(true)
-      requestLog.setExtended(false)
+      requestLog.setExtended(true)
       requestLog.setLogLatency(true)
+      requestLog.setPreferProxiedForAddress(true)
+      requestLog.setRetainDays(90)
       handler.setRequestLog(requestLog)
       handler
     }
