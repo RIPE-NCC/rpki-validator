@@ -32,6 +32,7 @@ package net.ripe.rpki.validator.config
 import java.io.File
 import net.ripe.rpki.validator.support.ValidatorTestCase
 
+//noinspection NameBooleanParameters
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class ApplicationOptionsTest extends ValidatorTestCase {
 
@@ -81,8 +82,8 @@ class ApplicationOptionsTest extends ValidatorTestCase {
     ApplicationOptions.workDirLocation should equal(new File("tmp"))
   }
 
-  test("Should use log/access.log as default access log") {
-    ApplicationOptions.accessLogFileName should equal("log/access.log")
+  test("Should configure access log file name for rotation") {
+    ApplicationOptions.accessLogFileName.contains("yyyy_MM_dd") should be(true)
   }
 
   test("Should use log/validator.log as default location for application log") {
