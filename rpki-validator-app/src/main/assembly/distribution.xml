@@ -50,9 +50,6 @@
         <fileSet>
             <directory>conf</directory>
             <outputDirectory>conf</outputDirectory>
-            <excludes>
-                <exclude>**/.keep</exclude>
-            </excludes>
         </fileSet>
         <fileSet>
             <!-- Workaround to create an empty 'log' directory-->
