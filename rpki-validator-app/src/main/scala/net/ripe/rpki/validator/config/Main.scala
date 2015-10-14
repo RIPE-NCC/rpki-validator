@@ -30,7 +30,7 @@
 package net.ripe.rpki.validator
 package config
 
-import java.io.File
+import java.io.{PrintStream, File}
 import java.util.EnumSet
 import javax.servlet.DispatcherType
 
@@ -50,6 +50,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.http.client.methods.HttpGet
 import org.eclipse.jetty.server.Server
 import org.joda.time.DateTime
+import org.slf4j.{LoggerFactory, Logger}
 
 import scala.Predef._
 import scala.collection.JavaConverters._
@@ -62,9 +63,15 @@ object Main {
   private val sessionId: Pdu.SessionId = Pdu.randomSessionid
 
   def main(args: Array[String]): Unit = {
+    setupLogging()
+    new Main()
+  }
+
+  private def setupLogging() {
     System.setProperty("VALIDATOR_LOG_FILE", ApplicationOptions.applicationLogFileName)
     System.setProperty("RTR_LOG_FILE", ApplicationOptions.rtrLogFileName)
-    new Main()
+    System.setErr(new PrintStream(new LoggingOutputStream(), true))
+    LoggerFactory.getLogger(this.getClass).info("Starting up the publication server ...")
   }
 }
 
@@ -191,6 +198,7 @@ class Main extends Http with Logging { main =>
     logger.info("Welcome to the RIPE NCC RPKI Validator, now available on port " + ApplicationOptions.httpPort + ". Hit CTRL+C to terminate.")
   }
 
+
   private def runRtrServer(): RTRServer = {
     val rtrServer = new RTRServer(
       port = ApplicationOptions.rtrPort,
@@ -286,10 +294,11 @@ class Main extends Http with Logging { main =>
     val requestLogHandler = {
       val handler = new RequestLogHandler()
       val requestLog = new NCSARequestLog(ApplicationOptions.accessLogFileName)
-      requestLog.setRetainDays(90)
       requestLog.setAppend(true)
-      requestLog.setExtended(false)
+      requestLog.setExtended(true)
       requestLog.setLogLatency(true)
+      requestLog.setPreferProxiedForAddress(true)
+      requestLog.setRetainDays(90)
       handler.setRequestLog(requestLog)
       handler
     }

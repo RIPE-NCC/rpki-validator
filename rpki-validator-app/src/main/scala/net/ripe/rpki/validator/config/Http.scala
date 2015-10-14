@@ -71,8 +71,9 @@ trait Http { this: Logging =>
           Failure(new RuntimeException(s"Error loading certificate from file $f: ${e.getMessage}", e))
       }
     }
+
     try {
-      dir.listFiles().filter(_.isFile).map(f => loadCertificateFromFile(f))
+      dir.listFiles().filter(f=> f.isFile && !f.getName.equals(".keep")).map(f => loadCertificateFromFile(f))
     } catch {
       case e: Exception =>
         Array(Failure(new RuntimeException(s"Error reading trusted certificates from $dir: ${e.getMessage}", e)))
