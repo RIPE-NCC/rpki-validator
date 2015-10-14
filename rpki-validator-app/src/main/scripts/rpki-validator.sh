@@ -57,6 +57,15 @@ Usage: $0 start  [-c /path/to/my-configuration.conf]
 EOF
 }
 
+
+function check_java_version {
+  JAVA_VERSION=`${JAVA_CMD} -version 2>&1 | grep version | sed 's/java version //g'`
+  MAJOR_VERSION=`echo ${JAVA_VERSION} | sed 's/"\([[:digit:]]\)\.\([[:digit:]]\).*"/\1\2/g'`
+  if (( ${MAJOR_VERSION} < 17 )) ; then
+    error_exit "RPKI validator requires Java 1.7 or greater, your version of java is ${JAVA_VERSION}";
+  fi
+}
+
 #
 # Specify the location of the Java home directory. If set then $JAVA_CMD will
 # be defined to $JAVA_HOME/bin/java
@@ -72,6 +81,7 @@ if [ -z $JAVA_CMD ]; then
     error_exit "Cannot find java on path. Make sure java is installed and/or set JAVA_HOME"
 fi
 
+check_java_version
 
 # See how we're called
 FIRST_ARG="$1"

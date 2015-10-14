@@ -324,6 +324,7 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.3</version>
                     <configuration>
+                        <!-- Change check_java_version in rpki-validator.sh when changing the target version -->
                         <source>1.7</source>
                         <target>1.7</target>
                         <encoding>UTF-8</encoding>
@@ -349,4 +350,3 @@
         </pluginManagement>
     </build>
 </project>
-
