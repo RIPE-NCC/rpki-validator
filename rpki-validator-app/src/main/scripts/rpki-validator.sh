@@ -59,7 +59,7 @@ EOF
 
 
 function check_java_version {
-  JAVA_VERSION=`${JAVA_CMD} -version 2>&1 | grep version | sed 's/java version //g'`
+  JAVA_VERSION=`${JAVA_CMD} -version 2>&1 | grep version | sed 's/.* version //g'`
   MAJOR_VERSION=`echo ${JAVA_VERSION} | sed 's/"\([[:digit:]]\)\.\([[:digit:]]\).*"/\1\2/g'`
   if (( ${MAJOR_VERSION} < 17 )) ; then
     error_exit "RPKI validator requires Java 1.7 or greater, your version of java is ${JAVA_VERSION}";
@@ -210,4 +210,3 @@ case ${FIRST_ARG} in
 esac
 
 exit $?
-
