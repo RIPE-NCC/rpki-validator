@@ -152,6 +152,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   test("should prefer rsync when rrdp is not anabled") {
     val rrdpEnabled = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now, enableRrdp = true)
     rrdpEnabled.preferredFetchLocation.get should be (RRDP_NOTIFICATION_LOCATION)
+
     val rrdpDisabled = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
     rrdpDisabled.preferredFetchLocation.get should be (REPO_LOCATION)
 
@@ -275,12 +276,6 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result.get(ROOT_MANIFEST_LOCATION).filter(_.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE)) should be('empty)
-  }
-
-  test("Should prefer rpkiNotify URI over caRepository URI") {
-    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
-
-    subject.preferredFetchLocation.get should be(RRDP_NOTIFICATION_LOCATION)
   }
 
   test("should update validation time for validated objects") {
