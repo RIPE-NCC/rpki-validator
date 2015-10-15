@@ -149,6 +149,14 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get(childCrlLocation).get.checks should be ('empty)
   }
 
+  test("should prefer rsync when rrdp is not anabled") {
+    val rrdpEnabled = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now, enableRrdp = true)
+    rrdpEnabled.preferredFetchLocation.get should be (RRDP_NOTIFICATION_LOCATION)
+    val rrdpDisabled = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
+    rrdpDisabled.preferredFetchLocation.get should be (REPO_LOCATION)
+
+  }
+
   test("should give warning when no mft refers to a certificate that is an object issuer") {
 
     val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)

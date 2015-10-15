@@ -53,15 +53,16 @@ import scala.language.reflectiveCalls
 object TopDownWalker {
 
   def create(certificateContext: CertificateRepositoryObjectValidationContext, store: Storage, repoService: RepoService,
-             validationOptions: ValidationOptions, validationStartTime: Instant) =
-    new TopDownWalker(certificateContext, store, repoService, validationOptions, validationStartTime)(Set())
+             validationOptions: ValidationOptions, validationStartTime: Instant, enableRrdp: Boolean = false) =
+    new TopDownWalker(certificateContext, store, repoService, validationOptions, validationStartTime, enableRrdp)(Set())
 }
 
 class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationContext,
                      store: Storage,
                      repoService: RepoService,
                      validationOptions: ValidationOptions,
-                     validationStartTime: Instant)(certificateTreeBranch: Set[String])
+                     validationStartTime: Instant,
+                     enableRrdp: Boolean)(certificateTreeBranch: Set[String])
   extends Logging {
 
   private object HashUtil extends Hashing
@@ -72,7 +73,12 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   Validate.isTrue(!certificateTreeBranch.contains(certificateSkiHex))
   Validate.isTrue(certificateContext.getCertificate.isObjectIssuer, "certificate must be an object issuer")
 
-  private[models] def preferredFetchLocation: Option[URI] = Option(certificateContext.getRpkiNotifyURI).orElse(Option(certificateContext.getRepositoryURI))
+  private[models] def preferredFetchLocation: Option[URI] = {
+    if (enableRrdp)
+      Option(certificateContext.getRpkiNotifyURI).orElse(Option(certificateContext.getRepositoryURI))
+    else
+      Option(certificateContext.getRepositoryURI).orElse(Option(certificateContext.getRpkiNotifyURI))
+  }
 
   case class Check(location: ValidationLocation, impl: ValidationCheck)
 
@@ -203,7 +209,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       val childSubjectChain = Lists.newArrayList(certificateContext.getSubjectChain)
       childSubjectChain.add(childCert.getSubject.getName)
       val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), childCert, childResources, childSubjectChain)
-      val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime)(certificateTreeBranch + certificateSkiHex)
+      val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime, enableRrdp)(certificateTreeBranch + certificateSkiHex)
       nextLevelWalker.validateContext
     }
   }
