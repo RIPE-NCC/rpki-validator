@@ -30,9 +30,11 @@
 package net.ripe.rpki.validator
 package support
 
+import org.apache.http.{HttpStatus, ProtocolVersion}
+import org.apache.http.message.BasicStatusLine
 import org.scalatest.{FunSuite, Matchers}
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 abstract class ValidatorTestCase extends FunSuite with JunitLog4JSetup with Matchers {
-
+  val statusLineOk: BasicStatusLine = new BasicStatusLine(new ProtocolVersion("HTTP", 1, 1), HttpStatus.SC_OK, "OK")
 }

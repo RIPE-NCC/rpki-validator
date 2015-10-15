@@ -73,6 +73,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
             val xml = urls(argument.getURI.toString)
             val response = mock[CloseableHttpResponse]
             val entity = mock[HttpEntity]
+            when(response.getStatusLine).thenReturn(statusLineOk)
             when(entity.getContent).thenReturn(new ByteArrayInputStream(xml.getBytes))
             when(response.getEntity).thenReturn(entity)
             response

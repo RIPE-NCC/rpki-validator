@@ -35,6 +35,7 @@ import com.google.common.io.BaseEncoding
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.config.{ApplicationOptions, Http}
 import net.ripe.rpki.validator.store.HttpFetcherStore
+import org.apache.http.HttpStatus
 import org.apache.http.client.methods.HttpGet
 
 import scala.math.BigInt
@@ -206,7 +207,12 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
   def getXml(notificationUrl: URI) =
     tryTo(notificationUrl) {
       val response = http.execute(new HttpGet(notificationUrl.toString))
-      scala.xml.XML.load(response.getEntity.getContent)
+      response.getStatusLine.getStatusCode match {
+        case HttpStatus.SC_OK =>
+          scala.xml.XML.load(response.getEntity.getContent)
+        case _ =>
+          throw new RuntimeException(response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
+      }
     }
 
   private def getSnapshot(snapshotUrl: URI, snapshotDef: SnapshotDef): Either[Error, Snapshot] =

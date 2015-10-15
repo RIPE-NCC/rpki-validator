@@ -29,10 +29,9 @@
  */
 package net.ripe.rpki.validator.fetchers
 
-import java.io.{InputStream, ByteArrayInputStream}
+import java.io.InputStream
 import java.net.URI
 
-import net.ripe.ipresource.IpResourceSet
 import net.ripe.rpki.validator.config.Http
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.store.{DataSources, HttpFetcherStore}
@@ -72,6 +71,7 @@ class SingleObjectHttpFetcherTest extends ValidatorTestCase with BeforeAndAfter 
             val file = urls(argument.getURI.toString)
             val response = mock[CloseableHttpResponse]
             val entity = mock[HttpEntity]
+            when(response.getStatusLine).thenReturn(statusLineOk)
             when(entity.getContent).thenReturn(file)
             when(response.getEntity).thenReturn(entity)
             response

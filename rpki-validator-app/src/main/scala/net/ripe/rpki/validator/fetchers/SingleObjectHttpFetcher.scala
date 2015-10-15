@@ -35,6 +35,7 @@ import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.config.{ApplicationOptions, Http}
 import net.ripe.rpki.validator.store.HttpFetcherStore
 import org.apache.commons.io.IOUtils
+import org.apache.http.HttpStatus
 import org.apache.http.client.methods.HttpGet
 
 class SingleObjectHttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
@@ -43,7 +44,12 @@ class SingleObjectHttpFetcher(store: HttpFetcherStore) extends Fetcher with Http
   def fetch(uri: URI, process: FetcherListener): Seq[Fetcher.Error] = {
     tryTo(uri) {
       val response = http.execute(new HttpGet(uri.toString))
-      IOUtils.toByteArray(response.getEntity.getContent)
+      response.getStatusLine.getStatusCode match {
+        case HttpStatus.SC_OK =>
+          IOUtils.toByteArray(response.getEntity.getContent)
+        case _ =>
+          throw new RuntimeException(response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
+      }
     }.right.map { bytes =>
       processObject(uri, bytes, process)
     }.left.toSeq
