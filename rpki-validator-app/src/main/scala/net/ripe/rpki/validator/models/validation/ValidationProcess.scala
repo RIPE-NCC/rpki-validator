@@ -136,7 +136,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
     val startTime = Instant.now
     trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
-    val walker = TopDownWalker.create(certificate, store, repoService, validationOptions, startTime, ApplicationOptions.enableRrdp)
+    val walker = TopDownWalker.create(certificate, store, repoService, validationOptions, startTime, ApplicationOptions.preferRrdp)
     block(walker.execute) {
       store.clearObjects(startTime)
     }
