@@ -93,7 +93,7 @@ trait Parsing {
   }.mkString("\n")
 
   def parseOrReturnBroken[T](url: String, bytes: Array[Byte])(f: => Either[BrokenObject, T]) = try f catch {
-    case e: Exception => Left(BrokenObject(url, bytes, e.getMessage))
+    case e: Exception => Left(BrokenObject(url, bytes, s"Error occurred parsing the object $url, $e"))
   }
 }
 
@@ -148,7 +148,7 @@ object ManifestObject extends Parsing {
 
   def parse(url: String, bytes: Array[Byte]) = ManifestObject(url, makeParser(url, bytes).getManifestCms)
 
-  def tryParse(url: String, bytes: Array[Byte]) = {
+  def tryParse(url: String, bytes: Array[Byte]) = parseOrReturnBroken(url, bytes) {
     val parser = makeParser(url, bytes)
     if (parser.isSuccess)
       Right(ManifestObject(url, parser.getManifestCms))
