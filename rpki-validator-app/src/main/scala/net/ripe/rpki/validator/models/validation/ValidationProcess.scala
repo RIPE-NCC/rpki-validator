@@ -37,7 +37,7 @@ import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceCertificate}
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationOptions, ValidationResult, ValidationString}
-import net.ripe.rpki.validator.config.MemoryImage
+import net.ripe.rpki.validator.config.{ApplicationOptions, MemoryImage}
 import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher
 import net.ripe.rpki.validator.lib.Structures._
 import net.ripe.rpki.validator.models._
@@ -136,7 +136,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
     val startTime = Instant.now
     trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
-    val walker = TopDownWalker.create(certificate, store, repoService, validationOptions, startTime)
+    val walker = TopDownWalker.create(certificate, store, repoService, validationOptions, startTime, ApplicationOptions.preferRrdp)
     block(walker.execute) {
       store.clearObjects(startTime)
     }

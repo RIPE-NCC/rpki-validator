@@ -149,6 +149,15 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get(childCrlLocation).get.checks should be ('empty)
   }
 
+  test("should prefer rsync when rrdp is not enabled") {
+    val preferRrdp = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now, preferRrdp = true)
+    preferRrdp.preferredFetchLocation.get should be (RRDP_NOTIFICATION_LOCATION)
+
+    val preferRsync = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
+    preferRsync.preferredFetchLocation.get should be (REPO_LOCATION)
+
+  }
+
   test("should give warning when no mft refers to a certificate that is an object issuer") {
 
     val (certificateLocation, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
@@ -267,12 +276,6 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val result = subject.execute.map(vo => vo.uri -> vo).toMap
 
     result.get(ROOT_MANIFEST_LOCATION).filter(_.hasCheckKey(ValidationString.VALIDATOR_MANIFEST_DOES_NOT_CONTAIN_FILE)) should be('empty)
-  }
-
-  test("Should prefer rpkiNotify URI over caRepository URI") {
-    val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
-
-    subject.preferredFetchLocation.get should be(RRDP_NOTIFICATION_LOCATION)
   }
 
   test("should update validation time for validated objects") {
