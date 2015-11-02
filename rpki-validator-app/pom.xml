@@ -212,8 +212,7 @@
                 <configuration>
                     <imageName>rpki/validator</imageName>
                     <baseImage>domblack/scala</baseImage>
-                    <entryPoint>["sh", "/${project.build.finalName}/rpki-validator.sh", "start"]</entryPoint>
-                    <!-- copy the service's jar file from target into the root directory of the image -->
+                    <entryPoint>["/${project.build.finalName}-dist.tar.gz/${project.build.finalName}/rpki-validator.sh", "run"]</entryPoint>
                     <resources>
                         <resource>
                             <targetPath>/</targetPath>
