@@ -300,6 +300,15 @@ Known Issues
 
 Version History
 ---------------
+2.21 - 2 November 2015
+= Fixed a bug where a broken CRL made the validation process crash for the given TA
+= Added support for the RPKI Retrieval Delta Protocol, which uses HTTP instead of rsync 
+  as the transport if the RPKI server supports it. There is a boolean option "prefer.rrdp"
+  in the configuration file to enable it. 
+= The startup script now warns if the Java version running on the host is too old
+= Added log rotation for all log files
+= A brand new RIPE NCC logo
+
 2.20 - 5 June 2015
 = Improvements to the caching system; previous versions could use a lot of disk space
 = Multithreading improvements; application is up to 50% faster
