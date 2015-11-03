@@ -211,15 +211,7 @@
                 <version>0.3.5</version>
                 <configuration>
                     <imageName>rpki/validator</imageName>
-                    <baseImage>domblack/scala</baseImage>
-                    <entryPoint>["/${project.build.finalName}-dist.tar.gz/${project.build.finalName}/rpki-validator.sh", "run"]</entryPoint>
-                    <resources>
-                        <resource>
-                            <targetPath>/</targetPath>
-                            <directory>${project.build.directory}</directory>
-                            <include>${project.build.finalName}-dist.tar.gz</include>
-                        </resource>
-                    </resources>
+                    <dockerDirectory>docker</dockerDirectory>
                 </configuration>
             </plugin>
 
