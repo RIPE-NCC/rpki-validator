@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Fri Aug 07 16:41:58 CEST 2015:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.11.1.1 - (1616546): instance a816c00e-014f-089c-80f5-000067235bb5 
+on database directory memory:/Users/misja/ripe/rpki-validator/tmp/rpki-object-cache with class loader sun.misc.Launcher$AppClassLoader@1efde7ba 
+Loaded from file:/Users/misja/.m2/repository/org/apache/derby/derby/10.11.1.1/derby-10.11.1.1.jar
+java.vendor=Oracle Corporation
+java.runtime.version=1.7.0_75-b13
+user.dir=/Users/misja/ripe/rpki-validator
+os.name=Mac OS X
+os.arch=x86_64
+os.version=10.10.4
+derby.system.home=/Users/misja/ripe/rpki-validator/tmp
+Database Class Loader started - derby.database.classpath=''

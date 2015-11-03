@@ -212,6 +212,13 @@
                 <configuration>
                     <imageName>rpki/validator</imageName>
                     <dockerDirectory>docker</dockerDirectory>
+                    <resources>
+                        <resource>
+                            <targetPath>/</targetPath>
+                            <directory>${project.build.directory}</directory>
+                            <include>${project.build.finalName}-dist.tar.gz</include>
+                        </resource>
+                    </resources>
                 </configuration>
             </plugin>
 
