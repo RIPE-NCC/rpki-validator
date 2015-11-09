@@ -235,7 +235,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       crl.decoded
   }
 
-  private def getCrlChecks(mft: ManifestObject, crl: Either[Check, CrlObject]) = crl match {
+  private def getCrlChecks(crl: Either[Check, CrlObject]) = crl match {
     case Right(c) => toChecks(location(c), _validateCrl(c))
     case _ => List[Check]()
   }
@@ -271,7 +271,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
       val crlOrError = getCrl(crlsOnManifest, location(mft))
 
-      val crlChecks = getCrlChecks(mft, crlOrError)
+      val crlChecks = getCrlChecks(crlOrError)
       val mftChecks = getMftChecks(mft, crlOrError)
       (mft, crlOrError.right.toOption, mftObjects, errors ++ crlOrError.left.toSeq, crlChecks ++ mftChecks)
     }
