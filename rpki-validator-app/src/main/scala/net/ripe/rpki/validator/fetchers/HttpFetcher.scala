@@ -206,6 +206,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
 
   def getXml(notificationUrl: URI) =
     tryTo(notificationUrl) {
+      logger.info(s"Fetching $notificationUrl")
       val response = http.execute(new HttpGet(notificationUrl.toString))
       response.getStatusLine.getStatusCode match {
         case HttpStatus.SC_OK =>
