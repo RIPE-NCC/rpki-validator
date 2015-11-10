@@ -61,8 +61,7 @@ trait Http { this: Logging =>
   }
 
   private def loadCertificatesFromDir(dir: File): Array[Try[X509Certificate]] = {
-    val cf = CertificateFactory.getInstance("X.509")
-
+    lazy val cf = CertificateFactory.getInstance("X.509")
     def loadCertificateFromFile(f: File): Try[X509Certificate] = {
       Try {
         cf.generateCertificate(new BufferedInputStream(new FileInputStream(f))).asInstanceOf[X509Certificate]
@@ -72,11 +71,15 @@ trait Http { this: Logging =>
       }
     }
 
-    try {
-      dir.listFiles().filter(f=> f.isFile && !f.getName.equals(".keep")).map(f => loadCertificateFromFile(f))
-    } catch {
-      case e: Exception =>
-        Array(Failure(new RuntimeException(s"Error reading trusted certificates from $dir: ${e.getMessage}", e)))
+    if (!dir.isDirectory) {
+      Array()
+    } else {
+      try {
+        dir.listFiles().filter(f => f.isFile && !f.getName.equals(".keep")).map(f => loadCertificateFromFile(f))
+      } catch {
+        case e: Exception =>
+          Array(Failure(new RuntimeException(s"Error reading trusted certificates from $dir: ${e.getMessage}", e)))
+      }
     }
   }
 
