@@ -37,7 +37,8 @@ import org.junit.Test;
 import java.io.File;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class BottomUpCertificateRepositoryObjectValidatorTest {
 
@@ -62,11 +63,11 @@ public class BottomUpCertificateRepositoryObjectValidatorTest {
         validator.setSingleObjectWalker(singleObjectWalker);
 
         File tempDir = validator.getTempDirectory();
-        assertTrue("Temp dir doesn't exist: " + tempDir.getAbsolutePath(), tempDir.exists());
-        assertTrue(tempDir.canWrite());
+        assertTrue("Temp dir should exist: " + tempDir.getAbsolutePath(), tempDir.exists());
+        assertTrue("Temp dir should be writable: " + tempDir.getAbsolutePath(), tempDir.canWrite());
 
         validator.validate();
 
-        assertFalse(tempDir.exists());
+        assertFalse("Temp dir should be removed: " + tempDir.getAbsolutePath(), tempDir.exists());
     }
 }

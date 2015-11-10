@@ -48,6 +48,8 @@ import org.apache.commons.io.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 
 public class BottomUpCertificateRepositoryObjectValidator {
@@ -104,18 +106,8 @@ public class BottomUpCertificateRepositoryObjectValidator {
     }
 
     private File getUniqueTempDir() {
-
-        File tmpDirBase = new File(ConfigurationUtil.getTempDirectory());
-        File uniqueDir;
         try {
-            File createTempFile = File.createTempFile("val", null);
-            String randomDirName = createTempFile.getName();
-            createTempFile.delete();
-
-            uniqueDir = new File(tmpDirBase + File.separator + randomDirName);
-            uniqueDir.mkdir();
-
-            return uniqueDir;
+            return Files.createTempDirectory(Paths.get(ConfigurationUtil.getTempDirectory()), "val").toFile();
         } catch (IOException e) {
             throw new ValidatorIOException("Could not create temp directory", e);
         }
