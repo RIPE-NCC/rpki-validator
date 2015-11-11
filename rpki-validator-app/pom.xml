@@ -201,6 +201,40 @@
 
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>docker</id>
+            <build>
+                 <plugins>
+                     <plugin>
+                         <groupId>com.spotify</groupId>
+                         <artifactId>docker-maven-plugin</artifactId>
+                         <version>0.3.5</version>
+                         <executions>
+                             <execution>
+                                 <goals>
+                                     <goal>build</goal>
+                                 </goals>
+                                 <phase>install</phase>
+                             </execution>
+                         </executions>
+                         <configuration>
+                             <imageName>rpki/validator</imageName>
+                             <dockerDirectory>${project.basedir}/docker</dockerDirectory>
+                             <resources>
+                                 <resource>
+                                     <targetPath>/</targetPath>
+                                     <directory>${project.build.directory}</directory>
+                                     <include>${project.build.finalName}-dist.tar.gz</include>
+                                 </resource>
+                             </resources>
+                         </configuration>
+                     </plugin>
+                 </plugins>
+            </build>
+        </profile>
+    </profiles>
+
     <build>
         <finalName>${project.artifactId}-${build.number}</finalName>
         <testSourceDirectory>src/test/scala</testSourceDirectory>
