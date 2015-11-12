@@ -61,8 +61,6 @@ trait Storage extends Logging {
 
   def clear()
 
-  def atomic[T](f: => T): T
-
   def updateValidationTimestamp(hashes: Iterable[Array[Byte]], t: Instant)
 
   def cleanOutdated(uriMap: Map[URI, Iterable[(URI, Array[Byte])]])

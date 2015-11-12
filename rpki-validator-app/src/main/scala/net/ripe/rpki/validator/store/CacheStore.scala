@@ -36,13 +36,11 @@ import javax.sql.DataSource
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.config.ApplicationOptions
+import net.ripe.rpki.validator.models.RepoService
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
-import org.springframework.jdbc.datasource.DataSourceTransactionManager
-import org.springframework.transaction.TransactionStatus
-import org.springframework.transaction.support.{TransactionCallback, TransactionTemplate}
 
 import scala.collection.JavaConversions._
 import scala.language.existentials
@@ -50,12 +48,7 @@ import scala.util.{Failure, Success, Try}
 
 class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
-  private val template = new NamedParameterJdbcTemplate(dataSource)
-  private val tx = new DataSourceTransactionManager(dataSource)
-
-  override def atomic[T](f: => T) = new TransactionTemplate(tx).execute(new TransactionCallback[T] {
-    override def doInTransaction(transactionStatus: TransactionStatus) = f
-  })
+  protected[store] val template = new NamedParameterJdbcTemplate(dataSource)
 
   private val roaObjectType = "roa"
   private val manifestObjectType = "mft"
@@ -76,7 +69,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   override def storeCrl(crl: CrlObject) = storeRepoObject(crl, crlObjectType)
 
   private def storeRepoObject[T <: CertificateRepositoryObject](obj: RepositoryObject[T], objType: String) =
-    atomic {
+    RepoService.locker.locked(obj.url) {
       try {
         val params = Map("aki" -> stringify(obj.aki),
           "hash" -> stringify(obj.hash),

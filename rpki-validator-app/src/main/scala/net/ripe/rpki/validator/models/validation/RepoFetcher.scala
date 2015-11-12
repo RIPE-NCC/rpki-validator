@@ -39,8 +39,11 @@ import net.ripe.rpki.commons.crypto.crl.X509Crl
 import net.ripe.rpki.commons.crypto.x509cert.{X509ResourceCertificate, X509ResourceCertificateParser}
 import net.ripe.rpki.commons.validation.ValidationResult
 import net.ripe.rpki.validator.fetchers._
+import net.ripe.rpki.validator.lib.Locker
+import net.ripe.rpki.validator.models.RepoService
 import net.ripe.rpki.validator.store._
 import org.joda.time.Instant
+import org.scalatra.Locked
 
 import scala.collection.JavaConversions._
 import scala.language.existentials
@@ -264,7 +267,7 @@ class RepoFetcher(storage: Storage, fetchers: Fetchers) {
 
     fetcher.fetch(objectUri, new FetcherListener {
       override def processObject(repoObj: RepositoryObject.ROType) = {
-        storage.atomic {
+        RepoService.locker.locked(objectUri) {
           storage.delete(objectUri)
           storeObject(repoObj)
         }

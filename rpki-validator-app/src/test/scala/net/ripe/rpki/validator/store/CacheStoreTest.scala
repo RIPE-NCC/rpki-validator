@@ -41,6 +41,9 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.joda.time.Instant
 import org.scalatest.BeforeAndAfter
 
+import scala.collection.JavaConversions._
+import scala.util.Try
+
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing {
 
@@ -105,6 +108,28 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val manifest = ManifestObject(url = "rsync://bla", decoded = testManifest)
 
     store.storeManifest(manifest)
+
+    val manifests: Seq[ManifestObject] = store.getManifests(manifest.aki)
+    manifests should have length 1
+
+    val head = manifests.head
+    head.url should be(manifest.url)
+    head.aki should be(manifest.aki)
+    head.encoded should be(manifest.encoded)
+    head.hash should be(manifest.hash)
+  }
+
+  test("DB concurrency") {
+    val manifest = ManifestObject(url = "rsync://bla", decoded = testManifest)
+
+    val timeToGo = System.currentTimeMillis() + 100
+    val results = (1 to 2*Runtime.getRuntime.availableProcessors()).par.map { t =>
+      val sleepTime = timeToGo - System.currentTimeMillis()
+      if (sleepTime > 1) Thread.sleep(sleepTime)
+      Try(store.storeManifest(manifest))
+    }
+
+    results.filter(_.isFailure) should have length 0
 
     val manifests: Seq[ManifestObject] = store.getManifests(manifest.aki)
     manifests should have length 1
