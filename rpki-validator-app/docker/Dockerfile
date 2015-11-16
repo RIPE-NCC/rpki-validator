@@ -1,5 +1,11 @@
 FROM domblack/scala
 RUN yum -y install rsync
+
+WORKDIR /opt/docker
+ADD rpki-validator-app-*-dist.tar.gz .
+COPY *.tal conf/tal/
+COPY docker-startup.sh ./
+
 EXPOSE 8080
-ADD rpki-validator-app-*-dist.tar.gz /
-CMD /rpki-validator-app-*/rpki-validator.sh run
+
+CMD /opt/docker/docker-startup.sh

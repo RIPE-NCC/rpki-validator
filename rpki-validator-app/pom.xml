@@ -226,7 +226,6 @@
                                      <targetPath>/</targetPath>
                                      <directory>${project.build.directory}</directory>
                                      <include>${project.build.finalName}-dist.tar.gz</include>
-                                     <include>test-classes/tal/*</include>
                                  </resource>
                              </resources>
                          </configuration>
