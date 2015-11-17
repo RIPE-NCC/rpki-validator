@@ -1,4 +1,4 @@
 ca.name = Docker Instance of RPKI
-certificate.location = rsync://rpki-daemon:10873/ta/published/local-test-ta.cer
+certificate.location = rsync://rpki-daemon:873/ta/published/local-test-ta.cer
 public.key.info = MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAu7PYtHR3sWe1K+n2wt9w6Dc19q8ighysVu5DbrotNDUkT9q1kl+cpvDI+CCiacEOk8i8gYYByjhXUEsJAfVGj0cgGG37AHpgwaY7TcbGz1By7Wjiiym3bmJvDFBMTvnBikw4b4I2dkYMO29wJlOpXGkbp4qNQ08TS6NP0qiRVB/SqrWYx6/7WiLHxhyALTs+sXQvtHeJ2aR1lCkrbxZWnoQTL/zm7I4640Ejxf7zQSG4vVEmU5U+D3Lvp1qyBKo8WSgZISurdMA4nphJfIUPdv6fd3pFf1F6NfeQ5eV0A0YJcSlQUDTvMRm3ed7SvU/XR/wfekUgn3APMT0ZI5BjLwIDAQAB
 prefetch.uris = https://pub-server:7788/notification.xml
