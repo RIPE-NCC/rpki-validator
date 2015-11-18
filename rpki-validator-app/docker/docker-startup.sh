@@ -29,5 +29,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+rm -f /opt/docker/rpki-validator-app-*/conf/tal/*.tal
 cp /opt/docker/conf/tal/* /opt/docker/rpki-validator-app-*/conf/tal/
 /opt/docker/rpki-validator-app-*/rpki-validator.sh run
