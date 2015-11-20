@@ -5,6 +5,7 @@ WORKDIR /opt/docker
 ADD rpki-validator-app-*-dist.tar.gz .
 RUN rm -f conf/tal/*.tal
 COPY *.tal conf/tal/
+COPY *.conf conf/
 COPY docker-startup.sh ./
 
 EXPOSE 8080
