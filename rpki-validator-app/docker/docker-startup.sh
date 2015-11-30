@@ -29,6 +29,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-rm -f /opt/docker/rpki-validator-app-*/conf/tal/*.tal
-cp /opt/docker/conf/tal/* /opt/docker/rpki-validator-app-*/conf/tal/
+rm -f rpki-validator-app-*/conf/tal/*.tal
+curl -o conf/tal/RPKI-RIPE-Docker.tal -X POST --cookie "user-id=98cfffe6-fbe8-4414-8b83-37454bfd5411" http://rpki-daemon:8080/certification/api/prod/ca/setupTA
+cp conf/tal/* rpki-validator-app-*/conf/tal/
 /opt/docker/rpki-validator-app-*/rpki-validator.sh run -c /opt/docker/conf/rpki-validator-docker.conf

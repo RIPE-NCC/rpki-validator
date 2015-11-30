@@ -3,8 +3,7 @@ RUN yum -y install rsync
 
 WORKDIR /opt/docker
 ADD rpki-validator-app-*-dist.tar.gz .
-RUN rm -f conf/tal/*.tal
-COPY rpki-docker-rsync.tal conf/tal/
+RUN mkdir -p conf/tal/
 COPY *.conf conf/
 COPY docker-startup.sh ./
 
