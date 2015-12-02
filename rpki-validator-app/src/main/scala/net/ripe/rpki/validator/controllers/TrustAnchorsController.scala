@@ -87,7 +87,7 @@ trait TrustAnchorsController extends ApplicationController {
 
   private def getValidatedObjectResultsForTa(filter: ValidationStatus => Boolean) = {
     validateParameter("identifierHash", required(trustAnchorByIdentifierHash)) match {
-      case Success(trustAnchor) =>  {
+      case Success(trustAnchor) =>
         val validatedObjectsForTa = validatedObjects.all.getOrElse(trustAnchor.locator, TrustAnchorValidations(Seq.empty)).validatedObjects
         val records = for {
           validatedObject: ValidatedObject <- validatedObjectsForTa if filter(validatedObject.validationStatus)
@@ -95,7 +95,6 @@ trait TrustAnchorsController extends ApplicationController {
           ValidatedObjectResult(trustAnchor.name, validatedObject.subjectChain, validatedObject.validationStatus, validatedObject.checks.filter(check => filter(check.getStatus)))
         }
         records.seq.toIndexedSeq
-      }
       case Failure(feedbackMessage) => IndexedSeq.empty
     }
   }
