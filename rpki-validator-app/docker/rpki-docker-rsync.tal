@@ -1,0 +1,4 @@
+ca.name = Docker Instance of RPKI - RSYNC
+certificate.location = rsync://rpki-daemon:873/ta/local-test-ta.cer
+public.key.info = MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs74uGzGkvkmYHtvFyAEOUpX2hT0QUE8xOH7E4HDd4ygOMIdn/5bbAHWo/2SqKfjTfLzwQZFl9npQs2LSfmagBiOp8JctvdVVKNWBV9QeXS4hlx7TY6YGKNatuxf5B/fzYNOGI40Qc1w9XwtkFFQRHalTgYT8C9zMtgF9jzhn3ArxA2qlXMYO9km8gEELz/75+LY/fnr2A82QNgGqSO6pM3Pwg27B8+i5dSoefkD5tMbZmyjV93XukbMz+7rVmidci6EC2AK5E73WrTTkiw2dubgQQgG4arRycT3gYn3aA/AC+J82DNYLkVpaNI4nPDp+pEDtd+7FXq75iGVZBaeTxwIDAQAB
+prefetch.uris = rsync://rpki-daemon:873/online/
