@@ -71,7 +71,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
   override def fetch(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
 
     val notificationXml = getXml(notificationUrl)
-    val notificationDef = notificationXml >>= fetchNotification(notificationUrl)
+    val notificationDef = notificationXml >>= parseNotification(notificationUrl)
     val snapshotDef = notificationXml >>= parseSnapshotDef(notificationUrl)
 
     type ChangeSet = (Seq[PublishUnit], Seq[WithdrawUnit])
@@ -162,7 +162,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
       case _ => Left(Error(notificationUrl, "There should one and only one 'snapshot' element'"))
     }
 
-  private def fetchNotification(notificationUrl: URI)(xml: Elem) =
+  private def parseNotification(notificationUrl: URI)(xml: Elem) =
     try {
       Right(NotificationDef((xml \ "@session_id").text, BigInt((xml \ "@serial").text)))
     } catch {
