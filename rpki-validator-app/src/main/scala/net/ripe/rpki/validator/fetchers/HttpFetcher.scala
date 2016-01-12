@@ -116,9 +116,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
             } else {
               val futures = requiredDeltas.map { dDef =>
                 future {
-                  getDelta(dDef.url, dDef) >>= { d =>
-                    Right((d.publishes, d.withdraw))
-                  }
+                  getDelta(dDef.url, dDef) map { d => (d.publishes, d.withdraw) }
                 }
               }
 
@@ -128,11 +126,11 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
                 Right(Seq[ChangeSet]())
               } { (result, deltaUnits) =>
                 result >>= { r =>
-                  deltaUnits >>= { dd => Right(r :+ dd)}
+                  deltaUnits map { r :+ _ }
                 }
               } >>= { seqOfPairs =>
-                val pubs = seqOfPairs.map(_._1).flatten
-                val withs = seqOfPairs.map(_._2).flatten
+                val pubs = seqOfPairs.flatMap(_._1)
+                val withs = seqOfPairs.flatMap(_._2)
                 Right((pubs, withs, serial))
               }
             }
@@ -180,7 +178,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
   private def validateDeltaDefs(uri: URI, lastLocalSerial: BigInt, notificationSerial: BigInt)(deltaDefs: Seq[DeltaDef]) = {
     val requiredDeltas = deltaDefs.filter(_.serial > lastLocalSerial).sortBy(_.serial)
     if (requiredDeltas.isEmpty)
-      Right(deltaDefs)
+      Right(requiredDeltas)
     else {
       val deltaWithMaxSerial = requiredDeltas.last
       if (deltaWithMaxSerial.serial != notificationSerial) {
