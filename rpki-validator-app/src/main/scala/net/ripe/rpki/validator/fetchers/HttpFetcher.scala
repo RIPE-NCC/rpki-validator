@@ -185,7 +185,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
         Left(Error(deltaWithMaxSerial.url, "Latest delta serial is not the same as the one in notification file"))
       } else {
         // TODO check if they form a contiguous sequence
-        Right(deltaDefs)
+        Right(requiredDeltas)
       }
     }
   }
