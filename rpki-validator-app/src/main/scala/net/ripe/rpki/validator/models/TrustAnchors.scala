@@ -70,7 +70,7 @@ case class TrustAnchor(
   crl: Option[X509Crl] = None,
   lastUpdated: Option[DateTime] = None) {
 
-  def identifierHash: String = HashSupport.createShortHexEncodedHash(locator.getPublicKeyInfo)
+  def identifierHash: String = HashSupport.createShortHexEncodedHash(locator.toString)
 
   def name: String = locator.getCaName
   def prefetchUris: Seq[URI] = locator.getPrefetchUris.asScala
