@@ -42,6 +42,11 @@ import org.joda.time.DateTime
 import scala.math.BigInt
 import scala.xml.Elem
 
+object HttpFetcher {
+
+  private val lastFetchTimes = collection.mutable.Map[URI, DateTime]()
+}
+
 class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
@@ -69,16 +74,14 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
 
   override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
 
-  private val lastFetchTimes = collection.mutable.Map[URI, DateTime]()
-
   override def fetch(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
 
     val fetchTime = new DateTime()
-    val notificationXml: Either[Error, Option[Elem]] = getXmlIfModified(notificationUrl, lastFetchTimes.get(notificationUrl))
+    val notificationXml: Either[Error, Option[Elem]] = getXmlIfModified(notificationUrl, HttpFetcher.lastFetchTimes.get(notificationUrl))
     notificationXml match {
       case Left(error) => Seq(error)
       case Right(Some(xml)) =>
-        lastFetchTimes.put(notificationUrl, fetchTime)
+        HttpFetcher.lastFetchTimes.put(notificationUrl, fetchTime)
         processNotificationXml(notificationUrl, xml, fetcherListener)
       case Right(None) => Seq[Error]()
     }
@@ -223,7 +226,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       logger.info(s"Fetching $xmlUrl")
       val get = new HttpGet(xmlUrl.toString)
       if (ifModifiedSince.isDefined) {
-        get.setHeader("If-Modified-Since", ifModifiedSince.get.toString("EEE, dd MMM yyyy HH:mm:ss 'GMT'"))
+        get.setHeader("If-Modified-Since", ifModifiedSince.get.toString("EEE, dd MMM yyyy HH:mm:ss zzz"))
       }
       val response = http.execute(get)
       response.getStatusLine.getStatusCode match {
