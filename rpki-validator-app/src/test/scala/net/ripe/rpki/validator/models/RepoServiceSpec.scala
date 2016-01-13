@@ -35,6 +35,7 @@ import net.ripe.rpki.validator.models.validation.RepoFetcher
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.joda.time.{Instant, Duration}
 import org.mockito.Mockito
+import org.mockito.internal.verification.VerificationModeFactory
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
 
@@ -60,8 +61,17 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
     repoService1.visitRepo(false, Instant.now())(uri)
     repoService1.visitRepo(false, Instant.now())(uri)
 
-    Mockito.verify(fetcher1).fetchRepo(uri)
-    Mockito.verifyNoMoreInteractions(fetcher1)
+    Mockito.verify(fetcher1, VerificationModeFactory.times(1)).fetchRepo(uri)
+  }
+
+  test("should fetch if URI was just visited but forceFetch is true") {
+    val uri = new URI("http://foo.bar/bla")
+
+    repoService1.visitRepo(false, Instant.now())(uri)
+    Thread.sleep(1000)
+    repoService1.visitRepo(true, Instant.now())(uri)
+
+    Mockito.verify(fetcher1, VerificationModeFactory.times(2)).fetchRepo(uri)
   }
 
   test("should fetch object if URI was never visited") {
@@ -93,5 +103,9 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
     repoService1.timeIsRecent(twoMinutesAgo, minute, Instant.now(), false) should be(false)
   }
 
-  // TODO add tests for forceFetch
+  test("should ignore duration when forceFetch is true") {
+    val twoMinutesAgo: Instant = Instant.now().minus(Duration.standardMinutes(1))
+    val minute: Duration = Duration.standardMinutes(2)
+    repoService1.timeIsRecent(twoMinutesAgo, minute, Instant.now(), true) should be(false)
+  }
 }
