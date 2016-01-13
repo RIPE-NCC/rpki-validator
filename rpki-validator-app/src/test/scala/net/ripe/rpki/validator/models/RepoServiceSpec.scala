@@ -33,7 +33,7 @@ import java.net.URI
 
 import net.ripe.rpki.validator.models.validation.RepoFetcher
 import net.ripe.rpki.validator.support.ValidatorTestCase
-import org.joda.time.{Duration, Instant}
+import org.joda.time.{Instant, Duration}
 import org.mockito.Mockito
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
@@ -50,15 +50,15 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
   test("should fetch if URI was never visited") {
     val uri = new URI("http://foo.bar/bla")
 
-    repoService1.visitRepo(uri)
+    repoService1.visitRepo(false, Instant.now())(uri)
     Mockito.verify(fetcher1).fetchRepo(uri)
   }
 
   test("should NOT fetch if URI was just visited") {
     val uri = new URI("http://foo.bar/bla")
 
-    repoService1.visitRepo(uri)
-    repoService1.visitRepo(uri)
+    repoService1.visitRepo(false, Instant.now())(uri)
+    repoService1.visitRepo(false, Instant.now())(uri)
 
     Mockito.verify(fetcher1).fetchRepo(uri)
     Mockito.verifyNoMoreInteractions(fetcher1)
@@ -67,7 +67,7 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
   test("should fetch object if URI was never visited") {
     val uri = new URI("http://foo.bar/bla.cer")
 
-    repoService1.visitTrustAnchorCertificate(uri)
+    repoService1.visitTrustAnchorCertificate(uri, false, Instant.now())
 
     Mockito.verify(fetcher1).fetchTrustAnchorCertificate(uri)
   }
@@ -75,8 +75,8 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
   test("should not fetch object if URI was already visited") {
     val uri: URI = new URI("http://foo.bar/bla.cer")
 
-    repoService1.visitTrustAnchorCertificate(uri)
-    repoService1.visitTrustAnchorCertificate(uri)
+    repoService1.visitTrustAnchorCertificate(uri, false, Instant.now())
+    repoService1.visitTrustAnchorCertificate(uri, false, Instant.now())
 
     Mockito.verify(fetcher1, Mockito.times(1)).fetchTrustAnchorCertificate(uri)
   }
@@ -84,12 +84,14 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
   test("fetch time should be recent") {
     val minuteAgo: Instant = Instant.now().minus(Duration.standardMinutes(1))
     val twoMinutes: Duration = Duration.standardMinutes(2)
-    repoService1.timeIsRecent(minuteAgo, twoMinutes) should be(true)
+    repoService1.timeIsRecent(minuteAgo, twoMinutes, Instant.now(), false) should be(true)
   }
 
   test("fetch time should NOT be recent") {
     val twoMinutesAgo: Instant = Instant.now().minus(Duration.standardMinutes(2))
     val minute: Duration = Duration.standardMinutes(1)
-    repoService1.timeIsRecent(twoMinutesAgo, minute) should be(false)
+    repoService1.timeIsRecent(twoMinutesAgo, minute, Instant.now(), false) should be(false)
   }
+
+  // TODO add tests for forceFetch
 }

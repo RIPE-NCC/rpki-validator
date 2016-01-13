@@ -30,7 +30,7 @@
 package net.ripe.rpki.validator
 package config
 
-import java.io.{PrintStream, File}
+import java.io.{File, PrintStream}
 import java.util.EnumSet
 import javax.servlet.DispatcherType
 
@@ -41,7 +41,7 @@ import net.ripe.rpki.validator.bgp.preview._
 import net.ripe.rpki.validator.config.health.HealthChecks
 import net.ripe.rpki.validator.fetchers.FetcherConfig
 import net.ripe.rpki.validator.lib.{UserPreferences, _}
-import net.ripe.rpki.validator.models.validation.{RepoFetcher, TrackValidationProcess, ValidationProcessLogger, TrustAnchorValidationProcess}
+import net.ripe.rpki.validator.models.validation.{RepoFetcher, TrackValidationProcess, TrustAnchorValidationProcess, ValidationProcessLogger}
 import net.ripe.rpki.validator.models.{Idle, IgnoreFilter, TrustAnchorData, _}
 import net.ripe.rpki.validator.rtr.{Pdu, RTRServer}
 import net.ripe.rpki.validator.store.DurableCaches
@@ -50,7 +50,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.http.client.methods.HttpGet
 import org.eclipse.jetty.server.Server
 import org.joda.time.DateTime
-import org.slf4j.{LoggerFactory, Logger}
+import org.slf4j.LoggerFactory
 
 import scala.Predef._
 import scala.collection.JavaConverters._
@@ -123,7 +123,7 @@ class Main extends Http with Logging { main =>
 
   runWebServer()
 
-  actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 10.seconds) { runValidator() }
+  actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 10.seconds) { runValidator(false) }
   actorSystem.scheduler.schedule(initialDelay = 0.seconds, interval = 2.hours) { refreshRisDumps() }
 
   private def loadTrustAnchors(): TrustAnchors = {
@@ -140,7 +140,7 @@ class Main extends Http with Logging { main =>
     }
   }
 
-  private def runValidator() {
+  private def runValidator(forceNewFetch: Boolean) {
     import lib.DateAndTime._
 
     val now = new DateTime
@@ -150,10 +150,10 @@ class Main extends Http with Logging { main =>
       if nextUpdate <= now
     } yield ta.name
 
-    runValidator(needUpdating)
+    runValidator(needUpdating, forceNewFetch)
   }
 
-  private def runValidator(trustAnchorNames: Seq[String]) {
+  private def runValidator(trustAnchorNames: Seq[String], forceNewFetch: Boolean) {
     val maxStaleDays = userPreferences.single.get.maxStaleDays
     val trustAnchors = memoryImage.single.get.trustAnchors.all
 
@@ -175,7 +175,7 @@ class Main extends Http with Logging { main =>
           override val memoryImage = main.memoryImage
         }
         try {
-          process.runProcess() match {
+          process.runProcess(forceNewFetch) match {
             case Success(validatedObjects) =>
               updateMemoryImage(_.updateValidatedObjects(trustAnchorLocator.locator, validatedObjects))
             case Failure(_) =>
@@ -240,7 +240,7 @@ class Main extends Http with Logging { main =>
         }
       }
 
-      override protected def startTrustAnchorValidation(trustAnchors: Seq[String]) = main.runValidator(trustAnchors)
+      override protected def startTrustAnchorValidation(trustAnchors: Seq[String]) = main.runValidator(trustAnchors, true)
 
       override protected def trustAnchors = memoryImage.single.get.trustAnchors
       override protected def validatedObjects = memoryImage.single.get.validatedObjects

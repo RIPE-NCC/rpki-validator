@@ -1,32 +1,32 @@
 /**
- * The BSD License
- *
- * Copyright (c) 2010-2012 RIPE NCC
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *   - Redistributions of source code must retain the above copyright notice,
- *     this list of conditions and the following disclaimer.
- *   - Redistributions in binary form must reproduce the above copyright notice,
- *     this list of conditions and the following disclaimer in the documentation
- *     and/or other materials provided with the distribution.
- *   - Neither the name of the RIPE NCC nor the names of its contributors may be
- *     used to endorse or promote products derived from this software without
- *     specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+  * The BSD License
+  *
+  * Copyright (c) 2010-2012 RIPE NCC
+  * All rights reserved.
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions are met:
+  * - Redistributions of source code must retain the above copyright notice,
+  * this list of conditions and the following disclaimer.
+  * - Redistributions in binary form must reproduce the above copyright notice,
+  * this list of conditions and the following disclaimer in the documentation
+  * and/or other materials provided with the distribution.
+  * - Neither the name of the RIPE NCC nor the names of its contributors may be
+  * used to endorse or promote products derived from this software without
+  * specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+  * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  * POSSIBILITY OF SUCH DAMAGE.
+  */
 package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
@@ -37,11 +37,12 @@ import net.ripe.rpki.validator.config.{ApplicationOptions, Http}
 import net.ripe.rpki.validator.store.HttpFetcherStore
 import org.apache.http.HttpStatus
 import org.apache.http.client.methods.HttpGet
+import org.joda.time.DateTime
 
 import scala.math.BigInt
 import scala.xml.Elem
 
-class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Logging {
+class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
@@ -68,11 +69,25 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
 
   override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
 
+  private val lastFetchTimes = collection.mutable.Map[URI, DateTime]()
+
   override def fetch(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
 
-    val notificationXml = getXml(notificationUrl)
-    val notificationDef = notificationXml >>= parseNotification(notificationUrl)
-    val snapshotDef = notificationXml >>= parseSnapshotDef(notificationUrl)
+    val fetchTime = new DateTime()
+    val notificationXml: Either[Error, Option[Elem]] = getXmlIfModified(notificationUrl, lastFetchTimes.get(notificationUrl))
+    notificationXml match {
+      case Left(error) => Seq(error)
+      case Right(Some(xml)) =>
+        lastFetchTimes.put(notificationUrl, fetchTime)
+        processNotificationXml(notificationUrl, xml, fetcherListener)
+      case Right(None) => Seq[Error]()
+    }
+  }
+
+  def processNotificationXml(notificationUrl: URI, xml: Elem, fetcherListener: FetcherListener): Seq[Error] = {
+
+    val notificationDef = parseNotification(notificationUrl)(xml)
+    val snapshotDef = parseSnapshotDef(notificationUrl)(xml)
 
     type ChangeSet = (Seq[PublishUnit], Seq[WithdrawUnit])
 
@@ -102,8 +117,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
           Left(Error(notificationUrl, s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}"))
 
         case serial@Some(lastLocalSerial) =>
-          notificationXml >>=
-            parseDeltaDefs(notificationUrl) >>=
+          parseDeltaDefs(notificationUrl)(xml) >>=
             validateDeltaDefs(notificationUrl, lastLocalSerial, notificationDef.serial) >>= { requiredDeltas =>
 
             if (requiredDeltas.isEmpty) {
@@ -126,7 +140,9 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
                 Right(Seq[ChangeSet]())
               } { (result, deltaUnits) =>
                 result >>= { r =>
-                  deltaUnits map { r :+ _ }
+                  deltaUnits map {
+                    r :+ _
+                  }
                 }
               } >>= { seqOfPairs =>
                 val pubs = seqOfPairs.flatMap(_._1)
@@ -142,7 +158,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
       val (publishUnits, withdrawUnits, lastLocalSerial) = changeSet
       val publishResults = publishUnits.map(parsePublishUnit(_, fetcherListener))
       val withdrawResults = withdrawUnits.map(parseWithdrawUnit(_, fetcherListener))
-      val errors = publishResults.collect { case Left(e) => e} ++ withdrawResults.collect { case Left(e) => e}
+      val errors = publishResults.collect { case Left(e) => e } ++ withdrawResults.collect { case Left(e) => e }
       if (errors.isEmpty) {
         notificationDef.right.foreach { nd =>
           if (Some(nd.serial) != lastLocalSerial) {
@@ -202,10 +218,30 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
       fetcherListener.withdraw(p.url, p.hash)
     }
 
-  def getXml(notificationUrl: URI) =
-    tryTo(notificationUrl) {
-      logger.info(s"Fetching $notificationUrl")
-      val response = http.execute(new HttpGet(notificationUrl.toString))
+  def getXmlIfModified(xmlUrl: URI, ifModifiedSince: Option[DateTime]): Either[Error, Option[Elem]] =
+    tryTo(xmlUrl) {
+      logger.info(s"Fetching $xmlUrl")
+      val get = new HttpGet(xmlUrl.toString)
+      if (ifModifiedSince.isDefined) {
+        get.setHeader("If-Modified-Since", ifModifiedSince.get.toString("EEE, dd MMM yyyy HH:mm:ss 'GMT'"))
+      }
+      val response = http.execute(get)
+      response.getStatusLine.getStatusCode match {
+        case HttpStatus.SC_OK =>
+          Some(scala.xml.XML.load(response.getEntity.getContent))
+        case HttpStatus.SC_NOT_MODIFIED =>
+          logger.info(s"Not fetching $xmlUrl because it was not modified since the last fetch at $ifModifiedSince")
+          None
+        case _ =>
+          throw new RuntimeException(response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
+      }
+    }
+
+  def getXml(xmlUrl: URI): Either[Error, Elem] =
+    tryTo(xmlUrl) {
+      logger.info(s"Fetching $xmlUrl")
+      val get = new HttpGet(xmlUrl.toString)
+      val response = http.execute(get)
       response.getStatusLine.getStatusCode match {
         case HttpStatus.SC_OK =>
           scala.xml.XML.load(response.getEntity.getContent)
@@ -231,7 +267,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
       }
     }
 
-  private def getPublishUnits[T](url: URI, xml: Elem) : Either[Error, Seq[PublishUnit]] = {
+  private def getPublishUnits[T](url: URI, xml: Elem): Either[Error, Seq[PublishUnit]] = {
     val publishes = (xml \ "publish").map(x => PublishUnit(new URI((x \ "@uri").text), (x \ "@hash").text, x.text))
     if (publishes.exists {
       p => Option(p.url).exists(_.toString.isEmpty) &&
@@ -245,7 +281,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
       Right(publishes)
   }
 
-  private def getWithdrawUnits[T](url: URI, xml: Elem) : Either[Error, Seq[WithdrawUnit]] = {
+  private def getWithdrawUnits[T](url: URI, xml: Elem): Either[Error, Seq[WithdrawUnit]] = {
     val withdraws = (xml \ "withdraw").map(x => WithdrawUnit(new URI((x \ "@uri").text), (x \ "@hash").text))
     if (withdraws.exists {
       p => Option(p.url).exists(_.toString.isEmpty) &&
