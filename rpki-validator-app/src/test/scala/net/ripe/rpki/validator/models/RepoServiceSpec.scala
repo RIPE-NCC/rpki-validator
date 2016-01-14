@@ -32,21 +32,28 @@ package net.ripe.rpki.validator.models
 import java.net.URI
 
 import net.ripe.rpki.validator.models.validation.RepoFetcher
-import net.ripe.rpki.validator.support.ValidatorTestCase
+import net.ripe.rpki.validator.store.RepoServiceStore
+import net.ripe.rpki.validator.support.{JunitLog4JSetup, ValidatorTestCase}
 import org.joda.time.{Instant, Duration}
 import org.mockito.Mockito
 import org.mockito.internal.verification.VerificationModeFactory
-import org.scalatest.BeforeAndAfter
+import org.scalatest.{Matchers, FunSuite, BeforeAndAfterEach, BeforeAndAfter}
 import org.scalatest.mock.MockitoSugar
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with MockitoSugar  {
+class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach with MockitoSugar  {
 
-  val fetcher1 = mock[RepoFetcher]
-  val fetcher2 = mock[RepoFetcher]
+  var fetcher1 = mock[RepoFetcher]
+  var fetcher2 = mock[RepoFetcher]
 
-  val repoService1 = new RepoService(fetcher1)
-  val repoService2 = new RepoService(fetcher2)
+  var repoService1 = new RepoService(fetcher1)
+  var repoService2 = new RepoService(fetcher2)
+
+  override def beforeEach() {
+    Mockito.reset(fetcher1, fetcher2)
+
+    RepoServiceStore.reset()
+  }
 
   test("should fetch if URI was never visited") {
     val uri = new URI("http://foo.bar/bla")
@@ -58,8 +65,10 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
   test("should NOT fetch if URI was just visited") {
     val uri = new URI("http://foo.bar/bla")
 
-    repoService1.visitRepo(false, Instant.now())(uri)
-    repoService1.visitRepo(false, Instant.now())(uri)
+    val firstInstant = Instant.now()
+    repoService1.visitRepo(false, firstInstant)(uri)
+    val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
+    repoService1.visitRepo(false, secondInstant)(uri)
 
     Mockito.verify(fetcher1, VerificationModeFactory.times(1)).fetchRepo(uri)
   }
@@ -67,9 +76,10 @@ class RepoServiceSpec extends ValidatorTestCase with BeforeAndAfter with Mockito
   test("should fetch if URI was just visited but forceFetch is true") {
     val uri = new URI("http://foo.bar/bla")
 
-    repoService1.visitRepo(false, Instant.now())(uri)
-    Thread.sleep(1000)
-    repoService1.visitRepo(true, Instant.now())(uri)
+    val firstInstant = Instant.now()
+    repoService1.visitRepo(false, firstInstant)(uri)
+    val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
+    repoService1.visitRepo(true, secondInstant)(uri)
 
     Mockito.verify(fetcher1, VerificationModeFactory.times(2)).fetchRepo(uri)
   }
