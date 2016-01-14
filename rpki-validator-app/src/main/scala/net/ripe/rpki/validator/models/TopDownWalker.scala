@@ -92,19 +92,19 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   private def location(o: RepositoryObject.ROType) = new ValidationLocation(o.url)
 
-  def execute: Seq[ValidatedObject] = fBlock(validateContext) { vo =>
+  def execute(forceNewFetch: Boolean): Seq[ValidatedObject] = fBlock(validateContext(forceNewFetch)) { vo =>
     updateValidationTimes(vo.map(vo => vo.uri -> vo).toMap)
   }
 
-  private def validateContext: Seq[ValidatedObject] = {
+  private def validateContext(forceNewFetch: Boolean): Seq[ValidatedObject] = {
     logger.debug(s"Validating ${certificateContext.getLocation}")
 
-    val fetchErrors = preferredFetchLocation.map(prefetch).getOrElse(Seq())
+    val fetchErrors = preferredFetchLocation.map(prefetch(forceNewFetch, validationStartTime)).getOrElse(Seq())
 
     val mftList = fetchMftsByAKI
     val validatedObjects = findRecentValidMftWithCrl(mftList) match {
       case Some(mftSearchResult) =>
-        validateManifestChildren(mftSearchResult)
+        validateManifestChildren(mftSearchResult, forceNewFetch)
 
       case None =>
         val subjectChain = ValidatedObject.flattenSubjectChain(certificateContext.getSubjectChain) + ValidatedObject.separator + "cert"
@@ -115,7 +115,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     fetchErrors ++ validatedObjects
   }
 
-  def validateManifestChildren(manifestSearchResult: ManifestSearchResult): Seq[ValidatedObject] = {
+  def validateManifestChildren(manifestSearchResult: ManifestSearchResult, forceNewFetch: Boolean): Seq[ValidatedObject] = {
     val ManifestSearchResult(manifest, crl, mftObjects, mftChecks, skippedObjects) = manifestSearchResult
 
     val ClassifiedObjects(roas, childrenCertificates, crlList) = classify(mftObjects)
@@ -138,7 +138,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       crlList.map(validatedObject(checkMap)) ++
       Seq(("mft", manifest)).map(validatedObject(checkMap)) ++
       skippedObjects ++
-      validatedCerts.filter(_.valid).map(_.cert).par.flatMap(stepDown(manifest))
+      validatedCerts.filter(_.valid).map(_.cert).par.flatMap(stepDown(manifest, forceNewFetch))
 
     everythingValidated
   }
@@ -151,7 +151,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     hashesOnly.foreach { hash =>
       logger.debug("Setting validation time for the object: " + HashUtil.stringify(hash))
     }
-    store.updateValidationTimestamp(hashesOnly, Instant.now())
+    store.updateValidationTimestamp(hashesOnly, validationStartTime)
     store.cleanOutdated(uriMap)
   }
 
@@ -188,7 +188,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     new IpResourceSet(resources)
   }
 
-  private def stepDown(parentManifest: ManifestObject)(cert: RepositoryObject[X509ResourceCertificate]): Seq[ValidatedObject] = {
+  private def stepDown(parentManifest: ManifestObject, forceNewFetch: Boolean)(cert: RepositoryObject[X509ResourceCertificate]): Seq[ValidatedObject] = {
     val childCert = cert.decoded
     val ski = HashUtil.stringify(childCert.getSubjectKeyIdentifier)
     if (certificateTreeBranch.contains(ski)) {
@@ -210,12 +210,12 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       childSubjectChain.add(childCert.getSubject.getName)
       val newValidationContext = new CertificateRepositoryObjectValidationContext(new URI(cert.url), childCert, childResources, childSubjectChain)
       val nextLevelWalker = new TopDownWalker(newValidationContext, store, repoService, validationOptions, validationStartTime, preferRrdp)(certificateTreeBranch + certificateSkiHex)
-      nextLevelWalker.validateContext
+      nextLevelWalker.validateContext(forceNewFetch)
     }
   }
 
-  private def prefetch(uri: URI) = {
-    repoService.visitRepo(uri).map { error =>
+  private def prefetch(forceNewFetch: Boolean, validationStart: Instant)(uri: URI) = {
+    repoService.visitRepo(forceNewFetch, validationStart)(uri).map { error =>
       ValidatedObject.invalid(None, certificateContext.getSubjectChain, error.url, None, Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, VALIDATOR_REPO_EXECUTION, error.message)))
     }
   }

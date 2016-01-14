@@ -55,13 +55,14 @@ trait ValidationProcess {
 
   def trustAnchorLocator: TrustAnchorLocator
 
-  def runProcess(): Validation[String, Seq[ValidatedObject]] = {
+  def runProcess(forceNewFetch: Boolean): Validation[String, Seq[ValidatedObject]] = {
     try {
-      val certificate = extractTrustAnchorLocator()
+      val startTime = Instant.now
+      val certificate = extractTrustAnchorLocator(forceNewFetch, startTime)
       certificate match {
         case ValidObject(_, uri, _, checks, trustAnchor: X509ResourceCertificate) =>
           val context = new CertificateRepositoryObjectValidationContext(uri, trustAnchor)
-          Success(validateObjects(context) :+ certificate)
+          Success(validateObjects(context, forceNewFetch, startTime) :+ certificate)
         case _ =>
           Success(Seq(certificate))
       }
@@ -74,15 +75,16 @@ trait ValidationProcess {
 
   def exceptionHandler: PartialFunction[Throwable, Validation[String, Nothing]] = {
     case e: Exception =>
-      println(e.getStackTrace.mkString("\n"))
+      logger.error("Exception when running validation process", e)
+      e.printStackTrace()
       val message = if (e.getMessage != null) e.getMessage else e.toString
       Failure(message)
   }
 
   def objectFetcherListeners: Seq[NotifyingCertificateRepositoryObjectFetcher.Listener] = Seq.empty
 
-  def extractTrustAnchorLocator(): ValidatedObject
-  def validateObjects(certificate: CertificateRepositoryObjectValidationContext): Seq[ValidatedObject]
+  def extractTrustAnchorLocator(forceNewFetch: Boolean, validationStart: Instant): ValidatedObject
+  def validateObjects(certificate: CertificateRepositoryObjectValidationContext, forceNewFetch: Boolean, validationStart: Instant): Seq[ValidatedObject]
   def finishProcessing(): Unit = {}
 
   def shutdown(): Unit = {}
@@ -101,11 +103,11 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   validationOptions.setMaxStaleDays(maxStaleDays)
   validationOptions.setLooseValidationEnabled(enableLooseValidation)
 
-  override def extractTrustAnchorLocator(): ValidatedObject = {
+  override def extractTrustAnchorLocator(forceNewFetch: Boolean, validationStart: Instant): ValidatedObject = {
     val uri = trustAnchorLocator.getCertificateLocation
     val validationResult = ValidationResult.withLocation(uri)
 
-    val errors = repoService.visitTrustAnchorCertificate(uri)
+    val errors = repoService.visitTrustAnchorCertificate(uri, forceNewFetch, validationStart)
     errors.foreach(e => validationResult.warn(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, e.toString))
 
     val certificates = store.getCertificates(uri.toString)
@@ -115,7 +117,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val matchingCertificates = certificates.filter(keyInfoMatches)
     if (matchingCertificates.size == 1) {
       validationResult.rejectIfFalse(keyInfoMatches(matchingCertificates.head), ValidationString.TRUST_ANCHOR_PUBLIC_KEY_MATCH)
-      store.updateValidationTimestamp(Seq(matchingCertificates.head.hash), Instant.now())
+      store.updateValidationTimestamp(Seq(matchingCertificates.head.hash), validationStart)
     } else {
       if (matchingCertificates.size > 1) {
         validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_TA_CERT_NOT_UNIQUE, uri.toString)
@@ -133,11 +135,10 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     }
   }
 
-  override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
-    val startTime = Instant.now
-    trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo)
+  override def validateObjects(certificate: CertificateRepositoryObjectValidationContext, forceNewFetch: Boolean, startTime: Instant) = {
+    trustAnchorLocator.getPrefetchUris.asScala.foreach(repoService.visitRepo(forceNewFetch, startTime))
     val walker = TopDownWalker.create(certificate, store, repoService, validationOptions, startTime, ApplicationOptions.preferRrdp)
-    block(walker.execute) {
+    block(walker.execute(forceNewFetch)) {
       store.clearObjects(startTime)
     }
   }
@@ -150,7 +151,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
 trait TrackValidationProcess extends ValidationProcess {
   def memoryImage: Ref[MemoryImage]
 
-  abstract override def runProcess() = {
+  abstract override def runProcess(forceNewFetch: Boolean) = {
     val start = atomic { implicit transaction =>
       (for (
         ta <- memoryImage().trustAnchors.all.find(_.locator == trustAnchorLocator)
@@ -160,7 +161,7 @@ trait TrackValidationProcess extends ValidationProcess {
         }).isDefined
     }
     if (start) {
-      val result = super.runProcess()
+      val result = super.runProcess(forceNewFetch)
       memoryImage.single.transform {
         _.finishedProcessingTrustAnchor(trustAnchorLocator, result)
       }
@@ -168,19 +169,19 @@ trait TrackValidationProcess extends ValidationProcess {
     } else Failure("Trust anchor not idle or enabled")
   }
 
-  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
+  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext, forceNewFetch: Boolean, validationStart: Instant) = {
     memoryImage.single.transform { _.startProcessingTrustAnchor(trustAnchorLocator, "Updating ROAs") }
-    super.validateObjects(certificate)
+    super.validateObjects(certificate, forceNewFetch, validationStart)
   }
 }
 
 trait ValidationProcessLogger extends ValidationProcess {
   override def objectFetcherListeners = super.objectFetcherListeners :+ ObjectFetcherLogger
 
-  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = {
+  abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext, forceNewFetch: Boolean, validationStart: Instant) = {
     logger.info("Loaded trust anchor " + trustAnchorLocator.getCaName + " from location " + certificate.getLocation + ", starting validation")
     val begin = Instant.now()
-    val objects = super.validateObjects(certificate)
+    val objects = super.validateObjects(certificate, forceNewFetch, validationStart)
     val elapsed = new Period(begin, Instant.now())
     logger.info(s"Finished validating ${trustAnchorLocator.getCaName}, ${objects.size} valid objects; spent $elapsed.")
     objects
