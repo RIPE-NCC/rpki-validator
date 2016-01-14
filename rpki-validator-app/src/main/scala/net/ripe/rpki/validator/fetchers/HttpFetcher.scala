@@ -68,8 +68,9 @@ import org.apache.http.HttpStatus
 import org.apache.http.client.methods.HttpGet
 import org.joda.time.DateTime
 
+import scala.collection.immutable
 import scala.math.BigInt
-import scala.xml.Elem
+import scala.xml.{Elem}
 
 object HttpFetcher {
 
@@ -85,9 +86,11 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
   import scala.concurrent.duration._
   import scalaz.Scalaz._
 
-  case class PublishUnit(url: URI, hash: String, base64: String)
+  class DeltaUnit
 
-  case class WithdrawUnit(url: URI, hash: String)
+  case class PublishUnit(url: URI, hash: String, base64: String) extends DeltaUnit
+
+  case class WithdrawUnit(url: URI, hash: String) extends DeltaUnit
 
   case class NotificationDef(sessionId: String, serial: BigInt)
 
@@ -95,7 +98,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
 
   case class DeltaDef(serial: BigInt, url: URI, hash: String)
 
-  case class Delta(deltaDef: DeltaDef, publishes: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
+  case class Delta(deltaDef: DeltaDef, units: Seq[DeltaUnit] = Seq())
 
   case class Snapshot(snapshotDef: SnapshotDef, publishes: Seq[PublishUnit], withdraw: Seq[WithdrawUnit] = Seq())
 
@@ -121,15 +124,15 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
     val notificationDef = parseNotification(notificationUrl)(xml)
     val snapshotDef = parseSnapshotDef(notificationUrl)(xml)
 
-    type ChangeSet = (Seq[PublishUnit], Seq[WithdrawUnit])
+    type ChangeSet = Seq[DeltaUnit]
 
     def returnSnapshot(lastLocalSerial: Option[BigInt]) = snapshotDef >>= { sd =>
       getSnapshot(new URI(sd.url), sd)
     } >>= { snapshot =>
-      Right((snapshot.publishes, Seq(), lastLocalSerial))
+      Right((snapshot.publishes, lastLocalSerial))
     }
 
-    val repositoryChangeSet = notificationDef >>= { notificationDef =>
+    val repositoryChangeSet: Either[Error, (ChangeSet, Option[BigInt])] = notificationDef >>= { notificationDef =>
 
       store.getSerial(notificationUrl, notificationDef.sessionId) match {
 
@@ -142,7 +145,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
 
         // our local serial is already the latest one
         case serial@Some(lastLocalSerial) if lastLocalSerial == notificationDef.serial =>
-          Right((Seq(), Seq(), serial))
+          Right((Seq[DeltaUnit](), serial))
 
         // something weird is happening, bail out
         case serial@Some(lastLocalSerial) if lastLocalSerial > notificationDef.serial =>
@@ -156,41 +159,38 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
               if (lastLocalSerial < notificationDef.serial)
                 returnSnapshot(serial)
               else
-                Right((Seq(), Seq(), serial))
+                Right((Seq(), serial))
             } else if (requiredDeltas.head.serial > lastLocalSerial + 1) {
               returnSnapshot(serial)
             } else {
-              val futures = requiredDeltas.map { dDef =>
+              val futures: Seq[Future[Either[Error, ChangeSet]]] = requiredDeltas.map { dDef =>
                 future {
-                  getDelta(dDef.url, dDef) map { d => (d.publishes, d.withdraw) }
+                  getDelta(dDef.url, dDef).map(d => d.units)
                 }
               }
 
               // wait for all the futures and bind their fetching results consecutively
               Await.result(Future.sequence(futures), 5.minutes).
-                foldLeft[Either[Error, Seq[ChangeSet]]] {
-                Right(Seq[ChangeSet]())
-              } { (result, deltaUnits) =>
-                result >>= { r =>
-                  deltaUnits map {
-                    r :+ _
+                foldLeft[Either[Error, ChangeSet]] {
+                  Right(Seq[DeltaUnit]())
+                } { (sum: Either[Error, ChangeSet], result: Either[Error, ChangeSet]) =>
+                  sum >>= { (deltas: Seq[DeltaUnit]) =>
+                    result >>= {
+                      (delta: ChangeSet) => Right(deltas ++ delta)
+                    }
                   }
+                } >>= { seq =>
+                  Right((seq, serial))
                 }
-              } >>= { seqOfPairs =>
-                val pubs = seqOfPairs.flatMap(_._1)
-                val withs = seqOfPairs.flatMap(_._2)
-                Right((pubs, withs, serial))
-              }
             }
           }
       }
     }
 
     repositoryChangeSet.fold(Seq(_), { changeSet =>
-      val (publishUnits, withdrawUnits, lastLocalSerial) = changeSet
-      val publishResults = publishUnits.map(parsePublishUnit(_, fetcherListener))
-      val withdrawResults = withdrawUnits.map(parseWithdrawUnit(_, fetcherListener))
-      val errors = publishResults.collect { case Left(e) => e } ++ withdrawResults.collect { case Left(e) => e }
+      val (deltaUnits, lastLocalSerial) = changeSet
+      val deltaResults = deltaUnits.map(parseDeltaUnit(_, fetcherListener))
+      val errors = deltaResults.collect { case Left(e) => e }
       if (errors.isEmpty) {
         notificationDef.right.foreach { nd =>
           if (Some(nd.serial) != lastLocalSerial) {
@@ -237,6 +237,12 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       }
     }
   }
+
+  private def parseDeltaUnit(d: DeltaUnit, fetcherListener: FetcherListener) =
+    d match {
+      case p: PublishUnit => parsePublishUnit(p, fetcherListener)
+      case w: WithdrawUnit => parseWithdrawUnit(w, fetcherListener)
+    }
 
   private def parsePublishUnit(p: PublishUnit, fetcherListener: FetcherListener) =
     tryTo(p.url) {
@@ -289,15 +295,31 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       }
     }
 
-
   private def getDelta(deltaUrl: URI, deltaDef: DeltaDef): Either[Error, Delta] =
     getXml(deltaUrl) >>= { xml =>
-      getPublishUnits(deltaUrl, xml) >>= { pu =>
-        getWithdrawUnits(deltaUrl, xml) >>= { wu =>
-          Right(Delta(deltaDef, pu, wu))
-        }
+      getUnits(deltaUrl, xml) >>= { pu =>
+        Right(Delta(deltaDef, pu))
       }
     }
+
+  private def getUnits[T](uri: URI, xml: Elem): Either[Error, Seq[DeltaUnit]] = {
+    val publishes = (xml \ "_").map(node => {
+      node match {
+        case <publish>{_}</publish> => PublishUnit(new URI((node \ "@uri").text), (node \ "@hash").text, node.text)
+        case <withdraw/> => WithdrawUnit(new URI((node \ "@uri").text), (node \ "@hash").text)
+      }
+    })
+
+    if (publishes.exists {
+        case PublishUnit(url, hash, text) => url.toString.isEmpty || hash.isEmpty || text.isEmpty
+        case WithdrawUnit(url, hash) => url.toString.isEmpty || hash.isEmpty
+    }) {
+      // TODO Make it better
+      Left(Error(uri, "Mandatory attributes are absent"))
+    }
+    else
+      Right(publishes)
+  }
 
   private def getPublishUnits[T](url: URI, xml: Elem): Either[Error, Seq[PublishUnit]] = {
     val publishes = (xml \ "publish").map(x => PublishUnit(new URI((x \ "@uri").text), (x \ "@hash").text, x.text))
