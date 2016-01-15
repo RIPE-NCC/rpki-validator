@@ -101,6 +101,21 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     (objects.reverse, withdraws.reverse, errors)
   }
 
+  def fetchRepoUnsorted(fetcher: HttpFetcher, rootUrl: String) = {
+    var units = List[String]()
+
+    fetcher.fetch(new URI(rootUrl), new FetcherListener {
+      override def processObject(repoObj: RepositoryObject.ROType) = {
+        units = units :+ "publish"
+      }
+
+      override def withdraw(url: URI, hash: String): Unit = {
+        units = units :+ "withdraw"
+      }
+    })
+    units
+  }
+
   test("Should download repository when we only have snapshot and no local state") {
     val fetcher = createMockedFetcher(Map(
       "http://repo.net/repo/notification.xml" -> readFile("mock-http-responses/test1/notification1.xml"),
@@ -187,6 +202,21 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
 
     val serial = store.getSerial(URI.create("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
     serial should be(Some(BigInt(2)))
+  }
+
+  test("Should return the individual delta units in their original order") {
+
+    store.storeSerial(URI.create("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28", BigInt(1))
+
+    val fetcher = createMockedFetcher(Map(
+      "http://repo.net/repo/notification.xml" -> readFile("mock-http-responses/test2/notification2.xml"),
+      "http://repo.net/repo/delta2_1.xml" -> readFile("mock-http-responses/test2/delta2_1.xml")
+    ))
+
+    val units = fetchRepoUnsorted(fetcher, "http://repo.net/repo/notification.xml")
+
+    val expectedOrder = List("publish", "withdraw", "publish")
+    units should be(expectedOrder)
   }
 
   test("Should download snapshot when there are not enough deltas") {

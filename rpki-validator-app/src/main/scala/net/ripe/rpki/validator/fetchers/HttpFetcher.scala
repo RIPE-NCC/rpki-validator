@@ -68,9 +68,8 @@ import org.apache.http.HttpStatus
 import org.apache.http.client.methods.HttpGet
 import org.joda.time.DateTime
 
-import scala.collection.immutable
 import scala.math.BigInt
-import scala.xml.{Elem}
+import scala.xml.Elem
 
 object HttpFetcher {
 
@@ -106,6 +105,8 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
 
   override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
 
+  type ChangeSet = Seq[DeltaUnit]
+
   override def fetch(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
 
     val fetchTime = new DateTime()
@@ -123,8 +124,6 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
 
     val notificationDef = parseNotification(notificationUrl)(xml)
     val snapshotDef = parseSnapshotDef(notificationUrl)(xml)
-
-    type ChangeSet = Seq[DeltaUnit]
 
     def returnSnapshot(lastLocalSerial: Option[BigInt]) = snapshotDef >>= { sd =>
       getSnapshot(new URI(sd.url), sd)
@@ -163,25 +162,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
             } else if (requiredDeltas.head.serial > lastLocalSerial + 1) {
               returnSnapshot(serial)
             } else {
-              val futures: Seq[Future[Either[Error, ChangeSet]]] = requiredDeltas.map { dDef =>
-                future {
-                  getDelta(dDef.url, dDef).map(d => d.units)
-                }
-              }
-
-              // wait for all the futures and bind their fetching results consecutively
-              Await.result(Future.sequence(futures), 5.minutes).
-                foldLeft[Either[Error, ChangeSet]] {
-                  Right(Seq[DeltaUnit]())
-                } { (sum: Either[Error, ChangeSet], result: Either[Error, ChangeSet]) =>
-                  sum >>= { (deltas: Seq[DeltaUnit]) =>
-                    result >>= {
-                      (delta: ChangeSet) => Right(deltas ++ delta)
-                    }
-                  }
-                } >>= { seq =>
-                  Right((seq, serial))
-                }
+              fetchDeltas(serial, requiredDeltas)
             }
           }
       }
@@ -200,6 +181,28 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       }
       errors
     })
+  }
+
+  private def fetchDeltas(serial: Some[scala.BigInt], requiredDeltas: Seq[DeltaDef]): Either[Error, (ChangeSet,  Option[BigInt])] = {
+    val futures: Seq[Future[Either[Error, ChangeSet]]] = requiredDeltas.map { dDef =>
+      future {
+        getDelta(dDef.url, dDef).map(d => d.units)
+      }
+    }
+
+    // wait for all the futures and bind their fetching results consecutively
+    Await.result(Future.sequence(futures), 5.minutes).
+      foldLeft[Either[Error, ChangeSet]] {
+      Right(Seq[DeltaUnit]())
+    } { (sum: Either[Error, ChangeSet], result: Either[Error, ChangeSet]) =>
+      sum >>= { (deltas: Seq[DeltaUnit]) =>
+        result >>= {
+          (delta: ChangeSet) => Right(deltas ++ delta)
+        }
+      }
+    } >>= { seq =>
+      Right((seq, serial))
+    }
   }
 
   private def parseSnapshotDef(notificationUrl: URI)(xml: Elem) =
@@ -290,8 +293,8 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
 
   private def getSnapshot(snapshotUrl: URI, snapshotDef: SnapshotDef): Either[Error, Snapshot] =
     getXml(snapshotUrl) >>= { xml =>
-      getPublishUnits(snapshotUrl, xml) >>= { pu =>
-        Right(Snapshot(snapshotDef, pu))
+      getUnits(snapshotUrl, xml) >>= { pu =>
+        Right(Snapshot(snapshotDef, pu.asInstanceOf[Seq[PublishUnit]]))
       }
     }
 
@@ -310,42 +313,15 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       }
     })
 
-    if (publishes.exists {
-        case PublishUnit(url, hash, text) => url.toString.isEmpty || hash.isEmpty || text.isEmpty
-        case WithdrawUnit(url, hash) => url.toString.isEmpty || hash.isEmpty
-    }) {
-      // TODO Make it better
-      Left(Error(uri, "Mandatory attributes are absent"))
+    val invalidElement = publishes.find {
+      case PublishUnit(url, hash, text) => url.toString.isEmpty && hash.isEmpty && text.isEmpty
+      case WithdrawUnit(url, hash) => url.toString.isEmpty && hash.isEmpty
+    }
+    if (invalidElement.isDefined) {
+      Left(Error(uri, s"Mandatory attributes are absent in element: $invalidElement"))
     }
     else
       Right(publishes)
-  }
-
-  private def getPublishUnits[T](url: URI, xml: Elem): Either[Error, Seq[PublishUnit]] = {
-    val publishes = (xml \ "publish").map(x => PublishUnit(new URI((x \ "@uri").text), (x \ "@hash").text, x.text))
-    if (publishes.exists {
-      p => Option(p.url).exists(_.toString.isEmpty) &&
-        Option(p.hash).exists(_.isEmpty) &&
-        Option(p.base64).exists(_.isEmpty)
-    }) {
-      // TODO Make it better
-      Left(Error(url, "Mandatory attributes are absent"))
-    }
-    else
-      Right(publishes)
-  }
-
-  private def getWithdrawUnits[T](url: URI, xml: Elem): Either[Error, Seq[WithdrawUnit]] = {
-    val withdraws = (xml \ "withdraw").map(x => WithdrawUnit(new URI((x \ "@uri").text), (x \ "@hash").text))
-    if (withdraws.exists {
-      p => Option(p.url).exists(_.toString.isEmpty) &&
-        Option(p.hash).exists(_.isEmpty)
-    }) {
-      // TODO Make it better
-      Left(Error(url, "Mandatory attributes are absent"))
-    }
-    else
-      Right(withdraws)
   }
 }
 
