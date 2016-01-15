@@ -64,6 +64,7 @@ import com.google.common.io.BaseEncoding
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.config.{ApplicationOptions, Http}
 import net.ripe.rpki.validator.store.HttpFetcherStore
+import net.ripe.rpki.validator.lib.DateAndTime.formatAsRFC2616
 import org.apache.http.HttpStatus
 import org.apache.http.client.methods.HttpGet
 import org.joda.time.DateTime
@@ -264,7 +265,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       logger.info(s"Fetching $xmlUrl")
       val get = new HttpGet(xmlUrl.toString)
       if (ifModifiedSince.isDefined) {
-        get.setHeader("If-Modified-Since", ifModifiedSince.get.toString("EEE, dd MMM yyyy HH:mm:ss zzz"))
+        get.setHeader("If-Modified-Since", formatAsRFC2616(ifModifiedSince.get))
       }
       val response = http.execute(get)
       response.getStatusLine.getStatusCode match {

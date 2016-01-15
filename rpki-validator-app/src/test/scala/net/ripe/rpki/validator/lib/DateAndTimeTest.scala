@@ -30,7 +30,9 @@
 package net.ripe.rpki.validator
 package lib
 
-import org.joda.time.Period
+import java.util.TimeZone
+
+import org.joda.time.{DateTimeZone, DateTime, Period}
 
 import support.ValidatorTestCase
 
@@ -51,5 +53,13 @@ class DateAndTimeTest extends ValidatorTestCase {
   test("stay within field bounds") {
     val period = new Period().withMillis(300)
     keepMostSignificantPeriodFields(period, 3) should equal(new Period().withMillis(300))
+  }
+
+  test("should convert date to utc and format it properly") {
+    val dt = new DateTime(2016, 1, 15, 14, 6, 0, 0, DateTimeZone.forTimeZone(TimeZone.getTimeZone("CET")))
+
+    val formatted = formatAsRFC2616(dt)
+
+    formatted should be ("Fri, 15 Jan 2016 13:06:00 UTC")
   }
 }
