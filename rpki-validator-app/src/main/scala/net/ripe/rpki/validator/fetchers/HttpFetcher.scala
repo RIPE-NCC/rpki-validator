@@ -88,6 +88,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
 
         // the first time we go to this repository
         case None =>
+          logger.info(s"No local serial number, downloading snapshot")
           returnSnapshot(None)
 
         case serial@Some(x) if x == BigInt(0) =>
@@ -95,10 +96,12 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
 
         // our local serial is already the latest one
         case serial@Some(lastLocalSerial) if lastLocalSerial == notificationDef.serial =>
+          logger.info(s"lastLocalSerial = $lastLocalSerial and it's equal to the remote serial")
           Right((Seq(), Seq(), serial))
 
         // something weird is happening, bail out
         case serial@Some(lastLocalSerial) if lastLocalSerial > notificationDef.serial =>
+          logger.info(s"lastLocalSerial = $lastLocalSerial and it's equal to the remote serial, ${notificationDef.serial}")
           Left(Error(notificationUrl, s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}"))
 
         case serial@Some(lastLocalSerial) =>
@@ -106,12 +109,17 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http  with Loggi
             parseDeltaDefs(notificationUrl) >>=
             validateDeltaDefs(notificationUrl, lastLocalSerial, notificationDef.serial) >>= { requiredDeltas =>
 
+            logger.info(s"lastLocalSerial = $lastLocalSerial and it's equal to the remote serial, ${notificationDef.serial}")
+
             if (requiredDeltas.isEmpty) {
-              if (lastLocalSerial < notificationDef.serial)
+              if (lastLocalSerial < notificationDef.serial) {
+                logger.info(s"requiredDeltas is empty, downloading snapshot")
                 returnSnapshot(serial)
+              }
               else
                 Right((Seq(), Seq(), serial))
             } else if (requiredDeltas.head.serial > lastLocalSerial + 1) {
+              logger.info(s"requiredDeltas.head.serial is ${requiredDeltas.head.serial} and larger then ${lastLocalSerial + 1}, downloading snapshot")
               returnSnapshot(serial)
             } else {
               val futures = requiredDeltas.map { dDef =>
