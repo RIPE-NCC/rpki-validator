@@ -55,7 +55,7 @@ class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
 
   def inMemoryRepoFetcher(config: FetcherConfig) = {
     val dataSource = DataSources.InMemoryDataSource
-    new RepoFetcher(new CacheStore(dataSource), new Fetchers(new HttpFetcherStore(dataSource), config))
+    new RepoFetcher(new CacheStore(dataSource), new Fetchers(new HttpFetcherStore(), config))
   }
 
   test("Should create different directories for different repo URLs") {
