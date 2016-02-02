@@ -158,7 +158,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
           parseDeltaDefs(notificationUrl)(xml) >>=
             validateDeltaDefs(notificationUrl, lastLocalSerial, notificationDef.serial) >>= { requiredDeltas =>
 
-            logger.info(s"lastLocalSerial = $lastLocalSerial and it's equal to the remote serial, ${notificationDef.serial}")
+            logger.info(s"lastLocalSerial = $lastLocalSerial and the remote serial is ${notificationDef.serial}")
 
             if (requiredDeltas.isEmpty) {
               if (lastLocalSerial < notificationDef.serial) {
