@@ -42,7 +42,7 @@ class PduCodecTest extends ValidatorTestCase with MockitoSugar {
 
   test("should encode NoDataAvailablePdu") {
     val encoder = new PduEncoder()
-    var channel = mock[Channel]
+    val channel = mock[Channel]
     val encoded = encoder.encode(null, channel, PduTest.NoDataAvailablePdu)
     
     assert(encoded.isInstanceOf[ChannelBuffer])
@@ -53,7 +53,7 @@ class PduCodecTest extends ValidatorTestCase with MockitoSugar {
   test("should decoded NoDataAvailablePduBytes") {
     val decoder = new PduDecoder
     val channelBuffer = new BigEndianHeapChannelBuffer(PduTest.NoDataAvailablePduBytes)
-    var channel = mock[Channel]
+    val channel = mock[Channel]
     
     decoder.decode(null, channel, channelBuffer) match {
       case Right(pdu: ErrorPdu) =>

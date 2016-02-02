@@ -37,6 +37,8 @@ import net.ripe.rpki.validator.models.{ValidObject, InvalidObject, RepoService, 
 import net.ripe.rpki.validator.store.CacheStore
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import net.ripe.rpki.validator.util.TrustAnchorLocator
+import org.joda.time.Instant
+import org.mockito.{Mockito, Matchers}
 import org.mockito.Mockito.when
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
@@ -69,16 +71,17 @@ class TrustAnchorValidationProcessTest extends ValidatorTestCase with MockitoSug
   }
 
   before {
+    Mockito.reset(mockStore, mockRepoService, mockTrustAnchorLocator)
     when(mockTrustAnchorLocator.getCertificateLocation).thenReturn(taCertUri)
-    when(mockRepoService.visitTrustAnchorCertificate(taCertUri)).thenReturn(Seq())
-    when(mockRepoService.visitRepo(matchingCert.decoded.getRepositoryUri)).thenReturn(Seq())
+    when(mockRepoService.visitTrustAnchorCertificate(Matchers.eq(taCertUri), Matchers.eq(false), Matchers.any(classOf[Instant]))).thenReturn(Seq())
+    when(mockRepoService.visitRepo(Matchers.eq(false), Matchers.any(classOf[Instant]))(Matchers.eq(matchingCert.decoded.getRepositoryUri))).thenReturn(Seq())
   }
   
   test("Should return validObject for trust anchor certificate without errors") {
     when(mockStore.getCertificates(taCertUri.toString)).thenReturn(Seq(matchingCert))
     when(mockStore.getManifests(matchingCert.aki)).thenReturn(Seq())
 
-    val validation = taValidatorProcess.runProcess()
+    val validation = taValidatorProcess.runProcess(false)
 
     val validatedObject = validation.toOption.get.find(vo => vo.uri == taCertUri && vo.isInstanceOf[ValidObject])
     validatedObject.isDefined should be(true)
@@ -88,7 +91,7 @@ class TrustAnchorValidationProcessTest extends ValidatorTestCase with MockitoSug
   test("Should return inValidObject when no valid ta certificate found") {
     when(mockStore.getCertificates(taCertUri.toString)).thenReturn(Seq())
 
-    val validation = taValidatorProcess.runProcess()
+    val validation = taValidatorProcess.runProcess(false)
 
     val validatedObject: ValidatedObject = validation.toOption.get.find(vo => vo.uri == taCertUri).get
     validatedObject.isInstanceOf[InvalidObject] should be(true)
@@ -98,7 +101,7 @@ class TrustAnchorValidationProcessTest extends ValidatorTestCase with MockitoSug
   test("Should return inValidObject when more than one matching ta certificate found") {
     when(mockStore.getCertificates(taCertUri.toString)).thenReturn(Seq(matchingCert, matchingCert))
 
-    val validation = taValidatorProcess.runProcess()
+    val validation = taValidatorProcess.runProcess(false)
 
     val validatedObject: ValidatedObject = validation.toOption.get.find(vo => vo.uri == taCertUri).get
     validatedObject.isInstanceOf[InvalidObject] should be(true)
@@ -110,7 +113,7 @@ class TrustAnchorValidationProcessTest extends ValidatorTestCase with MockitoSug
     when(mockStore.getCertificates(taCertUri.toString)).thenReturn(Seq(matchingCert, cert2))
     when(mockStore.getManifests(matchingCert.aki)).thenReturn(Seq())
 
-    val validation = taValidatorProcess.runProcess()
+    val validation = taValidatorProcess.runProcess(false)
 
     val validatedObject = validation.toOption.get.find(vo => vo.uri == taCertUri && vo.isInstanceOf[ValidObject])
     validatedObject.isDefined should be(true)

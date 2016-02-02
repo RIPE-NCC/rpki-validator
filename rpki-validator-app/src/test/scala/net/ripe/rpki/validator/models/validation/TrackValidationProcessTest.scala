@@ -38,7 +38,7 @@ import net.ripe.rpki.validator.config.MemoryImage
 import net.ripe.rpki.validator.models._
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import net.ripe.rpki.validator.util.TrustAnchorLocator
-import org.joda.time.DateTime
+import org.joda.time.{Instant, DateTime}
 import org.scalatest.BeforeAndAfter
 
 import scala.concurrent.stm._
@@ -49,7 +49,7 @@ class TrackValidationProcessTest extends ValidatorTestCase with BeforeAndAfter {
 
   class MyTrackValidationProcessTrustAnchor(trustAnchors: Seq[TrustAnchor]) extends MyValidationProcess with TrackValidationProcess {
     override val memoryImage = Ref(MemoryImage(Filters(), Whitelist(), new TrustAnchors(trustAnchors), ValidatedObjects(new TrustAnchors(trustAnchors))))
-    override def runProcess() = { super.runProcess() }
+    override def runProcess(forceNewFetch: Boolean) = { super.runProcess(false) }
   }
 
   val tal = new TrustAnchorLocator(new File(""), "caName", URI.create("rsync://rpki.ripe.net/root.cer"), "publicKeyInfo", Collections.emptyList())
@@ -57,21 +57,21 @@ class TrackValidationProcessTest extends ValidatorTestCase with BeforeAndAfter {
   test("should fail with no processable trust anchor") {
     val subject = new MyTrackValidationProcessTrustAnchor(Seq.empty[TrustAnchor])
 
-    val result = subject.runProcess()
+    val result = subject.runProcess(false)
     result should equal(Failure("Trust anchor not idle or enabled"))
   }
 
   test("should not process disabled trust anchors") {
     val subject = new MyTrackValidationProcessTrustAnchor(Seq(TrustAnchor(tal, Idle(new DateTime()), false)))
 
-    val result = subject.runProcess()
+    val result = subject.runProcess(false)
     result should equal(Failure("Trust anchor not idle or enabled"))
   }
 
   test("should not process already running trust anchors") {
     val subject = new MyTrackValidationProcessTrustAnchor(Seq(TrustAnchor(tal, Running(""), true)))
 
-    val result = subject.runProcess()
+    val result = subject.runProcess(false)
     result should equal(Failure("Trust anchor not idle or enabled"))
   }
 }
@@ -82,8 +82,8 @@ class MyValidationProcess extends ValidationProcess {
   override def exceptionHandler = {
     case e: Exception => Failure("")
   }
-  override def validateObjects(certificate: CertificateRepositoryObjectValidationContext) = Seq.empty[ValidatedObject]
+  override def validateObjects(certificate: CertificateRepositoryObjectValidationContext, forceNewFetch: Boolean, validationStart: Instant) = Seq.empty[ValidatedObject]
   override def finishProcessing() {}
   override val trustAnchorLocator = new TrustAnchorLocator(new File(""), "caName", certificateUri, "publicKeyInfo", Collections.emptyList())
-  override def extractTrustAnchorLocator() = { throw new RuntimeException("Make validation process fail") }
+  override def extractTrustAnchorLocator(forceNewFetch: Boolean, validationStart: Instant) = { throw new RuntimeException("Make validation process fail") }
 }

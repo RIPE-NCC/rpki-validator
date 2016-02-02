@@ -38,16 +38,21 @@ import org.apache.http.entity._
 import org.apache.http.client.utils.DateUtils
 import org.apache.http.message._
 import org.joda.time.LocalDate
-import org.scalatest.BeforeAndAfterAll
+import org.mockito.Mockito
+import org.scalatest.{BeforeAndAfterEach, BeforeAndAfterAll}
 import org.scalatest.mock.MockitoSugar
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class BgpRisDumpDownloaderTest extends ValidatorTestCase with BeforeAndAfterAll with MockitoSugar {
+class BgpRisDumpDownloaderTest extends ValidatorTestCase with BeforeAndAfterEach with MockitoSugar {
 
   val mockHttpClient = mock[HttpClient]
   val http11Protocol = new ProtocolVersion("http", 1, 1)
   val dump = BgpRisDump(url = "http://no.where/dump.4.gz")
   val BgpRisDumpDownloader = new BgpRisDumpDownloader(mockHttpClient)
+
+  override def beforeEach() = {
+    Mockito.reset(mockHttpClient)
+  }
 
   test("should stick to old dump, if new dump cannot be retrieved") {
 

@@ -37,7 +37,7 @@ import org.apache.http.HttpResponse
 import org.apache.http.client.HttpClient
 import org.apache.http.client.ResponseHandler
 import org.apache.http.client.methods.HttpGet
-import org.apache.http.impl.cookie.DateUtils
+import net.ripe.rpki.validator.lib.DateAndTime.formatAsRFC2616
 import org.apache.http.util.EntityUtils
 import org.joda.time.DateTime
 import scala.concurrent.blocking
@@ -56,7 +56,7 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
     try {
       val get = new HttpGet(dump.url)
       dump.lastModified foreach { lastModified =>
-        get.addHeader("If-Modified-Since", DateUtils.formatDate(lastModified.toDate))
+        get.addHeader("If-Modified-Since", formatAsRFC2616(lastModified))
       }
       val responseHandler = makeResponseHandler(dump)
 

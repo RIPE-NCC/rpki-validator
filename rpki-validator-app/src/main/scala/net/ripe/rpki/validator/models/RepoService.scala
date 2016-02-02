@@ -37,6 +37,7 @@ import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation.RepoFetcher
 import net.ripe.rpki.validator.store.RepoServiceStore
 import org.joda.time.{Duration, Instant}
+
 import scala.collection._
 
 object RepoServiceErrors {
@@ -53,30 +54,32 @@ class RepoService(fetcher: RepoFetcher) {
 
   private val locker = RepoService.locker
 
-  def visitRepo(uri: URI): Seq[Fetcher.Error] = fetchAndUpdateTime(uri) {
+  def visitRepo(forceNewFetch: Boolean, validationStart: Instant)(uri: URI): Seq[Fetcher.Error] = fetchAndUpdateTime(uri, forceNewFetch, validationStart) {
     fetcher.fetchRepo(uri)
   }
 
   def lastFetchTime(uri: URI): Instant = RepoServiceStore.getLastFetchTime(uri)
 
-  protected[models] def fetchAndUpdateTime(uri: URI)(block: => Seq[Fetcher.Error]): Seq[Fetcher.Error] =
+  protected[models] def fetchAndUpdateTime(uri: URI, forceNewFetch: Boolean, validationStart: Instant)(block: => Seq[Fetcher.Error]): Seq[Fetcher.Error] =
     locker.locked(uri) {
-      if (!haveRecentDataInStore(uri)) {
-        val fetchTime = Instant.now()
+      if (!haveRecentDataInStore(uri, validationStart, forceNewFetch)) {
         RepoServiceErrors.lastErrors(uri) = block
-        RepoServiceStore.updateLastFetchTime(uri, fetchTime)
+        RepoServiceStore.updateLastFetchTime(uri, validationStart)
       }
       RepoServiceErrors.lastErrors.getOrElse(uri, Seq.empty)
     }
 
-  def visitTrustAnchorCertificate(uri: URI) = fetchAndUpdateTime(uri) {
+  def visitTrustAnchorCertificate(uri: URI, forceNewFetch: Boolean, validationStart: Instant) = fetchAndUpdateTime(uri, forceNewFetch, validationStart) {
     fetcher.fetchTrustAnchorCertificate(uri)
   }
 
-  private def haveRecentDataInStore(uri: URI) =
-    timeIsRecent(RepoServiceStore.getLastFetchTime(uri), interval(uri))
+  private def haveRecentDataInStore(uri: URI, validationTime: Instant, forceNewFetch: Boolean) =
+    timeIsRecent(RepoServiceStore.getLastFetchTime(uri), interval(uri), validationTime, forceNewFetch)
 
-  private[models] def timeIsRecent(dateTime: Instant, duration: Duration) = dateTime.plus(duration).isAfterNow
+  private[models] def timeIsRecent(dateTime: Instant, duration: Duration, validationTime: Instant, forceNewFetch: Boolean) = {
+    if (forceNewFetch) !dateTime.isBefore(validationTime)
+    else !dateTime.plus(duration).isBefore(validationTime)
+  }
 }
 
 object RepoService {
