@@ -183,10 +183,13 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       val errors = deltaResults.collect { case Left(e) => e }
       if (errors.isEmpty) {
         notificationDef.right.foreach { nd =>
+          logger.warn(s"Serial from the notification file is ${nd.serial}, local is $lastLocalSerial")
           if (Some(nd.serial) != lastLocalSerial) {
             store.storeSerial(notificationUrl, nd.sessionId, nd.serial)
           }
         }
+      } else {
+        logger.warn("Errors occured during fetchng RRDP repository")
       }
       errors
     })
