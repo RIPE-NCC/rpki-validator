@@ -63,5 +63,5 @@ object DateAndTime {
     override def compare(x: DateTime, y: DateTime) = x.compareTo(y)
   }
 
-  def formatAsRFC2616(dateTime: DateTime) = dateTime.toDateTime(DateTimeZone.UTC).toString("EEE, dd MMM yyyy HH:mm:ss zzz")
+  def formatAsRFC2616(dateTime: DateTime) = dateTime.toDateTime(DateTimeZone.UTC).toString("EEE, dd MMM yyyy HH:mm:ss ZZZ")
 }
