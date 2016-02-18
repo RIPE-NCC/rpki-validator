@@ -209,9 +209,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       Right(Seq[DeltaUnit]())
     } { (sum: Either[Error, ChangeSet], result: Either[Error, ChangeSet]) =>
       sum >>= { (deltas: Seq[DeltaUnit]) =>
-        result >>= {
-          (delta: ChangeSet) => Right(deltas ++ delta)
-        }
+        result.map(deltas ++ _)
       }
     } >>= { seq =>
       Right((seq, serial))
