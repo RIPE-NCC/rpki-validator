@@ -71,7 +71,7 @@ object Main {
     System.setProperty("VALIDATOR_LOG_FILE", ApplicationOptions.applicationLogFileName)
     System.setProperty("RTR_LOG_FILE", ApplicationOptions.rtrLogFileName)
     System.setErr(new PrintStream(new LoggingOutputStream(), true))
-    LoggerFactory.getLogger(this.getClass).info("Starting up the publication server ...")
+    LoggerFactory.getLogger(this.getClass).info("Starting up the RPKI validator...")
   }
 }
 
