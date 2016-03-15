@@ -49,6 +49,7 @@ import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
 import scala.language.reflectiveCalls
+import scala.language.existentials
 
 object TopDownWalker {
 

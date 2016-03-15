@@ -63,9 +63,9 @@ trait DataTableJsonView[R <: Any] {
       JField("aaData", makeJArray(displayRecords))))))
   }
 
-  private def paginate(records: IndexedSeq[R]) = {
-    records.drop(iDisplayStart).take(iDisplayLength)
-  }
+  private def paginate(records: IndexedSeq[R]) =
+    records.slice(iDisplayStart, iDisplayStart + iDisplayLength)
+
 
   private def makeJArray(records: IndexedSeq[R]): JArray = {
     JArray(
