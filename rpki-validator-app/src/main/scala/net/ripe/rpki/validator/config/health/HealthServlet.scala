@@ -29,46 +29,34 @@
  */
 package net.ripe.rpki.validator.config.health
 
-import net.ripe.rpki.commons.rsync.Rsync
+import javax.servlet.http.{HttpServlet, HttpServletRequest, HttpServletResponse}
 
-trait HealthCheck {
-  def check(): Status
-}
+class HealthServlet extends HttpServlet {
 
-object Code extends Enumeration {
-  type Code = Value
-  val OK = Value("OK")
-  val WARNING = Value("WARNING")
-  val ERROR = Value("ERROR")
-}
+  import net.liftweb.json.Extraction._
+  import net.liftweb.json._
 
-case class Status(code: Code.Code, message: Option[String])
+  implicit val formats = net.liftweb.json.DefaultFormats
 
-object Status {
-  def ok = Status(Code.OK, None)
-  def ok(message: String) = Status(Code.OK, Some(message))
-  def warning(message: String) = Status(Code.WARNING, Some(message))
-  def error(message: String) = Status(Code.ERROR, Some(message))
-}
+  override def doGet(req: HttpServletRequest, resp: HttpServletResponse) = {
 
-object HealthChecks {
-  def registry =
-    Map("rsync" -> new RsyncHealthCheck)
-}
+    val statuses = HealthChecks.registry.map { e => (e._1, e._2.check()) }
 
-class RsyncHealthCheck extends HealthCheck {
+    def setProperResponse(problem: Code.Code, status: Int) = {
+      val brokenMessages = statuses.collect {
+        case (name, Status(code, Some(message))) if code == problem => s"$name : $message"
+        case (name, Status(code, None)) if code == problem => s"$name is broken"
+      }
+      if (brokenMessages.nonEmpty)
+        resp.setHeader("X-NCC-ERROR", brokenMessages.mkString(", "))
+      resp.setStatus(status)
+    }
 
-  override def check() = try {
-    val rsync = new Rsync
-    rsync.addOptions("--version")
-    val rc = rsync.execute()
-    if (rc == 0)
-      Status.ok("can find and execute rsync")
-    else
-      Status.error("problems executing rsync, make sure you have rsync installed on the path")
-  } catch {
-    case e: Exception =>
-      Status.error(e.getMessage)
+    if (statuses.exists(_._2.code == Code.ERROR))
+      setProperResponse(Code.ERROR, 500)
+    else if (statuses.exists(_._2.code == Code.WARNING))
+      setProperResponse(Code.WARNING, 299)
+
+    resp.getWriter.write(compact(render(decompose(statuses))))
   }
-
 }

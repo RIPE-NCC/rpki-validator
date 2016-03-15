@@ -34,11 +34,10 @@ import java.io.{File, PrintStream}
 import java.util.EnumSet
 import javax.servlet.DispatcherType
 
-import com.codahale.metrics.servlets.HealthCheckServlet
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.api.RestApi
 import net.ripe.rpki.validator.bgp.preview._
-import net.ripe.rpki.validator.config.health.HealthChecks
+import net.ripe.rpki.validator.config.health.{HealthServlet, HealthChecks}
 import net.ripe.rpki.validator.fetchers.FetcherConfig
 import net.ripe.rpki.validator.lib.{UserPreferences, _}
 import net.ripe.rpki.validator.models.validation.{RepoFetcher, TrackValidationProcess, TrustAnchorValidationProcess, ValidationProcessLogger}
@@ -288,7 +287,7 @@ class Main extends Http with Logging { main =>
     defaultServletHolder.setInitParameter("dirAllowed", "false")
     root.addServlet(defaultServletHolder, "/*")
     root.addServlet(new ServletHolder(restApiServlet), "/api/*")
-    root.addServlet(new ServletHolder(new HealthCheckServlet(HealthChecks.registry)), "/health")
+    root.addServlet(new ServletHolder(new HealthServlet()), "/health")
     root.addFilter(new FilterHolder(webFilter), "/*", EnumSet.allOf(classOf[DispatcherType]))
 
     val requestLogHandler = {

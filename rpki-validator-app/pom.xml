@@ -107,25 +107,6 @@
             <artifactId>spring-jdbc</artifactId>
         </dependency>
 
-        <!-- Yammer metrics, healthchecks, reporting -->
-        <dependency>
-            <groupId>com.codahale.metrics</groupId>
-            <artifactId>metrics-core</artifactId>
-            <version>${yammer.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.codahale.metrics</groupId>
-            <artifactId>metrics-healthchecks</artifactId>
-            <version>${yammer.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.codahale.metrics</groupId>
-            <artifactId>metrics-servlets</artifactId>
-            <version>${yammer.version}</version>
-        </dependency>
-
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
