@@ -44,13 +44,12 @@ class RtrSessions[T](getCurrentCacheSerial: () => Int,
   def allClientData = handlers.values.map(_.sessionData)
 
   def connect(id: T) {
-    val handler = handlers.getOrElseUpdate(id, new RtrSessionHandler[T](id, getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentSessionId, hasTrustAnchorsEnabled))
+    val handler = handlers.getOrElseUpdate(id, new RtrSessionHandler[T](id,
+      getCurrentCacheSerial, getCurrentRtrPrefixes, getCurrentSessionId, hasTrustAnchorsEnabled))
     handler.connect()
   }
 
-  def disconnect(id: T) {
-    handlerFor(id).disconnect()
-  }
+  def disconnect(id: T) = handlers.remove(id).foreach(_.disconnect())
 
   def serialNotify(serial: Long) = {
     val pdu = new SerialNotifyPdu(getCurrentSessionId(), serial)
@@ -66,6 +65,5 @@ class RtrSessions[T](getCurrentCacheSerial: () => Int,
     handlerFor(id).determineErrorPdu(cause)
   }
 
-  
   private def handlerFor(id: T) = handlers.get(id).get
 }
