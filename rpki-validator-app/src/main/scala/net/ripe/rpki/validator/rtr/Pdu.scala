@@ -228,7 +228,7 @@ object Pdus {
         case PduTypes.EndOfData => parseEndOfDataPdu(buffer, headerShort)
         case PduTypes.IPv4Prefix => parseIPv4PrefixPdu(buffer)
         case PduTypes.IPv6Prefix => parseIPv6PrefixPdu(buffer)
-        case PduTypes.CacheReset => Right(new CacheResetPdu())
+        case PduTypes.CacheReset => Right(CacheResetPdu())
         case _ => Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
       }
     }

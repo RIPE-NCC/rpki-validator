@@ -159,7 +159,7 @@ class RTRServerHandler(closeOnError: Boolean = true, clients: RtrSessions[Socket
 
     if (closeOnError) {
       responsePdus.last match {
-        case ErrorPdu(errorCode, _, _) if (ErrorPdu.isFatal(errorCode)) =>
+        case ErrorPdu(errorCode, _, _) if ErrorPdu.isFatal(errorCode) =>
           channelFuture.addListener(ChannelFutureListener.CLOSE)
         case _ =>
       }
