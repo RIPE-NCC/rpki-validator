@@ -75,7 +75,7 @@ trait Fetcher extends Hashing {
     }
   }
 
-  protected def tryTo[L, R](uri: URI)(f: => R) =
+  protected def tryTo[R](uri: URI)(f: => R) =
     try {
       Right(f)
     } catch {

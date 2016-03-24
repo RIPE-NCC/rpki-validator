@@ -107,7 +107,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val uri = trustAnchorLocator.getCertificateLocation
     val validationResult = ValidationResult.withLocation(uri)
 
-    val errors = repoService.visitTrustAnchorCertificate(uri, forceNewFetch, validationStart)
+    val errors = repoService.visitTrustAnchorCertificate(uri, forceNewFetch = true, validationStart)
     errors.foreach(e => validationResult.warn(ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, e.toString))
 
     val certificates = store.getCertificates(uri.toString)

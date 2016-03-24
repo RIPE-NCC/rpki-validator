@@ -91,7 +91,7 @@ class Main extends Http with Logging { main =>
   val dataFile = ApplicationOptions.dataFileLocation
   val data = PersistentDataSerialiser.read(dataFile).getOrElse(PersistentData())
 
-  val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).map(_.enabled).getOrElse(true)) }
+  val trustAnchors = loadTrustAnchors().all.map { ta => ta.copy(enabled = data.trustAnchorData.get(ta.name).forall(_.enabled)) }
   val roas = ValidatedObjects(new TrustAnchors(trustAnchors.filter(ta => ta.enabled)))
 
   override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
