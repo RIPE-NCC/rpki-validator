@@ -38,8 +38,8 @@ import grizzled.slf4j.Logging
 import scala.collection.mutable
 
 /**
- * Execute a function while acquiring a lock by a key.
- */
+  * Execute a function while acquiring a lock by a key.
+  */
 class Locker extends Logging {
 
   private class AccessibleLock extends ReentrantLock {
@@ -52,30 +52,40 @@ class Locker extends Logging {
   private def getStackTrace(thread: Thread) =
     thread.getStackTrace
       .map(e => s"${e.getFileName}:${e.getLineNumber}\t\t\t${e.getMethodName}\t\t${e.getClassName}")
-      .mkString("\n\t","\n\t","\n")
+      .mkString("\n\t", "\n\t", "\n")
 
   def locked[T](key: Object)(f: => T): T = {
-    val lock = _locked(globalLock) {
-      locks.getOrElseUpdate(key, new AccessibleLock())
+    val (lock, newlyCreated) = _locked(globalLock) {
+      locks.get(key) match {
+        case Some(lo) =>
+          (lo, false)
+        case None =>
+          val lo = new AccessibleLock()
+          locks.put(key, lo)
+          (lo, true)
+      }
     }
     try {
-      _locked(lock) {
+      if (lock.isHeldByCurrentThread)
         f
-      }
+      else
+        _locked(lock)(f)
     } finally {
-      _locked(globalLock) {
-        locks.remove(key)
+      if (newlyCreated) {
+        _locked(globalLock) {
+          locks.remove(key)
+        }
       }
     }
   }
 
   @inline
   private def _locked[T, X](lock: AccessibleLock)(g: => T): T = {
-    if (! lock.tryLock(25, TimeUnit.SECONDS)) {
-      val key: Object = locks.find(l => l._2 == lock).get._1
+    if (!lock.tryLock(25, TimeUnit.SECONDS)) {
+      val key = locks.find(l => l._2 == lock).get._1
       val lockOwner = lock.getOwningThread
       if (lockOwner != null) {
-        logger.info(s"waiting in ${Thread.currentThread()} on ${key} from ${getStackTrace(Thread.currentThread())}")
+        logger.info(s"waiting in ${Thread.currentThread()} on key=$key and lock=$lock from ${getStackTrace(Thread.currentThread())}")
         logger.info(s"Locked by $lockOwner: ${getStackTrace(lockOwner)}")
       }
       lock.lock()
