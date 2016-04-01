@@ -160,8 +160,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     if (i != 0) info(s"Clear old objects -> deleted $i object(s) last time validated before $thresholdTime")
 
     val hoursForBogusObjects: Int = 24
-    val twoHoursAgo = baseTime.toDateTime.minusHours(hoursForBogusObjects).toInstant
-    val j = template.update(s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '${timestamp(twoHoursAgo)}'", Map.empty[String, Object])
+    val bogusObjectsDeadline = baseTime.toDateTime.minusHours(hoursForBogusObjects).toInstant
+    val j = template.update(s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '${timestamp(bogusObjectsDeadline)}'", Map.empty[String, Object])
     if (j != 0) info(s"Clear old objects -> deleted $j object(s) downloaded $hoursForBogusObjects hours before $baseTime and never validated")
   }
 
