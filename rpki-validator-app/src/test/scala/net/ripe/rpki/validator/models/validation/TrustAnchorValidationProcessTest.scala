@@ -73,7 +73,7 @@ class TrustAnchorValidationProcessTest extends ValidatorTestCase with MockitoSug
   before {
     Mockito.reset(mockStore, mockRepoService, mockTrustAnchorLocator)
     when(mockTrustAnchorLocator.getCertificateLocation).thenReturn(taCertUri)
-    when(mockRepoService.visitTrustAnchorCertificate(Matchers.eq(taCertUri), Matchers.eq(false), Matchers.any(classOf[Instant]))).thenReturn(Seq())
+    when(mockRepoService.visitTrustAnchorCertificate(Matchers.eq(taCertUri), Matchers.eq(true), Matchers.any(classOf[Instant]))).thenReturn(Seq())
     when(mockRepoService.visitRepo(Matchers.eq(false), Matchers.any(classOf[Instant]))(Matchers.eq(matchingCert.decoded.getRepositoryUri))).thenReturn(Seq())
   }
   
