@@ -39,14 +39,9 @@ import org.joda.time.DateTime
 
 case class BgpRisEntry(origin: Asn, prefix: IpRange, visibility: Int)
 case class BgpRisDump(url: String, lastModified: Option[DateTime] = None, entries: Seq[BgpRisEntry] = Nil) {
-  def announcedRoutes: Seq[BgpAnnouncement] = {
-    (for {
-      entry <- entries
-      if entry.visibility >= BgpAnnouncementValidator.VISIBILITY_THRESHOLD
-    } yield {
-      BgpAnnouncement(entry.origin, entry.prefix)
-    }).distinct
-  }
+  def announcedRoutes: Seq[BgpAnnouncement] = entries.
+    withFilter(e => e.visibility >= BgpAnnouncementValidator.VISIBILITY_THRESHOLD).
+    map(e => BgpAnnouncement(e.origin, e.prefix)).distinct
 }
 
 object BgpRisDump extends Logging {

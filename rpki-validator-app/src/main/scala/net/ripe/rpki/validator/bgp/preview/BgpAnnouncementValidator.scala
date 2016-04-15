@@ -35,6 +35,7 @@ import net.ripe.rpki.validator.models.{RouteValidity, RtrPrefix}
 import net.ripe.ipresource.Asn
 import net.ripe.ipresource.IpRange
 import grizzled.slf4j.Logging
+import net.ripe.rpki.validator.lib.DateAndTime
 import net.ripe.rpki.validator.models.RouteValidity._
 
 import scala.concurrent.stm.{MaybeTxn, Ref}
@@ -102,11 +103,10 @@ class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) ext
   private def validate(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]): IndexedSeq[BgpValidatedAnnouncement] = {
     info("Started validating " + announcements.size + " BGP announcements with " + prefixes.size + " RTR prefixes.")
     val prefixTree = NumberResourceIntervalTree(prefixes: _*)
-
-    val result = announcements.par.map(BgpAnnouncementValidator.validate(_, prefixTree)).seq.toIndexedSeq
-
-    info("Completed validating " + result.size + " BGP announcements with " + prefixes.size + " RTR prefixes.")
-
+    val (result, time) = DateAndTime.timed {
+      announcements.par.map(BgpAnnouncementValidator.validate(_, prefixTree)).seq.toIndexedSeq
+    }
+    info(s"Completed validating ${result.size} BGP announcements with ${prefixes.size} RTR prefixes in ${time/1000.0} seconds")
     result
   }
 }
