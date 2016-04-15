@@ -87,20 +87,19 @@ object BgpAnnouncementValidator {
 }
 
 class BgpAnnouncementValidator(implicit actorSystem: akka.actor.ActorSystem) extends Logging {
-  import actorSystem.dispatcher
-  import scala.concurrent.duration._
+  import scala.concurrent.stm._
 
-  private val _validatedAnnouncements = akka.agent.Agent(IndexedSeq.empty[BgpValidatedAnnouncement])
+  private val _validatedAnnouncements = Ref(IndexedSeq.empty[BgpValidatedAnnouncement])
 
-  def validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement] = _validatedAnnouncements.await(30.seconds)
+  def validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement] = _validatedAnnouncements.single.get
 
-  def startUpdate(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]) {
-    _validatedAnnouncements.sendOff {
-      _ => validate(announcements, prefixes)
-    }
+  def startUpdate(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]) = {
+    val v = validate(announcements, prefixes)
+    _validatedAnnouncements.single.set(v)
   }
 
   private def validate(announcements: Seq[BgpAnnouncement], prefixes: Seq[RtrPrefix]): IndexedSeq[BgpValidatedAnnouncement] = {
+
     info("Started validating " + announcements.size + " BGP announcements with " + prefixes.size + " RTR prefixes.")
     val prefixTree = NumberResourceIntervalTree(prefixes: _*)
     val (result, time) = DateAndTime.timed {
