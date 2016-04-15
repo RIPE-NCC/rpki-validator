@@ -104,16 +104,22 @@ class Main extends Http with Logging { main =>
     MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors), roas))
 
   def updateMemoryImage(f: MemoryImage => MemoryImage)(implicit transaction: MaybeTxn) {
-    atomic { implicit transaction =>
+    val (oldV, newV, action) = atomic { implicit transaction =>
       val oldVersion = memoryImage().version
-
       memoryImage.transform(f)
+      val newVersion = memoryImage().version
 
-      if (oldVersion != memoryImage().version) {
-        bgpAnnouncementValidator.startUpdate(main.bgpRisDumps().flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes.toSeq)
+      val bgpAnnouncements = main.bgpRisDumps().par.flatMap(_.announcedRoutes).seq
+      val distinctRtrPrefixes = memoryImage().getDistinctRtrPrefixes
+
+      val action = { () =>
+        bgpAnnouncementValidator.startUpdate(bgpAnnouncements, distinctRtrPrefixes.toSeq)
         rtrServer.notify(memoryImage().version)
       }
+      (oldVersion, newVersion, action)
     }
+    if (oldV != newV)
+      action()
   }
 
   wipeRsyncDiskCache()
