@@ -35,7 +35,8 @@ import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetc
 import net.ripe.rpki.validator.util.UriToFileMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.Validate;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,7 +46,7 @@ import java.net.URI;
  * Writes validated objects to the location as specified by the {@link UriToFileMapper}.
  */
 public class ValidatedObjectWriter implements Listener {
-    private static final Logger LOG = Logger.getLogger(ValidatedObjectWriter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ValidatedObjectWriter.class);
 
     private UriToFileMapper uriToFileMapper;
 

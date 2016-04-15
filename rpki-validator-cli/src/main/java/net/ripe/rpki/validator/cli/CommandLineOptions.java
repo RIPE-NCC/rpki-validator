@@ -38,7 +38,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
@@ -49,7 +50,7 @@ import java.util.List;
 
 public class CommandLineOptions {
 
-    private static final Logger LOG = Logger.getLogger(CommandLineOptions.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CommandLineOptions.class);
 
     private static final String HELP = "help";
     private static final String VERSION = "version";

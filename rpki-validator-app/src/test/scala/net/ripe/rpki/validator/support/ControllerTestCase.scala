@@ -39,7 +39,7 @@ import org.scalatra.test.scalatest.ScalatraFunSuite
 
 
 @RunWith(classOf[JUnitRunner])
-abstract class ControllerTestCase extends ScalatraFunSuite with JunitLog4JSetup with Matchers with MockitoSugar {
+abstract class ControllerTestCase extends ScalatraFunSuite with JunitLoggingSetup with Matchers with MockitoSugar {
   /**
    * The result of the last render action.
    */

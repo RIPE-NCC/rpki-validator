@@ -34,10 +34,10 @@ import net.ripe.rpki.validator.config.ApplicationOptions
 /**
  * Be sure to extend this FIRST from your junit tests.
  *
- * We need this because we refer to system properties for filenames in log4j.xml.
+ * We need this because we refer to system properties for filenames in logback*.xml.
  * This config also gets picked up by *static* LOG fields in libraries, so order of loading is important.
  */
-trait JunitLog4JSetup {
+trait JunitLoggingSetup {
   System.setProperty("VALIDATOR_LOG_FILE", ApplicationOptions.applicationLogFileName)
   System.setProperty("RTR_LOG_FILE", ApplicationOptions.rtrLogFileName)
 }

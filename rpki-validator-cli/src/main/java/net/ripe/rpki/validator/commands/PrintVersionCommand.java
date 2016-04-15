@@ -30,7 +30,8 @@
 package net.ripe.rpki.validator.commands;
 
 import com.google.common.io.Closer;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +39,7 @@ import java.util.Properties;
 
 public class PrintVersionCommand {
 
-    private static final Logger LOG = Logger.getLogger(PrintVersionCommand.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PrintVersionCommand.class);
 
     public void execute() {
         final Closer closer = Closer.create();
@@ -54,7 +55,7 @@ public class PrintVersionCommand {
                 closer.close();
             }
         } catch (IOException e) {
-            LOG.fatal(e);
+            LOG.error(e.getMessage());
         }
     }
 }

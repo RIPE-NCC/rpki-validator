@@ -33,7 +33,7 @@ import java.net.URI
 
 import net.ripe.rpki.validator.models.validation.RepoFetcher
 import net.ripe.rpki.validator.store.RepoServiceStore
-import net.ripe.rpki.validator.support.{JunitLog4JSetup, ValidatorTestCase}
+import net.ripe.rpki.validator.support.{JunitLoggingSetup, ValidatorTestCase}
 import org.joda.time.{Instant, Duration}
 import org.mockito.Mockito
 import org.mockito.internal.verification.VerificationModeFactory

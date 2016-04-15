@@ -29,22 +29,19 @@
  */
 package net.ripe.rpki.validator.cli;
 
+import ch.qos.logback.classic.Level;
 import net.ripe.rpki.validator.commands.BottomUpValidationCommand;
 import net.ripe.rpki.validator.commands.PrintCertificateRepositoryObjectCommand;
 import net.ripe.rpki.validator.commands.PrintVersionCommand;
 import net.ripe.rpki.validator.commands.TopDownValidationCommand;
 import org.apache.commons.cli.ParseException;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public final class Main {
 
-    private static Logger getLogger() {
-        return Logger.getLogger(Main.class);
-    }
+    private static Logger logger = LoggerFactory.getLogger(Main.class);
 
     private CommandLineOptions options;
 
@@ -53,22 +50,12 @@ public final class Main {
 
     public static void main(String[] args) {
         try {
-            setUpLogging();
             new Main().run(args);
             System.exit(0);
         } catch (Exception e) {
-            getLogger().error(e.getMessage());
+            logger.error(e.getMessage());
             System.exit(1);
         }
-    }
-
-    private static void setUpLogging() {
-        ConsoleAppender console = new ConsoleAppender(new PatternLayout("%d{ABSOLUTE} %-5p %m%n"));
-
-        Logger ripeNet = Logger.getLogger("net.ripe");
-        ripeNet.setLevel(Level.INFO);
-
-        Logger.getRootLogger().addAppender(console);
     }
 
     private void run(String[] args) {
@@ -98,7 +85,7 @@ public final class Main {
         try {
             options.parse(args);
         } catch (ParseException e) {
-            getLogger().fatal(e.getMessage());
+            logger.error(e.getMessage());
             System.exit(1);
         }
 
@@ -106,8 +93,11 @@ public final class Main {
 
     private void setVerbosity() {
         if (options.isVerboseEnabled()) {
-            Logger ripeNet = Logger.getLogger("net.ripe");
-            ripeNet.setLevel(Level.DEBUG);
+            Logger rootLogger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+            if ((rootLogger instanceof ch.qos.logback.classic.Logger)) {
+                ch.qos.logback.classic.Logger logbackLogger = (ch.qos.logback.classic.Logger) rootLogger;
+                logbackLogger.setLevel(Level.DEBUG);
+            }
         }
     }
 }

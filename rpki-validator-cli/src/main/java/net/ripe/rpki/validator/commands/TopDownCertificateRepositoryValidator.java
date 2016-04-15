@@ -47,7 +47,8 @@ import net.ripe.rpki.validator.summary.ValidationSummaryPrinter;
 import net.ripe.rpki.validator.util.UriToFileMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.Validate;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,7 +61,7 @@ import java.util.List;
  * Validates a complete repository, recursively, starting with the trust anchors.
  */
 public class TopDownCertificateRepositoryValidator {
-    private static final Logger LOG = Logger.getLogger(TopDownCertificateRepositoryValidator.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TopDownCertificateRepositoryValidator.class);
 
     static final String BASE_DIRECTORY_NAME = "rta";
 

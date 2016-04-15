@@ -39,10 +39,11 @@ import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.util.CsvFormatter;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher.Listener;
-import org.apache.log4j.Logger;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,7 +60,7 @@ import java.util.List;
  */
 public class ValidatedRoaWriter implements Listener {
 
-    private static final Logger LOG = Logger.getLogger(ValidatedRoaWriter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ValidatedRoaWriter.class);
 
     private List<RoaData> allRoaData = new ArrayList<RoaData>();
 

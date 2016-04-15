@@ -38,12 +38,13 @@ import net.ripe.rpki.commons.validation.ValidationLocation;
 import net.ripe.rpki.commons.validation.ValidationMessage;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 
 public class ObjectFetcherResultLogger implements NotifyingCertificateRepositoryObjectFetcher.Listener {
-    private static final Logger LOG = Logger.getLogger(ObjectFetcherResultLogger.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ObjectFetcherResultLogger.class);
     private boolean logValidObjects;
 
 

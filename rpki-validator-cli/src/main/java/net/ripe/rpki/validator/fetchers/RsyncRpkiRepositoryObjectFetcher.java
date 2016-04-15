@@ -37,7 +37,8 @@ import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.validator.util.HierarchicalUriCache;
 import net.ripe.rpki.validator.util.UriToFileMapper;
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,7 +51,7 @@ public class RsyncRpkiRepositoryObjectFetcher implements RpkiRepositoryObjectFet
     public static final String RSYNC_PREFETCH_VALIDATION_METRIC = "rsync.prefetch";
     public static final String RSYNC_FETCH_FILE_VALIDATION_METRIC = "rsync.fetch.file";
 
-    private static final Logger LOG = Logger.getLogger(RsyncRpkiRepositoryObjectFetcher.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RsyncRpkiRepositoryObjectFetcher.class);
 
     private static final String[] STANDARD_OPTIONS = { "--update", "--times", "--copy-links" };
     private static final String[] PREFETCH_OPTIONS = { "--recursive", "--delete" };

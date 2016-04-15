@@ -31,15 +31,14 @@ package net.ripe.rpki.validator.fetchers
 
 import java.io.File
 import java.net.URI
-import java.nio.file.Files
 
-import org.apache.log4j.Logger
+import org.slf4j.{Logger, LoggerFactory}
 
 class RsyncFetcher(config: FetcherConfig) extends Fetcher with RsyncSupport {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
-  private val logger: Logger = Logger.getLogger(classOf[RsyncFetcher])
+  private val logger: Logger = LoggerFactory.getLogger(classOf[RsyncFetcher])
 
   private def walkTree[T1, T2](d: File)(f: File => Either[T1, T2]): Seq[T1] = {
     if (d.isDirectory) {

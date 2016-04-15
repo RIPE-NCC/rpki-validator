@@ -40,7 +40,8 @@ import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.commons.validation.ValidationString;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import org.apache.commons.lang.Validate;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
@@ -50,7 +51,7 @@ import static net.ripe.rpki.commons.validation.ValidationString.*;
 
 public class ValidatingCertificateRepositoryObjectFetcher implements CertificateRepositoryObjectFetcher {
 
-    private static final Logger LOG = Logger.getLogger(ValidatingCertificateRepositoryObjectFetcher.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ValidatingCertificateRepositoryObjectFetcher.class);
 
     private final CertificateRepositoryObjectFetcher fetcher;
     private CertificateRepositoryObjectFetcher outerMostDecorator;

@@ -35,6 +35,6 @@ import org.apache.http.message.BasicStatusLine
 import org.scalatest.{FunSuite, Matchers}
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-abstract class ValidatorTestCase extends FunSuite with JunitLog4JSetup with Matchers {
+abstract class ValidatorTestCase extends FunSuite with JunitLoggingSetup with Matchers {
   val statusLineOk: BasicStatusLine = new BasicStatusLine(new ProtocolVersion("HTTP", 1, 1), HttpStatus.SC_OK, "OK")
 }

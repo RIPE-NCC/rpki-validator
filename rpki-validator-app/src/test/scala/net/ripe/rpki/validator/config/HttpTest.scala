@@ -33,7 +33,7 @@ import java.io.File
 import java.security.KeyStore
 
 import grizzled.slf4j.Logging
-import net.ripe.rpki.validator.support.{JunitLog4JSetup, ValidatorTestCase}
+import net.ripe.rpki.validator.support.{JunitLoggingSetup, ValidatorTestCase}
 import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server._
@@ -42,7 +42,7 @@ import org.scalatest.{Ignore, BeforeAndAfterAll}
 
 import scala.util.Try
 
-class HttpTest extends ValidatorTestCase with JunitLog4JSetup with BeforeAndAfterAll {
+class HttpTest extends ValidatorTestCase with JunitLoggingSetup with BeforeAndAfterAll {
 
   override def beforeAll() {
     HttpServer.start()

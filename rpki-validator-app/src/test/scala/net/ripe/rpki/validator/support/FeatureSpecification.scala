@@ -42,7 +42,7 @@ import net.ripe.rpki.validator.util.TrustAnchorLocator
 import net.ripe.rpki.validator.api.RestApi
 
 @RunWith(classOf[JUnitRunner])
-abstract class FeatureSpecification extends ScalatraFeatureSpec with JunitLog4JSetup with Matchers with MockitoSugar with GivenWhenThen {
+abstract class FeatureSpecification extends ScalatraFeatureSpec with JunitLoggingSetup with Matchers with MockitoSugar with GivenWhenThen {
   addFilter(new WebFilter {
     override protected def startTrustAnchorValidation(trustAnchors: Seq[String]) = sys.error("TODO")
     override protected def filters = sys.error("TODO")
