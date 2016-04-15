@@ -37,12 +37,12 @@ import net.ripe.ipresource.IpRange
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.models.RouteValidity._
 
-case class BgpAnnouncement private (asn: Asn, interval: NumberResourceInterval) {
-  def prefix = interval.start.upTo(interval.end).asInstanceOf[IpRange]
+import scala.concurrent.stm.{MaybeTxn, Ref}
+
+case class BgpAnnouncement(asn: Asn, prefix: IpRange) {
+  def interval = NumberResourceInterval(prefix.getStart, prefix.getEnd)
 }
-object BgpAnnouncement {
-  def apply(asn: Asn, prefix: IpRange) = new BgpAnnouncement(asn, NumberResourceInterval(prefix.getStart, prefix.getEnd))
-}
+
 case class BgpValidatedAnnouncement(announced: BgpAnnouncement, valids: Seq[RtrPrefix] = Seq.empty,
                                     invalidsAsn: Seq[RtrPrefix] = Seq.empty,
                                     invalidsLength: Seq[RtrPrefix] = Seq.empty) {
