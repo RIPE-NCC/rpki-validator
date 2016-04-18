@@ -30,20 +30,19 @@
 package net.ripe.rpki.validator
 package rtr
 
-import org.jboss.netty.bootstrap.ServerBootstrap
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
-import org.jboss.netty.channel._
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
-import org.jboss.netty.handler.timeout.ReadTimeoutHandler
-import org.jboss.netty.util.Timer
-import org.jboss.netty.util.HashedWheelTimer
+import java.net.{InetSocketAddress, SocketAddress}
+import java.util.concurrent.{Executors, TimeUnit}
+
 import grizzled.slf4j.{Logger, Logging}
-import org.jboss.netty.channel.group.{ ChannelGroup, DefaultChannelGroup }
+import net.ripe.rpki.validator.models.RtrPrefix
+import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.channel.ChannelHandler.Sharable
-import models.RtrPrefix
-import java.net.{SocketAddress, InetSocketAddress}
+import org.jboss.netty.channel._
+import org.jboss.netty.channel.group.{ChannelGroup, DefaultChannelGroup}
+import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
+import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
+import org.jboss.netty.handler.timeout.ReadTimeoutHandler
+import org.jboss.netty.util.{HashedWheelTimer, Timer}
 
 
 object RTRServer {
@@ -57,7 +56,7 @@ class RTRServer(port: Int, closeOnError: Boolean, sendNotify: Boolean,
                 getCurrentCacheSerial: () => Int,
                 getCurrentRtrPrefixes: () => Set[RtrPrefix],
                 getCurrentSessionId: () => Pdu.SessionId,
-                hasTrustAnchorsEnabled: () => Boolean)(implicit actorSystem: akka.actor.ActorSystem)
+                hasTrustAnchorsEnabled: () => Boolean)
   extends Logging {
 
   import TimeUnit._
@@ -69,10 +68,7 @@ class RTRServer(port: Int, closeOnError: Boolean, sendNotify: Boolean,
 
   val serverHandler = new RTRServerHandler(closeOnError, rtrSessions)
 
-  // Use an agent to make notification sending transactional.
-  private val notifier = akka.agent.Agent(())
-
-  def notify(serial: Long) = notifier.send { _ =>
+  def notify(serial: Long) = {
     if (sendNotify) {
       info("Sending Notify with serial %s to all clients".format(serial))
       serverHandler.notifyChildren(rtrSessions.serialNotify(serial))
