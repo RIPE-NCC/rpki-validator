@@ -114,7 +114,7 @@ class Main extends Http with Logging { main =>
 
       Txn.afterCommit { _ =>
         bgpAnnouncementValidator.startUpdate(bgpAnnouncements, distinctRtrPrefixes.toSeq)
-        rtrServer.notify(memoryImage().version)
+        rtrServer.notify(newVersion)
       }
     }
   }
