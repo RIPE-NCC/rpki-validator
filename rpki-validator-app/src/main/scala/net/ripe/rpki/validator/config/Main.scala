@@ -113,8 +113,10 @@ class Main extends Http with Logging { main =>
       val distinctRtrPrefixes = memoryImage().getDistinctRtrPrefixes
 
       Txn.afterCommit { _ =>
-        bgpAnnouncementValidator.startUpdate(bgpAnnouncements, distinctRtrPrefixes.toSeq)
-        rtrServer.notify(newVersion)
+        if (oldVersion != newVersion) {
+          bgpAnnouncementValidator.startUpdate(bgpAnnouncements, distinctRtrPrefixes.toSeq)
+          rtrServer.notify(newVersion)
+        }
       }
     }
   }
