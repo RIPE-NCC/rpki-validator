@@ -37,7 +37,7 @@ import javax.servlet.DispatcherType
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.api.RestApi
 import net.ripe.rpki.validator.bgp.preview._
-import net.ripe.rpki.validator.config.health.{HealthServlet, HealthChecks}
+import net.ripe.rpki.validator.config.health.HealthServlet
 import net.ripe.rpki.validator.fetchers.FetcherConfig
 import net.ripe.rpki.validator.lib.{UserPreferences, _}
 import net.ripe.rpki.validator.models.validation.{RepoFetcher, TrackValidationProcess, TrustAnchorValidationProcess, ValidationProcessLogger}
@@ -81,6 +81,8 @@ class Main extends Http with Logging { main =>
   import actorSystem.dispatcher
 
   val startedAt = System.currentTimeMillis
+
+  logger.info(s"Prefer RRDP=${ApplicationOptions.preferRrdp}")
 
   val bgpRisDumps = Ref(Seq(
     BgpRisDump("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz"),
