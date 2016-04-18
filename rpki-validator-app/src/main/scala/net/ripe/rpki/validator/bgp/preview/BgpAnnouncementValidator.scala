@@ -56,7 +56,7 @@ object BgpValidatedAnnouncement {
 }
 
 
-case class BgpValidatedAnnouncement(announced: BgpAnnouncement, prefixes: Seq[(RouteValidity, RtrPrefix)] = Seq.empty) {
+case class BgpValidatedAnnouncement(announced: BgpAnnouncement, prefixes: Seq[(RouteValidity, RtrPrefix)] = List.empty) {
   require(!invalidsAsn.exists(_.asn == announced.asn), "invalidsAsn must not contain the announced ASN")
   require(!invalidsLength.exists(_.asn != announced.asn), "invalidsLength must only contain VRPs that refer to the same ASN")
 
