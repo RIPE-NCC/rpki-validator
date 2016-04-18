@@ -35,11 +35,11 @@ import scala.xml.Text
 import bgp.preview._
 import lib.DateAndTime._
 
-class BgpPreviewView(bgpRisDumps: Seq[BgpRisDump], search: String) extends View with ViewHelpers {
+class BgpPreviewView(bgpAnnouncementSets: Seq[BgpAnnouncementSet], search: String) extends View with ViewHelpers {
 
   val now = new Instant()
 
-  private def lastUpdated = bgpRisDumps.flatMap(_.lastModified).toList match {
+  private def lastUpdated = bgpAnnouncementSets.flatMap(_.lastModified).toList match {
     case Nil => <span>is currently being loaded</span>
     case times => <span>was last updated <span rel="twipsy" data-original-title={formatDateTime(times.max)}>{periodInWords(new Period(times.max, now), 2)} ago</span></span>
   }

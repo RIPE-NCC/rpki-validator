@@ -82,9 +82,9 @@ class Main extends Http with Logging { main =>
 
   val startedAt = System.currentTimeMillis
 
-  val bgpRisDumps = Ref(Seq(
-    BgpRisDump("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz"),
-    BgpRisDump("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz")))
+  val bgpAnnouncementSets = Ref(Seq(
+    BgpAnnouncementSet("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz"),
+    BgpAnnouncementSet("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz")))
 
   val bgpAnnouncementValidator = new BgpAnnouncementValidator
 
@@ -104,22 +104,19 @@ class Main extends Http with Logging { main =>
     MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors), roas))
 
   def updateMemoryImage(f: MemoryImage => MemoryImage)(implicit transaction: MaybeTxn) {
-    val (oldV, newV, action) = atomic { implicit transaction =>
+    atomic { implicit transaction =>
       val oldVersion = memoryImage().version
       memoryImage.transform(f)
       val newVersion = memoryImage().version
 
-      val bgpAnnouncements = main.bgpRisDumps().par.flatMap(_.announcedRoutes).seq
+      val bgpAnnouncements = main.bgpAnnouncementSets().flatMap(_.entries)
       val distinctRtrPrefixes = memoryImage().getDistinctRtrPrefixes
 
-      val action = { () =>
+      Txn.afterCommit { _ =>
         bgpAnnouncementValidator.startUpdate(bgpAnnouncements, distinctRtrPrefixes.toSeq)
         rtrServer.notify(memoryImage().version)
       }
-      (oldVersion, newVersion, action)
     }
-    if (oldV != newV)
-      action()
   }
 
   wipeRsyncDiskCache()
@@ -137,10 +134,10 @@ class Main extends Http with Logging { main =>
   }
 
   private def refreshRisDumps() {
-    Future.traverse(bgpRisDumps.single.get)(bgpRisDumpDownloader.download) foreach { dumps =>
+    Future.traverse(bgpAnnouncementSets.single.get)(bgpRisDumpDownloader.download) foreach { dumps =>
       atomic { implicit transaction =>
-        bgpRisDumps() = dumps
-        bgpAnnouncementValidator.startUpdate(dumps.flatMap(_.announcedRoutes), memoryImage().getDistinctRtrPrefixes.toSeq)
+        bgpAnnouncementSets() = dumps
+        bgpAnnouncementValidator.startUpdate(bgpAnnouncementSets().flatMap(_.entries), memoryImage().getDistinctRtrPrefixes.toSeq)
       }
     }
   }
@@ -166,7 +163,6 @@ class Main extends Http with Logging { main =>
 
     for (trustAnchorLocator <- taLocators) {
       Future {
-
         val store = DurableCaches(ApplicationOptions.workDirLocation)
         val repoService = new RepoService(RepoFetcher(ApplicationOptions.workDirLocation, FetcherConfig(ApplicationOptions.rsyncDirLocation)))
 
@@ -258,7 +254,7 @@ class Main extends Http with Logging { main =>
       override protected def addWhitelistEntry(entry: RtrPrefix) = updateAndPersist { implicit transaction => updateMemoryImage(_.addWhitelistEntry(entry)) }
       override protected def removeWhitelistEntry(entry: RtrPrefix) = updateAndPersist { implicit transaction => updateMemoryImage(_.removeWhitelistEntry(entry)) }
 
-      override protected def bgpRisDumps = main.bgpRisDumps.single.get
+      override protected def bgpAnnouncementSet = main.bgpAnnouncementSets.single.get
       override protected def validatedAnnouncements = bgpAnnouncementValidator.validatedAnnouncements
 
       override protected def getRtrPrefixes = memoryImage.single.get.getDistinctRtrPrefixes

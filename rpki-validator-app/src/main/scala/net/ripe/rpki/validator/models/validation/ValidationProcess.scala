@@ -39,11 +39,12 @@ import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryOb
 import net.ripe.rpki.commons.validation.{ValidationLocation, ValidationOptions, ValidationResult, ValidationString}
 import net.ripe.rpki.validator.config.{ApplicationOptions, MemoryImage}
 import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher
+import net.ripe.rpki.validator.lib.DateAndTime
 import net.ripe.rpki.validator.lib.Structures._
 import net.ripe.rpki.validator.models._
 import net.ripe.rpki.validator.store.CacheStore
 import net.ripe.rpki.validator.util.TrustAnchorLocator
-import org.joda.time.{Instant, Period}
+import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
 import scala.concurrent.stm._
@@ -180,10 +181,10 @@ trait ValidationProcessLogger extends ValidationProcess {
 
   abstract override def validateObjects(certificate: CertificateRepositoryObjectValidationContext, forceNewFetch: Boolean, validationStart: Instant) = {
     logger.info("Loaded trust anchor " + trustAnchorLocator.getCaName + " from location " + certificate.getLocation + ", starting validation")
-    val begin = Instant.now()
-    val objects = super.validateObjects(certificate, forceNewFetch, validationStart)
-    val elapsed = new Period(begin, Instant.now())
-    logger.info(s"Finished validating ${trustAnchorLocator.getCaName}, ${objects.size} valid objects; spent $elapsed.")
+    val (objects, elapsed) = DateAndTime.timed {
+      super.validateObjects(certificate, forceNewFetch, validationStart)
+    }
+    logger.info(s"Finished validating ${trustAnchorLocator.getCaName}, ${objects.size} valid objects; spent ${elapsed/1000.0}s.")
     objects
   }
 

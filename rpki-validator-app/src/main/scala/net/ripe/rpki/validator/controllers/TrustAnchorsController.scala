@@ -56,12 +56,11 @@ trait TrustAnchorsController extends ApplicationController {
 
   get(s"${Tabs.TrustAnchorMonitorTab.url}/:identifierHash") {
     validateParameter("identifierHash", required(trustAnchorByIdentifierHash)) match {
-      case Success(trustAnchor) => {
+      case Success(trustAnchor) =>
         new views.TrustAnchorMonitorView(
           ta = trustAnchor,
           trustAnchorValidations = validatedObjects.all.getOrElse(trustAnchor.locator, TrustAnchorValidations()),
           messages = feedbackMessages)
-      }
       case Failure(feedbackMessage) =>
         redirectWithFeedbackMessages(s"${Tabs.TrustAnchorsTab.url}", feedbackMessage)
     }
