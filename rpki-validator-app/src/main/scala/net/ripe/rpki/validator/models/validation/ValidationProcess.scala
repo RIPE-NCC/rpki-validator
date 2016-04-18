@@ -122,7 +122,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
       if (matchingCertificates.size > 1) {
         validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_TA_CERT_NOT_UNIQUE, uri.toString)
       } else {
-        validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString)
+        validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, "n/a")
       }
     }
 
