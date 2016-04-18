@@ -150,8 +150,7 @@ parse_jvm_options
 #
 RUNNING="false"
 if [ -e ${PID_FILE} ]; then
-    ps `cat ${PID_FILE}` | grep "\-Dapp.name=${APP_NAME}" >/dev/null 2>&1
-    if [ $? == "0" ]; then
+    if [ x`cat ${PID_FILE}` == x`pgrep -f -- -Dapp.name=${APP_NAME}` ]; then
         RUNNING="true"
     fi
 fi
