@@ -55,6 +55,8 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
 
   def removeWhitelistEntry(entry: RtrPrefix) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
 
+  // TODO Creating a set here is not enough, there could be prefixes
+  // TODO that differ only by trust anchor locator
   def getDistinctRtrPrefixes: Set[RtrPrefix] =
     Set.empty[RtrPrefix] ++ whitelist.entries ++ filters.filter(validatedObjects.getValidatedRtrPrefixes)
 

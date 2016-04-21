@@ -33,6 +33,7 @@ import grizzled.slf4j.Logging
 import java.util.zip.GZIPInputStream
 import javax.servlet.http.HttpServletResponse.SC_NOT_MODIFIED
 import javax.servlet.http.HttpServletResponse.SC_OK
+
 import org.apache.http.HttpResponse
 import org.apache.http.client.HttpClient
 import org.apache.http.client.ResponseHandler
@@ -40,6 +41,7 @@ import org.apache.http.client.methods.HttpGet
 import net.ripe.rpki.validator.lib.DateAndTime.formatAsRFC2616
 import org.apache.http.util.EntityUtils
 import org.joda.time.DateTime
+
 import scala.concurrent.blocking
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -52,7 +54,7 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
   /**
    * Refreshes the given BgpRisDump. If the source information was not modified or could not be retrieved the input dump is returned.
    */
-  def download(dump: BgpRisDump)(implicit ec: ExecutionContext): Future[BgpRisDump] = Future {
+  def download(dump: BgpAnnouncementSet)(implicit ec: ExecutionContext): Future[BgpAnnouncementSet] = Future {
     try {
       val get = new HttpGet(dump.url)
       dump.lastModified foreach { lastModified =>
@@ -75,9 +77,9 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
     }
   }
 
-  protected[preview] def makeResponseHandler(dump: BgpRisDump): ResponseHandler[BgpRisDump] = {
-    val responseHandler = new ResponseHandler[BgpRisDump]() {
-      override def handleResponse(response: HttpResponse): BgpRisDump = {
+  protected[preview] def makeResponseHandler(dump: BgpAnnouncementSet): ResponseHandler[BgpAnnouncementSet] = {
+    val responseHandler = new ResponseHandler[BgpAnnouncementSet]() {
+      override def handleResponse(response: HttpResponse): BgpAnnouncementSet = {
         response.getStatusLine.getStatusCode match {
           case SC_OK =>
             try {
@@ -88,7 +90,7 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
                 case Right(entries) =>
                   val modified = lastModified(response)
                   info("Retrieved " + entries.size + " entries from " + dump.url + ", last modified at " + modified.getOrElse("unknown"))
-                  dump.copy(lastModified = modified, entries = entries)
+                  dump.copy(lastModified = modified, entries = BgpRisDump.toAnnouncedRoutes(entries))
               }
             } catch {
               case exception: Exception =>

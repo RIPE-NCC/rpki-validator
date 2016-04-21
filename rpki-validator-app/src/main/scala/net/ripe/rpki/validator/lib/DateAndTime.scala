@@ -64,4 +64,11 @@ object DateAndTime {
   }
 
   def formatAsRFC2616(dateTime: DateTime) = dateTime.toDateTime(DateTimeZone.UTC).toString("EEE, dd MMM yyyy HH:mm:ss ZZZ")
+
+  def timed[T](f: => T) = {
+    val begin = System.currentTimeMillis()
+    val r = f
+    val end = System.currentTimeMillis()
+    (r, end - begin)
+  }
 }

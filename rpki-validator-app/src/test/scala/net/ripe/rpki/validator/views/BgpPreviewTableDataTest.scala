@@ -43,10 +43,10 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 class BgpPreviewTableDataTest extends ValidatorTestCase {
   import lib.NumberResourcesTest._
 
-  val validAnnouncement = BgpValidatedAnnouncement(BgpAnnouncement(65001, "10.0.0.0/24"), valids = Seq(RtrPrefix(65001, "10.0.0.0/24")), invalidsLength = Seq(RtrPrefix(65001, "10.0.0.0/16", Some(20))))
-  val invalidAsnAnnouncement = BgpValidatedAnnouncement(BgpAnnouncement(65002, "10.0.1.0/24"), invalidsAsn = Seq(RtrPrefix(65001, "10.0.1.0/24")))
-  val invalidLengthAnnouncement = BgpValidatedAnnouncement(BgpAnnouncement(65003, "10.0.2.0/24"), invalidsAsn = Seq(RtrPrefix(65001, "10.0.2.0/24")), invalidsLength = Seq(RtrPrefix(65003, "10.0.0.0/16", Some(20))))
-  val unknownAnnouncement = BgpValidatedAnnouncement(BgpAnnouncement(65004, "10.0.3.0/24"))
+  val validAnnouncement = BgpValidatedAnnouncement.make(BgpAnnouncement(65001, "10.0.0.0/24"), valids = Seq(RtrPrefix(65001, "10.0.0.0/24")), invalidsLength = Seq(RtrPrefix(65001, "10.0.0.0/16", Some(20))))
+  val invalidAsnAnnouncement = BgpValidatedAnnouncement.make(BgpAnnouncement(65002, "10.0.1.0/24"), invalidsAsn = Seq(RtrPrefix(65001, "10.0.1.0/24")))
+  val invalidLengthAnnouncement = BgpValidatedAnnouncement.make(BgpAnnouncement(65003, "10.0.2.0/24"), invalidsAsn = Seq(RtrPrefix(65001, "10.0.2.0/24")), invalidsLength = Seq(RtrPrefix(65003, "10.0.0.0/16", Some(20))))
+  val unknownAnnouncement = BgpValidatedAnnouncement.make(BgpAnnouncement(65004, "10.0.3.0/24"))
 
   val announcements = IndexedSeq(validAnnouncement, invalidAsnAnnouncement, invalidLengthAnnouncement, unknownAnnouncement)
 

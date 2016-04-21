@@ -47,7 +47,7 @@ class BgpRisDumpDownloaderTest extends ValidatorTestCase with BeforeAndAfterEach
 
   val mockHttpClient = mock[HttpClient]
   val http11Protocol = new ProtocolVersion("http", 1, 1)
-  val dump = BgpRisDump(url = "http://no.where/dump.4.gz")
+  val dump = BgpAnnouncementSet(url = "http://no.where/dump.4.gz")
   val BgpRisDumpDownloader = new BgpRisDumpDownloader(mockHttpClient)
 
   override def beforeEach() = {

@@ -37,13 +37,13 @@ import views.BgpPreviewTableData
 
 trait BgpPreviewController extends ApplicationController {
 
-  protected def bgpRisDumps: Seq[BgpRisDump]
+  protected def bgpAnnouncementSet: Seq[BgpAnnouncementSet]
   protected def validatedAnnouncements: IndexedSeq[BgpValidatedAnnouncement]
 
   private def baseUrl = views.Tabs.BgpPreviewTab.url
 
   get(baseUrl) {
-    new BgpPreviewView(bgpRisDumps, params.getOrElse("q", ""))
+    new BgpPreviewView(bgpAnnouncementSet, params.getOrElse("q", ""))
   }
 
   get("/bgp-preview-data") {

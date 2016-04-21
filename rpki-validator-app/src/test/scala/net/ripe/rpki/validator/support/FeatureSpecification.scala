@@ -51,7 +51,7 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with JunitLoggin
     override protected def whitelist = sys.error("TODO")
     override protected def addWhitelistEntry(entry: RtrPrefix) = sys.error("TODO")
     override protected def removeWhitelistEntry(entry: RtrPrefix) = sys.error("TODO")
-    override protected def bgpRisDumps = sys.error("TODO")
+    override protected def bgpAnnouncementSet = sys.error("TODO")
     override protected def validatedAnnouncements = sys.error("TODO")
     override protected def getRtrPrefixes = sys.error("TODO")
     override protected def sessionData = sys.error("TBD")
