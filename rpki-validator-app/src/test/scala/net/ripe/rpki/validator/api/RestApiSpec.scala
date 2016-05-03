@@ -42,7 +42,7 @@ class RestApiSpec extends FeatureSpecification {
       get("/api/not/found") {
         status should be(404)
         header("Set-Cookie") should be(null)
-        header("Content-Type") should be("text/json;charset=UTF-8")
+        header("Content-Type").toLowerCase() should be("text/json;charset=utf-8")
         body should be("""{
                          |  "message":"Unrecognized request URL (GET: /api/not/found})."
                          |}""".stripMargin)
