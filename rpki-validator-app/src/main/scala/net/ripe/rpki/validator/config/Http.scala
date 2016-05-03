@@ -88,8 +88,8 @@ trait Http { this: Logging =>
   }
 
   private val httpRequestConfig = RequestConfig.custom()
-    .setConnectTimeout(2 * 60 * 1000)
-    .setSocketTimeout(2 * 60 * 1000)
+    .setConnectTimeout(11 * 1000)
+    .setSocketTimeout(29 * 1000)
     .build()
 
   private val customSslContext = SSLContexts.custom()
