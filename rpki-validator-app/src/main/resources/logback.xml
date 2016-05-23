@@ -56,7 +56,7 @@
     <appender name="RTR_APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${RTR_LOG_FILE}</file>
         <encoder>
-            <pattern>%date\t%msg%n</pattern>
+            <pattern>%date %level \t%msg%n</pattern>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- daily rollover -->
@@ -73,7 +73,7 @@
         <appender-ref ref="RTR_APPENDER"/>
     </logger>
 
-    <root level="info">
+    <root level="INFO">
         <appender-ref ref="FILE" />
         <appender-ref ref="RTR_APPENDER" />
         <!--<appender-ref ref="CONSOLE" />-->
