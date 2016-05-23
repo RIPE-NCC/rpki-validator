@@ -91,6 +91,13 @@ if [[ -n $MODE ]]; then
    exit
 fi
 
+#Validate that rsync is available in the path and is executable
+if ! [ -x "$(command -v rsync)" ]; then
+  echo 'rsync not found. It is necessary to sync repositories.' >&2
+  exit 1
+fi
+
+
 # Determine config file location
 getopts ":c:" OPT_NAME
 CONFIG_FILE=${OPTARG:-conf/rpki-validator.conf}
