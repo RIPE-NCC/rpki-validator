@@ -46,7 +46,7 @@ class PduDecoder extends OneToOneDecoder {
 
     val decoded = Pdus.fromByteArray(buffer)
     // Hardcoded to "client" for now -> quick and dirty logging to have a usable test server
-    logger.info(RtrPduLogEntry(channel.getRemoteAddress, decoded, Client))
+    logger.debug(RtrPduLogEntry(channel.getRemoteAddress, decoded, Client))
 
     decoded
   }
@@ -66,14 +66,14 @@ class PduEncoder extends OneToOneEncoder {
         buffer.writeBytes(Pdus.encode(pdu))
 
         // Hardcoded to "server" for now -> only the server sends lists of pdus
-        logger.info(RtrPduLogEntry(channel.getRemoteAddress, Right(pdu), Server))
+        logger.debug(RtrPduLogEntry(channel.getRemoteAddress, Right(pdu), Server))
       }
       buffer
 
     case pdu: Pdu =>
       val buffer = ChannelBuffers.buffer(ByteOrder.BIG_ENDIAN, pdu.length)
       buffer.writeBytes(Pdus.encode(pdu))
-      logger.info(RtrPduLogEntry(channel.getRemoteAddress, Right(pdu), Server))
+      logger.debug(RtrPduLogEntry(channel.getRemoteAddress, Right(pdu), Server))
       buffer
 
     case bytes: Array[Byte] =>
