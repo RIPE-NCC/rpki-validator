@@ -29,7 +29,7 @@
  */
 package net.ripe.rpki.validator.lib
 
-import java.io.{OutputStream, IOException}
+import java.io.{IOException, OutputStream}
 
 import grizzled.slf4j.Logging
 
@@ -83,7 +83,7 @@ class LoggingOutputStream extends OutputStream with Logging {
     }
     val theBytes: Array[Byte] = new Array[Byte](count)
     System.arraycopy(buf, 0, theBytes, 0, count)
-    logger.error(new String(theBytes))
+    logger.warn(new String(theBytes))
     reset()
   }
 
