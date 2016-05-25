@@ -94,8 +94,8 @@ class ApplicationOptionsTest extends ValidatorTestCase {
     ApplicationOptions.rtrLogFileName should equal("log/rtr.log")
   }
 
-  test("Should use 3 hours as the default interval for validation") {
-    ApplicationOptions.validationInterval should equal(10.minutes)
+  test("Should use 11 minutes as the default interval for validation") {
+    ApplicationOptions.validationInterval should equal(11.minutes)
   }
 
   test("Should use data/rsync as the default directory for rsync-based repositories") {
@@ -103,7 +103,7 @@ class ApplicationOptionsTest extends ValidatorTestCase {
   }
 
   test("Should set interval between old object removals") {
-    ApplicationOptions.removeOldObjectTimeoutInHours should equal(7.days)
+    ApplicationOptions.removeOldObjectTimeoutInHours should equal(1.days)
   }
 
 }
