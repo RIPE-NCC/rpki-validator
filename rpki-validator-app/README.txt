@@ -27,12 +27,12 @@ Requirements
   
 = Oracle JDK 7 or 8
 
-  This software was developed and tested using Oracle JDK 7. This Java version should be
+  This software was developed and tested using Oracle JDK 8. This Java version should be
   available without restrictions for all major platforms, though it may not be included 
   in your distribution by default.
   
-  Oracle JDK 8 should also work. Please let us know if you should run into any issues
-  using this.
+  Oracle JDK 7, as well as OpenJDK 7 and 8 should also work. Please let us know if you
+  should run into any issues using this.
 
   You can check which version of Java you have by running:
 
@@ -49,11 +49,19 @@ Requirements
       
   $JAVA_HOME/bin/java
 
-= At least 1GB of free memory
+= At least 1.5 GB of free memory
 
-  For performance this tool keeps a lot of data in memory. This also helps multi-threading
-  allowing the tool to work faster by doing tasks in parallel.
+  For performance reasons this tool keeps a lot of data in memory and runs many tasks in
+  parallel.  The actual amount of memory used by the validator depends on the number of
+  enabled trust anchors, number of CPU cores, and on configured validation interval.  In
+  general, more CPU cores require more memory for validator, and vice versa.  
   
+  If the validator keeps crashing with "Out of memory" error, try to increase the amount
+  of memory allocated to it ("jvm.memory.maximum" parameter in the config file). If the
+  validator gets killed by the OOM killer, try to lower the amount of memory allocated to
+  it, or decrease the number of trust anchors (see below), or increase the validation
+  interval ("validation.interval" option in the config file).
+
   
 Manual Installation
 -------------------
@@ -285,14 +293,23 @@ regular expressions, check for the label in the span tag with the id "healthchec
    <span id="healthcheck-result">.*ALERT.*</span>
 
 
+RRDP Support
+------------
+
+This version of the validator supports the RPKI Repository Delta Protocol (RRDP), but by
+default validator will prefer rsync protocol.  You could change that by turning the
+"prefer.rrdp" option in the configuration file to "true".  Note that currently RRDP is in
+the draft state, and only the RIPE NCC repository publishes data using RRDP.  RRDP is
+described in https://tools.ietf.org/html/draft-ietf-sidr-delta-protocol.
+
 Known Issues
 ------------
 
 = The validator does not check for revocations or expiration times in between validation 
   runs
 
-= The validator does not support incremental updates as defined here, yet:
-  http://tools.ietf.org/html/rfc6810#section-6.2
+= In its RTR implementation, the validator does not support incremental updates as defined
+  here, yet: http://tools.ietf.org/html/rfc6810#section-6.2
   
   When the validator has any updates, it will respond with a cache-reset, as described 
   here: http://tools.ietf.org/html/rfc6810#section-6.3
@@ -300,6 +317,15 @@ Known Issues
 
 Version History
 ---------------
+
+2.22 - 25 May 2016
+= Multiple improvements in RRDP support
+= Multiple improvements in database and memory handling
+= Replaced log4j by logback; log configuration is now in logback.xml.
+= Added support multiple TALs for the same TA. This changed monitoring URLs for TALs.
+  If you were using TA monitoring feature, you have to update URLs for monitored trust
+  anchors.
+
 2.21 - 2 November 2015
 = Fixed a bug where a broken CRL made the validation process crash for the given TA
 = Added support for the RPKI Retrieval Delta Protocol, which uses HTTP instead of rsync 
