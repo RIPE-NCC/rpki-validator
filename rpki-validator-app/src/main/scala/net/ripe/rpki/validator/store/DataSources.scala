@@ -65,6 +65,22 @@ object DataSources {
   }
 
   private def migrate(dataSource: DataSource) {
+    // configure Flyway's logging with Slf4j
+    com.googlecode.flyway.core.util.logging.LogFactory.setLogCreator(
+      new com.googlecode.flyway.core.util.logging.LogCreator {
+        override def createLogger(clazz: Class[_]): com.googlecode.flyway.core.util.logging.Log =
+          new com.googlecode.flyway.core.util.logging.Log {
+            val slf4jLogger = org.slf4j.LoggerFactory.getLogger(clazz)
+
+            override def warn(message: String): Unit = slf4jLogger.warn(message)
+            override def error(message: String): Unit = slf4jLogger.error(message)
+            override def error(message: String, e: Exception): Unit = slf4jLogger.error(message, e)
+            override def debug(message: String): Unit = slf4jLogger.debug(message)
+            override def info(message: String): Unit = slf4jLogger.info(message)
+          }
+      }
+    )
+
     val flyway = new Flyway
     flyway.setDataSource(dataSource)
     flyway.setLocations("/db/objectstore/migration")
