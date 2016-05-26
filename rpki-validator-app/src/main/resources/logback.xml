@@ -53,6 +53,8 @@
         </rollingPolicy>
     </appender>
 
+    <!-- This appender is used by logers which are manually configured in RTR-related classes -->
+    <!-- It should not be included in the root logger -->
     <appender name="RTR_APPENDER" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${RTR_LOG_FILE}</file>
         <encoder>
@@ -75,7 +77,6 @@
 
     <root level="info">
         <appender-ref ref="FILE" />
-        <appender-ref ref="RTR_APPENDER" />
         <!--<appender-ref ref="CONSOLE" />-->
     </root>
 </configuration>
