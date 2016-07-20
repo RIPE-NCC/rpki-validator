@@ -32,6 +32,7 @@ package net.ripe.rpki.validator.store
 import java.io.File
 import java.net.URI
 import java.sql.{ResultSet, Timestamp}
+import java.util.concurrent.Executors
 import javax.sql.DataSource
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
@@ -43,6 +44,8 @@ import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 
 import scala.collection.JavaConversions._
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.existentials
 import scala.util.{Failure, Success, Try}
 
@@ -68,34 +71,40 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   override def storeCrl(crl: CrlObject) = storeRepoObject(crl, crlObjectType)
 
+  // run on separate thread pool to be sure there's always a thread to run DB operation
+  val executionContext = ExecutionContext.fromExecutorService(Executors.newSingleThreadExecutor())
+  def detached[T](block: => T) = Await.result(Future(block)(executionContext), 6.minutes)
+
   private def storeRepoObject[T <: CertificateRepositoryObject](obj: RepositoryObject[T], objType: String) =
     RepoService.locker.locked(obj.url) {
-      try {
-        val params = Map("aki" -> stringify(obj.aki),
-          "hash" -> stringify(obj.hash),
-          "url" -> obj.url,
-          "encoded" -> obj.encoded,
-          "object_type" -> objType)
+      detached {
+        try {
+          val params = Map("aki" -> stringify(obj.aki),
+            "hash" -> stringify(obj.hash),
+            "url" -> obj.url,
+            "encoded" -> obj.encoded,
+            "object_type" -> objType)
 
-        val found = template.queryForObject(
-          "SELECT COUNT(1) FROM repo_objects WHERE hash = :hash AND url = :url",
-          params, classOf[Integer])
+          val found = template.queryForObject(
+            "SELECT COUNT(1) FROM repo_objects WHERE hash = :hash AND url = :url",
+            params, classOf[Integer])
 
-        if (found == 0) {
-          template.update(
-            """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
+          if (found == 0) {
+            template.update(
+              """INSERT INTO repo_objects(aki, hash, url, encoded, object_type)
                VALUES(:aki, :hash, :url, :encoded, :object_type)""",
-            params)
+              params)
+          }
+        } catch {
+          case e: Exception =>
+            logger.error(s"An error occurred while inserting an object: " +
+              s"url = ${obj.url}, hash = ${stringify(obj.hash)}", e)
+            throw e
         }
-      } catch {
-        case e: Exception =>
-          logger.error(s"An error occurred while inserting an object: " +
-            s"url = ${obj.url}, hash = ${stringify(obj.hash)}", e)
-          throw e
       }
     }
 
-  override def getCertificates(url: String): Seq[CertificateObject] = {
+  override def getCertificates(url: String): Seq[CertificateObject] = detached {
     template.query(
       """SELECT url, encoded FROM repo_objects
          WHERE url = :url AND object_type = :object_type
@@ -113,16 +122,18 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   }
 
   private def getRepoObject[T](aki: Array[Byte], objType: String)(mapper: (String, Array[Byte], Option[Instant]) => T) =
-    template.query(
-      """SELECT url, encoded, validation_time
+    detached {
+      template.query(
+        """SELECT url, encoded, validation_time
         FROM repo_objects
         WHERE aki = :aki AND object_type = :object_type""",
-      Map("aki" -> stringify(aki), "object_type" -> objType),
-      new RowMapper[T] {
-        override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)))
-      }).toSeq
+        Map("aki" -> stringify(aki), "object_type" -> objType),
+        new RowMapper[T] {
+          override def mapRow(rs: ResultSet, i: Int) = mapper(rs.getString(1), rs.getBytes(2), instant(rs.getTimestamp(3)))
+        }).toSeq
+    }
 
-  override def getObjects(hash: String): Seq[RepositoryObject.ROType] = {
+  override def getObjects(hash: String): Seq[RepositoryObject.ROType] = detached {
     Try {
       template.query(
         """SELECT encoded, validation_time, object_type, url
@@ -149,33 +160,35 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
   }
 
-  def clear() = {
+  def clear() = detached {
     template.update(s"TRUNCATE TABLE repo_objects", Map.empty[String, Object])
   }
 
-  def clearObjects(baseTime: Instant) = {
-    val thresholdTime = baseTime.toDateTime.minusHours(deletionDelay).toInstant
-    val tt = timestamp(thresholdTime)
-    val i = template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt'", Map.empty[String, Object])
-    if (i != 0) info(s"Clear old objects -> deleted $i object(s) last time validated before $thresholdTime")
+  def clearObjects(baseTime: Instant) = detached {
+      val thresholdTime = baseTime.toDateTime.minusHours(deletionDelay).toInstant
+      val tt = timestamp(thresholdTime)
+      val i = template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt'", Map.empty[String, Object])
+      if (i != 0) info(s"Clear old objects -> deleted $i object(s) last time validated before $thresholdTime")
 
-    val hoursForBogusObjects: Int = 24
-    val bogusObjectsDeadline = baseTime.toDateTime.minusHours(hoursForBogusObjects).toInstant
-    val j = template.update(s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '${timestamp(bogusObjectsDeadline)}'", Map.empty[String, Object])
-    if (j != 0) info(s"Clear old objects -> deleted $j object(s) downloaded $hoursForBogusObjects hours before $baseTime and never validated")
+      val hoursForBogusObjects: Int = 24
+      val bogusObjectsDeadline = baseTime.toDateTime.minusHours(hoursForBogusObjects).toInstant
+      val j = template.update(
+        s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '${timestamp(bogusObjectsDeadline)}'",
+        Map.empty[String, Object])
+      if (j != 0) info(s"Clear old objects -> deleted $j object(s) downloaded $hoursForBogusObjects hours before $baseTime and never validated")
   }
 
-  override def delete(url: String, hash: String) = {
+  override def delete(url: String, hash: String) = detached {
     template.update(s"DELETE FROM repo_objects WHERE url = :url AND hash = :hash",
       Map("hash" -> hash, "url" -> url))
   }
 
-  override def delete(uri: URI) = {
+  override def delete(uri: URI) = detached {
     template.update(s"DELETE FROM repo_objects WHERE url = :url",
       Map("url" -> uri.toString))
   }
 
-  def updateValidationTimestamp(hashes: Iterable[Array[Byte]], t: Instant) = {
+  override def updateValidationTimestamp(hashes: Iterable[Array[Byte]], t: Instant) = {
     val tt = timestamp(t)
     // That has to be as fast as possible to prevent
     // other threads from being locked. That's why
@@ -186,7 +199,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     }
 
     if (sqls.nonEmpty) {
-      val counts = template.getJdbcOperations.batchUpdate(sqls.toArray)
+      val counts = detached(template.getJdbcOperations.batchUpdate(sqls.toArray))
       info(s"Updated validationTime for ${counts.sum} objects.")
     }
   }
