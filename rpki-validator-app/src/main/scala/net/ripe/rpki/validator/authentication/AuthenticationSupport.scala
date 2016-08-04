@@ -80,12 +80,10 @@ trait AuthenticationSupport extends ScentrySupport[User] with BasicAuthSupport[U
    * Prompts for basic authentication if the admin password env variable has been set.
    */
   def authenticatedAction(action: => Any) = {
-    if(ApplicationOptions.httpKioskEnabled) {
+    if (ApplicationOptions.httpKioskEnabled) {
       basicAuth()
-      action
-    } else {
-      action
     }
+    action
   }
 }
 
