@@ -274,8 +274,8 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
     tryTo(xmlUrl) {
       logger.info(s"Fetching $xmlUrl")
       val get = new HttpGet(xmlUrl.toString)
-      if (ifModifiedSince.isDefined) {
-        get.setHeader("If-Modified-Since", formatAsRFC2616(ifModifiedSince.get))
+      ifModifiedSince.foreach { t =>
+        get.setHeader("If-Modified-Since", formatAsRFC2616(t))
       }
       val response = http.execute(get)
       response.getStatusLine.getStatusCode match {
