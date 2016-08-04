@@ -72,12 +72,12 @@ import org.joda.time.DateTime
 import scala.math.BigInt
 import scala.xml.Elem
 
-object HttpFetcher {
+object RrdpFetcher {
 
   private val lastFetchTimes = collection.mutable.Map[URI, DateTime]()
 }
 
-class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
+class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
@@ -111,11 +111,11 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
   override def fetch(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
 
     val fetchTime = new DateTime()
-    val notificationXml: Either[Error, Option[Elem]] = getXmlIfModified(notificationUrl, HttpFetcher.lastFetchTimes.get(notificationUrl))
+    val notificationXml: Either[Error, Option[Elem]] = getXmlIfModified(notificationUrl, RrdpFetcher.lastFetchTimes.get(notificationUrl))
     notificationXml match {
       case Left(error) => Seq(error)
       case Right(Some(xml)) =>
-        HttpFetcher.lastFetchTimes.put(notificationUrl, fetchTime)
+        RrdpFetcher.lastFetchTimes.put(notificationUrl, fetchTime)
         processNotificationXml(notificationUrl, xml, fetcherListener)
       case Right(None) => Seq[Error]()
     }

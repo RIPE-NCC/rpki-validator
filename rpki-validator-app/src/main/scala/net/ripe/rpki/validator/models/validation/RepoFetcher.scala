@@ -230,7 +230,7 @@ class Fetchers(httpStore: HttpFetcherStore, config: FetcherConfig) {
   def fetcher(repoUri: URI): Fetcher = {
     val fetcher = repoUri.getScheme match {
       case "rsync" => new RsyncFetcher(config)
-      case "http" | "https" => new HttpFetcher(httpStore)
+      case "http" | "https" => new RrdpFetcher(httpStore)
       case _ => throw new Exception(s"No fetcher for the uri $repoUri")
     }
     fetcher

@@ -35,7 +35,7 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.scalatest.BeforeAndAfter
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class HttpFetcherStoreTest extends ValidatorTestCase with BeforeAndAfter {
+class RrdpFetcherStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
   val store = new HttpFetcherStore()
 

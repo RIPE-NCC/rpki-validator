@@ -48,7 +48,7 @@ import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
+class RrdpFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
 
   val store = new HttpFetcherStore()
 
@@ -64,7 +64,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
   }
 
   def createMockedFetcher(urls: String => String) = {
-    new HttpFetcher(store) with Http {
+    new RrdpFetcher(store) with Http {
       override def http = {
         val httpMock = mock[CloseableHttpClient]
         when(httpMock.execute(any[HttpGet])).thenAnswer(new Answer[CloseableHttpResponse]() {
@@ -84,7 +84,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     }
   }
 
-  def fetchRepo(fetcher: HttpFetcher, rootUrl: String) = {
+  def fetchRepo(fetcher: RrdpFetcher, rootUrl: String) = {
     var objects = List[RepositoryObject.ROType]()
     var withdraws = List[(URI, String)]()
 
@@ -101,7 +101,7 @@ class HttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     (objects.reverse, withdraws.reverse, errors)
   }
 
-  def fetchRepoUnsorted(fetcher: HttpFetcher, rootUrl: String) = {
+  def fetchRepoUnsorted(fetcher: RrdpFetcher, rootUrl: String) = {
     var units = List[String]()
 
     fetcher.fetch(new URI(rootUrl), new FetcherListener {
