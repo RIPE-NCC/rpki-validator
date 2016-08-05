@@ -31,13 +31,14 @@ package net.ripe.rpki.validator.models
 
 import java.net.URI
 
+import net.ripe.rpki.validator.fetchers.Fetcher.{ConnectionError, ParseError}
 import net.ripe.rpki.validator.models.validation.RepoFetcher
 import net.ripe.rpki.validator.store.RepoServiceStore
 import net.ripe.rpki.validator.support.{JunitLoggingSetup, ValidatorTestCase}
-import org.joda.time.{Instant, Duration}
+import org.joda.time.{Duration, Instant}
 import org.mockito.Mockito
 import org.mockito.internal.verification.VerificationModeFactory
-import org.scalatest.{Matchers, FunSuite, BeforeAndAfterEach, BeforeAndAfter}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterEach, FunSuite, Matchers}
 import org.scalatest.mock.MockitoSugar
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
@@ -51,7 +52,6 @@ class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach wit
 
   override def beforeEach() {
     Mockito.reset(fetcher1, fetcher2)
-
     RepoServiceStore.reset()
   }
 
@@ -118,4 +118,22 @@ class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach wit
     val minute: Duration = Duration.standardMinutes(2)
     repoService1.timeIsRecent(twoMinutesAgo, minute, Instant.now(), true) should be(false)
   }
+
+  test("should not update last fetch time in case of connection errors") {
+    val uri = new URI("http://foo.bar/bla")
+
+    Mockito.when(fetcher1.fetchRepo(uri)).thenReturn(Seq(ParseError(uri, "Cannot parse stuff")))
+
+    val firstInstant = Instant.now()
+    repoService1.visitRepo(false, firstInstant)(uri)
+    repoService1.lastFetchTime(uri) should be(firstInstant)
+
+    Mockito.when(fetcher1.fetchRepo(uri)).thenReturn(Seq(ConnectionError(uri, "Cannot parse stuff")))
+
+    val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
+    repoService1.visitRepo(true, secondInstant)(uri)
+    // the last fetch time should be still the first one
+    repoService1.lastFetchTime(uri) should be(firstInstant)
+  }
+
 }

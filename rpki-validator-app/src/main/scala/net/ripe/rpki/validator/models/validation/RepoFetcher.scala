@@ -153,10 +153,9 @@ object ManifestObject extends Parsing {
 
   def tryParse(url: String, bytes: Array[Byte]) = parseOrReturnBroken(url, bytes) {
     val parser = makeParser(url, bytes)
-    if (parser.isSuccess)
-      Right(ManifestObject(url, parser.getManifestCms))
-    else
-      Left(BrokenObject(url, bytes, formatFailures(parser.getValidationResult)))
+    Either.cond(parser.isSuccess,
+      ManifestObject(url, parser.getManifestCms),
+      BrokenObject(url, bytes, formatFailures(parser.getValidationResult)))
   }
 }
 
