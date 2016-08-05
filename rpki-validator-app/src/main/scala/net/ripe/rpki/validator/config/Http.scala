@@ -35,9 +35,12 @@ import java.security.cert.{CertificateFactory, X509Certificate}
 import javax.net.ssl.{TrustManagerFactory, X509TrustManager}
 
 import grizzled.slf4j.Logging
+import net.ripe.rpki.validator.lib.DateAndTime._
 import org.apache.http.client.config.RequestConfig
+import org.apache.http.client.methods.HttpGet
 import org.apache.http.conn.ssl.SSLContexts
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClientBuilder}
+import org.joda.time.DateTime
 
 import scala.util.{Failure, Success, Try}
 
@@ -54,8 +57,8 @@ trait Http { this: Logging =>
     tmf.getTrustManagers.filter(_.isInstanceOf[X509TrustManager]).flatMap(_.asInstanceOf[X509TrustManager].getAcceptedIssuers)
   }
 
-  systemTrustedCertificates.foreach(cert => putCertificateInKeyStore(cert))
-  loadCertificatesFromDir(trustedCertsLocation) foreach {
+  systemTrustedCertificates.foreach(putCertificateInKeyStore)
+  loadCertificatesFromDir(trustedCertsLocation).foreach {
     case Success(cert) => putCertificateInKeyStore(cert)
     case Failure(e) => logger.error(e)
   }
@@ -104,4 +107,24 @@ trait Http { this: Logging =>
     .build()
 
   def http = httpClient
+
+  private def fallBackToInsecureSsl[T](get: HttpGet) = try
+    http.execute(get)
+  catch {
+    // TODO Find the proper exception type for wrong SSL certificate
+    case e: Exception =>
+      // TODO Do something meaningful here
+      throw e;
+  }
+
+  def httpGet(url: String) = fallBackToInsecureSsl(new HttpGet(url))
+
+  def httpGetIfNotModified(url: String, ifModifiedSince: Option[DateTime]) = {
+    val get = new HttpGet(url)
+    ifModifiedSince.foreach { t =>
+      get.setHeader("If-Modified-Since", formatAsRFC2616(t))
+    }
+    fallBackToInsecureSsl(get)
+  }
+
 }

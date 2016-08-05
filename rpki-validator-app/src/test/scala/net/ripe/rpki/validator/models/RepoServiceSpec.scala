@@ -44,96 +44,94 @@ import org.scalatest.mock.MockitoSugar
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach with MockitoSugar  {
 
-  var fetcher1 = mock[RepoFetcher]
-  var fetcher2 = mock[RepoFetcher]
+  val fetcher = mock[RepoFetcher]
 
-  var repoService1 = new RepoService(fetcher1)
-  var repoService2 = new RepoService(fetcher2)
+  val repoService = new RepoService(fetcher)
 
   override def beforeEach() {
-    Mockito.reset(fetcher1, fetcher2)
+    Mockito.reset(fetcher)
     RepoServiceStore.reset()
   }
 
   test("should fetch if URI was never visited") {
     val uri = new URI("http://foo.bar/bla")
 
-    repoService1.visitRepo(false, Instant.now())(uri)
-    Mockito.verify(fetcher1).fetchRepo(uri)
+    repoService.visitRepo(false, Instant.now())(uri)
+    Mockito.verify(fetcher).fetchRepo(uri)
   }
 
   test("should NOT fetch if URI was just visited") {
     val uri = new URI("http://foo.bar/bla")
 
     val firstInstant = Instant.now()
-    repoService1.visitRepo(false, firstInstant)(uri)
+    repoService.visitRepo(false, firstInstant)(uri)
     val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
-    repoService1.visitRepo(false, secondInstant)(uri)
+    repoService.visitRepo(false, secondInstant)(uri)
 
-    Mockito.verify(fetcher1, VerificationModeFactory.times(1)).fetchRepo(uri)
+    Mockito.verify(fetcher, VerificationModeFactory.times(1)).fetchRepo(uri)
   }
 
   test("should fetch if URI was just visited but forceFetch is true") {
     val uri = new URI("http://foo.bar/bla")
 
     val firstInstant = Instant.now()
-    repoService1.visitRepo(false, firstInstant)(uri)
+    repoService.visitRepo(false, firstInstant)(uri)
     val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
-    repoService1.visitRepo(true, secondInstant)(uri)
+    repoService.visitRepo(true, secondInstant)(uri)
 
-    Mockito.verify(fetcher1, VerificationModeFactory.times(2)).fetchRepo(uri)
+    Mockito.verify(fetcher, VerificationModeFactory.times(2)).fetchRepo(uri)
   }
 
   test("should fetch object if URI was never visited") {
     val uri = new URI("http://foo.bar/bla.cer")
 
-    repoService1.visitTrustAnchorCertificate(uri, false, Instant.now())
+    repoService.visitTrustAnchorCertificate(uri, false, Instant.now())
 
-    Mockito.verify(fetcher1).fetchTrustAnchorCertificate(uri)
+    Mockito.verify(fetcher).fetchTrustAnchorCertificate(uri)
   }
 
   test("should not fetch object if URI was already visited") {
     val uri: URI = new URI("http://foo.bar/bla.cer")
 
-    repoService1.visitTrustAnchorCertificate(uri, false, Instant.now())
-    repoService1.visitTrustAnchorCertificate(uri, false, Instant.now())
+    repoService.visitTrustAnchorCertificate(uri, false, Instant.now())
+    repoService.visitTrustAnchorCertificate(uri, false, Instant.now())
 
-    Mockito.verify(fetcher1, Mockito.times(1)).fetchTrustAnchorCertificate(uri)
+    Mockito.verify(fetcher, Mockito.times(1)).fetchTrustAnchorCertificate(uri)
   }
 
   test("fetch time should be recent") {
     val minuteAgo: Instant = Instant.now().minus(Duration.standardMinutes(1))
     val twoMinutes: Duration = Duration.standardMinutes(2)
-    repoService1.timeIsRecent(minuteAgo, twoMinutes, Instant.now(), false) should be(true)
+    repoService.timeIsRecent(minuteAgo, twoMinutes, Instant.now(), false) should be(true)
   }
 
   test("fetch time should NOT be recent") {
     val twoMinutesAgo: Instant = Instant.now().minus(Duration.standardMinutes(2))
     val minute: Duration = Duration.standardMinutes(1)
-    repoService1.timeIsRecent(twoMinutesAgo, minute, Instant.now(), false) should be(false)
+    repoService.timeIsRecent(twoMinutesAgo, minute, Instant.now(), false) should be(false)
   }
 
   test("should ignore duration when forceFetch is true") {
     val twoMinutesAgo: Instant = Instant.now().minus(Duration.standardMinutes(1))
     val minute: Duration = Duration.standardMinutes(2)
-    repoService1.timeIsRecent(twoMinutesAgo, minute, Instant.now(), true) should be(false)
+    repoService.timeIsRecent(twoMinutesAgo, minute, Instant.now(), true) should be(false)
   }
 
   test("should not update last fetch time in case of connection errors") {
     val uri = new URI("http://foo.bar/bla")
 
-    Mockito.when(fetcher1.fetchRepo(uri)).thenReturn(Seq(ParseError(uri, "Cannot parse stuff")))
+    Mockito.when(fetcher.fetchRepo(uri)).thenReturn(Seq(ParseError(uri, "Cannot parse stuff")))
 
     val firstInstant = Instant.now()
-    repoService1.visitRepo(false, firstInstant)(uri)
-    repoService1.lastFetchTime(uri) should be(firstInstant)
+    repoService.visitRepo(false, firstInstant)(uri)
+    repoService.lastFetchTime(uri) should be(firstInstant)
 
-    Mockito.when(fetcher1.fetchRepo(uri)).thenReturn(Seq(ConnectionError(uri, "Cannot parse stuff")))
+    Mockito.when(fetcher.fetchRepo(uri)).thenReturn(Seq(ConnectionError(uri, "Cannot parse stuff")))
 
     val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
-    repoService1.visitRepo(true, secondInstant)(uri)
+    repoService.visitRepo(true, secondInstant)(uri)
     // the last fetch time should be still the first one
-    repoService1.lastFetchTime(uri) should be(firstInstant)
+    repoService.lastFetchTime(uri) should be(firstInstant)
   }
 
 }

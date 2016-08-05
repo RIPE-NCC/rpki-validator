@@ -274,11 +274,7 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
   def getXmlIfModified(xmlUrl: URI, ifModifiedSince: Option[DateTime]): Either[Error, Option[Elem]] =
     tryTo(xmlUrl)(connectionE) {
       logger.info(s"Fetching $xmlUrl")
-      val get = new HttpGet(xmlUrl.toString)
-      ifModifiedSince.foreach { t =>
-        get.setHeader("If-Modified-Since", formatAsRFC2616(t))
-      }
-      http.execute(get)
+      httpGetIfNotModified(xmlUrl.toString, ifModifiedSince)
     } >>= { response =>
       tryTo(xmlUrl)(parseE) {
         response.getStatusLine.getStatusCode match {
@@ -296,7 +292,7 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
   def getXml(xmlUrl: URI): Either[Error, Elem] =
     tryTo(xmlUrl)(connectionE) {
       logger.info(s"Fetching $xmlUrl")
-      http.execute(new HttpGet(xmlUrl.toString))
+      httpGet(xmlUrl.toString)
     } >>= { response =>
       tryTo(xmlUrl)(parseE) {
         response.getStatusLine.getStatusCode match {

@@ -61,7 +61,7 @@ class HttpTest extends ValidatorTestCase with JunitLoggingSetup with BeforeAndAf
   test("Should connect to http server") {
     HttpServer.httpPort
 
-    val response: CloseableHttpResponse = subject.http.execute(new HttpGet(s"http://localhost:${HttpServer.httpPort}"))
+    val response: CloseableHttpResponse = subject.httpGet(s"http://localhost:${HttpServer.httpPort}")
     Try {
       response.getStatusLine.getStatusCode
     } should be a 'Success
@@ -70,7 +70,7 @@ class HttpTest extends ValidatorTestCase with JunitLoggingSetup with BeforeAndAf
   }
 
   test("Should connect to https server") {
-    val response: CloseableHttpResponse = subject.http.execute(new HttpGet(s"https://localhost:${HttpServer.httpsPort}"))
+    val response: CloseableHttpResponse = subject.httpGet(s"https://localhost:${HttpServer.httpsPort}")
     Try {
       response.getStatusLine.getStatusCode
     } should be a 'Success

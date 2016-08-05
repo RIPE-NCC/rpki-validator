@@ -43,7 +43,7 @@ class SingleObjectHttpFetcher(store: HttpFetcherStore) extends Fetcher with Http
 
   def fetch(uri: URI, process: FetcherListener): Seq[Fetcher.Error] = {
     tryTo(uri)(connectionE) {
-      val response = http.execute(new HttpGet(uri.toString))
+      val response = httpGet(uri.toString)
       response.getStatusLine.getStatusCode match {
         case HttpStatus.SC_OK =>
           IOUtils.toByteArray(response.getEntity.getContent)
