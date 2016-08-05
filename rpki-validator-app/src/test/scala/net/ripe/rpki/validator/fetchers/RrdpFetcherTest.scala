@@ -168,7 +168,7 @@ class RrdpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     objects should have size 0
     withdraws should have size 0
 
-    errors.head should be(Fetcher.Error(URI.create("http://repo.net/repo/notification.xml"), "Local serial 2 is larger then repository serial 1"))
+    errors.head should be(Fetcher.ParseError(URI.create("http://repo.net/repo/notification.xml"), "Local serial 2 is larger then repository serial 1"))
 
     val serial = store.getSerial(URI.create("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
     serial should be(Some(BigInt(2)))
@@ -254,7 +254,7 @@ class RrdpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     objects should have size 0
     withdraws should have size 0
     errors should have size 1
-    errors.head should be (Fetcher.Error(URI.create("http://repo.net/repo/notification.xml"),
+    errors.head should be (Fetcher.ParseError(URI.create("http://repo.net/repo/notification.xml"),
       "The element type \"notification\" must be terminated by the matching end-tag \"</notification>\"."))
 
     val serial = store.getSerial(URI.create("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
@@ -274,7 +274,7 @@ class RrdpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     objects should have size 0
     withdraws should have size 0
     errors should have size 1
-    errors.head should be (Fetcher.Error(URI.create("http://repo.net/repo/snapshot.xml"), "Couldn't download snapshot"))
+    errors.head should be (Fetcher.ConnectionError(URI.create("http://repo.net/repo/snapshot.xml"), "Couldn't download snapshot"))
 
     val serial = store.getSerial(URI.create("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
     serial should be(Some(BigInt(1)))
@@ -294,7 +294,7 @@ class RrdpFetcherTest extends ValidatorTestCase with BeforeAndAfter with Mockito
     objects should have size 0
     withdraws should have size 0
     errors should have size 1
-    errors.head should be (Fetcher.Error(URI.create("http://repo.net/repo/delta2.xml"), "Couldn't download delta2"))
+    errors.head should be (Fetcher.ConnectionError(URI.create("http://repo.net/repo/delta2.xml"), "Couldn't download delta2"))
 
     val serial = store.getSerial(URI.create("http://repo.net/repo/notification.xml"), "9df4b597-af9e-4dca-bdda-719cce2c4e28")
     serial should be(Some(BigInt(1)))

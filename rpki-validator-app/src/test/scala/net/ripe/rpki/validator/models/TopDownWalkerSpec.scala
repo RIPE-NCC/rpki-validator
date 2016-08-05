@@ -309,7 +309,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val uri = new URI("http://some.uri")
     val message = "Some message"
 
-    val errors = Seq[Fetcher.Error](new Fetcher.Error(uri, message))
+    val errors = Seq[Fetcher.Error](Fetcher.ParseError(uri, message))
     val subject = TopDownWalker.create(taContext, storage, createRepoService(storage, errors), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
     val result = subject.execute(false)

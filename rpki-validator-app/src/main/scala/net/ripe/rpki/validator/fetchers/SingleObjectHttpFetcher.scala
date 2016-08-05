@@ -42,7 +42,7 @@ class SingleObjectHttpFetcher(store: HttpFetcherStore) extends Fetcher with Http
   override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
 
   def fetch(uri: URI, process: FetcherListener): Seq[Fetcher.Error] = {
-    tryTo(uri) {
+    tryTo(uri)(connectionE) {
       val response = http.execute(new HttpGet(uri.toString))
       response.getStatusLine.getStatusCode match {
         case HttpStatus.SC_OK =>

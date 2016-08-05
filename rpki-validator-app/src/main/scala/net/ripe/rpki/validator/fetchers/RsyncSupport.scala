@@ -34,7 +34,7 @@ import java.net.URI
 import java.nio.file.Files
 
 import net.ripe.rpki.commons.rsync.Rsync
-import net.ripe.rpki.validator.fetchers.Fetcher.Error
+import net.ripe.rpki.validator.fetchers.Fetcher.{ConnectionError, Error}
 
 import scala.collection.JavaConversions._
 
@@ -50,14 +50,14 @@ trait RsyncSupport {
     try {
       r.execute match {
         case 0 => None
-        case code => Some(Error(url, s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}"""))
+        case code => Some(ConnectionError(url, s"""Returned code: $code, stderr: ${r.getErrorLines.mkString("\n")}"""))
       }
     } catch {
-      case e: Exception => Some(Error(url, s"""Failed with exception, ${e.getMessage}"""))
+      case e: Exception => Some(ConnectionError(url, s"""Failed with exception, ${e.getMessage}"""))
     }
   }
 
-  def readFile(f: File) = tryTo(new URI(f.getAbsolutePath)) {
+  def readFile(f: File) = tryTo(new URI(f.getAbsolutePath))(processingE) {
     Files.readAllBytes(f.toPath)
   }
 
