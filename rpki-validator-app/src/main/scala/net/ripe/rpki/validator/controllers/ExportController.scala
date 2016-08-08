@@ -47,7 +47,7 @@ trait ExportController extends ApplicationController {
   }
 
   get("/export.csv") {
-    val Header = "ASN,IP Prefix,Max Length, Trust Anchor\n"
+    val Header = "ASN,IP Prefix,Max Length,Trust Anchor\n"
     val RowFormat = "%s,%s,%s,%s\n"
 
     contentType = "text/csv"
