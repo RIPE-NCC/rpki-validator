@@ -72,7 +72,7 @@ trait ExportController extends ApplicationController {
         ("prefix" -> rtr.prefix.toString) ~
         ("maxLength" -> rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
     )
-    response.getWriter.write(compact(render(("roas" -> roas))))
+    response.getWriter.write(compact(render("roas" -> roas)))
   }
 
   get("/export.rpsl") {
