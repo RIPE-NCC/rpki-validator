@@ -63,10 +63,10 @@ class ExportControllerTest extends ControllerTestCase {
     get("/export.csv") {
 
       val expectedResponse =
-        """ASN,IP Prefix,Max Length
-          |AS6500,10.0.0.0/8,8
-          |AS6501,10.0.0.0/16,18
-          |AS6502,2001:43e8::/32,32
+        """ASN,IP Prefix,Max Length,Trust Anchor
+          |AS6500,10.0.0.0/8,8,Ca Name
+          |AS6501,10.0.0.0/16,18,unknown
+          |AS6502,2001:43e8::/32,32,Ca Name
           |""".stripMargin
 
       status should equal(200)
@@ -81,7 +81,7 @@ class ExportControllerTest extends ControllerTestCase {
   test("Should export JSON with max lengths filled out") {
     get("/export.json") {
       status should equal(200)
-      body should equal( """{"roas":[{"asn":"AS6500","prefix":"10.0.0.0/8","maxLength":8},{"asn":"AS6501","prefix":"10.0.0.0/16","maxLength":18},{"asn":"AS6502","prefix":"2001:43e8::/32","maxLength":32}]}""")
+      body should equal("""{"roas":[{"asn":"AS6500","prefix":"10.0.0.0/8","maxLength":8,"trustAnchor":"Ca Name"},{"asn":"AS6501","prefix":"10.0.0.0/16","maxLength":18,"trustAnchor":"unknown"},{"asn":"AS6502","prefix":"2001:43e8::/32","maxLength":32,"trustAnchor":"Ca Name"}]}""")
       header("Content-Type").toLowerCase() should startWith("text/json")
       header("Content-Type").toLowerCase() should endWith("charset=utf-8")
       header("Pragma") should equal("public")
