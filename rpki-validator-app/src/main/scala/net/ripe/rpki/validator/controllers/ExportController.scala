@@ -47,15 +47,15 @@ trait ExportController extends ApplicationController {
   }
 
   get("/export.csv") {
-    val Header = "ASN,IP Prefix,Max Length\n"
-    val RowFormat = "%s,%s,%s\n"
+    val Header = "ASN,IP Prefix,Max Length, Trust Anchor\n"
+    val RowFormat = "%s,%s,%s,%s\n"
 
     contentType = "text/csv"
     response.addHeader("Pragma", "public")
     response.addHeader("Cache-Control", "no-cache")
 
     val roas = getRtrPrefixes.map(rtr => {
-      RowFormat.format(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
+      RowFormat.format(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength), rtr.getCaName)
     })
     response.getWriter.write(Header + roas.mkString)
   }
@@ -70,7 +70,8 @@ trait ExportController extends ApplicationController {
     val roas = getRtrPrefixes.map(rtr =>
       ("asn" -> rtr.asn.toString) ~
         ("prefix" -> rtr.prefix.toString) ~
-        ("maxLength" -> rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength))
+        ("maxLength" -> rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength)) ~
+        ("trustAnchor" -> rtr.getCaName)
     )
     response.getWriter.write(compact(render(("roas" -> roas))))
   }
