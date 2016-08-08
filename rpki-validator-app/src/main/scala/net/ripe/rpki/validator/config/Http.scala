@@ -30,16 +30,20 @@
 package net.ripe.rpki.validator.config
 
 import java.io.{BufferedInputStream, File, FileInputStream}
+import java.net.URI
 import java.security.KeyStore
 import java.security.cert.{CertificateFactory, X509Certificate}
-import javax.net.ssl.{TrustManagerFactory, X509TrustManager}
+import javax.net.ssl.{SSLException, TrustManagerFactory, X509TrustManager}
 
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.lib.DateAndTime._
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.HttpGet
-import org.apache.http.conn.ssl.SSLContexts
+import org.apache.http.config.Registry
+import org.apache.http.conn.scheme.{Scheme, SchemeRegistry}
+import org.apache.http.conn.ssl.{SSLConnectionSocketFactory, SSLContexts, SSLSocketFactory, TrustStrategy}
 import org.apache.http.impl.client.{CloseableHttpClient, HttpClientBuilder}
+import org.apache.http.impl.conn.PoolingClientConnectionManager
 import org.joda.time.DateTime
 
 import scala.util.{Failure, Success, Try}
@@ -100,21 +104,54 @@ trait Http { this: Logging =>
     .loadTrustMaterial(customKeyStore)
     .build()
 
-  private val httpClient: CloseableHttpClient = HttpClientBuilder.create()
+  private val httpClient = HttpClientBuilder.create()
     .useSystemProperties()
     .setDefaultRequestConfig(httpRequestConfig)
     .setSslcontext(customSslContext)
     .build()
 
+  private lazy val wrongSslHttp = {
+    val acceptingTrustStrategy = new TrustStrategy() {
+      override def isTrusted(chain: Array[X509Certificate], authType: String) = true
+    }
+
+    val sslConext = SSLContexts.custom()
+      .useTLS()
+      .loadTrustMaterial(customKeyStore, acceptingTrustStrategy)
+      .build()
+
+    val socketFactory = new SSLConnectionSocketFactory(sslConext,
+      SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
+
+    HttpClientBuilder.create()
+      .setSSLSocketFactory(socketFactory)
+      .build()
+  }
+
   def http = httpClient
 
-  private def fallBackToInsecureSsl[T](get: HttpGet) = try
-    http.execute(get)
-  catch {
-    // TODO Find the proper exception type for wrong SSL certificate
-    case e: Exception =>
-      // TODO Do something meaningful here
-      throw e;
+  private var invalidSslHosts = Set[String]()
+
+  private def fallBackToInsecureSsl[T](get: HttpGet) = {
+    val url = get.getURI
+    if (url.getScheme == "https") {
+      if (invalidSslHosts.contains(url.getHost)) {
+        wrongSslHttp.execute(get)
+      } else {
+        try {
+          http.execute(get)
+        } catch {
+          case e: SSLException =>
+            logger.warn("Could not establish SSL connection while retrieving " + url)
+            url.synchronized {
+              invalidSslHosts = invalidSslHosts + url.getHost
+            }
+            wrongSslHttp.execute(get)
+        }
+      }
+    } else {
+      http.execute(get)
+    }
   }
 
   def httpGet(url: String) = fallBackToInsecureSsl(new HttpGet(url))
