@@ -29,7 +29,7 @@
  */
 package net.ripe.rpki.validator.config
 
-import java.io.{BufferedInputStream, File, FileInputStream}
+import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
 import java.net.URI
 import java.security.KeyStore
 import java.security.cert.{CertificateFactory, X509Certificate}
@@ -116,9 +116,12 @@ trait Http { this: Logging =>
       override def isTrusted(chain: Array[X509Certificate], authType: String) = true
     }
 
+    val emptyKeyStore = KeyStore.getInstance(KeyStore.getDefaultType)
+    emptyKeyStore.load(null.asInstanceOf[InputStream], "".toCharArray)
+
     val sslConext = SSLContexts.custom()
       .useTLS()
-      .loadTrustMaterial(customKeyStore, acceptingTrustStrategy)
+      .loadTrustMaterial(emptyKeyStore, acceptingTrustStrategy)
       .build()
 
     val socketFactory = new SSLConnectionSocketFactory(sslConext,
@@ -143,7 +146,7 @@ trait Http { this: Logging =>
           http.execute(get)
         } catch {
           case e: SSLException =>
-            logger.warn("Could not establish SSL connection while retrieving " + url)
+            logger.error(s"Could not establish SSL connection while retrieving $url, trying to establish SSL connection without certificate check.", e)
             url.synchronized {
               invalidSslHosts = invalidSslHosts + url.getHost
             }
