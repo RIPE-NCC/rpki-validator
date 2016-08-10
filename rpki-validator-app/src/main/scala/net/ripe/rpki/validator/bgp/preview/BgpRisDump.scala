@@ -39,6 +39,8 @@ import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.lib.DateAndTime
 import org.joda.time.DateTime
 
+import scala.util.control.NonFatal
+
 case class BgpRisEntry(origin: Asn, prefix: IpRange, visibility: Int)
 case class BgpRisDump(url: String, lastModified: Option[DateTime] = None, entries: Seq[BgpRisEntry] = Nil)
 
@@ -76,9 +78,9 @@ object BgpRisDump extends Logging {
     content match {
       case BgpEntryRegex(asn, ipprefix, visibility) =>
         try {
-          Some(new BgpRisEntry(origin = Asn.parse(asn), prefix = IpRange.parse(ipprefix), visibility = Integer.parseInt(visibility)))
+          Some(BgpRisEntry(origin = Asn.parse(asn), prefix = IpRange.parse(ipprefix), visibility = Integer.parseInt(visibility)))
         } catch {
-          case e: Throwable =>
+          case NonFatal(e) =>
             error("Skipping unparseble line: " + content)
             debug("Detailed error: ", e)
             None

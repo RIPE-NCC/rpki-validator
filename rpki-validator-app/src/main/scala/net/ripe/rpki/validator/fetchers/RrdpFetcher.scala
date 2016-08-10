@@ -71,6 +71,7 @@ import org.joda.time.DateTime
 
 import scala.collection.immutable.Seq
 import scala.math.BigInt
+import scala.util.control.NonFatal
 import scala.xml.Elem
 
 object RrdpFetcher {
@@ -212,9 +213,7 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       sum >>= { (deltas: Seq[DeltaUnit]) =>
         result.map(deltas ++ _)
       }
-    } >>= { seq =>
-      Right((seq, serial))
-    }
+    }.right.map((_, serial))
   }
 
   private def parseSnapshotDef(notificationUrl: URI)(xml: Elem): Either[Error, SnapshotDef] =
@@ -228,14 +227,14 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       Right(NotificationDef((xml \ "@session_id").text, BigInt((xml \ "@serial").text)))
     } catch {
       case e: NumberFormatException => Left(ParseError(notificationUrl, "Couldn't parse serial number"))
-      case e: Throwable => Left(ParseError(notificationUrl, s"Error: ${e.getMessage}"))
+      case NonFatal(e) => Left(ParseError(notificationUrl, s"Error: ${e.getMessage}"))
     }
 
   private def parseDeltaDefs(notificationUrl: URI)(xml: Elem): Either[Error, Seq[DeltaDef]] =
     try {
       Right((xml \ "delta").map(d => DeltaDef(BigInt((d \ "@serial").text), new URI((d \ "@uri").text), (d \ "@hash").text)))
     } catch {
-      case e: Exception => Left(ParseError(notificationUrl, s"Couldn't parse delta definitions: ${e.getMessage}"))
+      case NonFatal(e) => Left(ParseError(notificationUrl, s"Couldn't parse delta definitions: ${e.getMessage}"))
     }
 
   private def validateDeltaDefs(uri: URI, lastLocalSerial: BigInt, notificationSerial: BigInt)(deltaDefs: Seq[DeltaDef]) = {

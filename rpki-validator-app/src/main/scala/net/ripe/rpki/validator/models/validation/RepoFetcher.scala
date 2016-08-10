@@ -47,6 +47,8 @@ import org.scalatra.Locked
 
 import scala.collection.JavaConversions._
 import scala.language.existentials
+import scala.util.Try
+import scala.util.control.NonFatal
 
 
 trait Hashing {
@@ -56,11 +58,9 @@ trait Hashing {
     _.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
   }.getOrElse("")
 
-  def parseBytes(hex: String): Option[Array[Byte]] = try {
-    Some(hex.sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte))
-  } catch {
-    case _: Throwable => None
-  }
+  def parseBytes(hex: String): Option[Array[Byte]] = Try {
+    hex.sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte)
+  }.toOption
 
   def equals(hashA: Array[Byte], hashB: Array[Byte]): Boolean = { hashA.deep == hashB.deep }
 }

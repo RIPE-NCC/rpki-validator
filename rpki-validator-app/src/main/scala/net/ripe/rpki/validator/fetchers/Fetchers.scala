@@ -33,6 +33,8 @@ import java.net.URI
 
 import net.ripe.rpki.validator.models.validation._
 
+import scala.util.control.NonFatal
+
 case class FetcherConfig(rsyncDir: String = "")
 
 trait FetcherListener {
@@ -89,7 +91,7 @@ trait Fetcher extends Hashing {
     try {
       Right(f)
     } catch {
-      case e: Throwable => Left(err(uri, e.getMessage))
+      case NonFatal(e) => Left(err(uri, e.getMessage))
     }
 }
 
