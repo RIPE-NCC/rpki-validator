@@ -46,6 +46,7 @@ import org.apache.http.impl.client.{CloseableHttpClient, HttpClientBuilder}
 import org.apache.http.impl.conn.PoolingClientConnectionManager
 import org.joda.time.DateTime
 
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 trait Http { this: Logging =>
@@ -147,6 +148,9 @@ trait Http { this: Logging =>
               invalidSslHosts = invalidSslHosts + url.getHost
             }
             wrongSslHttp.execute(get)
+          case NonFatal(e) =>
+            logger.error("Something bad happened while retrieving " + url)
+            throw e
         }
       }
     } else {
