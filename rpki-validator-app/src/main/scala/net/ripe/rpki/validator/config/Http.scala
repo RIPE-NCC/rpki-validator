@@ -30,7 +30,6 @@
 package net.ripe.rpki.validator.config
 
 import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
-import java.net.URI
 import java.security.KeyStore
 import java.security.cert.{CertificateFactory, X509Certificate}
 import javax.net.ssl.{SSLException, TrustManagerFactory, X509TrustManager}
@@ -39,11 +38,8 @@ import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.lib.DateAndTime._
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.HttpGet
-import org.apache.http.config.Registry
-import org.apache.http.conn.scheme.{Scheme, SchemeRegistry}
-import org.apache.http.conn.ssl.{SSLConnectionSocketFactory, SSLContexts, SSLSocketFactory, TrustStrategy}
-import org.apache.http.impl.client.{CloseableHttpClient, HttpClientBuilder}
-import org.apache.http.impl.conn.PoolingClientConnectionManager
+import org.apache.http.conn.ssl.{SSLConnectionSocketFactory, SSLContexts, TrustStrategy}
+import org.apache.http.impl.client.HttpClientBuilder
 import org.joda.time.DateTime
 
 import scala.util.control.NonFatal
