@@ -40,7 +40,9 @@ case class Filters(entries: Set[IgnoreFilter] = Set.empty) {
   def addFilter(filter: IgnoreFilter) = copy(entries + filter)
   def removeFilter(filter: IgnoreFilter) = copy(entries - filter)
 
-  def filter(input: Iterable[RtrPrefix]): Iterable[RtrPrefix] = input.filterNot(shouldIgnore)
+  def filter(input: Iterable[RtrPrefix]): Iterable[RtrPrefix] =
+    if (entries.isEmpty) input
+    else input.filterNot(shouldIgnore)
 
   private def shouldIgnore(rtrPrefix: RtrPrefix) = entries.exists(_.shouldIgnore(rtrPrefix)) 
 }
