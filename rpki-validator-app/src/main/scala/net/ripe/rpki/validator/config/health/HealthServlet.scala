@@ -57,6 +57,6 @@ class HealthServlet extends HttpServlet {
     else if (statuses.exists(_._2.code == Code.WARNING))
       setProperResponse(Code.WARNING, 299)
 
-    resp.getWriter.write(compact(render(decompose(statuses))))
+    resp.getWriter.write(compactRender(decompose(statuses)))
   }
 }

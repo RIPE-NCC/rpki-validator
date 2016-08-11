@@ -38,7 +38,7 @@ import org.jboss.netty.handler.timeout.ReadTimeoutException
 
 class RtrSessionHandler[T] (remoteAddress: T,
                         getCurrentCacheSerial: () => Int,
-                        getCurrentRtrPrefixes: () => Set[RtrPrefix],
+                        getCurrentRtrPrefixes: () => Seq[RtrPrefix],
                         getCurrentSessionId: () => Pdu.SessionId,
                         hasTrustAnchorsEnabled: () => Boolean) {
 

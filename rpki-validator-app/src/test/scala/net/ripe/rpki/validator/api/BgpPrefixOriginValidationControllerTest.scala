@@ -51,7 +51,7 @@ class BgpPrefixOriginValidationControllerTest extends ValidatorTestCase with Sca
   implicit def TupleToRtrPrefix(x: (Int, String, Int)): RtrPrefix = RtrPrefix(x._1, x._2, Some(x._3))
 
   private val controller = new ScalatraFilter with BgpPrefixOriginValidationController {
-    protected def getVrpObjects: Set[RtrPrefix] = testVrpObjects
+    protected def getVrpObjects = testVrpObjects.toSeq
   }
   addFilter(controller, "/*")
 

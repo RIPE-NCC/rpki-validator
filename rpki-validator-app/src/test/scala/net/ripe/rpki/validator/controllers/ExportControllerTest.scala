@@ -54,9 +54,7 @@ class ExportControllerTest extends ControllerTestCase {
   val TEST_PREFIXES = Set[RtrPrefix](PREFIX1, PREFIX2, PREFIX3)
 
   override def controller = new ControllerFilter with ExportController {
-    override def getRtrPrefixes: Set[RtrPrefix] = {
-      TEST_PREFIXES
-    }
+    override def getRtrPrefixes: Seq[RtrPrefix] = TEST_PREFIXES.toSeq
   }
 
   test("Should make CSV with max lengths filled out") {
