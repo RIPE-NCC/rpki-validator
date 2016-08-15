@@ -139,13 +139,13 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       crlList.map(validatedObject(checkMap)) ++
       Seq(("mft", manifest)).map(validatedObject(checkMap)) ++
       skippedObjects ++
-      validatedCerts.filter(_.valid).map(_.cert).par.flatMap(stepDown(manifest, forceNewFetch))
+      validatedCerts.withFilter(_.valid).map(_.cert).par.flatMap(stepDown(manifest, forceNewFetch))
 
     everythingValidated
   }
 
   private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
-    val hashes = validatedObjectMap.values.filter(_.hash.isDefined).map(o => (o.uri, o.hash.get))
+    val hashes = validatedObjectMap.values.withFilter(_.hash.isDefined).map(o => (o.uri, o.hash.get))
     val uriMap: Map[URI, Iterable[(URI, Array[Byte])]] = hashes.groupBy(_._1)
 
     val hashesOnly = hashes.map(_._2)

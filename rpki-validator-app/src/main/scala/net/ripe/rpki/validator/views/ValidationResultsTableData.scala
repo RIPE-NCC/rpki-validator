@@ -34,7 +34,7 @@ import java.net.URI
 import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.validation.{ ValidationStatus, ValidationMessage, ValidationCheck }
 
-abstract class ValidationResultsTableData(records: IndexedSeq[ValidatedObjectResult]) extends DataTableJsonView[ValidatedObjectResult] with Logging {
+abstract class ValidationResultsTableData(records: Seq[ValidatedObjectResult]) extends DataTableJsonView[ValidatedObjectResult] with Logging {
 
   override def getAllRecords() = records
 
@@ -65,7 +65,7 @@ abstract class ValidationResultsTableData(records: IndexedSeq[ValidatedObjectRes
 
 }
 
-abstract class FetchResultsTableData(records: IndexedSeq[ValidatedObjectResult]) extends ValidationResultsTableData(records){
+abstract class FetchResultsTableData(records: Seq[ValidatedObjectResult]) extends ValidationResultsTableData(records){
   override def getValuesForRecord(record: ValidatedObjectResult) = {
     List(record.subjectChain.toString, record.messages)
   }
@@ -81,5 +81,5 @@ abstract class FetchResultsTableData(records: IndexedSeq[ValidatedObjectResult])
 }
 
 case class ValidatedObjectResult(trustAnchorName: String, subjectChain: String, validationStatus: ValidationStatus, checks: Set[ValidationCheck]) {
-  lazy val messages = checks.map(ValidationMessage.getMessage(_)).mkString("<br/>\n")
+  lazy val messages = checks.map(ValidationMessage.getMessage).mkString("<br/>\n")
 }

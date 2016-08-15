@@ -66,21 +66,13 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
     response.addHeader("Cache-Control", "no-cache")
 
     val Header = "URI, Object Validity, Check, Check Validity\n"
-    val RowFormat = "\"%s\",%s,%s,%s\n"
-
     val writer = response.getWriter
     writer.print(Header)
 
     val records = getValidationDetails
 
-    records.foreach {
-      record =>
-        writer.print(RowFormat.format(
-          record.subjectChain,
-          record.isValid,
-          record.check.getKey,
-          record.check.isOk
-        ))
+    records.foreach { r =>
+      writer.print(s""""${r.subjectChain}",${r.isValid},${r.check.getKey},${r.check.isOk}\n""")
     }
   }
 
@@ -89,8 +81,11 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
       (trustAnchorLocator, taValidation) <- validatedObjects.all.par
       validatedObject <- taValidation.validatedObjects.filterNot(_.validationStatus == ValidationStatus.PASSED)
     } yield {
-        ValidatedObjectResult(trustAnchorLocator.getCaName, validatedObject.subjectChain, validatedObject.validationStatus, validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
-      }
+      ValidatedObjectResult(trustAnchorLocator.getCaName,
+        validatedObject.subjectChain,
+        validatedObject.validationStatus,
+        validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
+    }
     records.seq.toIndexedSeq
   }
 
@@ -101,8 +96,8 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
       validatedObject <- taValidation.validatedObjects
       check <- if (validatedObject.checks.isEmpty) Seq(AllChecksPassed) else validatedObject.checks
     } yield {
-        ValidatedObjectDetail(validatedObject.subjectChain, validatedObject.isValid, check)
-      }
+      ValidatedObjectDetail(validatedObject.subjectChain, validatedObject.isValid, check)
+    }
     records.seq.toIndexedSeq
   }
 }

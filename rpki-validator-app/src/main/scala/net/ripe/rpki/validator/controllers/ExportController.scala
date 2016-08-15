@@ -107,15 +107,10 @@ trait ExportController extends ApplicationController {
     }
   }
 
-  private def getMaximumLengthForExport(prefixLength:Int, maxPrefixLength: Option[Int]) = {
-    val delta = 8
-    val ml = maxPrefixLength.getOrElse(prefixLength)
+  private val prefixDelta = 8
 
-    if((ml-prefixLength) > delta) {
-      prefixLength+delta
-    } else {
-      ml
-    }
+  private def getMaximumLengthForExport(prefixLength: Int, maxPrefixLength: Option[Int]) = {
+    Math.min(maxPrefixLength.getOrElse(prefixLength), prefixLength + prefixDelta)
   }
 
   private def forAllRanges(prefix: IpRange, maxPrefixLength: Int)(printRange: IpRange => Unit) {

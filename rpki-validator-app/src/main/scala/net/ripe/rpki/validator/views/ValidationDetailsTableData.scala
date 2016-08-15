@@ -33,7 +33,7 @@ package views
 import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.validation.{ValidationCheck, ValidationMessage, ValidationStatus}
 
-abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] with Logging {
+abstract class ValidationDetailsTableData (records: Seq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] with Logging {
   
   override def getAllRecords() = records
 

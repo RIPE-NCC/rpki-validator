@@ -36,7 +36,7 @@ import lib.Validation._
 trait DataTableJsonView[R <: Any] {
 
   protected def getParam(name: String): String
-  protected def getAllRecords(): IndexedSeq[R]
+  protected def getAllRecords(): Seq[R]
   protected def filter(searchCriterium: Any): R => Boolean
   protected def ordering(sortColumn: Int): Ordering[R]
   protected def getValuesForRecord(record: R): List[String]
@@ -63,22 +63,22 @@ trait DataTableJsonView[R <: Any] {
       JField("aaData", makeJArray(displayRecords)))))
   }
 
-  private def paginate(records: IndexedSeq[R]) =
+  private def paginate(records: Seq[R]) =
     records.slice(iDisplayStart, iDisplayStart + iDisplayLength)
 
-  private def makeJArray(records: IndexedSeq[R]): JArray =
-    JArray(records.map { record =>
+  private def makeJArray(records: Seq[R]): JArray =
+    JArray(records.par.map { record =>
       JArray(makeJStringListForRecord(record))
     }.toList)
 
   private def makeJStringListForRecord(record: R): List[JValue] =
     getValuesForRecord(record).map(JString(_))
 
-  private[views] def filterRecords(allRecords: IndexedSeq[R], searchCriterium: Any): IndexedSeq[R] = {
-    allRecords.par.filter(filter(searchCriterium)).toIndexedSeq
+  private[views] def filterRecords(allRecords: Seq[R], searchCriterium: Any): Seq[R] = {
+    allRecords.par.filter(filter(searchCriterium)).seq
   }
 
-  private[views] def sortRecords(filteredRecords: IndexedSeq[R], sortColumn: Int): IndexedSeq[R] = {
+  private[views] def sortRecords(filteredRecords: Seq[R], sortColumn: Int): Seq[R] = {
     filteredRecords.sorted(order(ordering(sortColumn)))
   }
 

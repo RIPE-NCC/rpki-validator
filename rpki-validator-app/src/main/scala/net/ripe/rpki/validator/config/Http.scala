@@ -55,7 +55,7 @@ trait Http { this: Logging =>
   private val systemTrustedCertificates = {
     val tmf = TrustManagerFactory.getInstance("PKIX")
     tmf.init(null.asInstanceOf[KeyStore])
-    tmf.getTrustManagers.filter(_.isInstanceOf[X509TrustManager]).flatMap(_.asInstanceOf[X509TrustManager].getAcceptedIssuers)
+    tmf.getTrustManagers.withFilter(_.isInstanceOf[X509TrustManager]).flatMap(_.asInstanceOf[X509TrustManager].getAcceptedIssuers)
   }
 
   systemTrustedCertificates.foreach(putCertificateInKeyStore)
@@ -79,7 +79,7 @@ trait Http { this: Logging =>
       Array()
     } else {
       try {
-        dir.listFiles().filter(f => f.isFile && !f.getName.equals(".keep")).map(f => loadCertificateFromFile(f))
+        dir.listFiles().withFilter(f => f.isFile && !f.getName.equals(".keep")).map(f => loadCertificateFromFile(f))
       } catch {
         case e: Exception =>
           Array(Failure(new RuntimeException(s"Error reading trusted certificates from $dir: ${e.getMessage}", e)))
