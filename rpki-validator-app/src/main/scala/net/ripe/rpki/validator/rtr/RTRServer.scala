@@ -54,7 +54,7 @@ object RTRServer {
 
 class RTRServer(port: Int, closeOnError: Boolean, sendNotify: Boolean,
                 getCurrentCacheSerial: () => Int,
-                getCurrentRtrPrefixes: () => Set[RtrPrefix],
+                getCurrentRtrPrefixes: () => Seq[RtrPrefix],
                 getCurrentSessionId: () => Pdu.SessionId,
                 hasTrustAnchorsEnabled: () => Boolean)
   extends Logging {

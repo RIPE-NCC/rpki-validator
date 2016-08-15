@@ -38,7 +38,7 @@ import lib.NumberResources._
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 
 case class RtrPrefix(asn: Asn, prefix: IpRange, maxPrefixLength: Option[Int] = None, trustAnchorLocator: Option[TrustAnchorLocator] = None) {
-  val interval = NumberResourceInterval(prefix.getStart, prefix.getEnd)
+  def interval = NumberResourceInterval(prefix.getStart, prefix.getEnd)
   def effectiveMaxPrefixLength = maxPrefixLength.getOrElse(prefix.getPrefixLength)
   def getCaName = trustAnchorLocator.map(_.getCaName).getOrElse("unknown")
 }

@@ -37,6 +37,9 @@ import java.net.URI
 
 case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, version: Int = 0) {
 
+  private lazy val distinctRtrPrefixes =
+    (Set.empty[RtrPrefix] ++ whitelist.entries ++ filters.filter(validatedObjects.getValidatedRtrPrefixes)).toSeq
+
   def startProcessingTrustAnchor(locator: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(locator, description))
 
   def finishedProcessingTrustAnchor(locator: TrustAnchorLocator, result: Validation[String, Seq[ValidatedObject]]) =
@@ -55,10 +58,7 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
 
   def removeWhitelistEntry(entry: RtrPrefix) = copy(version = version + 1, whitelist = whitelist.removeEntry(entry))
 
-  // TODO Creating a set here is not enough, there could be prefixes
-  // TODO that differ only by trust anchor locator
-  def getDistinctRtrPrefixes: Set[RtrPrefix] =
-    Set.empty[RtrPrefix] ++ whitelist.entries ++ filters.filter(validatedObjects.getValidatedRtrPrefixes)
+  def getDistinctRtrPrefixes: Seq[RtrPrefix] = distinctRtrPrefixes
 
   def addFilter(filter: IgnoreFilter) = copy(version = version + 1, filters = filters.addFilter(filter))
 

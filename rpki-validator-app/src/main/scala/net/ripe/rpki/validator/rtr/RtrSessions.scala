@@ -35,7 +35,7 @@ import scala.collection.mutable
 
 
 class RtrSessions[T](getCurrentCacheSerial: () => Int,
-                     getCurrentRtrPrefixes: () => Set[RtrPrefix],
+                     getCurrentRtrPrefixes: () => Seq[RtrPrefix],
                      getCurrentSessionId: () => Pdu.SessionId,
                      hasTrustAnchorsEnabled: () => Boolean) {
 

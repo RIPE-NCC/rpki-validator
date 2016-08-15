@@ -54,9 +54,7 @@ class ExportControllerTest extends ControllerTestCase {
   val TEST_PREFIXES = Set[RtrPrefix](PREFIX1, PREFIX2, PREFIX3)
 
   override def controller = new ControllerFilter with ExportController {
-    override def getRtrPrefixes: Set[RtrPrefix] = {
-      TEST_PREFIXES
-    }
+    override def getRtrPrefixes: Seq[RtrPrefix] = TEST_PREFIXES.toSeq
   }
 
   test("Should make CSV with max lengths filled out") {
@@ -102,72 +100,72 @@ class ExportControllerTest extends ControllerTestCase {
          |origin: AS6500
          |descr: exported from ripe ncc validator
          |mnt-by: NA
-         |created: ${formattedDateTime}
-         |last-modified: ${formattedDateTime}
+         |created: $formattedDateTime
+         |last-modified: $formattedDateTime
          |source: ROA-CA-NAME
          |
          |route: 10.0.0.0/16
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: NA
-         |created: ${formattedDateTime}
-         |last-modified: ${formattedDateTime}
+         |created: $formattedDateTime
+         |last-modified: $formattedDateTime
          |source: ROA-UNKNOWN
          |
          |route: 10.0.0.0/17
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: NA
-         |created: ${formattedDateTime}
-         |last-modified: ${formattedDateTime}
+         |created: $formattedDateTime
+         |last-modified: $formattedDateTime
          |source: ROA-UNKNOWN
          |
          |route: 10.0.0.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: NA
-         |created: ${formattedDateTime}
-         |last-modified: ${formattedDateTime}
+         |created: $formattedDateTime
+         |last-modified: $formattedDateTime
          |source: ROA-UNKNOWN
          |
          |route: 10.0.64.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: NA
-         |created: ${formattedDateTime}
-         |last-modified: ${formattedDateTime}
+         |created: $formattedDateTime
+         |last-modified: $formattedDateTime
          |source: ROA-UNKNOWN
          |
          |route: 10.0.128.0/17
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: NA
-         |created: ${formattedDateTime}
-         |last-modified: ${formattedDateTime}
+         |created: $formattedDateTime
+         |last-modified: $formattedDateTime
          |source: ROA-UNKNOWN
          |
          |route: 10.0.128.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: NA
-         |created: ${formattedDateTime}
-         |last-modified: ${formattedDateTime}
+         |created: $formattedDateTime
+         |last-modified: $formattedDateTime
          |source: ROA-UNKNOWN
          |
          |route: 10.0.192.0/18
          |origin: AS6501
          |descr: exported from ripe ncc validator
          |mnt-by: NA
-         |created: ${formattedDateTime}
-         |last-modified: ${formattedDateTime}
+         |created: $formattedDateTime
+         |last-modified: $formattedDateTime
          |source: ROA-UNKNOWN
          |
          |route6: 2001:43e8::/32
          |origin: AS6502
          |descr: exported from ripe ncc validator
          |mnt-by: NA
-         |created: ${formattedDateTime}
-         |last-modified: ${formattedDateTime}
+         |created: $formattedDateTime
+         |last-modified: $formattedDateTime
          |source: ROA-CA-NAME
          |""".stripMargin
 

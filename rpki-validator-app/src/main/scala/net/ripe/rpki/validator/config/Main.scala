@@ -268,8 +268,7 @@ class Main extends Http with Logging { main =>
       // Software Update checker
       override def newVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version,
         () => {
-          val get = new HttpGet("https://lirportal.ripe.net/certification/content/static/validator/latest-version.properties")
-          val response = http.execute(get)
+          val response = httpGet("https://lirportal.ripe.net/certification/content/static/validator/latest-version.properties")
           scala.io.Source.fromInputStream(response.getEntity.getContent).mkString
         })
 

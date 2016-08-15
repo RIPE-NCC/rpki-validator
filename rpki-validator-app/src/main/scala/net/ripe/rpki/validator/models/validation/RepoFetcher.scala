@@ -47,6 +47,8 @@ import org.scalatra.Locked
 
 import scala.collection.JavaConversions._
 import scala.language.existentials
+import scala.util.Try
+import scala.util.control.NonFatal
 
 
 trait Hashing {
@@ -56,11 +58,9 @@ trait Hashing {
     _.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
   }.getOrElse("")
 
-  def parseBytes(hex: String): Option[Array[Byte]] = try {
-    Some(hex.sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte))
-  } catch {
-    case _: Throwable => None
-  }
+  def parseBytes(hex: String): Option[Array[Byte]] = Try {
+    hex.sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte)
+  }.toOption
 
   def equals(hashA: Array[Byte], hashB: Array[Byte]): Boolean = { hashA.deep == hashB.deep }
 }
@@ -153,10 +153,9 @@ object ManifestObject extends Parsing {
 
   def tryParse(url: String, bytes: Array[Byte]) = parseOrReturnBroken(url, bytes) {
     val parser = makeParser(url, bytes)
-    if (parser.isSuccess)
-      Right(ManifestObject(url, parser.getManifestCms))
-    else
-      Left(BrokenObject(url, bytes, formatFailures(parser.getValidationResult)))
+    Either.cond(parser.isSuccess,
+      ManifestObject(url, parser.getManifestCms),
+      BrokenObject(url, bytes, formatFailures(parser.getValidationResult)))
   }
 }
 
@@ -230,7 +229,7 @@ class Fetchers(httpStore: HttpFetcherStore, config: FetcherConfig) {
   def fetcher(repoUri: URI): Fetcher = {
     val fetcher = repoUri.getScheme match {
       case "rsync" => new RsyncFetcher(config)
-      case "http" | "https" => new HttpFetcher(httpStore)
+      case "http" | "https" => new RrdpFetcher(httpStore)
       case _ => throw new Exception(s"No fetcher for the uri $repoUri")
     }
     fetcher

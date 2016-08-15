@@ -41,7 +41,7 @@ import net.ripe.rpki.validator.models.RouteValidity._
 trait BgpPrefixOriginValidationController extends ScalatraBase {
   import net.liftweb.json.JsonDSL._
 
-  protected def getVrpObjects: Set[RtrPrefix]
+  protected def getVrpObjects: Seq[RtrPrefix]
 
   get("/v1/validity/:asn/:prefix/:length") {
     contentType = "text/json;charset=UTF-8"
@@ -50,7 +50,7 @@ trait BgpPrefixOriginValidationController extends ScalatraBase {
     val asn = parseAsn(params("asn")).orHalt
     val prefix = parseIpPrefix(s"${params("prefix")}/${params("length")}").orHalt
 
-    val announcement = BgpAnnouncementValidator.validate(BgpAnnouncement(asn, prefix), getVrpObjects.toSeq)
+    val announcement = BgpAnnouncementValidator.validate(BgpAnnouncement(asn, prefix), getVrpObjects)
 
     Ok(body = pretty(render(
       "validated_route" ->

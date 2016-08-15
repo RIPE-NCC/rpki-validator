@@ -35,6 +35,8 @@ import java.util.concurrent.TimeUnit
 import com.typesafe.config.{Config, ConfigFactory}
 import grizzled.slf4j.Logger
 
+import scala.util.control.NonFatal
+
 object ApplicationOptions {
   import scala.concurrent.duration._
 
@@ -89,7 +91,7 @@ object ApplicationOptions {
   private def safeConf[T](f: String => T)(name: String) : T = try {
     f(name)
   } catch {
-    case e: Throwable =>
+    case NonFatal(e) =>
       logger.error("Couldn't extract property " + name, e)
       throw e
   }
@@ -97,7 +99,7 @@ object ApplicationOptions {
   private def confOrElse[T](f: String => T)(name: String, default: T) : T = try {
     f(name)
   } catch {
-    case e: Throwable =>
+    case NonFatal(e) =>
       logger.error("Couldn't extract property " + name, e)
       default
   }

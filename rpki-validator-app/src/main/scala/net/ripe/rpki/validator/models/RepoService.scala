@@ -33,11 +33,13 @@ import java.net.URI
 
 import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.fetchers.Fetcher
+import net.ripe.rpki.validator.fetchers.Fetcher.{ConnectionError, Error}
 import net.ripe.rpki.validator.lib.Locker
 import net.ripe.rpki.validator.models.validation.RepoFetcher
 import net.ripe.rpki.validator.store.RepoServiceStore
 import org.joda.time.{Duration, Instant}
 
+import scala.Seq
 import scala.collection._
 
 object RepoServiceErrors {
@@ -54,31 +56,37 @@ class RepoService(fetcher: RepoFetcher) {
 
   private val locker = RepoService.locker
 
-  def visitRepo(forceNewFetch: Boolean, validationStart: Instant)(uri: URI): Seq[Fetcher.Error] = fetchAndUpdateTime(uri, forceNewFetch, validationStart) {
-    fetcher.fetchRepo(uri)
-  }
+  def visitRepo(forceNewFetch: Boolean, validationStart: Instant)(uri: URI): Seq[Fetcher.Error] =
+    fetchAndUpdateTime(uri, forceNewFetch, validationStart) {
+      fetcher.fetchRepo(uri)
+    }
 
   def lastFetchTime(uri: URI): Instant = RepoServiceStore.getLastFetchTime(uri)
 
-  protected[models] def fetchAndUpdateTime(uri: URI, forceNewFetch: Boolean, validationStart: Instant)(block: => Seq[Fetcher.Error]): Seq[Fetcher.Error] =
+  protected[models] def fetchAndUpdateTime(uri: URI, forceNewFetch: Boolean, validationStart: Instant)(fetch: => Seq[Fetcher.Error]): Seq[Fetcher.Error] =
     locker.locked(uri) {
       if (!haveRecentDataInStore(uri, validationStart, forceNewFetch)) {
-        RepoServiceErrors.lastErrors(uri) = block
-        RepoServiceStore.updateLastFetchTime(uri, validationStart)
+        val errors = fetch
+        RepoServiceErrors.lastErrors(uri) = errors
+        if (!Option(errors).exists(_.exists(_.isInstanceOf[ConnectionError])))
+          RepoServiceStore.updateLastFetchTime(uri, validationStart)
       }
       RepoServiceErrors.lastErrors.getOrElse(uri, Seq.empty)
     }
 
-  def visitTrustAnchorCertificate(uri: URI, forceNewFetch: Boolean, validationStart: Instant) = fetchAndUpdateTime(uri, forceNewFetch, validationStart) {
-    fetcher.fetchTrustAnchorCertificate(uri)
-  }
+  def visitTrustAnchorCertificate(uri: URI, forceNewFetch: Boolean, validationStart: Instant) =
+    fetchAndUpdateTime(uri, forceNewFetch, validationStart) {
+      fetcher.fetchTrustAnchorCertificate(uri)
+    }
 
   private def haveRecentDataInStore(uri: URI, validationTime: Instant, forceNewFetch: Boolean) =
     timeIsRecent(RepoServiceStore.getLastFetchTime(uri), interval(uri), validationTime, forceNewFetch)
 
-  private[models] def timeIsRecent(dateTime: Instant, duration: Duration, validationTime: Instant, forceNewFetch: Boolean) = {
-    if (forceNewFetch) !dateTime.isBefore(validationTime)
-    else !dateTime.plus(duration).isBefore(validationTime)
+  private[models] def timeIsRecent(lastFetchTime: Instant, minimalDuration: Duration, validationTime: Instant, forceNewFetch: Boolean) = {
+    if (forceNewFetch)
+      !lastFetchTime.isBefore(validationTime)
+    else
+      !lastFetchTime.plus(minimalDuration).isBefore(validationTime)
   }
 }
 

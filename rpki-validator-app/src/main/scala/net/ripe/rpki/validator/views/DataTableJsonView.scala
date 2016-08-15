@@ -56,30 +56,23 @@ trait DataTableJsonView[R <: Any] {
     val sortedRecords = sortRecords(filteredRecords, sortCol)
     val displayRecords = paginate(sortedRecords)
 
-    compact(render(JObject(List(
+    compactRender(JObject(List(
       JField("sEcho", JInt(getParam("sEcho").toInt)),
       JField("iTotalRecords", JInt(allRecords.size)),
       JField("iTotalDisplayRecords", JInt(filteredRecords.size)),
-      JField("aaData", makeJArray(displayRecords))))))
+      JField("aaData", makeJArray(displayRecords)))))
   }
 
   private def paginate(records: IndexedSeq[R]) =
     records.slice(iDisplayStart, iDisplayStart + iDisplayLength)
 
+  private def makeJArray(records: IndexedSeq[R]): JArray =
+    JArray(records.map { record =>
+      JArray(makeJStringListForRecord(record))
+    }.toList)
 
-  private def makeJArray(records: IndexedSeq[R]): JArray = {
-    JArray(
-      records.map { record =>
-        JArray(makeJStringListForRecord(record))
-      }.toList)
-  }
-
-  private def makeJStringListForRecord(record: R): List[JValue] = {
-    val strings = getValuesForRecord(record)
-    strings.map { string =>
-      JString(string)
-    }
-  }
+  private def makeJStringListForRecord(record: R): List[JValue] =
+    getValuesForRecord(record).map(JString(_))
 
   private[views] def filterRecords(allRecords: IndexedSeq[R], searchCriterium: Any): IndexedSeq[R] = {
     allRecords.par.filter(filter(searchCriterium)).toIndexedSeq

@@ -49,10 +49,9 @@ case class BgpAnnouncement(asn: Asn, prefix: IpRange) {
 
 object BgpValidatedAnnouncement {
   def make(announced: BgpAnnouncement, valids: Seq[RtrPrefix] = Seq.empty,
-            invalidsAsn: Seq[RtrPrefix] = Seq.empty,
-            invalidsLength: Seq[RtrPrefix] = Seq.empty): BgpValidatedAnnouncement =
-    BgpValidatedAnnouncement(announced,
-      valids.map((Valid, _)) ++ invalidsAsn.map((InvalidAsn, _)) ++ invalidsLength.map((InvalidLength, _)))
+           invalidsAsn: Seq[RtrPrefix] = Seq.empty,
+           invalidsLength: Seq[RtrPrefix] = Seq.empty) = BgpValidatedAnnouncement(announced,
+    valids.map((Valid, _)) ++ invalidsAsn.map((InvalidAsn, _)) ++ invalidsLength.map((InvalidLength, _)))
 }
 
 

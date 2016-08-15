@@ -33,6 +33,8 @@ import java.net.URI
 
 import net.ripe.rpki.validator.models.validation._
 
+import scala.util.control.NonFatal
+
 case class FetcherConfig(rsyncDir: String = "")
 
 trait FetcherListener {
@@ -41,7 +43,13 @@ trait FetcherListener {
 }
 
 object Fetcher {
-  case class Error(url: URI, message: String)
+  sealed trait Error {
+    def url: URI
+    def message: String
+  }
+  case class ConnectionError(url: URI, message: String) extends Error
+  case class ProcessingError(url: URI, message: String) extends Error
+  case class ParseError(url: URI, message: String) extends Error
 }
 
 trait Fetcher extends Hashing {
@@ -53,11 +61,11 @@ trait Fetcher extends Hashing {
   protected def processObject(uri: URI, bytes: Array[Byte], fetcherListener: FetcherListener): Either[Error, Unit] = {
     def checkIfBroken[T](parsed: => Either[BrokenObject, T]) =
       parsed.left.map { bo =>
-        Error(uri, "Could not parse object")
+        ProcessingError(uri, "Could not parse object")
       }
 
     val uriStr = uri.toString
-    tryTo(uri) {
+    tryTo(uri)(processingE) {
       uriStr.takeRight(4).toLowerCase
     }.right.flatMap { extension =>
       val repoObject = extension match {
@@ -67,7 +75,7 @@ trait Fetcher extends Hashing {
         case ".roa" => checkIfBroken(RoaObject.tryParse(uriStr, bytes))
         case ".gbr" => checkIfBroken(GhostbustersObject.tryParse(uriStr, bytes))
         case _ =>
-          Left(Error(uri, "Found unknown file $f"))
+          Left(ProcessingError(uri, "Found unknown file $f"))
       }
       repoObject.right.map { ro =>
         fetcherListener.processObject(ro)
@@ -75,11 +83,15 @@ trait Fetcher extends Hashing {
     }
   }
 
-  protected def tryTo[R](uri: URI)(f: => R) =
+  protected def connectionE = (u: URI, s: String) => ConnectionError(u, s)
+  protected def processingE = (u: URI, s: String) => ProcessingError(u, s)
+  protected def parseE = (u: URI, s: String) => ParseError(u, s)
+
+  protected def tryTo[R](uri: URI)(err: (URI, String) => Fetcher.Error)(f: => R) =
     try {
       Right(f)
     } catch {
-      case e: Throwable => Left(Error(uri, e.getMessage))
+      case NonFatal(e) => Left(err(uri, e.getMessage))
     }
 }
 

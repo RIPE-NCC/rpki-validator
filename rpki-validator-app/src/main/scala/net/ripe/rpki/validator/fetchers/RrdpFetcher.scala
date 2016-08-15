@@ -69,15 +69,17 @@ import org.apache.http.HttpStatus
 import org.apache.http.client.methods.HttpGet
 import org.joda.time.DateTime
 
+import scala.collection.immutable.Seq
 import scala.math.BigInt
+import scala.util.control.NonFatal
 import scala.xml.Elem
 
-object HttpFetcher {
+object RrdpFetcher {
 
   private val lastFetchTimes = collection.mutable.Map[URI, DateTime]()
 }
 
-class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
+class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
@@ -111,11 +113,11 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
   override def fetch(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
 
     val fetchTime = new DateTime()
-    val notificationXml: Either[Error, Option[Elem]] = getXmlIfModified(notificationUrl, HttpFetcher.lastFetchTimes.get(notificationUrl))
+    val notificationXml: Either[Error, Option[Elem]] = getXmlIfModified(notificationUrl, RrdpFetcher.lastFetchTimes.get(notificationUrl))
     notificationXml match {
       case Left(error) => Seq(error)
       case Right(Some(xml)) =>
-        HttpFetcher.lastFetchTimes.put(notificationUrl, fetchTime)
+        RrdpFetcher.lastFetchTimes.put(notificationUrl, fetchTime)
         processNotificationXml(notificationUrl, xml, fetcherListener)
       case Right(None) => Seq[Error]()
     }
@@ -142,7 +144,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
           returnSnapshot(None)
 
         case serial@Some(x) if x == BigInt(0) =>
-          Left(Error(notificationUrl, s"Serial must be a positive number"))
+          Left(ParseError(notificationUrl, s"Serial must be a positive number"))
 
         // our local serial is already the latest one
         case serial@Some(lastLocalSerial) if lastLocalSerial == notificationDef.serial =>
@@ -152,7 +154,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
         // something weird is happening, bail out
         case serial@Some(lastLocalSerial) if lastLocalSerial > notificationDef.serial =>
           logger.info(s"lastLocalSerial = $lastLocalSerial and it's equal to the remote serial, ${notificationDef.serial}")
-          Left(Error(notificationUrl, s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}"))
+          Left(ParseError(notificationUrl, s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}"))
 
         case serial@Some(lastLocalSerial) =>
           parseDeltaDefs(notificationUrl)(xml) >>=
@@ -211,30 +213,28 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
       sum >>= { (deltas: Seq[DeltaUnit]) =>
         result.map(deltas ++ _)
       }
-    } >>= { seq =>
-      Right((seq, serial))
-    }
+    }.right.map((_, serial))
   }
 
-  private def parseSnapshotDef(notificationUrl: URI)(xml: Elem) =
+  private def parseSnapshotDef(notificationUrl: URI)(xml: Elem): Either[Error, SnapshotDef] =
     (xml \ "snapshot").map(x => ((x \ "@uri").text, (x \ "@hash").text)) match {
       case Seq(s) => Right(SnapshotDef(s._1, s._2))
-      case _ => Left(Error(notificationUrl, "There should one and only one 'snapshot' element'"))
+      case _ => Left(ParseError(notificationUrl, "There should one and only one 'snapshot' element'"))
     }
 
-  private def parseNotification(notificationUrl: URI)(xml: Elem) =
+  private def parseNotification(notificationUrl: URI)(xml: Elem): Either[Error, NotificationDef] =
     try {
       Right(NotificationDef((xml \ "@session_id").text, BigInt((xml \ "@serial").text)))
     } catch {
-      case e: NumberFormatException => Left(Error(notificationUrl, "Couldn't parse serial number"))
-      case e: Throwable => Left(Error(notificationUrl, s"Error: ${e.getMessage}"))
+      case e: NumberFormatException => Left(ParseError(notificationUrl, "Couldn't parse serial number"))
+      case NonFatal(e) => Left(ParseError(notificationUrl, s"Error: ${e.getMessage}"))
     }
 
-  private def parseDeltaDefs(notificationUrl: URI)(xml: Elem) =
+  private def parseDeltaDefs(notificationUrl: URI)(xml: Elem): Either[Error, Seq[DeltaDef]] =
     try {
       Right((xml \ "delta").map(d => DeltaDef(BigInt((d \ "@serial").text), new URI((d \ "@uri").text), (d \ "@hash").text)))
     } catch {
-      case e: Exception => Left(Error(notificationUrl, s"Couldn't parse delta definitions: ${e.getMessage}"))
+      case NonFatal(e) => Left(ParseError(notificationUrl, s"Couldn't parse delta definitions: ${e.getMessage}"))
     }
 
   private def validateDeltaDefs(uri: URI, lastLocalSerial: BigInt, notificationSerial: BigInt)(deltaDefs: Seq[DeltaDef]) = {
@@ -244,7 +244,7 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
     else {
       val deltaWithMaxSerial = requiredDeltas.last
       if (deltaWithMaxSerial.serial != notificationSerial) {
-        Left(Error(deltaWithMaxSerial.url, "Latest delta serial is not the same as the one in notification file"))
+        Left(ParseError(deltaWithMaxSerial.url, "Latest delta serial is not the same as the one in notification file"))
       } else {
         // TODO check if they form a contiguous sequence
         Right(requiredDeltas)
@@ -259,46 +259,47 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
     }
 
   private def parsePublishUnit(p: PublishUnit, fetcherListener: FetcherListener) =
-    tryTo(p.url) {
+    tryTo(p.url)(processingE) {
       base64.decode(p.base64.filterNot(Character.isWhitespace))
     } >>= { bytes =>
       processObject(p.url, bytes, fetcherListener)
     }
 
   private def parseWithdrawUnit(p: WithdrawUnit, fetcherListener: FetcherListener) =
-    tryTo(p.url) {
+    tryTo(p.url)(processingE) {
       fetcherListener.withdraw(p.url, p.hash)
     }
 
   def getXmlIfModified(xmlUrl: URI, ifModifiedSince: Option[DateTime]): Either[Error, Option[Elem]] =
-    tryTo(xmlUrl) {
+    tryTo(xmlUrl)(connectionE) {
       logger.info(s"Fetching $xmlUrl")
-      val get = new HttpGet(xmlUrl.toString)
-      if (ifModifiedSince.isDefined) {
-        get.setHeader("If-Modified-Since", formatAsRFC2616(ifModifiedSince.get))
-      }
-      val response = http.execute(get)
-      response.getStatusLine.getStatusCode match {
-        case HttpStatus.SC_OK =>
-          Some(scala.xml.XML.load(response.getEntity.getContent))
-        case HttpStatus.SC_NOT_MODIFIED =>
-          logger.info(s"Not fetching $xmlUrl because it was not modified since the last fetch at $ifModifiedSince")
-          None
-        case _ =>
-          throw new RuntimeException(response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
+      httpGetIfNotModified(xmlUrl.toString, ifModifiedSince)
+    } >>= { response =>
+      tryTo(xmlUrl)(parseE) {
+        response.getStatusLine.getStatusCode match {
+          case HttpStatus.SC_OK =>
+            Some(scala.xml.XML.load(response.getEntity.getContent))
+          case HttpStatus.SC_NOT_MODIFIED =>
+            logger.info(s"Not fetching $xmlUrl because it was not modified since the last fetch at $ifModifiedSince")
+            None
+          case _ =>
+            throw new RuntimeException(response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
+        }
       }
     }
 
   def getXml(xmlUrl: URI): Either[Error, Elem] =
-    tryTo(xmlUrl) {
+    tryTo(xmlUrl)(connectionE) {
       logger.info(s"Fetching $xmlUrl")
-      val get = new HttpGet(xmlUrl.toString)
-      val response = http.execute(get)
-      response.getStatusLine.getStatusCode match {
-        case HttpStatus.SC_OK =>
-          scala.xml.XML.load(response.getEntity.getContent)
-        case _ =>
-          throw new RuntimeException(response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
+      httpGet(xmlUrl.toString)
+    } >>= { response =>
+      tryTo(xmlUrl)(parseE) {
+        response.getStatusLine.getStatusCode match {
+          case HttpStatus.SC_OK =>
+            scala.xml.XML.load(response.getEntity.getContent)
+          case _ =>
+            throw new RuntimeException(response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
+        }
       }
     }
 
@@ -317,19 +318,17 @@ class HttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
     }
 
   private def getUnits[T](uri: URI, xml: Elem): Either[Error, Seq[DeltaUnit]] = {
-    val publishes = (xml \ "_").map(node => {
-      node match {
-        case <publish>{_}</publish> => PublishUnit(new URI((node \ "@uri").text), (node \ "@hash").text, node.text)
-        case <withdraw/> => WithdrawUnit(new URI((node \ "@uri").text), (node \ "@hash").text)
-      }
-    })
+    val publishes = (xml \ "_").map {
+      case node@(<publish>{_}</publish>) => PublishUnit(new URI((node \ "@uri").text), (node \ "@hash").text, node.text)
+      case node@(<withdraw/>) => WithdrawUnit(new URI((node \ "@uri").text), (node \ "@hash").text)
+    }
 
     val invalidElement = publishes.find {
       case PublishUnit(url, hash, text) => url.toString.isEmpty && hash.isEmpty && text.isEmpty
       case WithdrawUnit(url, hash) => url.toString.isEmpty && hash.isEmpty
     }
     if (invalidElement.isDefined) {
-      Left(Error(uri, s"Mandatory attributes are absent in element: $invalidElement"))
+      Left(ParseError(uri, s"Mandatory attributes are absent in element: $invalidElement"))
     }
     else
       Right(publishes)

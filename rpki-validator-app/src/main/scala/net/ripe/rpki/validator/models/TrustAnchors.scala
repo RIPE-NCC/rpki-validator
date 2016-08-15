@@ -138,7 +138,7 @@ object TrustAnchors extends Logging {
     info("Loading trust anchors...")
     val trustAnchors = files.map { file =>
       val tal = TrustAnchorLocator.fromFile(file)
-      new TrustAnchor(
+      TrustAnchor(
         locator = tal,
         status = Idle(now),
         enabled = true,

@@ -30,17 +30,17 @@
 package net.ripe.rpki.validator
 package controllers
 
-import net.ripe.ipresource.{IpResourceType, IpAddress, IpRange}
+import net.liftweb.json._
+import net.ripe.ipresource.{IpAddress, IpRange, IpResourceType}
 import net.ripe.rpki.commons.validation.roa.AllowedRoute
+import net.ripe.rpki.validator.models.RtrPrefix
+import net.ripe.rpki.validator.views.ExportView
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
-import views.ExportView
-import models.RtrPrefix
-import net.liftweb.json._
 
 trait ExportController extends ApplicationController {
 
-  protected def getRtrPrefixes: Set[RtrPrefix]
+  protected def getRtrPrefixes: Seq[RtrPrefix]
 
   get("/export") {
     new ExportView()
@@ -48,16 +48,15 @@ trait ExportController extends ApplicationController {
 
   get("/export.csv") {
     val Header = "ASN,IP Prefix,Max Length,Trust Anchor\n"
-    val RowFormat = "%s,%s,%s,%s\n"
-
     contentType = "text/csv"
     response.addHeader("Pragma", "public")
     response.addHeader("Cache-Control", "no-cache")
 
-    val roas = getRtrPrefixes.map(rtr => {
-      RowFormat.format(rtr.asn, rtr.prefix, rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength), rtr.getCaName)
-    })
-    response.getWriter.write(Header + roas.mkString)
+    val writer = response.getWriter
+    writer.write(Header)
+    getRtrPrefixes.foreach {
+      rtr => writer.write(s"${rtr.asn},${rtr.prefix},${rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength)},${rtr.getCaName}\n")
+    }
   }
 
   get("/export.json") {
@@ -73,7 +72,7 @@ trait ExportController extends ApplicationController {
         ("maxLength" -> rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength)) ~
         ("trustAnchor" -> rtr.getCaName)
     )
-    response.getWriter.write(compact(render(("roas" -> roas))))
+    response.getWriter.write(compactRender("roas" -> roas))
   }
 
   get("/export.rpsl") {

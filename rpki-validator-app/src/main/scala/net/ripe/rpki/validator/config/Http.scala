@@ -29,16 +29,20 @@
  */
 package net.ripe.rpki.validator.config
 
-import java.io.{BufferedInputStream, File, FileInputStream}
+import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
 import java.security.KeyStore
 import java.security.cert.{CertificateFactory, X509Certificate}
-import javax.net.ssl.{TrustManagerFactory, X509TrustManager}
+import javax.net.ssl.{SSLException, TrustManagerFactory, X509TrustManager}
 
 import grizzled.slf4j.Logging
+import net.ripe.rpki.validator.lib.DateAndTime._
 import org.apache.http.client.config.RequestConfig
-import org.apache.http.conn.ssl.SSLContexts
-import org.apache.http.impl.client.{CloseableHttpClient, HttpClientBuilder}
+import org.apache.http.client.methods.HttpGet
+import org.apache.http.conn.ssl.{SSLConnectionSocketFactory, SSLContexts, TrustStrategy}
+import org.apache.http.impl.client.HttpClientBuilder
+import org.joda.time.DateTime
 
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 trait Http { this: Logging =>
@@ -54,8 +58,8 @@ trait Http { this: Logging =>
     tmf.getTrustManagers.filter(_.isInstanceOf[X509TrustManager]).flatMap(_.asInstanceOf[X509TrustManager].getAcceptedIssuers)
   }
 
-  systemTrustedCertificates.foreach(cert => putCertificateInKeyStore(cert))
-  loadCertificatesFromDir(trustedCertsLocation) foreach {
+  systemTrustedCertificates.foreach(putCertificateInKeyStore)
+  loadCertificatesFromDir(trustedCertsLocation).foreach {
     case Success(cert) => putCertificateInKeyStore(cert)
     case Failure(e) => logger.error(e)
   }
@@ -97,11 +101,70 @@ trait Http { this: Logging =>
     .loadTrustMaterial(customKeyStore)
     .build()
 
-  private val httpClient: CloseableHttpClient = HttpClientBuilder.create()
+  private val httpClient = HttpClientBuilder.create()
     .useSystemProperties()
     .setDefaultRequestConfig(httpRequestConfig)
     .setSslcontext(customSslContext)
     .build()
 
+  private lazy val wrongSslHttp = {
+    val acceptingTrustStrategy = new TrustStrategy() {
+      override def isTrusted(chain: Array[X509Certificate], authType: String) = true
+    }
+
+    val emptyKeyStore = KeyStore.getInstance(KeyStore.getDefaultType)
+    emptyKeyStore.load(null.asInstanceOf[InputStream], "".toCharArray)
+
+    val sslConext = SSLContexts.custom()
+      .useTLS()
+      .loadTrustMaterial(emptyKeyStore, acceptingTrustStrategy)
+      .build()
+
+    val socketFactory = new SSLConnectionSocketFactory(sslConext,
+      SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
+
+    HttpClientBuilder.create()
+      .setSSLSocketFactory(socketFactory)
+      .build()
+  }
+
   def http = httpClient
+
+  private var invalidSslHosts = Set[String]()
+
+  private def fallBackToInsecureSsl[T](get: HttpGet) = {
+    val url = get.getURI
+    if (url.getScheme == "https") {
+      if (invalidSslHosts.contains(url.getHost)) {
+        wrongSslHttp.execute(get)
+      } else {
+        try {
+          http.execute(get)
+        } catch {
+          case e: SSLException =>
+            logger.error(s"Could not establish SSL connection while retrieving $url, trying to establish SSL connection without certificate check.", e)
+            url.synchronized {
+              invalidSslHosts = invalidSslHosts + url.getHost
+            }
+            wrongSslHttp.execute(get)
+          case NonFatal(e) =>
+            logger.error("Something bad happened while retrieving " + url)
+            throw e
+        }
+      }
+    } else {
+      http.execute(get)
+    }
+  }
+
+  def httpGet(url: String) = fallBackToInsecureSsl(new HttpGet(url))
+
+  def httpGetIfNotModified(url: String, ifModifiedSince: Option[DateTime]) = {
+    val get = new HttpGet(url)
+    ifModifiedSince.foreach { t =>
+      get.setHeader("If-Modified-Since", formatAsRFC2616(t))
+    }
+    fallBackToInsecureSsl(get)
+  }
+
 }

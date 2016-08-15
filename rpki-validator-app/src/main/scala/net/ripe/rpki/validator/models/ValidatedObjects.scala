@@ -57,9 +57,7 @@ sealed trait ValidatedObject {
     else ValidationStatus.PASSED
   }
 
-  def hasCheckKey(key: String): Boolean = {
-    checks.map(_.getKey).contains(key)
-  }
+  def hasCheckKey(key: String): Boolean = checks.exists(_.getKey == key)
 }
 
 case class InvalidObject(subjectChain: String, uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) extends ValidatedObject {
@@ -146,10 +144,11 @@ class ValidatedObjects(val all: Map[TrustAnchorLocator, TrustAnchorValidations])
   def getValidatedRtrPrefixes = {
     for {
       (locator, taValidations) <- all
+      oLocator = Option(locator)
       ValidObject(_, _, _, _, roa: RoaCms) <- taValidations.validatedObjects
       roaPrefix <- roa.getPrefixes.asScala
     } yield {
-      RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), Option(locator))
+      RtrPrefix(roa.getAsn, roaPrefix.getPrefix, Java.toOption(roaPrefix.getMaximumLength), oLocator)
     }
   }
 

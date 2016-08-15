@@ -27,31 +27,53 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.fetchers
+package net.ripe.rpki.validator.store
 
 import java.net.URI
 
-import grizzled.slf4j.Logging
-import net.ripe.rpki.validator.config.{ApplicationOptions, Http}
-import net.ripe.rpki.validator.store.HttpFetcherStore
-import org.apache.commons.io.IOUtils
-import org.apache.http.HttpStatus
-import org.apache.http.client.methods.HttpGet
+import net.ripe.rpki.validator.support.ValidatorTestCase
+import org.scalatest.BeforeAndAfter
 
-class SingleObjectHttpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
-  override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+class RrdpFetcherStoreTest extends ValidatorTestCase with BeforeAndAfter {
 
-  def fetch(uri: URI, process: FetcherListener): Seq[Fetcher.Error] = {
-    tryTo(uri)(connectionE) {
-      val response = httpGet(uri.toString)
-      response.getStatusLine.getStatusCode match {
-        case HttpStatus.SC_OK =>
-          IOUtils.toByteArray(response.getEntity.getContent)
-        case _ =>
-          throw new RuntimeException(response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
-      }
-    }.right.map { bytes =>
-      processObject(uri, bytes, process)
-    }.left.toSeq
+  val store = new HttpFetcherStore()
+
+  before {
+    store.clear()
   }
+
+  test("Store a serial and get it back") {
+    val url = new URI("http://bla.bla")
+    val sessionId = "aec41310-67e1-429b-9d1b-df30961e9932"
+    val serial = BigInt(100)
+    store.storeSerial(url, sessionId, serial)
+
+    val s = store.getSerial(url, sessionId)
+    s should be(Some(serial))
+  }
+
+  test("Store a really big serial number and get it back") {
+    val url = new URI("http://bla.bla")
+    val sessionId = "aec41310-67e1-429b-9d1b-df30961e9932"
+    val serial = BigInt(Long.MaxValue) * 10
+    store.storeSerial(url, sessionId, serial)
+
+    val s = store.getSerial(url, sessionId)
+    s should be(Some(serial))
+  }
+
+  test("Store a serial, updates it and get back the latest one") {
+    val url = new URI("http://bla.bla")
+    val sessionId = "aec41310-67e1-429b-9d1b-df30961e9932"
+    val serial1 = BigInt(100)
+    val serial2 = BigInt(101)
+
+    store.storeSerial(url, sessionId, serial1)
+    store.getSerial(url, sessionId) should be(Some(serial1))
+
+    store.storeSerial(url, sessionId, serial2)
+    store.getSerial(url, sessionId) should be(Some(serial2))
+  }
+
 }

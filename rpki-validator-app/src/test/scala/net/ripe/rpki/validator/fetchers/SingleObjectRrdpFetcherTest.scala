@@ -47,7 +47,7 @@ import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class SingleObjectHttpFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
+class SingleObjectRrdpFetcherTest extends ValidatorTestCase with BeforeAndAfter with MockitoSugar {
 
   val store = new HttpFetcherStore()
 
