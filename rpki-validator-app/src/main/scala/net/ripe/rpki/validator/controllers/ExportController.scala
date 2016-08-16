@@ -70,7 +70,7 @@ trait ExportController extends ApplicationController {
       ("asn" -> rtr.asn.toString) ~
         ("prefix" -> rtr.prefix.toString) ~
         ("maxLength" -> rtr.maxPrefixLength.getOrElse(rtr.prefix.getPrefixLength)) ~
-        ("trustAnchor" -> rtr.getCaName)
+        ("ta" -> rtr.getCaName)
     )
     response.getWriter.write(compactRender("roas" -> roas))
   }

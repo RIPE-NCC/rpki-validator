@@ -79,7 +79,7 @@ class ExportControllerTest extends ControllerTestCase {
   test("Should export JSON with max lengths filled out") {
     get("/export.json") {
       status should equal(200)
-      body should equal("""{"roas":[{"asn":"AS6500","prefix":"10.0.0.0/8","maxLength":8,"trustAnchor":"Ca Name"},{"asn":"AS6501","prefix":"10.0.0.0/16","maxLength":18,"trustAnchor":"unknown"},{"asn":"AS6502","prefix":"2001:43e8::/32","maxLength":32,"trustAnchor":"Ca Name"}]}""")
+      body should equal("""{"roas":[{"asn":"AS6500","prefix":"10.0.0.0/8","maxLength":8,"ta":"Ca Name"},{"asn":"AS6501","prefix":"10.0.0.0/16","maxLength":18,"ta":"unknown"},{"asn":"AS6502","prefix":"2001:43e8::/32","maxLength":32,"ta":"Ca Name"}]}""")
       header("Content-Type").toLowerCase() should startWith("text/json")
       header("Content-Type").toLowerCase() should endWith("charset=utf-8")
       header("Pragma") should equal("public")
