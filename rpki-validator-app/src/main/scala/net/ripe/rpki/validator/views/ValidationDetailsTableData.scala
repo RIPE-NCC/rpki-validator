@@ -33,20 +33,20 @@ package views
 import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.validation.{ValidationCheck, ValidationMessage, ValidationStatus}
 
-abstract class ValidationDetailsTableData (records: Seq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] with Logging {
+abstract class ValidationDetailsTableData (records: IndexedSeq[ValidatedObjectDetail]) extends DataTableJsonView[ValidatedObjectDetail] with Logging {
   
   override def getAllRecords() = records
 
   override def filter(searchCriterium: Any): ValidatedObjectDetail => Boolean = {
     searchCriterium match {
       case searchString: String =>
-        record => {
-            searchString.isEmpty ||
-            record.subjectChain.toString.toUpperCase.contains(searchString) ||
-            record.isValid.toString.toUpperCase.contains(searchString) ||
-            record.check.getStatus.toString.toUpperCase.contains(searchString) ||
-            record.message.toUpperCase.contains(searchString) ||
-            record.check.getKey.toUpperCase.contains(searchString)}
+        record => searchString.isEmpty ||
+          record.subjectChain.toString.toUpperCase.contains(searchString) ||
+          record.isValid.toString.toUpperCase.contains(searchString) ||
+          record.check.getStatus.toString.toUpperCase.contains(searchString) ||
+          record.message.toUpperCase.contains(searchString) ||
+          record.check.getKey.toUpperCase.contains(searchString)
+
       case _ => _ => true
     }
   }

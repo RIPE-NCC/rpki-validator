@@ -35,7 +35,8 @@ import lib.Validation._
 import models._
 import net.ripe.rpki.commons.validation.ValidationStatus
 
-class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAnchorValidations, messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
+class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAnchorValidations,
+                             messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
 
   val MaximumErrorCount = 10
   val MaximumErrorFraction = .1
@@ -49,7 +50,8 @@ class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAncho
 
   def numberOfObjectsWithStatus(status: ValidationStatus) = validatedObjects.count(vo => vo.validationStatus.equals(status))
 
-  val hasProblemValidatingTa = validatedObjects.exists(vo => vo.subjectChain == ta.locator.getCertificateLocation && !vo.isValid)
+  private val taCertLocation = ta.locator.getCertificateLocation.toString
+  val hasProblemValidatingTa = validatedObjects.exists(vo => vo.subjectChain == taCertLocation && !vo.isValid)
 
   val hasUnexpectedDrop = trustAnchorValidations.objectCountDropObserved.isDefined
 
@@ -125,7 +127,8 @@ $(document).ready(function() {
 
   def renderValidationDetails = {
     <h3>Validation violations</h3>
-      <table id="validation-details-table" class="zebra-striped" style="display: none;" data-source={ s"${Tabs.TrustAnchorMonitorTab.url}/validation-detail/${ta.identifierHash}" }>
+      <table id="validation-details-table" class="zebra-striped" style="display: none;"
+             data-source={ s"${Tabs.TrustAnchorMonitorTab.url}/validation-detail/${ta.identifierHash}" }>
         <thead>
           <tr>
             <th>Object</th>

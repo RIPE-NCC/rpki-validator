@@ -66,7 +66,7 @@ trait TrustAnchorsController extends ApplicationController {
   }
 
   get(s"${Tabs.TrustAnchorMonitorTab.url}/validation-detail/:identifierHash") {
-    val validatedObjectResultsForTa: Seq[ValidatedObjectResult] = getValidatedObjectResultsForTa { status =>
+    val validatedObjectResultsForTa = getValidatedObjectResultsForTa { status =>
       status != ValidationStatus.PASSED && status != ValidationStatus.FETCH_ERROR
     }
 
@@ -76,14 +76,14 @@ trait TrustAnchorsController extends ApplicationController {
   }
 
   get(s"${Tabs.TrustAnchorMonitorTab.url}/fetch-detail/:identifierHash") {
-    val validatedObjectResultsForTa = getValidatedObjectResultsForTa { status => status == ValidationStatus.FETCH_ERROR }
+    val validatedObjectResultsForTa = getValidatedObjectResultsForTa(_ == ValidationStatus.FETCH_ERROR)
     new FetchResultsTableData(validatedObjectResultsForTa) {
       override def getParam(name: String) = params(name)
     }
   }
 
   private def getValidatedObjectResultsForTa(statusFilter: ValidationStatus => Boolean) =
-    validateParameter("identifierHash", required(trustAnchorByIdentifierHash)) match {
+    (validateParameter("identifierHash", required(trustAnchorByIdentifierHash)) match {
       case Success(trustAnchor) =>
         validatedObjects.all.get(trustAnchor.locator).map { ta =>
           ta.validatedObjects.withFilter { validatedObject =>
@@ -91,13 +91,14 @@ trait TrustAnchorsController extends ApplicationController {
           }.map { validatedObject =>
             ValidatedObjectResult(trustAnchor.name,
               validatedObject.subjectChain,
+              validatedObject.uri,
               validatedObject.validationStatus,
               validatedObject.checks.filter(check => statusFilter(check.getStatus)))
           }
         }.getOrElse(Seq.empty)
 
       case Failure(feedbackMessage) => Seq.empty
-    }
+    }).toIndexedSeq
 
 
   post(s"${Tabs.TrustAnchorsTab.url}/update") {

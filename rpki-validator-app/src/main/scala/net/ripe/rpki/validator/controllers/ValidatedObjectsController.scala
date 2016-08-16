@@ -83,6 +83,7 @@ trait ValidatedObjectsController extends ApplicationController with Logging {
     } yield {
       ValidatedObjectResult(trustAnchorLocator.getCaName,
         validatedObject.subjectChain,
+        validatedObject.uri,
         validatedObject.validationStatus,
         validatedObject.checks.filterNot(_.getStatus == ValidationStatus.PASSED))
     }

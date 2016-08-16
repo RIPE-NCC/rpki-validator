@@ -34,7 +34,7 @@ import java.net.URI
 import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.validation.{ ValidationStatus, ValidationMessage, ValidationCheck }
 
-abstract class ValidationResultsTableData(records: Seq[ValidatedObjectResult]) extends DataTableJsonView[ValidatedObjectResult] with Logging {
+abstract class ValidationResultsTableData(records: IndexedSeq[ValidatedObjectResult]) extends DataTableJsonView[ValidatedObjectResult] with Logging {
 
   override def getAllRecords() = records
 
@@ -59,13 +59,15 @@ abstract class ValidationResultsTableData(records: Seq[ValidatedObjectResult]) e
 
   override def getValuesForRecord(record: ValidatedObjectResult) = {
     List(<span rel="twipsy" data-original-title={record.subjectChain.toString}>
-      {record.subjectChain.toString.split("/").last}
+      <b>Certificate chain:</b> {record.subjectChain.toString.split("/").last}
+      <br/>
+      <b>URI:</b>&nbsp; {record.uri.toString}
     </span>.toString(), record.validationStatus.toString, record.messages)
   }
 
 }
 
-abstract class FetchResultsTableData(records: Seq[ValidatedObjectResult]) extends ValidationResultsTableData(records){
+abstract class FetchResultsTableData(records: IndexedSeq[ValidatedObjectResult]) extends ValidationResultsTableData(records){
   override def getValuesForRecord(record: ValidatedObjectResult) = {
     List(record.subjectChain.toString, record.messages)
   }
@@ -80,6 +82,6 @@ abstract class FetchResultsTableData(records: Seq[ValidatedObjectResult]) extend
 
 }
 
-case class ValidatedObjectResult(trustAnchorName: String, subjectChain: String, validationStatus: ValidationStatus, checks: Set[ValidationCheck]) {
+case class ValidatedObjectResult(trustAnchorName: String, subjectChain: String, uri: URI, validationStatus: ValidationStatus, checks: Set[ValidationCheck]) {
   lazy val messages = checks.map(ValidationMessage.getMessage).mkString("<br/>\n")
 }
