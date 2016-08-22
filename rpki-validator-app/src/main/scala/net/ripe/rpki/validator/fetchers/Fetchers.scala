@@ -31,6 +31,7 @@ package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
 
+import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.models.validation._
 
 import scala.util.control.NonFatal
@@ -52,7 +53,7 @@ object Fetcher {
   case class ParseError(url: URI, message: String) extends Error
 }
 
-trait Fetcher extends Hashing {
+trait Fetcher extends Hashing with Logging {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
@@ -91,7 +92,9 @@ trait Fetcher extends Hashing {
     try {
       Right(f)
     } catch {
-      case NonFatal(e) => Left(err(uri, e.getMessage))
+      case NonFatal(e) =>
+        logger.warn(s"Error fetching $uri: ${e.getMessage}")
+        Left(err(uri, e.getMessage))
     }
 }
 

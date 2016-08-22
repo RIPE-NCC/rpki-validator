@@ -38,8 +38,6 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher with RsyncSupport {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
-  private val logger: Logger = LoggerFactory.getLogger(classOf[RsyncFetcher])
-
   private def walkTree[T1, T2](d: File)(f: File => Either[T1, T2]): Seq[T1] = {
     if (d.isDirectory) {
       d.listFiles.map(walkTree(_)(f)).toSeq.flatten
