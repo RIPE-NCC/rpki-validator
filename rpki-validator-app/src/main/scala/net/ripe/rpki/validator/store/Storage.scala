@@ -63,7 +63,7 @@ trait Storage extends Logging {
 
   def updateValidationTimestamp(hashes: Iterable[Array[Byte]], t: Instant)
 
-  def cleanOutdated(uriMap: Map[URI, Iterable[(URI, Array[Byte])]])
+  def cleanOutdated(validated: Iterable[(URI, Array[Byte])])
 
 }
 

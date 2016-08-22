@@ -93,9 +93,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   private def location(o: RepositoryObject.ROType) = new ValidationLocation(o.url)
 
-  def execute(forceNewFetch: Boolean): Seq[ValidatedObject] = fBlock(validateContext(forceNewFetch)) { vo =>
-    updateValidationTimes(vo.map(vo => vo.uri -> vo).toMap)
-  }
+  def execute(forceNewFetch: Boolean): Seq[ValidatedObject] =
+    fBlock(validateContext(forceNewFetch))(updateValidationTimes)
 
   private def validateContext(forceNewFetch: Boolean): Seq[ValidatedObject] = {
     logger.debug(s"Validating ${certificateContext.getLocation}")
@@ -144,16 +143,15 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     everythingValidated
   }
 
-  private def updateValidationTimes(validatedObjectMap: Map[URI, ValidatedObject]) = {
-    val hashes = validatedObjectMap.values.withFilter(_.hash.isDefined).map(o => (o.uri, o.hash.get))
-    val uriMap: Map[URI, Iterable[(URI, Array[Byte])]] = hashes.groupBy(_._1)
+  private def updateValidationTimes(validatedObjects: Seq[ValidatedObject]) = {
+    val hashes: Iterable[(URI, Array[Byte])] = validatedObjects.filter(_.hash.isDefined).map(o => (o.uri, o.hash.get))
 
     val hashesOnly = hashes.map(_._2)
     hashesOnly.foreach { hash =>
       logger.debug("Setting validation time for the object: " + HashUtil.stringify(hash))
     }
     store.updateValidationTimestamp(hashesOnly, validationStartTime)
-    store.cleanOutdated(uriMap)
+    store.cleanOutdated(hashes)
   }
 
   private def validatedObject(checkMap: Map[ValidationLocation, List[Check]])(r: (String, RepositoryObject.ROType)): ValidatedObject = {
@@ -355,7 +353,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   }
 
   case class ManifestObjects(objects: Seq[(String, ROType)], errors: Seq[Check])
-  
+
   def getManifestObjects(manifest: ManifestObject): ManifestObjects = {
     val repositoryUri = certificateContext.getRepositoryURI
     val validationLocation = location(manifest)
@@ -369,7 +367,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       val uri = repositoryUri.resolve(name)
       val hashStr: String = HashUtil.stringify(hash)
       val objs = store.getObjects(hashStr)
-      
+
       if (objs.isEmpty) {
         errors += error(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, hashStr)
       } else {

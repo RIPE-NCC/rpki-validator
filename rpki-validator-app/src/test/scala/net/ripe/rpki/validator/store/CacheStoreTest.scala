@@ -263,7 +263,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     store.getManifests(mft1.aki) should have size 2
 
     val uri = new URI("rsync://bla.mft")
-    store.cleanOutdated(Map(uri -> Seq((uri, mft1.hash))))
+    store.cleanOutdated(Seq((uri, mft1.hash)))
 
     val manifests = store.getManifests(mft1.aki)
     manifests should have size 1
