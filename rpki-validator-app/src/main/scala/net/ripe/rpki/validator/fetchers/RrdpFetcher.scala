@@ -150,7 +150,7 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
 
         // something weird is happening, bail out
         case serial@Some(lastLocalSerial) if lastLocalSerial > notificationDef.serial =>
-          logger.info(s"lastLocalSerial = $lastLocalSerial and it's equal to the remote serial, ${notificationDef.serial}")
+          logger.error(s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}")
           Left(ParseError(notificationUrl, s"Local serial $lastLocalSerial is larger then repository serial ${notificationDef.serial}"))
 
         case serial@Some(lastLocalSerial) =>
