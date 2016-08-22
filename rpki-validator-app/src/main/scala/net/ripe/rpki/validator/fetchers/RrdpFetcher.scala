@@ -143,9 +143,6 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
           logger.info(s"No local serial number, downloading snapshot")
           returnSnapshot(None)
 
-        case serial@Some(x) if x == BigInt(0) =>
-          Left(ParseError(notificationUrl, s"Serial must be a positive number"))
-
         // our local serial is already the latest one
         case serial@Some(lastLocalSerial) if lastLocalSerial == notificationDef.serial =>
           logger.info(s"lastLocalSerial = $lastLocalSerial and it's equal to the remote serial")
