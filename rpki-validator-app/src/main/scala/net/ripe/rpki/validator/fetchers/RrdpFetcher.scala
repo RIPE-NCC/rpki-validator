@@ -59,14 +59,13 @@
 package net.ripe.rpki.validator.fetchers
 
 import java.net.URI
+import java.util.concurrent.Executors
 
 import com.google.common.io.BaseEncoding
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.config.{ApplicationOptions, Http}
 import net.ripe.rpki.validator.store.HttpFetcherStore
-import net.ripe.rpki.validator.lib.DateAndTime.formatAsRFC2616
 import org.apache.http.HttpStatus
-import org.apache.http.client.methods.HttpGet
 import org.joda.time.DateTime
 
 import scala.collection.immutable.Seq
@@ -83,7 +82,6 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
 
-  import scala.concurrent.ExecutionContext.Implicits.global
   import scala.concurrent._
   import scala.concurrent.duration._
   import scalaz.Scalaz._
@@ -109,6 +107,8 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
   override def trustedCertsLocation = ApplicationOptions.trustedSslCertsLocation
 
   type ChangeSet = Seq[DeltaUnit]
+
+  implicit val executionContext = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
 
   override def fetch(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
 
