@@ -265,7 +265,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     // avoid checking every existing manifest
     val validatedManifestData = recentFirstManifests.view.map { mft =>
       // get CRLs on the manifest
-      val ManifestObjects(mftObjects, errors) = getManifestObjects(mft)
+      val ManifestEntriesAndErrors(mftObjects, errors) = getManifestEntries(mft)
       val crlsOnManifest = mftObjects.collect { case (_, c: CrlObject) => c }
 
       val crlOrError = getCrl(crlsOnManifest, location(mft))
@@ -352,9 +352,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
-  case class ManifestObjects(objects: Seq[(String, ROType)], errors: Seq[Check])
+  case class ManifestEntriesAndErrors(objects: Seq[(String, ROType)], errors: Seq[Check])
 
-  def getManifestObjects(manifest: ManifestObject): ManifestObjects = {
+  def getManifestEntries(manifest: ManifestObject): ManifestEntriesAndErrors = {
     val repositoryUri = certificateContext.getRepositoryURI
     val validationLocation = location(manifest)
 
@@ -380,6 +380,6 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         foundObjects ++= objs.map((name, _))
       }
     }
-    ManifestObjects(foundObjects.toSeq, errors.toSeq)
+    ManifestEntriesAndErrors(foundObjects, errors)
   }
 }
