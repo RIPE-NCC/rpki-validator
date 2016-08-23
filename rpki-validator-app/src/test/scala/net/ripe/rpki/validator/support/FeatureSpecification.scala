@@ -31,7 +31,7 @@ package net.ripe.rpki.validator
 package support
 
 import org.junit.runner.RunWith
-import org.scalatest.{Matchers, GivenWhenThen}
+import org.scalatest.{GivenWhenThen, Matchers}
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.mock.MockitoSugar
 import net.ripe.rpki.validator.config.WebFilter
@@ -66,5 +66,6 @@ abstract class FeatureSpecification extends ScalatraFeatureSpec with JunitLoggin
 
   addServlet(new RestApi {
     protected def getVrpObjects = ???
+    protected def getCachedObjects = ???
   }, "/api/*")
 }

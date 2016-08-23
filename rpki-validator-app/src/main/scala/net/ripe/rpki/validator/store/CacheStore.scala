@@ -133,13 +133,17 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         }).toSeq
     }
 
-  override def getObjects(hash: String): Seq[RepositoryObject.ROType] = detached {
-    Try {
-      template.query(
-        """SELECT encoded, validation_time, object_type, url
+  override def getObjects(hash: String): Seq[RepositoryObject.ROType] =
+    getAllObjectsBy(
+      """SELECT encoded, validation_time, object_type, url
         FROM repo_objects
-        WHERE hash = :hash""",
-        Map("hash" -> hash),
+        WHERE hash = :hash""", Map("hash" -> hash))
+
+  def getAllObjects = getAllObjectsBy("SELECT encoded, validation_time, object_type, url FROM repo_objects", Map())
+
+  def getAllObjectsBy(query: String, params: Map[String, Object]): Seq[RepositoryObject.ROType] = detached {
+    Try {
+      template.query(query, params,
         new RowMapper[RepositoryObject.ROType] {
           override def mapRow(rs: ResultSet, i: Int) = {
             val (bytes, validationTime, objType, url) = (rs.getBytes(1), instant(rs.getTimestamp(2)), rs.getString(3), rs.getString(4))
@@ -155,7 +159,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     } match {
       case Success(obj) => obj
       case Failure(err) =>
-        logger.error(s"$err, hash = $hash")
+        logger.error(s"$err, parameters = $params")
         Seq()
     }
   }

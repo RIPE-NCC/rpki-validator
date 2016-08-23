@@ -35,15 +35,16 @@ import java.util.EnumSet
 import javax.servlet.DispatcherType
 
 import grizzled.slf4j.Logging
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.api.RestApi
 import net.ripe.rpki.validator.bgp.preview._
 import net.ripe.rpki.validator.config.health.HealthServlet
 import net.ripe.rpki.validator.fetchers.FetcherConfig
 import net.ripe.rpki.validator.lib.{UserPreferences, _}
-import net.ripe.rpki.validator.models.validation.{RepoFetcher, TrackValidationProcess, TrustAnchorValidationProcess, ValidationProcessLogger}
+import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.models.{Idle, IgnoreFilter, TrustAnchorData, _}
 import net.ripe.rpki.validator.rtr.{Pdu, RTRServer}
-import net.ripe.rpki.validator.store.DurableCaches
+import net.ripe.rpki.validator.store.{CacheStore, DurableCaches}
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.apache.commons.io.FileUtils
 import org.apache.http.client.methods.HttpGet
@@ -105,6 +106,8 @@ class Main extends Http with Logging { main =>
   val memoryImage = Ref(
     MemoryImage(data.filters, data.whitelist, new TrustAnchors(trustAnchors), roas))
 
+  var store : CacheStore = _
+
   def updateMemoryImage(f: MemoryImage => MemoryImage)(implicit transaction: MaybeTxn) {
     atomic { implicit transaction =>
       val oldVersion = memoryImage().version
@@ -165,9 +168,10 @@ class Main extends Http with Logging { main =>
 
     val taLocators = trustAnchorNames.flatMap { name => trustAnchors.find(_.name == name) }
 
+    store = DurableCaches(ApplicationOptions.workDirLocation)
+
     for (trustAnchorLocator <- taLocators) {
       Future {
-        val store = DurableCaches(ApplicationOptions.workDirLocation)
         val repoService = new RepoService(RepoFetcher(ApplicationOptions.workDirLocation, FetcherConfig(ApplicationOptions.rsyncDirLocation)))
 
         val process = new TrustAnchorValidationProcess(trustAnchorLocator.locator,
@@ -282,7 +286,9 @@ class Main extends Http with Logging { main =>
     }
 
     val restApiServlet = new RestApi() {
-      protected def getVrpObjects = memoryImage.single.get.getDistinctRtrPrefixes
+      override protected def getVrpObjects = memoryImage.single.get.getDistinctRtrPrefixes
+
+      override protected def getCachedObjects = store.getAllObjects
     }
 
     val root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS)

@@ -29,21 +29,53 @@
  */
 package net.ripe.rpki.validator.api
 
-import org.scalatra.ScalatraServlet
 import net.liftweb.json._
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import net.ripe.rpki.validator.models.validation.{RepositoryObject, _}
+import org.scalatra.{Ok, ScalatraBase}
+import scala.collection.JavaConversions._
 
-abstract class RestApi extends ScalatraServlet with BgpPrefixOriginValidationController with CacheStoreController {
+
+trait CacheStoreController extends ScalatraBase with Hashing {
   import net.liftweb.json.JsonDSL._
 
-  before() {
-    contentType ="text/json;charset=UTF-8"
-    response.setHeader("Set-Cookie", null) // watch out for scalatra.FlashMapSupport
+  protected def getCachedObjects: Seq[RepositoryObject.ROType]
+
+  get("/v1/store/view") {
+    contentType = "text/json;charset=utf-8"
+    response.addHeader("Cache-Control", "no-cache,no-store")
+
+    val cachedObjects = getCachedObjects
+
+    def common(o: RepositoryObject.ROType) = {
+      val js = ("url" -> o.url.toString) ~
+        ("hash" -> stringify(o.hash)) ~
+        ("aki" -> stringify(o.aki))
+
+      o.validationTime.map(t => js ~ ("validation_time" -> t.toString)).getOrElse(js)
+    }
+
+    val js = cachedObjects.par.map {
+      case c: CertificateObject =>
+        ("type" -> "cer") ~ common(c)
+
+      case r: RoaObject =>
+        ("type" -> "roa") ~ common(r)
+
+      case m: ManifestObject =>
+        ("type" -> "mft") ~ common(m) ~ ("files" -> m.decoded.getHashes.map { e =>
+          e._1 -> stringify(e._2)
+        })
+
+      case c: CrlObject =>
+        ("type" -> "crl") ~ common(c)
+
+      case g: GhostbustersObject =>
+        ("type" -> "gbr") ~ common(g)
+    }.seq
+
+    Ok(body = pretty(render(js)))
   }
 
-  notFound {
-    status = 404
-    response.getWriter.write(pretty(render(
-      "message" -> s"Unrecognized request URL (${request.getMethod}: ${request.getRequestURI}})."
-    )))
-  }
+
 }
