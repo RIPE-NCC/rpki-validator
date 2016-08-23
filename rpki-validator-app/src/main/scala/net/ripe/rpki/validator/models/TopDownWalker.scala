@@ -252,7 +252,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   case class ManifestSearchResult(manifest: ManifestObject,
                                   crl: CrlObject,
-                                  manifestObjects: Seq[(String, RepositoryObject.ROType)],
+                                  manifestEntries: Seq[(String, RepositoryObject.ROType)],
                                   checksForManifest: Seq[Check],
                                   skippedObjects: Seq[InvalidObject])
 

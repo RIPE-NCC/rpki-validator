@@ -337,9 +337,9 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.crl.decoded should be (crl)
     result.get.crl.url should be ("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be (crl)
-    result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head._2.url should be ("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head._2.decoded should be (crl)
+    result.get.manifestEntries should have size 1
+    result.get.manifestEntries.head._2.url should be ("rsync://foo.host/bar/ta.crl")
+    result.get.manifestEntries.head._2.decoded should be (crl)
     result.get.checksForManifest should have size 0
     result.get.skippedObjects should have size 0
   }
@@ -371,9 +371,9 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.crl.decoded should be(crl)
     result.get.crl.url should be("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be(crl)
-    result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head._2.url should be("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head._2.decoded should be(crl)
+    result.get.manifestEntries should have size 1
+    result.get.manifestEntries.head._2.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.manifestEntries.head._2.decoded should be(crl)
     result.get.checksForManifest should have size 0
 
     val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
@@ -405,9 +405,9 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get.crl.decoded should be(goodCrl)
     result.get.crl.url should be("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be(goodCrl)
-    result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head._2.url should be("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head._2.decoded should be(goodCrl)
+    result.get.manifestEntries should have size 1
+    result.get.manifestEntries.head._2.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.manifestEntries.head._2.decoded should be(goodCrl)
     result.get.checksForManifest should have size 0
     result.get.skippedObjects should have size 2
     val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
