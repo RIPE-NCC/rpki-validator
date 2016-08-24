@@ -283,7 +283,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
       val isMftValid = !errorsExist && crl.isDefined
       if (!isMftValid) {
-        val skippedChecks: Seq[Check] = Seq(warning(location(mft), VALIDATOR_MANIFEST_IS_INVALID)) ++ nonFatalChecks ++ fatalChecks
+        val skippedChecks: Seq[Check] = Seq(error(location(mft), VALIDATOR_MANIFEST_IS_INVALID)) ++ nonFatalChecks ++ fatalChecks
 
         val mftChecks = skippedChecks.filter(c => c.location.getName.equals(mft.url))
         val crlChecks = skippedChecks.filter(c => crl.isDefined && c.location.getName.equals(crl.get.url))

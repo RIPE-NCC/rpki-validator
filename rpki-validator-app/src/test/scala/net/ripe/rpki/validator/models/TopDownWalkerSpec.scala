@@ -413,7 +413,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
     skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks should have size 1
     skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks.head.getKey should be (ValidationString.VALIDATOR_MANIFEST_IS_INVALID)
-    skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks.head.getStatus should be (ValidationStatus.WARNING)
+    skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks.head.getStatus should be (ValidationStatus.ERROR)
     skippedObjectsMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks should have size 2
     skippedObjectsMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_AKI_MISMATCH) should be(true)
     skippedObjectsMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_SIGNATURE_VALID) should be(true)
@@ -462,7 +462,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result should have size 2
     result.get(manifestLocation).get should not be 'isValid
     result.get(manifestLocation).get.checks should have size 1
-    result.get(manifestLocation).get.checks.head.getStatus should be(ValidationStatus.WARNING)
+    result.get(manifestLocation).get.checks.head.getStatus should be(ValidationStatus.ERROR)
     result.get(ROOT_CRL_LOCATION).get should not be 'isValid
     result.get(ROOT_CRL_LOCATION).get.checks should have size 2
   }
