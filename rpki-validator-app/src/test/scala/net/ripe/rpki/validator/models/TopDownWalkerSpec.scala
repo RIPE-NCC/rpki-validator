@@ -108,13 +108,13 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result should have size 4
 
     result.get(certificateLocation).get.checks should be ('empty)
-    result.get(certificateLocation).get.subjectChain should be("CN=For Testing Only,CN=RIPE NCC,C=NL - certificate")
+    result.get(certificateLocation).get.subjectChain should be("CN=For Testing Only,CN=RIPE NCC,C=NL" + ValidatedObject.separator + "certificate")
     result.get(ROOT_CRL_LOCATION).get.checks should be ('empty)
-    result.get(ROOT_CRL_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - crl")
+    result.get(ROOT_CRL_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL" + ValidatedObject.separator + "crl")
     result.get(ROOT_MANIFEST_LOCATION).get.checks should be ('empty)
-    result.get(ROOT_MANIFEST_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - manifest")
+    result.get(ROOT_MANIFEST_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL" + ValidatedObject.separator + "manifest")
     result.get(roaLocation).get.checks should be ('empty)
-    result.get(roaLocation).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - roa123")
+    result.get(roaLocation).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL" + ValidatedObject.separator + "roa123")
   }
 
   test("should not give warnings for valid certificate with child objects") {

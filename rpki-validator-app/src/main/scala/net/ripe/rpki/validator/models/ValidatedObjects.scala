@@ -69,7 +69,7 @@ case class ValidObject(subjectChain: String, uri: URI, hash: Option[Array[Byte]]
 }
 
 object ValidatedObject {
-  val separator = " - "
+  val separator = " / "
 
   def flattenSubjectChain(subjectChain: util.List[String]): String = subjectChain.asScala.reduce(_ + separator + _)
 
