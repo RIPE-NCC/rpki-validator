@@ -265,14 +265,13 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     // avoid checking every existing manifest
     val validatedManifestData = recentFirstManifests.view.map { mft =>
       // get CRLs on the manifest
-      val ManifestEntriesAndErrors(mftObjects, errors) = getManifestEntries(mft)
-      val crlsOnManifest = mftObjects.collect { case (_, c: CrlObject) => c }
-
+      val ManifestEntriesAndErrors(mftEntries, entriesErrors) = getManifestEntries(mft)
+      val crlsOnManifest = mftEntries.collect { case (_, c: CrlObject) => c }
       val crlOrError = getCrl(crlsOnManifest, location(mft))
 
       val crlChecks = getCrlChecks(crlOrError)
       val mftChecks = getMftChecks(mft, crlOrError)
-      (mft, crlOrError.right.toOption, mftObjects, errors ++ crlOrError.left.toSeq, crlChecks ++ mftChecks)
+      (mft, crlOrError.right.toOption, mftEntries, entriesErrors ++ crlOrError.left.toSeq, crlChecks ++ mftChecks)
     }
 
     // Add warnings and retain the errors for the cases when we have to move from one invalid manifest to an older one.
