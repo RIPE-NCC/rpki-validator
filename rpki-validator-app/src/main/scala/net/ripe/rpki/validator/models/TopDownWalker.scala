@@ -102,21 +102,25 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     val fetchErrors = preferredFetchLocation.map(prefetch(forceNewFetch, validationStartTime)).getOrElse(Seq())
 
     val mftList = fetchMftsByAKI
-    val validatedObjects = findRecentValidMftWithCrl(mftList) match {
+    logger.debug(s"Found manifests by AKI ${certificateContext.getSubjectKeyIdentifier}: ${mftList.mkString("; ")}")
+
+    val (manifestSearchOption, manifestSearchErrors) = findRecentValidMftWithCrl(mftList)
+
+    val validatedObjects = manifestSearchOption match {
       case Some(mftSearchResult) =>
         validateManifestChildren(mftSearchResult, forceNewFetch)
 
       case None =>
         val subjectChain = ValidatedObject.flattenSubjectChain(certificateContext.getSubjectChain) + ValidatedObject.separator + "cert"
-        val check = new ValidationCheck(ValidationStatus.WARNING, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateSkiHex)
+        val check = new ValidationCheck(ValidationStatus.ERROR, VALIDATOR_CA_SHOULD_HAVE_MANIFEST, certificateContext.getLocation.toString)
         Seq(InvalidObject(subjectChain, certificateContext.getLocation, None, Set(check)))
     }
 
-    fetchErrors ++ validatedObjects
+    fetchErrors ++ manifestSearchErrors ++ validatedObjects
   }
 
   def validateManifestChildren(manifestSearchResult: ManifestSearchResult, forceNewFetch: Boolean): Seq[ValidatedObject] = {
-    val ManifestSearchResult(manifest, crl, mftObjects, mftChecks, skippedObjects) = manifestSearchResult
+    val ManifestSearchResult(manifest, crl, mftObjects, mftChecks) = manifestSearchResult
 
     val ClassifiedObjects(roas, childrenCertificates, crlList) = classify(mftObjects)
 
@@ -137,7 +141,6 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       validatedCerts.map(_.validatedObject) ++
       crlList.map(validatedObject(checkMap)) ++
       Seq(("mft", manifest)).map(validatedObject(checkMap)) ++
-      skippedObjects ++
       validatedCerts.withFilter(_.valid).map(_.cert).par.flatMap(stepDown(manifest, forceNewFetch))
 
     everythingValidated
@@ -252,11 +255,10 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   case class ManifestSearchResult(manifest: ManifestObject,
                                   crl: CrlObject,
-                                  manifestObjects: Seq[(String, RepositoryObject.ROType)],
-                                  checksForManifest: Seq[Check],
-                                  skippedObjects: Seq[InvalidObject])
+                                  manifestEntries: Seq[(String, RepositoryObject.ROType)],
+                                  checksForManifest: Seq[Check])
 
-  def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): Option[ManifestSearchResult] = {
+  def findRecentValidMftWithCrl(mftList: Seq[ManifestObject]): (Option[ManifestSearchResult], Seq[InvalidObject]) = {
     // sort manifests chronologically so that
     // the latest one goes first
     val recentFirstManifests = mftList.sortBy(_.decoded.getNumber.negate())
@@ -265,26 +267,24 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     // avoid checking every existing manifest
     val validatedManifestData = recentFirstManifests.view.map { mft =>
       // get CRLs on the manifest
-      val ManifestObjects(mftObjects, errors) = getManifestObjects(mft)
-      val crlsOnManifest = mftObjects.collect { case (_, c: CrlObject) => c }
-
+      val ManifestEntriesAndErrors(mftEntries, entriesErrors) = getManifestEntries(mft)
+      val crlsOnManifest = mftEntries.collect { case (_, c: CrlObject) => c }
       val crlOrError = getCrl(crlsOnManifest, location(mft))
 
       val crlChecks = getCrlChecks(crlOrError)
       val mftChecks = getMftChecks(mft, crlOrError)
-      (mft, crlOrError.right.toOption, mftObjects, errors ++ crlOrError.left.toSeq, crlChecks ++ mftChecks)
+      (mft, crlOrError.right.toOption, mftEntries, entriesErrors, crlOrError.left.toSeq ++ crlChecks ++ mftChecks)
     }
 
     // Add warnings and retain the errors for the cases when we have to move from one invalid manifest to an older one.
     var checksForSkippedMfts = Seq[InvalidObject]()
-    var checksForValidMft = Seq[Check]()
     val mostRecentValidMft = validatedManifestData.iterator.find { x =>
       val (mft, crl, _, nonFatalChecks, fatalChecks) = x
       val errorsExist = fatalChecks.exists(isError)
 
       val isMftValid = !errorsExist && crl.isDefined
       if (!isMftValid) {
-        val skippedChecks: Seq[Check] = Seq(warning(location(mft), VALIDATOR_MANIFEST_IS_INVALID)) ++ nonFatalChecks ++ fatalChecks
+        val skippedChecks: Seq[Check] = Seq(error(location(mft), VALIDATOR_MANIFEST_IS_INVALID)) ++ nonFatalChecks ++ fatalChecks
 
         val mftChecks = skippedChecks.filter(c => c.location.getName.equals(mft.url))
         val crlChecks = skippedChecks.filter(c => crl.isDefined && c.location.getName.equals(crl.get.url))
@@ -292,20 +292,18 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
         var skippedInvalidObjects: Seq[InvalidObject] = Seq(ValidatedObject.invalid(Some(("mft", mft)), certificateContext.getSubjectChain, mftUri, Some(mft.hash), mftChecks.map(c => c.impl).toSet))
         if (crlChecks.nonEmpty) {
-          val invalidObject = ValidatedObject.invalid(Some(("mft", mft)), certificateContext.getSubjectChain, new URI(crl.get.url), Some(crl.get.hash), crlChecks.map(c => c.impl).toSet)
+          val invalidObject = ValidatedObject.invalid(Some(("crl", crl.get)), certificateContext.getSubjectChain, new URI(crl.get.url), Some(crl.get.hash), crlChecks.map(c => c.impl).toSet)
           skippedInvalidObjects ++= Seq(invalidObject)
         }
         checksForSkippedMfts ++= skippedInvalidObjects
-      } else {
-        checksForValidMft = nonFatalChecks
       }
       isMftValid
     }
 
-    // replace the particular manifest checks with all the checks
-    // we've found while searching for the proper manifest
-    for { (mft, oCrl, mftObjects, _, _) <- mostRecentValidMft; crl <- oCrl }
-      yield ManifestSearchResult(mft, crl, mftObjects, checksForValidMft, checksForSkippedMfts)
+    val validManifest = for { (mft, oCrl, mftObjects, nonFatalChecks, fatalChecks) <- mostRecentValidMft; crl <- oCrl }
+      yield ManifestSearchResult(mft, crl, mftObjects, nonFatalChecks ++ fatalChecks)
+
+    (validManifest, checksForSkippedMfts)
   }
 
   private def validateMft(crl: CrlObject, mft: ManifestObject): ValidationResult =
@@ -352,9 +350,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
-  case class ManifestObjects(objects: Seq[(String, ROType)], errors: Seq[Check])
+  case class ManifestEntriesAndErrors(objects: Seq[(String, ROType)], errors: Seq[Check])
 
-  def getManifestObjects(manifest: ManifestObject): ManifestObjects = {
+  def getManifestEntries(manifest: ManifestObject): ManifestEntriesAndErrors = {
     val repositoryUri = certificateContext.getRepositoryURI
     val validationLocation = location(manifest)
 
@@ -380,6 +378,6 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         foundObjects ++= objs.map((name, _))
       }
     }
-    ManifestObjects(foundObjects.toSeq, errors.toSeq)
+    ManifestEntriesAndErrors(foundObjects, errors)
   }
 }

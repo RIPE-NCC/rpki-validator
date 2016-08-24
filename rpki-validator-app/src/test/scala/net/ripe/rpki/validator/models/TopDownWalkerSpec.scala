@@ -108,13 +108,13 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result should have size 4
 
     result.get(certificateLocation).get.checks should be ('empty)
-    result.get(certificateLocation).get.subjectChain should be("CN=For Testing Only,CN=RIPE NCC,C=NL - certificate")
+    result.get(certificateLocation).get.subjectChain should be("CN=For Testing Only,CN=RIPE NCC,C=NL" + ValidatedObject.separator + "certificate")
     result.get(ROOT_CRL_LOCATION).get.checks should be ('empty)
-    result.get(ROOT_CRL_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - crl")
+    result.get(ROOT_CRL_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL" + ValidatedObject.separator + "crl")
     result.get(ROOT_MANIFEST_LOCATION).get.checks should be ('empty)
-    result.get(ROOT_MANIFEST_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - manifest")
+    result.get(ROOT_MANIFEST_LOCATION).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL" + ValidatedObject.separator + "manifest")
     result.get(roaLocation).get.checks should be ('empty)
-    result.get(roaLocation).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL - roa123")
+    result.get(roaLocation).get.subjectChain should be ("CN=For Testing Only,CN=RIPE NCC,C=NL" + ValidatedObject.separator + "roa123")
   }
 
   test("should not give warnings for valid certificate with child objects") {
@@ -331,17 +331,17 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
     val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest)
-    val result = subject.findRecentValidMftWithCrl(Seq(manifestObject))
+    val (result, errors) = subject.findRecentValidMftWithCrl(Seq(manifestObject))
 
     result.get.manifest should be (manifestObject)
     result.get.crl.decoded should be (crl)
     result.get.crl.url should be ("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be (crl)
-    result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head._2.url should be ("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head._2.decoded should be (crl)
+    result.get.manifestEntries should have size 1
+    result.get.manifestEntries.head._2.url should be ("rsync://foo.host/bar/ta.crl")
+    result.get.manifestEntries.head._2.decoded should be (crl)
     result.get.checksForManifest should have size 0
-    result.get.skippedObjects should have size 0
+    errors should have size 0
   }
 
   test("should find recent valid manifest with valid CRL in case there is second invalid more recent manifest") {
@@ -365,21 +365,21 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
     val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest)
     val badManifestObject = ManifestObject("rsync://host.net/bad_manifest.mft", badManifestBuilder.build(ROOT_KEY_PAIR.getPrivate))
-    val result = subject.findRecentValidMftWithCrl(Seq(manifestObject, badManifestObject))
+    val (result, errors) = subject.findRecentValidMftWithCrl(Seq(manifestObject, badManifestObject))
 
     result.get.manifest should be(manifestObject)
     result.get.crl.decoded should be(crl)
     result.get.crl.url should be("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be(crl)
-    result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head._2.url should be("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head._2.decoded should be(crl)
+    result.get.manifestEntries should have size 1
+    result.get.manifestEntries.head._2.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.manifestEntries.head._2.decoded should be(crl)
     result.get.checksForManifest should have size 0
 
-    val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
+    val skippedObjectsMap: Map[URI, InvalidObject] = errors.map(so => so.uri -> so)(collection.breakOut)
     if (errorNumber > 0) {
       skippedObjectsMap should have size 1
-      skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks should have size errorNumber
+      skippedObjectsMap(new URI(badManifestObject.url)).checks should have size errorNumber
     } else {
       skippedObjectsMap should have size 0
     }
@@ -399,24 +399,24 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
     val manifestObject = ManifestObject("rsync://host.net/manifest.mft", manifest1)
     val badManifestObject = ManifestObject("rsync://host.net/bad_manifest.mft", bogusManifestBuilder.build(ROOT_KEY_PAIR.getPrivate))
-    val result = subject.findRecentValidMftWithCrl(Seq(manifestObject, badManifestObject))
+    val (result, errors) = subject.findRecentValidMftWithCrl(Seq(manifestObject, badManifestObject))
 
     result.get.manifest should be(manifestObject)
     result.get.crl.decoded should be(goodCrl)
     result.get.crl.url should be("rsync://foo.host/bar/ta.crl")
     result.get.crl.decoded should be(goodCrl)
-    result.get.manifestObjects should have size 1
-    result.get.manifestObjects.head._2.url should be("rsync://foo.host/bar/ta.crl")
-    result.get.manifestObjects.head._2.decoded should be(goodCrl)
+    result.get.manifestEntries should have size 1
+    result.get.manifestEntries.head._2.url should be("rsync://foo.host/bar/ta.crl")
+    result.get.manifestEntries.head._2.decoded should be(goodCrl)
     result.get.checksForManifest should have size 0
-    result.get.skippedObjects should have size 2
-    val skippedObjectsMap = result.get.skippedObjects.map(so => so.uri -> so).toMap
-    skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks should have size 1
-    skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks.head.getKey should be (ValidationString.VALIDATOR_MANIFEST_IS_INVALID)
-    skippedObjectsMap.get(new URI(badManifestObject.url)).get.checks.head.getStatus should be (ValidationStatus.WARNING)
-    skippedObjectsMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks should have size 2
-    skippedObjectsMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_AKI_MISMATCH) should be(true)
-    skippedObjectsMap.get(new URI("rsync://host.net/bad_manifest_crl.crl")).get.checks.exists(ch => ch.getKey == CRL_SIGNATURE_VALID) should be(true)
+    errors should have size 2
+    val skippedObjectsMap: Map[URI, InvalidObject] = errors.map(so => so.uri -> so)(collection.breakOut)
+    skippedObjectsMap(new URI(badManifestObject.url)).checks should have size 1
+    skippedObjectsMap(new URI(badManifestObject.url)).checks.head.getKey should be (ValidationString.VALIDATOR_MANIFEST_IS_INVALID)
+    skippedObjectsMap(new URI(badManifestObject.url)).checks.head.getStatus should be (ValidationStatus.ERROR)
+    skippedObjectsMap(new URI("rsync://host.net/bad_manifest_crl.crl")).checks should have size 2
+    skippedObjectsMap(new URI("rsync://host.net/bad_manifest_crl.crl")).checks.exists(ch => ch.getKey == CRL_AKI_MISMATCH) should be(true)
+    skippedObjectsMap(new URI("rsync://host.net/bad_manifest_crl.crl")).checks.exists(ch => ch.getKey == CRL_SIGNATURE_VALID) should be(true)
   }
 
   test("should validate only the CRL of the most recent (valid) manifest") {
@@ -442,7 +442,7 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
     result.get(ROOT_CRL_LOCATION).get should be('isValid)
   }
 
-  test("should skip the recent manifest if its Crl is invalid but return a warning for the manifest and for the crl") {
+  test("should skip the recent manifest if its Crl is invalid and return errors for that manifest and crl") {
     val (_, certificate) = createValidResourceCertificate(CERTIFICATE_KEY_PAIR, "valid.cer", ROOT_MANIFEST_LOCATION)
     val goodCrl = createCrlWithEntry(certificate)
     val bogusMftCrl = createCrlWithEntry(certificate, ROOT_KEY_PAIR_2, ROOT_CERTIFICATE_NAME_2, ROOT_CRL_LOCATION.toString)
@@ -457,14 +457,20 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
 
     val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
-    val result = subject.execute(false).map(vo => vo.uri -> vo).toMap
+    val result = subject.execute(false)
+      .sortBy(vo => vo.isValid + vo.uri.toString)
+      .toIndexedSeq
 
-    result should have size 2
-    result.get(manifestLocation).get should not be 'isValid
-    result.get(manifestLocation).get.checks should have size 1
-    result.get(manifestLocation).get.checks.head.getStatus should be(ValidationStatus.WARNING)
-    result.get(ROOT_CRL_LOCATION).get should not be 'isValid
-    result.get(ROOT_CRL_LOCATION).get.checks should have size 2
+    result should have size 4
+
+    result(0) should not be 'valid
+    result(1) should not be 'valid
+    result(2) shouldBe 'valid
+    result(3) shouldBe 'valid
+
+    result(0).checks.head.getKey shouldBe "validator.manifest.is.invalid"
+    result(1).checks.head.getKey shouldBe "cert.crl.signature"
+    result(1).checks.tail.head.getKey shouldBe "crl.aki.mismatch"
   }
 
   test("should give overclaim warning if a child certificate claims more resources than its parent") {
