@@ -58,19 +58,31 @@ abstract class ValidationResultsTableData(records: IndexedSeq[ValidatedObjectRes
   }
 
   override def getValuesForRecord(record: ValidatedObjectResult) = {
-    List(<span rel="twipsy" data-original-title={record.subjectChain.toString}>
-      <b>Certificate chain:</b> {record.subjectChain.toString.split("/").last}
-      <br/>
-      <b>URI:</b>&nbsp; {record.uri.toString}
-    </span>.toString(), record.validationStatus.toString, record.messages)
+    List(
+      <span rel="twipsy" data-original-title={record.subjectChain}>
+        <b>Certificate chain:</b> {record.subjectChain}
+        <br/>
+        <b>URI:</b>&nbsp;{record.uri.toString}
+      </span>.toString(),
+      record.validationStatus.toString,
+      record.messages
+    )
   }
 
 }
 
 abstract class FetchResultsTableData(records: IndexedSeq[ValidatedObjectResult]) extends ValidationResultsTableData(records){
   override def getValuesForRecord(record: ValidatedObjectResult) = {
-    List(record.subjectChain.toString, record.messages)
+    List(
+      <span rel="twipsy" data-original-title={record.subjectChain}>
+        <b>Certificate chain:</b> {record.subjectChain}
+        <br/>
+        <b>URI:</b>&nbsp;{record.uri.toString}
+      </span>.toString(),
+      record.messages
+    )
   }
+
 
   override def ordering(sortColumn: Int) = {
     sortColumn match {

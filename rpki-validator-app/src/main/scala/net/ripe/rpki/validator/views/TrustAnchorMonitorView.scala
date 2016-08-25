@@ -74,7 +74,7 @@ class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAncho
     val style = if (opaque) "opacity: 0.25;" else ""
     <span class={ clazz } style={ style }>{ text }</span>
   }
-  
+
   def checkToOverallHealthBadge(isOkay: Boolean) = {
     checkToTextBadge(isOkay, passedText = "Overall health: OK - All checks were successful", failedText = "Overall health: ALERT - One or more checks failed")
   }
@@ -99,7 +99,7 @@ class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAncho
       <table id="fetch-details-table" class="zebra-striped" style="display: none;" data-source={ s"${Tabs.TrustAnchorMonitorTab.url}/fetch-detail/${ta.identifierHash}" }>
         <thead>
           <tr>
-            <th>URI</th>
+            <th>Object</th>
             <th>Message</th>
           </tr>
         </thead>
