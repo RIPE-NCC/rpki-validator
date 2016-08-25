@@ -32,20 +32,26 @@ package controllers
 
 import java.net.URI
 
-import net.ripe.rpki.commons.validation.{ValidationString, ValidationStatus, ValidationCheck}
+import net.ripe.rpki.commons.validation.{ValidationCheck, ValidationStatus, ValidationString}
+import net.ripe.rpki.validator.models._
+import net.ripe.rpki.validator.support.ControllerTestCase
 import net.ripe.rpki.validator.testing.TestingObjectMother
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 import net.ripe.rpki.validator.views.FetchResultsTableData
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import support.ControllerTestCase
-import models._
-import net.ripe.rpki.validator.util.TrustAnchorLocator
 
 @RunWith(classOf[JUnitRunner])
 class TrustAnchorsControllerTest extends ControllerTestCase {
   private val ta = TestingObjectMother.TA
   private val message = "some message"
-  private val invalidObject: InvalidObject = InvalidObject("obj", URI.create("rsync://some.host/obj.o"), None, Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, ValidationString.VALIDATOR_REPO_EXECUTION, message)))
+  private val uri: URI = URI.create("rsync://some.host/obj.o")
+  private val invalidObject: InvalidObject = InvalidObject(
+    "obj",
+    uri,
+    None,
+    Set(new ValidationCheck(ValidationStatus.FETCH_ERROR, ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, uri.toString, message))
+  )
   private val invalidObjects = Seq(invalidObject)
 
   override def controller = new ControllerFilter with TrustAnchorsController {
@@ -68,7 +74,8 @@ class TrustAnchorsControllerTest extends ControllerTestCase {
       val records = result.asInstanceOf[FetchResultsTableData].getAllRecords()
       records.size should be(1)
       records.head.subjectChain should be(invalidObject.subjectChain)
-      records.head.messages should be(message)
+      records.head.messages should include(uri.toString)
+      records.head.messages should include(message)
     }
   }
 
