@@ -33,10 +33,12 @@ import java.math.BigInteger
 import java.net.URI
 import java.security.KeyPair
 import java.util
+import java.util.Collections
 import javax.security.auth.x500.X500Principal
 
 import net.ripe.ipresource.{Asn, IpRange, IpResourceSet, IpResourceType}
 import net.ripe.rpki.commons.crypto.ValidityPeriod
+import net.ripe.rpki.commons.crypto.cms.ghostbuster.GhostbustersCms
 import net.ripe.rpki.commons.crypto.cms.manifest.{ManifestCms, ManifestCmsBuilder}
 import net.ripe.rpki.commons.crypto.cms.roa.{RoaCms, RoaCmsBuilder, RoaPrefix}
 import net.ripe.rpki.commons.crypto.crl.{X509Crl, X509CrlBuilder}
@@ -55,6 +57,8 @@ import org.bouncycastle.asn1.x509.KeyUsage
 import org.joda.time.{DateTime, Instant}
 import org.scalatest._
 import org.scalatest.mock.MockitoSugar
+
+import scala.util.Random
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with Hashing with MockitoSugar {
@@ -688,13 +692,14 @@ class TopDownWalkerSpec extends ValidatorTestCase with BeforeAndAfterEach with H
   test ("shouldClassifyObjectsCorrectly") {
     val subject = TopDownWalker.create(taContext, storage, createRepoService(storage), DEFAULT_VALIDATION_OPTIONS, Instant.now)
 
-    val objects = Seq(("bla", new RoaObject("url", mock[RoaCms], None)), ("blah", new CertificateObject("url", getRootResourceCertificate, None)))
+    val roa = "roaUrl" -> new RoaObject("roaUrl", mock[RoaCms], None)
+    val cert = "certUrl" -> new CertificateObject("certUrl", getRootResourceCertificate, Some(Instant.now()))
+    val crl = "crlUrl" -> new CrlObject("certUrl", mock[X509Crl], None)
+    val gbr = "gbrUrl" -> new GhostbustersObject("certUrl", mock[GhostbustersCms], Some(new Instant(Random.nextLong())))
 
-    val subject.ClassifiedObjects(roas, certificates, crls) = subject.classify(objects)
+    val objects = Random.shuffle(Seq(roa, cert, crl, gbr))
 
-    roas.size should be(1)
-    certificates.size should be(1)
-    crls.size should be(0)
+    subject.classify(objects) shouldBe subject.ClassifiedObjects(Seq(roa), Seq(cert), Seq(crl), Seq(gbr))
   }
 
   def getRootResourceCertificate: X509ResourceCertificate = {
