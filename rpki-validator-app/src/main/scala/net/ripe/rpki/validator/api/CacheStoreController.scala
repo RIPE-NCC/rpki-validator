@@ -29,14 +29,15 @@
  */
 package net.ripe.rpki.validator.api
 
+import grizzled.slf4j.Logging
 import net.liftweb.json._
-import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.models.validation.{RepositoryObject, _}
 import org.scalatra.{Ok, ScalatraBase}
+
 import scala.collection.JavaConversions._
 
 
-trait CacheStoreController extends ScalatraBase with Hashing {
+trait CacheStoreController extends ScalatraBase with Hashing with Logging {
   import net.liftweb.json.JsonDSL._
 
   protected def getCachedObjects: Seq[RepositoryObject.ROType]
@@ -45,6 +46,7 @@ trait CacheStoreController extends ScalatraBase with Hashing {
     contentType = "text/json;charset=utf-8"
     response.addHeader("Cache-Control", "no-cache,no-store")
 
+    logger.info("Getting cached objects")
     val cachedObjects = getCachedObjects
 
     def common(o: RepositoryObject.ROType) = {
@@ -55,6 +57,7 @@ trait CacheStoreController extends ScalatraBase with Hashing {
       o.validationTime.map(t => js ~ ("validation_time" -> t.toString)).getOrElse(js)
     }
 
+    logger.info("Started creating JSON")
     val js = cachedObjects.par.map {
       case c: CertificateObject =>
         ("type" -> "cer") ~ common(c)
@@ -74,7 +77,12 @@ trait CacheStoreController extends ScalatraBase with Hashing {
         ("type" -> "gbr") ~ common(g)
     }.seq
 
-    Ok(body = pretty(render(js)))
+    logger.info("Finished creating JSON")
+
+    val result = Ok(body = pretty(render(js)))
+
+    logger.info("Finished rendering JSON")
+    result
   }
 
 
