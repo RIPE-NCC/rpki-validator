@@ -86,7 +86,7 @@ case class TrustAnchor(
 
     result match {
       case Success(validatedObjects) =>
-        val validatedObjectsByUri = validatedObjects.map(vo => vo.uri -> vo).toMap
+        val validatedObjectsByUri: Map[URI, ValidatedObject] = validatedObjects.map(vo => vo.uri -> vo)(collection.breakOut)
         val nextUpdate = now.plus(ApplicationOptions.validationInterval.toMillis)
         val trustAnchor = validatedObjectsByUri.get(locator.getCertificateLocation).collect {
           case ValidObject(_, _, _, _, certificate: X509ResourceCertificate) => certificate

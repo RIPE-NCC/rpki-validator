@@ -30,16 +30,18 @@
 package net.ripe.rpki.validator
 package models
 
-import net.ripe.rpki.commons.crypto.{UnknownCertificateRepositoryObject, GhostbustersRecord, CertificateRepositoryObject}
 import java.net.URI
-import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
+
 import akka.util.ByteString
-import org.joda.time.{DateTimeZone, DateTime}
-import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
-import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
+import net.ripe.rpki.commons.crypto.UnknownCertificateRepositoryObject
+import net.ripe.rpki.commons.crypto.cms.ghostbuster.GhostbustersCms
+import net.ripe.rpki.commons.crypto.cms.manifest.ManifestCms
 import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.X509Crl
+import net.ripe.rpki.commons.crypto.util.CertificateRepositoryObjectFactory
+import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.commons.validation.ValidationResult
+import org.joda.time.{DateTime, DateTimeZone}
 
 object StoredRepositoryObject {
 
@@ -63,7 +65,7 @@ object StoredRepositoryObject {
         case mft: ManifestCms => mft.getNotValidAfter
         case roa: RoaCms => roa.getValidityPeriod.getNotValidAfter
         case crl: X509Crl => crl.getNextUpdateTime
-        case _: GhostbustersRecord | _: UnknownCertificateRepositoryObject => defaultTime
+        case _: GhostbustersCms | _: UnknownCertificateRepositoryObject => defaultTime
       }
     } catch {
       case e: RuntimeException => defaultTime

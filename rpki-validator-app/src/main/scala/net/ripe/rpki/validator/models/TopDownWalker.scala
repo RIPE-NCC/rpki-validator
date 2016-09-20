@@ -35,6 +35,9 @@ import java.util
 import com.google.common.collect.Lists
 import grizzled.slf4j.Logging
 import net.ripe.ipresource.{IpResourceSet, IpResourceType}
+import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import net.ripe.rpki.commons.crypto.cms.RpkiSignedObject
+import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509Crl}
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.commons.validation.ValidationString._
@@ -122,11 +125,12 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   def validateManifestChildren(manifestSearchResult: ManifestSearchResult, forceNewFetch: Boolean): Seq[ValidatedObject] = {
     val ManifestSearchResult(manifest, crl, mftObjects, mftChecks) = manifestSearchResult
 
-    val ClassifiedObjects(roas, childrenCertificates, crlList) = classify(mftObjects)
+    val ClassifiedObjects(roas, childrenCertificates, crls, gbrs) = classify(mftObjects)
 
     val checks = checkManifestUrlOnCertMatchesLocationInRepo(manifest).toList ++
       mftChecks ++
       check(roas, crl) ++
+      check(gbrs, crl) ++
       check(childrenCertificates, crl)
 
     val checkMap = checks.groupBy(_.location)
@@ -139,7 +143,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
     val everythingValidated = roas.map(validatedObject(checkMap)) ++
       validatedCerts.map(_.validatedObject) ++
-      crlList.map(validatedObject(checkMap)) ++
+      crls.map(validatedObject(checkMap)) ++
+      gbrs.map(validatedObject(checkMap)) ++
       Seq(("mft", manifest)).map(validatedObject(checkMap)) ++
       validatedCerts.withFilter(_.valid).map(_.cert).par.flatMap(stepDown(manifest, forceNewFetch))
 
@@ -169,12 +174,12 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     }
   }
 
-  private def check(objects: Seq[(String, RepositoryObject.ROType)], crl: CrlObject): List[Check] = {
+  private def check[T <: RepositoryObject[_ <: CertificateRepositoryObject]](objects: Seq[(String, T)], crl: CrlObject): List[Check] = {
     objects.flatMap { pair =>
       val (_, o) = pair
       val loc = location(o)
       val result = ValidationResult.withLocation(loc)
-      o.decoded.validate(o.url, certificateContext, crlLocator(crl), validationOptions, result)
+      o.decoded.validate(o.url, certificateContext, crl.decoded, URI.create(crl.url), validationOptions, result)
       toChecks(loc, result)
     }.toList
   }
@@ -227,7 +232,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   private def _validateCrl(crl: CrlObject): ValidationResult =
     validateObject(crl) { validationResult =>
-      crl.decoded.validate(crl.url, certificateContext, crlLocator(crl), validationOptions, validationResult)
+      crl.decoded.validate(crl.url, certificateContext, crl.decoded, URI.create(crl.url), validationOptions, validationResult)
     }
 
   private def fetchMftsByAKI: Seq[ManifestObject] = store.getManifests(certificateContext.getSubjectKeyIdentifier)
@@ -308,24 +313,30 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   private def validateMft(crl: CrlObject, mft: ManifestObject): ValidationResult =
     validateObject(mft) { validationResult =>
-      mft.decoded.validate(mft.url, certificateContext, crlLocator(crl), validationOptions, validationResult)
+      mft.decoded.validate(mft.url, certificateContext, crl.decoded, URI.create(crl.url), validationOptions, validationResult)
     }
 
-  case class ClassifiedObjects(roas: Seq[(String, RoaObject)], certificates: Seq[(String, CertificateObject)], crls: Seq[(String, CrlObject)])
+  case class ClassifiedObjects(roas: Seq[(String, RoaObject)],
+                               certificates: Seq[(String, CertificateObject)],
+                               crls: Seq[(String, CrlObject)],
+                               gbrs: Seq[(String, GhostbustersObject)]
+                              )
 
   def classify(objects: Seq[(String, RepositoryObject.ROType)]) = {
-    var (roas, certificates, crls) = (List[(String, RoaObject)](), List[(String, CertificateObject)](), List[(String, CrlObject)]())
-    objects.foreach { obj => {
+    var (roas, certificates, crls, gbrs) =
+      (Seq[(String, RoaObject)](), Seq[(String, CertificateObject)](), Seq[(String, CrlObject)](), Seq[(String,
+        GhostbustersObject)]())
+    objects.foreach { obj =>
       val (_, repoObject) = obj
       repoObject match {
-        case RoaObject(_, _, _) => roas = obj.asInstanceOf[(String, RoaObject)] :: roas
-        case CertificateObject(_, _, _) => certificates = obj.asInstanceOf[(String, CertificateObject)] :: certificates
-        case CrlObject(_, _, _) => crls = obj.asInstanceOf[(String, CrlObject)] :: crls
-        case _ =>
+        case RoaObject(_, _, _) => roas = obj.asInstanceOf[(String, RoaObject)] +: roas
+        case CertificateObject(_, _, _) => certificates = obj.asInstanceOf[(String, CertificateObject)] +: certificates
+        case CrlObject(_, _, _) => crls = obj.asInstanceOf[(String, CrlObject)] +: crls
+        case GhostbustersObject(_,_,_) => gbrs = obj.asInstanceOf[(String, GhostbustersObject)] +: gbrs
+        case ManifestObject(_,_,_) =>
       }
     }
-    }
-    ClassifiedObjects(roas.toSeq, certificates.toSeq, crls.toSeq)
+    ClassifiedObjects(roas, certificates, crls, gbrs)
   }
 
   private def checkManifestUrlOnCertMatchesLocationInRepo(manifest: ManifestObject): Option[Check] = {
