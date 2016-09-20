@@ -48,7 +48,7 @@
         <scala.version>2.10.6</scala.version>
         <scala.binary.version>2.10</scala.binary.version>
         <scalatra.version>2.3.1</scalatra.version>
-        <rpki.commons.version>1.2-SNAPSHOT</rpki.commons.version>
+        <rpki.commons.version>1.2</rpki.commons.version>
         <org.springframework.version>3.2.16.RELEASE</org.springframework.version>
         <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
         <sonar.clover.reportPath>target/site/clover/clover.xml</sonar.clover.reportPath>
