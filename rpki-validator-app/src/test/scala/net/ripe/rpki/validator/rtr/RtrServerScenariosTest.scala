@@ -29,26 +29,26 @@
  */
 package net.ripe.rpki.validator.rtr
 
-import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.BeforeAndAfter
-import net.ripe.rpki.validator.lib._
-import net.ripe.rpki.validator.config._
-import net.ripe.rpki.validator.util.TrustAnchorLocator
 import java.io.File
 import java.net.URI
-import net.ripe.rpki.commons.crypto.cms.roa._
-import net.ripe.rpki.validator.models._
-import net.ripe.ipresource.Ipv4Address
-import net.ripe.ipresource.Asn
-import net.ripe.ipresource.Ipv6Address
-import scala.util.Random
+import java.util.Collections
+
+import net.ripe.ipresource.{Asn, Ipv4Address, Ipv6Address}
 import net.ripe.rpki.commons.crypto.ValidityPeriod
-import org.joda.time.DateTime
-import scala.collection.JavaConverters._
+import net.ripe.rpki.commons.crypto.cms.roa._
 import net.ripe.rpki.commons.validation.ValidationCheck
+import net.ripe.rpki.validator.config._
+import net.ripe.rpki.validator.lib._
+import net.ripe.rpki.validator.models._
 import net.ripe.rpki.validator.support.ValidatorTestCase
+import net.ripe.rpki.validator.util.TrustAnchorLocator
+import org.joda.time.DateTime
+import org.junit.runner.RunWith
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import org.scalatest.junit.JUnitRunner
+
+import scala.collection.JavaConverters._
+import scala.util.Random
 
 @RunWith(classOf[JUnitRunner])
 class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll with BeforeAndAfter {
@@ -72,8 +72,11 @@ class RtrServerScenariosTest extends ValidatorTestCase with BeforeAndAfterAll wi
     var location: URI = URI.create("rsync://example.com/")
     var publicKeyInfo = "info"
     var prefetchUris: java.util.List[URI] = new java.util.ArrayList[URI]()
-    tal = new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
-    val trustAnchors: TrustAnchors = new TrustAnchors(Seq(TrustAnchor(locator = tal, status = Idle(new DateTime, None), enabled = true)))
+    tal = new TrustAnchorLocator(file, caName, Collections.singletonList(location), publicKeyInfo, prefetchUris)
+    val trustAnchors: TrustAnchors = new TrustAnchors(Seq(TrustAnchor(
+      locator = tal,
+      status = Idle(new DateTime, None),
+      enabled = true)))
     val validatedObjects: ValidatedObjects = new ValidatedObjects(Map.empty)
     cache = scala.concurrent.stm.Ref(MemoryImage(Filters(), Whitelist(), trustAnchors, validatedObjects))
     server = new RTRServer(

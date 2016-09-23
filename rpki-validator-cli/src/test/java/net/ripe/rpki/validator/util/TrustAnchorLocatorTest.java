@@ -34,11 +34,11 @@ import org.junit.Test;
 
 import java.io.File;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 
 public class TrustAnchorLocatorTest {
@@ -60,24 +60,38 @@ public class TrustAnchorLocatorTest {
     public void should_load_standard_trust_anchor_locator_files() {
         TrustAnchorLocator tal = TrustAnchorLocator.fromFile(new File("src/test/resources/rpki-standard-tal.tal"));
         assertEquals("rpki-standard-tal", tal.getCaName());
-        assertEquals(URI.create("rsync://rpki.example.org/rpki/hedgehog/root.cer"), tal.getCertificateLocation());
+        assertEquals(1, tal.getCertificateLocations().size());
+        assertEquals(URI.create("rsync://rpki.example.org/rpki/hedgehog/root.cer"), tal.getCertificateLocations().get(0));
         assertEquals(EXPECTED_PUBLIC_KEY_INFO, tal.getPublicKeyInfo());
-        assertEquals(new ArrayList<URI>(), tal.getPrefetchUris());
+        assertEquals(Collections.EMPTY_LIST, tal.getPrefetchUris());
+    }
+
+    @Test
+    public void should_load_standard_trust_anchor_locator_file_with_multi_locations() {
+        TrustAnchorLocator tal = TrustAnchorLocator.fromFile(new File("src/test/resources/rpki-standard-tal-multi-location.tal"));
+        assertEquals("rpki-standard-tal-multi-location", tal.getCaName());
+        assertEquals(2, tal.getCertificateLocations().size());
+        assertEquals(URI.create("http://pub-server.elasticbeanstalk.com/ta/local-test-ta.cer"), tal.getCertificateLocations().get(0));
+        assertEquals(URI.create("rsync://rpki.example.org/rpki/hedgehog/root.cer"), tal.getCertificateLocations().get(1));
+        assertEquals(EXPECTED_PUBLIC_KEY_INFO, tal.getPublicKeyInfo());
+        assertTrue(tal.getPrefetchUris().isEmpty());
     }
 
     @Test
     public void should_load_extended_trust_anchor_locator_files() {
         TrustAnchorLocator tal1 = TrustAnchorLocator.fromFile(new File("src/test/resources/rpki-extended-tal1.tal"));
         assertEquals("TEST1 TAL", tal1.getCaName());
-        assertEquals(URI.create("rsync://foo.net.invald/root1.cer"), tal1.getCertificateLocation());
+        assertEquals(1, tal1.getCertificateLocations().size());
+        assertEquals(URI.create("rsync://foo.net.invald/root1.cer"), tal1.getCertificateLocations().get(0));
         assertEquals(EXPECTED_PUBLIC_KEY_INFO, tal1.getPublicKeyInfo());
-        assertEquals(new ArrayList<URI>(), tal1.getPrefetchUris());
+        assertEquals(Collections.EMPTY_LIST, tal1.getPrefetchUris());
 
         TrustAnchorLocator tal2 = TrustAnchorLocator.fromFile(new File("src/test/resources/rpki-extended-tal2.tal"));
         assertEquals("TEST2 TAL", tal2.getCaName());
-        assertEquals(URI.create("rsync://foo.net.invald/root2.cer"), tal2.getCertificateLocation());
+        assertEquals(1, tal2.getCertificateLocations().size());
+        assertEquals(URI.create("rsync://foo.net.invald/root2.cer"), tal2.getCertificateLocations().get(0));
         assertEquals(EXPECTED_PUBLIC_KEY_INFO, tal2.getPublicKeyInfo());
-        assertEquals(Arrays.asList(URI.create("rsync://foo.net.invalid/")), tal2.getPrefetchUris());
+        assertEquals(Collections.singletonList(URI.create("rsync://foo.net.invalid/")), tal2.getPrefetchUris());
     }
 
 }

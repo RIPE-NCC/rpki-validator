@@ -29,19 +29,31 @@
  */
 package net.ripe.rpki.validator.util;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import net.ripe.rpki.commons.crypto.x509cert.X509CertificateUtil;
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate;
 import net.ripe.rpki.commons.rsync.Rsync;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.rpki.validator.cli.CommandLineOptions;
 import net.ripe.rpki.validator.runtimeproblems.ValidatorIOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 
 public class TrustAnchorExtractor {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(TrustAnchorExtractor.class);
 
     private final Rsync rsync;
 
@@ -70,7 +82,7 @@ public class TrustAnchorExtractor {
 
         verifyTrustAnchor(tal, cert);
 
-        return new CertificateRepositoryObjectValidationContext(tal.getCertificateLocation(), cert);
+        return new CertificateRepositoryObjectValidationContext(tal.getFetchedCertificateUri(), cert);
     }
 
     private void verifyTrustAnchor(TrustAnchorLocator tal, X509ResourceCertificate resourceCertificate) {
@@ -86,23 +98,39 @@ public class TrustAnchorExtractor {
     }
 
     private X509ResourceCertificate getRemoteCertificate(TrustAnchorLocator tal, String rootCertificateOutputDir) {
-        rsync.reset();
-        rsync.setSource(tal.getCertificateLocation().toString());
+        Preconditions.checkArgument(! tal.getCertificateLocations().isEmpty(),
+                                    "TAL without a certificate location: " + tal.getCaName());
 
-        String targetDirectoryPath = rootCertificateOutputDir;
-        File targetDirectory = new File(targetDirectoryPath);
-        if (!targetDirectory.exists()) {
-            targetDirectory.mkdirs();
+        final Path targetDirectory = Paths.get(rootCertificateOutputDir);
+        try {
+            Files.createDirectories(targetDirectory);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+        File dest = targetDirectory.resolve(tal.getFile().getName() + ".cer").toFile();
+        final URI uri = fetchRootCertificate(tal.getCertificateLocations(), dest);
+        tal.setFetchedCertificateUri(uri);
+        return CertificateRepositoryObjectLocalFileHelper.readCertificate(dest);
+    }
 
-        String dest = targetDirectoryPath + "/" + tal.getFile().getName() + ".cer";
-        rsync.setDestination(dest);
-        int exitStatus = rsync.execute();
-        switch (exitStatus) {
-        case 0:
-            return CertificateRepositoryObjectLocalFileHelper.readCertificate(new File(dest));
-        default:
-            throw new ValidatorIOException("rsync failed while retrieving remote certificate from '" + tal.getCertificateLocation() + "': exit status: " + exitStatus);
-        }
+    private URI fetchRootCertificate(Iterable<URI> certificateLocations, File dest) {
+        int exitStatus = -1;
+        URI certUri;
+        final Iterator<URI> certificateLocationsIterator = certificateLocations.iterator();
+        do {
+            certUri = certificateLocationsIterator.next();
+            if ("rsync".equalsIgnoreCase(certUri.getScheme())) {
+                rsync.reset();
+                rsync.setSource(certUri.toString());
+                rsync.setDestination(dest.toString());
+                exitStatus = rsync.execute();
+            } else {
+                LOGGER.info("Only rsync protocol is supported for TA certificate fetch. Skipping " + certUri.toString());
+            }
+        } while (exitStatus != 0 && certificateLocationsIterator.hasNext());
+
+        if (exitStatus != 0) throw new ValidatorIOException(
+                "Failed to retrieve TA certificate from all locations:" + Joiner.on(", ").join(certificateLocations));
+        else return certUri;
     }
 }

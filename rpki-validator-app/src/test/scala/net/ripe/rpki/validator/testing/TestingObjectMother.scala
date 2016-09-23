@@ -30,19 +30,18 @@
 package net.ripe.rpki.validator
 package testing
 
-import scala.collection.JavaConverters._
 import java.io.File
 import java.net.URI
-import net.ripe.rpki.validator.util.TrustAnchorLocator
+import java.util
+import java.util.Collections
+
+import net.ripe.ipresource.{Asn, IpRange}
 import net.ripe.rpki.commons.crypto.ValidityPeriod
-import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
-import net.ripe.rpki.commons.crypto.cms.roa.RoaCmsObjectMother
-import net.ripe.rpki.commons.crypto.cms.roa.RoaPrefix
+import net.ripe.rpki.commons.crypto.cms.roa.{RoaCms, RoaCmsObjectMother, RoaPrefix}
 import net.ripe.rpki.commons.validation.ValidationCheck
-import net.ripe.ipresource.Asn
-import net.ripe.ipresource.IpRange
+import net.ripe.rpki.validator.models._
+import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.joda.time.DateTime
-import models._
 
 object TestingObjectMother {
 
@@ -61,9 +60,9 @@ object TestingObjectMother {
     val caName = "test ca"
     val location: URI = URI.create("rsync://example.com/")
     val publicKeyInfo = "info"
-    val prefetchUris: java.util.List[URI] = new java.util.ArrayList[URI]()
+    val prefetchUris = Collections.emptyList[URI]()
 
-    new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris)
+    new TrustAnchorLocator(file, caName, Collections.singletonList(location), publicKeyInfo, prefetchUris)
   }
 
   val TA = TrustAnchor(locator = TAL, status = Idle(nextUpdate = new DateTime()))
@@ -75,29 +74,29 @@ object TestingObjectMother {
   val ASN3_TO_WHITELIST1: RtrPrefix = RtrPrefix(ASN3, WHITELIST_PREFIX_1, None, Some(TAL))
 
   def ROAS = {
-    val prefixes1 = List[RoaPrefix](
+    val prefixes1 = util.Arrays.asList(
       ROA_PREFIX_V4_1,
       ROA_PREFIX_V6_1,
       ROA_PREFIX_V6_1) // Duplicate prefix on same ROA should be filtered
 
-    val prefixes2 = List[RoaPrefix](
+    val prefixes2 = Collections.singletonList(
       ROA_PREFIX_V4_1) // This ROA has another ASN so this combo should be found
 
-    val prefixes3 = List[RoaPrefix](
+    val prefixes3 = util.Arrays.asList(
       ROA_PREFIX_V4_1, // Duplicate prefix on other ROA for SAME ASN should be filtered
       ROA_PREFIX_V4_2) // but this should be added
 
     val validityPeriod = new ValidityPeriod(new DateTime(), new DateTime().plusYears(1))
 
-    val roa1: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes1.asJava, validityPeriod, ASN1)
+    val roa1: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes1, validityPeriod, ASN1)
     val roa1Uri: URI = URI.create("rsync://example.com/roa1.roa")
     val validatedRoa1 = ValidObject("roa1", roa1Uri, Some(Array[Byte](1)), Set.empty[ValidationCheck], roa1)
 
-    val roa2: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes2.asJava, validityPeriod, ASN2)
+    val roa2: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes2, validityPeriod, ASN2)
     val roa2Uri: URI = URI.create("rsync://example.com/roa2.roa")
     val validatedRoa2 = ValidObject("roa2", roa2Uri, Some(Array[Byte](2)), Set.empty[ValidationCheck], roa2)
 
-    val roa3: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes3.asJava, validityPeriod, ASN1)
+    val roa3: RoaCms = RoaCmsObjectMother.getRoaCms(prefixes3, validityPeriod, ASN1)
     val roa3Uri: URI = URI.create("rsync://example.com/roa3.roa")
     val validatedRoa3 = ValidObject("roa3", roa3Uri, Some(Array[Byte](3)), Set.empty[ValidationCheck], roa3)
 
@@ -106,7 +105,7 @@ object TestingObjectMother {
   }
 
 
-  def FILTERS = new Filters(Set(new IgnoreFilter(ROA_PREFIX_V6_1.getPrefix)))
+  def FILTERS = Filters(Set(IgnoreFilter(ROA_PREFIX_V6_1.getPrefix)))
 
   def WHITELIST = Whitelist(Set(ASN3_TO_WHITELIST1))
 }

@@ -38,6 +38,7 @@ import net.ripe.rpki.commons.crypto.x509cert.{X509CertificateUtil, X509ResourceC
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext
 import net.ripe.rpki.commons.validation.{ValidationCheck, ValidationLocation, ValidationOptions, ValidationResult, ValidationStatus, ValidationString}
 import net.ripe.rpki.validator.config.{ApplicationOptions, MemoryImage}
+import net.ripe.rpki.validator.fetchers.Fetcher.Error
 import net.ripe.rpki.validator.fetchers.NotifyingCertificateRepositoryObjectFetcher
 import net.ripe.rpki.validator.lib.DateAndTime
 import net.ripe.rpki.validator.lib.Structures._
@@ -47,6 +48,7 @@ import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.joda.time.Instant
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.concurrent.stm._
 import scalaz.{Failure, Success, Validation}
 
@@ -105,16 +107,29 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
   validationOptions.setLooseValidationEnabled(enableLooseValidation)
 
   override def extractTrustAnchorLocator(forceNewFetch: Boolean, validationStart: Instant): ValidatedObject = {
-    val uri = trustAnchorLocator.getCertificateLocation
-    val validationResult = ValidationResult.withLocation(uri)
+    val fetchErrors = mutable.Buffer[Error]()
 
-    val fetchErrors = repoService.visitTrustAnchorCertificate(uri, forceNewFetch = true, validationStart)
+    val certificateLocations: Seq[URI] = trustAnchorLocator.getCertificateLocations.asScala
+
+    val taCertUri = certificateLocations.find { uri =>
+      val errors = repoService.visitTrustAnchorCertificate(uri, forceNewFetch = true, validationStart)
+      fetchErrors.appendAll(errors)
+      errors.isEmpty
+    } getOrElse certificateLocations.head
+
+    trustAnchorLocator.setFetchedCertificateUri(taCertUri)
+
+    val validationResult = ValidationResult.withLocation(taCertUri)
+
     val fetchErrorChecks = fetchErrors.map(e =>
       new ValidationCheck(ValidationStatus.FETCH_ERROR, ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_FOUND, e.url.toString, e.message))
 
-    val certificates = store.getCertificates(uri.toString)
+    val certificates = store.getCertificates(taCertUri.toString)
     if (certificates.size > 1) {
-      validationResult.warnForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_TA_CERT_URI_NOT_UNIQUE, uri.toString)
+      validationResult.warnForLocation(
+        new ValidationLocation(taCertUri),
+        ValidationString.VALIDATOR_REPOSITORY_TA_CERT_URI_NOT_UNIQUE,
+        taCertUri.toString)
     }
     val matchingCertificates = certificates.filter(keyInfoMatches)
     if (matchingCertificates.size == 1) {
@@ -122,21 +137,30 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
       store.updateValidationTimestamp(Seq(matchingCertificates.head.hash), validationStart)
     } else {
       if (matchingCertificates.size > 1) {
-        validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_TA_CERT_NOT_UNIQUE, uri.toString)
+        validationResult.rejectForLocation(new ValidationLocation(taCertUri),
+          ValidationString.VALIDATOR_REPOSITORY_TA_CERT_NOT_UNIQUE,
+          taCertUri.toString)
       } else {
-        validationResult.rejectForLocation(new ValidationLocation(uri), ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, "n/a")
+        validationResult.rejectForLocation(new ValidationLocation(taCertUri),
+          ValidationString.VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE,
+          taCertUri.toString,
+          "n/a")
       }
     }
 
     if (validationResult.hasFailureForCurrentLocation)
-      ValidatedObject.invalid(None, Lists.newArrayList("No trust anchor certificate"), uri, None,
+      ValidatedObject.invalid(None, Lists.newArrayList("No trust anchor certificate"), taCertUri, None,
         (validationResult.getAllValidationChecksForCurrentLocation.asScala ++ fetchErrorChecks).toSet)
     else {
       val taCertificate = matchingCertificates.head
-      ValidatedObject.valid(Some("cert", taCertificate), Lists.newArrayList(taCertificate.decoded.getSubject.getName), uri,
+      ValidatedObject.valid(
+        Some("cert", taCertificate),
+        Lists.newArrayList(taCertificate.decoded.getSubject.getName),
+        taCertUri,
         Some(taCertificate.hash),
         (validationResult.getAllValidationChecksForCurrentLocation.asScala ++ fetchErrorChecks).toSet,
-        taCertificate.decoded)
+        taCertificate.decoded
+      )
     }
   }
 
