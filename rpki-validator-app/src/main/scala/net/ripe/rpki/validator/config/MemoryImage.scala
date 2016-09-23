@@ -30,17 +30,22 @@
 package net.ripe.rpki.validator
 package config
 
+import net.ripe.rpki.validator.models._
 import net.ripe.rpki.validator.util.TrustAnchorLocator
-import models._
-import scalaz.Validation
-import java.net.URI
 
-case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: TrustAnchors, validatedObjects: ValidatedObjects, version: Int = 0) {
+import scalaz.Validation
+
+case class MemoryImage(filters: Filters,
+                       whitelist: Whitelist,
+                       trustAnchors: TrustAnchors,
+                       validatedObjects: ValidatedObjects,
+                       version: Int = 0) {
 
   private lazy val distinctRtrPrefixes =
     (Set.empty[RtrPrefix] ++ whitelist.entries ++ filters.filter(validatedObjects.getValidatedRtrPrefixes)).toSeq
 
-  def startProcessingTrustAnchor(locator: TrustAnchorLocator, description: String) = copy(trustAnchors = trustAnchors.startProcessing(locator, description))
+  def startProcessingTrustAnchor(locator: TrustAnchorLocator, description: String) =
+    copy(trustAnchors = trustAnchors.startProcessing(locator, description))
 
   def finishedProcessingTrustAnchor(locator: TrustAnchorLocator, result: Validation[String, Seq[ValidatedObject]]) =
     copy(trustAnchors = trustAnchors.finishedProcessing(locator, result))
@@ -69,6 +74,8 @@ case class MemoryImage(filters: Filters, whitelist: Whitelist, trustAnchors: Tru
       case true => validatedObjects.update(locator, Seq.empty[ValidatedObject])
       case false => validatedObjects.removeTrustAnchor(locator)
     }
-    copy(version = version + 1, trustAnchors = trustAnchors.updateTrustAnchorState(locator, enabled), validatedObjects = newValidatedObjects)
+    copy(version = version + 1,
+      trustAnchors = trustAnchors.updateTrustAnchorState(locator, enabled),
+      validatedObjects = newValidatedObjects)
   }
 }
