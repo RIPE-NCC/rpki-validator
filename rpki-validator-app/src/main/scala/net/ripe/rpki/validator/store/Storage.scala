@@ -39,7 +39,7 @@ import scala.collection.mutable
 
 trait Storage extends Logging {
 
-  def getObjects(hash: String) : Seq[RepositoryObject.ROType]
+  def getObjects(hash: Seq[Byte]) : Seq[RepositoryObject.ROType]
 
   def storeCertificate(certificate: CertificateObject)
 
@@ -53,7 +53,7 @@ trait Storage extends Logging {
 
   def getCertificates(uri: String): Seq[CertificateObject]
 
-  def getManifests(aki: Array[Byte]): Seq[ManifestObject]
+  def getManifests(aki: Seq[Byte]): Seq[ManifestObject]
 
   def delete(url: String, hash: String)
 
@@ -61,9 +61,9 @@ trait Storage extends Logging {
 
   def clear()
 
-  def updateValidationTimestamp(hashes: Iterable[Array[Byte]], t: Instant)
+  def updateValidationTimestamp(hashes: Iterable[Seq[Byte]], validationTime: Instant)
 
-  def cleanOutdated(validated: Iterable[(URI, Array[Byte])])
+  def cleanOutdated(validated: Iterable[(URI, Seq[Byte])])
 
 }
 

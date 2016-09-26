@@ -45,7 +45,7 @@ import org.joda.time.DateTime
 sealed trait ValidatedObject {
   val uri: URI
   val subjectChain: String
-  val hash: Option[Array[Byte]]
+  val hash: Option[Seq[Byte]]
   val checks: Set[ValidationCheck]
   val isValid: Boolean
 
@@ -60,11 +60,11 @@ sealed trait ValidatedObject {
   def hasCheckKey(key: String): Boolean = checks.exists(_.getKey == key)
 }
 
-case class InvalidObject(subjectChain: String, uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) extends ValidatedObject {
+case class InvalidObject(subjectChain: String, uri: URI, hash: Option[Seq[Byte]], checks: Set[ValidationCheck]) extends ValidatedObject {
   override val isValid = false
 }
 
-case class ValidObject(subjectChain: String, uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) extends ValidatedObject {
+case class ValidObject(subjectChain: String, uri: URI, hash: Option[Seq[Byte]], checks: Set[ValidationCheck], repositoryObject: CertificateRepositoryObject) extends ValidatedObject {
   override val isValid = true
 }
 
@@ -82,10 +82,10 @@ object ValidatedObject {
     case _ => "Unknown object"
   }
 
-  def invalid(obj: Option[(String, RepositoryObject.ROType)], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck]) =
+  def invalid(obj: Option[(String, RepositoryObject.ROType)], subjectChain: util.List[String], uri: URI, hash: Option[Seq[Byte]], checks: Set[ValidationCheck]) =
     InvalidObject(flattenSubjectChain(subjectChain) + separator + objectName(obj), uri, hash, checks)
 
-  def valid(obj: Option[(String, RepositoryObject.ROType)], subjectChain: util.List[String], uri: URI, hash: Option[Array[Byte]], checks: Set[ValidationCheck],
+  def valid(obj: Option[(String, RepositoryObject.ROType)], subjectChain: util.List[String], uri: URI, hash: Option[Seq[Byte]], checks: Set[ValidationCheck],
             repositoryObject: CertificateRepositoryObject) =
     ValidObject(flattenSubjectChain(subjectChain) + separator + objectName(obj), uri, hash, checks, repositoryObject)
 }

@@ -36,16 +36,17 @@ import net.ripe.ipresource.IpResourceSet
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
 import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.fetchers.Fetcher.Error
-import net.ripe.rpki.validator.fetchers.{FetcherListener, Fetcher, FetcherConfig}
-import net.ripe.rpki.validator.store.{HttpFetcherStore, DataSources, CacheStore}
+import net.ripe.rpki.validator.fetchers.{Fetcher, FetcherConfig, FetcherListener}
+import net.ripe.rpki.validator.store.{CacheStore, DataSources, HttpFetcherStore}
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.scalatest.mock.MockitoSugar
 import org.mockito.Mockito.when
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterEach}
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
-class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
+class RepoFetcherTest extends ValidatorTestCase with MockitoSugar with BeforeAndAfterEach {
 
-  val storage = new CacheStore(DataSources.InMemoryDataSource)
+  var storage: CacheStore = _
 
   val resourceSet1 = IpResourceSet.parse("10.0.0.0/8, 192.168.0.0/16, ffce::/16, AS21212")
   val resourceSet2 = IpResourceSet.parse("192.169.0.0/16")
@@ -54,8 +55,11 @@ class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
   val testCertificate2 = X509ResourceCertificateTest.createSelfSignedCaResourceCertificate(resourceSet2)
 
   def inMemoryRepoFetcher(config: FetcherConfig) = {
-    val dataSource = DataSources.InMemoryDataSource
-    new RepoFetcher(new CacheStore(dataSource), new Fetchers(new HttpFetcherStore(), config))
+    new RepoFetcher(storage, new Fetchers(new HttpFetcherStore(), config))
+  }
+
+  override def beforeEach() {
+    storage = new CacheStore(DataSources.InMemoryDataSource)
   }
 
   test("Should create different directories for different repo URLs") {
@@ -69,9 +73,8 @@ class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
   }
 
   test("Should add a new trust anchor certificate in the repo") {
-    val dataSource = DataSources.InMemoryDataSource
     val fetchersMock = mock[Fetchers]
-    val fetcher = new RepoFetcher(new CacheStore(dataSource), fetchersMock)
+    val fetcher = new RepoFetcher(storage, fetchersMock)
 
     val oldUrl = "rsync://repo2/oldCert.cert"
     val oldCertificate = CertificateObject(oldUrl, decoded = testCertificate1)
@@ -103,7 +106,7 @@ class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
   test("Should update an existing trust anchor certificate in the repo by uri") {
     val dataSource = DataSources.InMemoryDataSource
     val fetchersMock = mock[Fetchers]
-    val fetcher = new RepoFetcher(new CacheStore(dataSource), fetchersMock)
+    val fetcher = new RepoFetcher(storage, fetchersMock)
 
     val url = "rsync://repo2/cert.cert"
     val uri = new URI(url)

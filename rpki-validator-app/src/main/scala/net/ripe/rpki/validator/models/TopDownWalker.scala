@@ -36,8 +36,6 @@ import com.google.common.collect.Lists
 import grizzled.slf4j.Logging
 import net.ripe.ipresource.{IpResourceSet, IpResourceType}
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
-import net.ripe.rpki.commons.crypto.cms.RpkiSignedObject
-import net.ripe.rpki.commons.crypto.cms.roa.RoaCms
 import net.ripe.rpki.commons.crypto.crl.{CrlLocator, X509Crl}
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificate
 import net.ripe.rpki.commons.validation.ValidationString._
@@ -152,7 +150,10 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   }
 
   private def updateValidationTimes(validatedObjects: Seq[ValidatedObject]) = {
-    val hashes: Iterable[(URI, Array[Byte])] = validatedObjects.filter(_.hash.isDefined).map(o => (o.uri, o.hash.get))
+    val hashes: Iterable[(URI, Seq[Byte])] = for {
+      obj <- validatedObjects
+      hash <- obj.hash
+    } yield obj.uri -> hash
 
     val hashesOnly = hashes.map(_._2)
     hashesOnly.foreach { hash =>
@@ -329,11 +330,11 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     objects.foreach { obj =>
       val (_, repoObject) = obj
       repoObject match {
-        case RoaObject(_, _, _) => roas = obj.asInstanceOf[(String, RoaObject)] +: roas
-        case CertificateObject(_, _, _) => certificates = obj.asInstanceOf[(String, CertificateObject)] +: certificates
-        case CrlObject(_, _, _) => crls = obj.asInstanceOf[(String, CrlObject)] +: crls
-        case GhostbustersObject(_,_,_) => gbrs = obj.asInstanceOf[(String, GhostbustersObject)] +: gbrs
-        case ManifestObject(_,_,_) =>
+        case RoaObject(_, _) => roas = obj.asInstanceOf[(String, RoaObject)] +: roas
+        case CertificateObject(_, _) => certificates = obj.asInstanceOf[(String, CertificateObject)] +: certificates
+        case CrlObject(_, _) => crls = obj.asInstanceOf[(String, CrlObject)] +: crls
+        case GhostbustersObject(_,_) => gbrs = obj.asInstanceOf[(String, GhostbustersObject)] +: gbrs
+        case ManifestObject(_,_) =>
       }
     }
     ClassifiedObjects(roas, certificates, crls, gbrs)
@@ -374,11 +375,11 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     entries.foreach { e =>
       val (name, hash) = e
       val uri = repositoryUri.resolve(name)
-      val hashStr: String = HashUtil.stringify(hash)
-      val objs = store.getObjects(hashStr)
+      val objs = store.getObjects(hash)
 
       if (objs.isEmpty) {
-        errors += error(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, hashStr)
+        errors +=
+          error(validationLocation, VALIDATOR_REPOSITORY_OBJECT_NOT_IN_CACHE, uri.toString, HashUtil.stringify(hash))
       } else {
         val (found, mismatches) = objs.partition(_.url == uri.toString)
         if (found.isEmpty) {

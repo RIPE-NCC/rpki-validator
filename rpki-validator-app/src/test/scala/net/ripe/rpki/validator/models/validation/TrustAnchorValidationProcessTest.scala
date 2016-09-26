@@ -58,7 +58,8 @@ class TrustAnchorValidationProcessTest extends ValidatorTestCase with MockitoSug
 
   val taCertUri = new URI("rsync://taCert.cert")
 
-  val matchingCert = CertificateObject("rsync://taCert.cert", X509ResourceCertificateTest.createSelfSignedCaResourceCertificate, None)
+  val matchingCert = CertificateObject("rsync://taCert.cert",
+    X509ResourceCertificateTest.createSelfSignedCaResourceCertificate)
 
   val taValidatorProcess = new TrustAnchorValidationProcess(
     mockTrustAnchorLocator,

@@ -154,7 +154,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     else {
       val taCertificate = matchingCertificates.head
       ValidatedObject.valid(
-        Some("cert", taCertificate),
+        Some("cert" -> taCertificate),
         Lists.newArrayList(taCertificate.decoded.getSubject.getName),
         taCertUri,
         Some(taCertificate.hash),

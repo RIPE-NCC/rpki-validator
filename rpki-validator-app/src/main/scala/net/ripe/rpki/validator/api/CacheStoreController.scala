@@ -54,7 +54,8 @@ trait CacheStoreController extends ScalatraBase with Hashing with Logging {
         ("hash" -> stringify(o.hash)) ~
         ("aki" -> stringify(o.aki))
 
-      o.validationTime.map(t => js ~ ("validation_time" -> t.toString)).getOrElse(js)
+//      o.validationTime.map(t => js ~ ("validation_time" -> t.toString)).getOrElse(js)
+      js
     }
 
     logger.info("Started creating JSON")
