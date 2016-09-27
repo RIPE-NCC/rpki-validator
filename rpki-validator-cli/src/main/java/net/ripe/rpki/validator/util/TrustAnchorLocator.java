@@ -30,24 +30,25 @@
 package net.ripe.rpki.validator.util;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
-import com.google.common.base.Strings;
 import com.google.common.io.Files;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
 /**
- * Represents a Trust Anchor Locator as defined <a href="http://tools.ietf.org/html/draft-ietf-sidr-ta-07">here</a>
+ * Represents a Trust Anchor Locator as defined in <a href="https://tools.ietf.org/html/rfc7730">RFC 7730</a>
  */
 public class TrustAnchorLocator {
 
@@ -55,42 +56,58 @@ public class TrustAnchorLocator {
 
     private final String caName;
 
-    private final URI certificateLocation;
+    private final List<URI> certificateLocations;
 
     private final String publicKeyInfo;
 
     private final List<URI> prefetchUris;
 
+    private URI fetchedCertificateUri;
+
     public static TrustAnchorLocator fromFile(File file) throws TrustAnchorExtractorException {
         try {
             String contents = Files.toString(file, Charsets.UTF_8);
-            if (contents.trim().startsWith("rsync://")) {
-                return readStandardTrustAnchorLocator(file, contents);
+            String trimmed = contents.trim();
+            if (trimmed.startsWith("rsync://") || trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
+                return readStandardTrustAnchorLocator(file);
             } else {
                 return readExtendedTrustAnchorLocator(file, contents);
             }
-        } catch (IllegalArgumentException e) {
-            throw new TrustAnchorExtractorException("failed to load trust anchor locator " + file + ": " + e.getMessage(), e);
-        } catch (IOException e) {
-            throw new TrustAnchorExtractorException("failed to open trust anchor locator " + file + ": " + e.getMessage(), e);
-        } catch (URISyntaxException e) {
+        } catch (IllegalArgumentException | URISyntaxException | IOException e) {
             throw new TrustAnchorExtractorException("failed to load trust anchor locator " + file + ": " + e.getMessage(), e);
         }
     }
 
     /**
-     * @see http://tools.ietf.org/html/draft-ietf-sidr-ta-07
+     * @see <a href="https://tools.ietf.org/html/rfc7730">RFC 7730</a>
      */
-    private static TrustAnchorLocator readStandardTrustAnchorLocator(File file, String contents) throws URISyntaxException {
+    private static TrustAnchorLocator readStandardTrustAnchorLocator(File file) throws URISyntaxException, IOException {
         String caName = Files.getNameWithoutExtension(file.getName());
-        String[] lines = contents.trim().split("\\s*(\r\n|\n\r|\n|\r)\\s*");
-        URI location = new URI(lines[0]);
-        int i = 1;
-        while (lines[i].startsWith("rsync://")) {
-            i++;
+
+        final ArrayList<URI> certificateLocations = new ArrayList<>();
+
+        try (final BufferedReader reader = Files.newReader(file, Charsets.UTF_8)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                final String trimmed = line.trim();
+                if (looksLikeUri(trimmed)) {
+                    certificateLocations.add(new URI(trimmed));
+                } else break;
+            }
+
+            if (line == null)
+                throw new IllegalArgumentException("publicKeyInfo not found in TAL file " + file.toString());
+
+            StringBuilder publicKeyInfo = new StringBuilder(line.trim());
+            while ((line = reader.readLine()) != null) {
+                publicKeyInfo.append(line.trim());
+            }
+            return new TrustAnchorLocator(file, caName, certificateLocations, publicKeyInfo.toString(), Collections.<URI>emptyList());
         }
-        String publicKeyInfo = StringUtils.join(Arrays.copyOfRange(lines, i, lines.length));
-        return new TrustAnchorLocator(file, caName, location, publicKeyInfo, new ArrayList<URI>());
+    }
+
+    private static boolean looksLikeUri(String string) {
+        return string.startsWith("rsync://") || string.startsWith("https://") || string.startsWith("http://");
     }
 
     private static TrustAnchorLocator readExtendedTrustAnchorLocator(File file, String contents) throws IOException, URISyntaxException {
@@ -113,16 +130,16 @@ public class TrustAnchorLocator {
                 prefetchUris.add(new URI(uri));
             }
         }
-        return new TrustAnchorLocator(file, caName, location, publicKeyInfo, prefetchUris);
+        return new TrustAnchorLocator(file, caName, Collections.singletonList(location), publicKeyInfo, prefetchUris);
     }
 
-    public TrustAnchorLocator(File file, String caName, URI location, String publicKeyInfo, List<URI> prefetchUris) {
+    public TrustAnchorLocator(File file, String caName, List<URI> location, String publicKeyInfo, List<URI> prefetchUris) {
         Validate.notEmpty(caName, "'ca.name' must be provided");
         Validate.notNull(location, "'certificate.location' must be provided");
         Validate.notEmpty(publicKeyInfo, "'public.key.info' must be provided");
         this.file = file;
         this.caName = caName;
-        this.certificateLocation = location;
+        this.certificateLocations = location;
         this.publicKeyInfo = publicKeyInfo;
         this.prefetchUris = prefetchUris;
     }
@@ -135,8 +152,8 @@ public class TrustAnchorLocator {
         return caName;
     }
 
-    public URI getCertificateLocation() {
-        return certificateLocation;
+    public List<URI> getCertificateLocations() {
+        return certificateLocations;
     }
 
     public String getPublicKeyInfo() {
@@ -150,8 +167,16 @@ public class TrustAnchorLocator {
     @Override
     public String toString() {
         return Objects.toStringHelper(this)
-                .add("caName", getCaName())
-                .add("certificationLocation", getCertificateLocation())
-                .toString();
+                      .add("caName", getCaName())
+                      .add("certificationLocation", Joiner.on(", ").join(getCertificateLocations()))
+                      .toString();
+    }
+
+    public URI getFetchedCertificateUri() {
+        return fetchedCertificateUri;
+    }
+
+    public void setFetchedCertificateUri(URI fetchedCertificateUri) {
+        this.fetchedCertificateUri = fetchedCertificateUri;
     }
 }

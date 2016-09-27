@@ -52,7 +52,11 @@ class TrackValidationProcessTest extends ValidatorTestCase with BeforeAndAfter {
     override def runProcess(forceNewFetch: Boolean) = { super.runProcess(false) }
   }
 
-  val tal = new TrustAnchorLocator(new File(""), "caName", URI.create("rsync://rpki.ripe.net/root.cer"), "publicKeyInfo", Collections.emptyList())
+  val tal = new TrustAnchorLocator(new File(""),
+    "caName",
+    Collections.singletonList(URI.create("rsync://rpki.ripe.net/root.cer")),
+    "publicKeyInfo",
+    Collections.emptyList())
 
   test("should fail with no processable trust anchor") {
     val subject = new MyTrackValidationProcessTrustAnchor(Seq.empty[TrustAnchor])
@@ -84,6 +88,14 @@ class MyValidationProcess extends ValidationProcess {
   }
   override def validateObjects(certificate: CertificateRepositoryObjectValidationContext, forceNewFetch: Boolean, validationStart: Instant) = Seq.empty[ValidatedObject]
   override def finishProcessing() {}
-  override val trustAnchorLocator = new TrustAnchorLocator(new File(""), "caName", certificateUri, "publicKeyInfo", Collections.emptyList())
-  override def extractTrustAnchorLocator(forceNewFetch: Boolean, validationStart: Instant) = { throw new RuntimeException("Make validation process fail") }
+
+  override val trustAnchorLocator = new TrustAnchorLocator(new File(""),
+                                                           "caName",
+                                                           Collections.singletonList(certificateUri),
+                                                           "publicKeyInfo",
+                                                           Collections.emptyList())
+
+  override def extractTrustAnchorLocator(forceNewFetch: Boolean, validationStart: Instant) = {
+    throw new RuntimeException("Make validation process fail")
+  }
 }

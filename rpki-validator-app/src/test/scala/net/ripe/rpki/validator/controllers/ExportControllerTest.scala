@@ -34,20 +34,23 @@ import java.io.File
 import java.net.URI
 import java.util.Collections
 
+import net.ripe.ipresource.{Asn, IpRange}
+import net.ripe.rpki.validator.models.RtrPrefix
+import net.ripe.rpki.validator.support.ControllerTestCase
 import net.ripe.rpki.validator.util.TrustAnchorLocator
-import org.joda.time.{DateTimeUtils, DateTime}
 import org.joda.time.format.ISODateTimeFormat
+import org.joda.time.{DateTime, DateTimeUtils}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-
-import support.ControllerTestCase
-import models.RtrPrefix
-import net.ripe.ipresource.{ IpRange, Asn }
 
 @RunWith(classOf[JUnitRunner])
 class ExportControllerTest extends ControllerTestCase {
 
-  val tal = new TrustAnchorLocator(new File(""), "Ca Name", URI.create("rsync://rpki.ripe.net/root.cer"), "publicKeyInfo", Collections.emptyList())
+  val tal = new TrustAnchorLocator(new File(""),
+                                   "Ca Name",
+                                   Collections.singletonList(URI.create("rsync://rpki.ripe.net/root.cer")),
+                                   "publicKeyInfo",
+                                   Collections.emptyList())
   val PREFIX1 = RtrPrefix(asn = Asn.parse("AS6500"), prefix = IpRange.parse("10/8"), maxPrefixLength = None, Some(tal))
   val PREFIX2 = RtrPrefix(asn = Asn.parse("AS6501"), prefix = IpRange.parse("10/16"), maxPrefixLength = Some(18))
   val PREFIX3 = RtrPrefix(asn = Asn.parse("AS6502"), prefix = IpRange.parse("2001:43e8::/32"), maxPrefixLength = Some(32), Some(tal))

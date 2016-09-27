@@ -30,10 +30,11 @@
 package net.ripe.rpki.validator
 package views
 
-import scala.xml.Text
-import lib.Validation._
-import models._
 import net.ripe.rpki.commons.validation.ValidationStatus
+import net.ripe.rpki.validator.lib.Validation._
+import net.ripe.rpki.validator.models._
+
+import scala.xml.Text
 
 class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAnchorValidations,
                              messages: Seq[FeedbackMessage] = Seq.empty) extends View with ViewHelpers {
@@ -50,8 +51,10 @@ class TrustAnchorMonitorView(ta: TrustAnchor, trustAnchorValidations: TrustAncho
 
   def numberOfObjectsWithStatus(status: ValidationStatus) = validatedObjects.count(vo => vo.validationStatus.equals(status))
 
-  private val taCertLocation = ta.locator.getCertificateLocation.toString
-  val hasProblemValidatingTa = validatedObjects.exists(vo => vo.subjectChain == taCertLocation && !vo.isValid)
+  private def taCertLocation = Option(ta.locator.getFetchedCertificateUri).map(_.toString)
+
+  val hasProblemValidatingTa = taCertLocation.exists(uri =>
+    validatedObjects.exists(vo => !vo.isValid && vo.subjectChain == uri))
 
   val hasUnexpectedDrop = trustAnchorValidations.objectCountDropObserved.isDefined
 

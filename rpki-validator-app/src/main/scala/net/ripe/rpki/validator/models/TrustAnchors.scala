@@ -88,7 +88,7 @@ case class TrustAnchor(
       case Success(validatedObjects) =>
         val validatedObjectsByUri: Map[URI, ValidatedObject] = validatedObjects.map(vo => vo.uri -> vo)(collection.breakOut)
         val nextUpdate = now.plus(ApplicationOptions.validationInterval.toMillis)
-        val trustAnchor = validatedObjectsByUri.get(locator.getCertificateLocation).collect {
+        val trustAnchor = validatedObjectsByUri.get(locator.getFetchedCertificateUri).collect {
           case ValidObject(_, _, _, _, certificate: X509ResourceCertificate) => certificate
         }
         val manifest = trustAnchor.flatMap(ta => validatedObjectsByUri.get(ta.getManifestUri)).collect {

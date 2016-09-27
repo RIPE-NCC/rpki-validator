@@ -30,21 +30,22 @@
 package net.ripe.rpki.validator.models.validation
 
 import java.net.URI
+import java.util.Collections
 
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
 import net.ripe.rpki.commons.validation.ValidationStatus
-import net.ripe.rpki.validator.models.{ValidObject, InvalidObject, RepoService, ValidatedObject}
+import net.ripe.rpki.validator.models.{InvalidObject, RepoService, ValidObject, ValidatedObject}
 import net.ripe.rpki.validator.store.CacheStore
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.joda.time.Instant
-import org.mockito.{Mockito, Matchers}
 import org.mockito.Mockito.when
+import org.mockito.{Matchers, Mockito}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.mock.MockitoSugar
 
 class TrustAnchorValidationProcessTest extends ValidatorTestCase with MockitoSugar with BeforeAndAfter {
-  
+
   val mockStore = mock[CacheStore]
   val mockRepoService = mock[RepoService]
   val mockTrustAnchorLocator: TrustAnchorLocator = mock[TrustAnchorLocator]
@@ -72,11 +73,11 @@ class TrustAnchorValidationProcessTest extends ValidatorTestCase with MockitoSug
 
   before {
     Mockito.reset(mockStore, mockRepoService, mockTrustAnchorLocator)
-    when(mockTrustAnchorLocator.getCertificateLocation).thenReturn(taCertUri)
+    when(mockTrustAnchorLocator.getCertificateLocations).thenReturn(Collections.singletonList(taCertUri))
     when(mockRepoService.visitTrustAnchorCertificate(Matchers.eq(taCertUri), Matchers.eq(true), Matchers.any(classOf[Instant]))).thenReturn(Seq())
     when(mockRepoService.visitRepo(Matchers.eq(false), Matchers.any(classOf[Instant]))(Matchers.eq(matchingCert.decoded.getRepositoryUri))).thenReturn(Seq())
   }
-  
+
   test("Should return validObject for trust anchor certificate without errors") {
     when(mockStore.getCertificates(taCertUri.toString)).thenReturn(Seq(matchingCert))
     when(mockStore.getManifests(matchingCert.aki)).thenReturn(Seq())

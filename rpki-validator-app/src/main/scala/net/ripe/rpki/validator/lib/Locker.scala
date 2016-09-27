@@ -81,15 +81,7 @@ class Locker extends Logging {
 
   @inline
   private def _locked[T, X](lock: AccessibleLock)(g: => T): T = {
-    if (!lock.tryLock(25, TimeUnit.SECONDS)) {
-      val key = locks.find(l => l._2 == lock).get._1
-      val lockOwner = lock.getOwningThread
-      if (lockOwner != null) {
-        logger.info(s"waiting in ${Thread.currentThread()} on key=$key and lock=$lock from ${getStackTrace(Thread.currentThread())}")
-        logger.info(s"Locked by $lockOwner: ${getStackTrace(lockOwner)}")
-      }
-      lock.lock()
-    }
+    lock.lock()
     try {
       g
     } finally {
