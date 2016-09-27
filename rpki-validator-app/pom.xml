@@ -12,7 +12,7 @@
 
     <properties>
         <!-- 9.2 is the last jetty that's compatible with Java 7 -->
-	<jetty.version>9.2.17.v20160517</jetty.version>
+        <jetty.version>9.2.17.v20160517</jetty.version>
         <yammer.version>3.0.2</yammer.version>
         <main.class>net.ripe.rpki.validator.config.Main</main.class>
     </properties>
@@ -287,7 +287,6 @@
                             <goal>testCompile</goal>
                         </goals>
                         <configuration>
-                            <scalaVersion>${scala.version}</scalaVersion>
                             <scalaCompatVersion>${scala.binary.version}</scalaCompatVersion>
                             <checkMultipleScalaVersions>true</checkMultipleScalaVersions>
                             <jvmArgs>
@@ -295,7 +294,6 @@
                                 <arg>-XX:CICompilerCount=1</arg> <!-- Number of HotSpot background compiler threads -->
                             </jvmArgs>
                             <recompileMode>incremental</recompileMode>
-                            <useZincServer>true</useZincServer>
                             <args>
                                 <arg>-deprecation</arg>
                                 <arg>-unchecked</arg>
