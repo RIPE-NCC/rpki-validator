@@ -64,6 +64,7 @@ import javax.sql.DataSource
 
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.config.ApplicationOptions
+import net.ripe.rpki.validator.lib.DateAndTime
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
 
@@ -142,7 +143,11 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   }
 
   def getAllObjects = {
-    objects.getAll.flatMap(classifyObject).toSeq
+    val (o, t) = DateAndTime.timed {
+      objects.getAll.par.flatMap(classifyObject).seq.toSeq
+    }
+    logger.info(s"getAllObjects time is ${t/1000.0} seconds")
+    o
   }
 
   private def classifyObject(obj: StoredObject): Seq[RepositoryObject.ROType] = {
@@ -208,13 +213,21 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   override def updateValidationTimestamp(hashes: Iterable[Seq[Byte]], validationTime: org.joda.time.Instant): Unit = {
     val count = atomic { implicit txn =>
-      objects.getAll
-        .withFilter(o => hashes.exists(_ == o.repoObject.hash))
-        .map { o =>
-          val updated = o.copy(validationTime = Option(validationTime))
-          objects.put(o.repoObject.url -> o.repoObject.hash, updated)
+      val (updated, t) = DateAndTime.timed {
+        hashes.flatMap { h =>
+          byHash(h).values.map(_.copy(validationTime = Option(validationTime)))
         }
-        .size
+      }
+      info(s"Getting the ones to update = ${t / 1000.0}")
+
+      val (_, t1) = DateAndTime.timed {
+        updated.foreach { upd =>
+          objects.put(upd.repoObject.url -> upd.repoObject.hash, upd)
+        }
+      }
+      info(s"Actually updating = ${t1 / 1000.0}")
+
+      updated.size
     }
     info(s"Updated validationTime for $count objects.")
   }
