@@ -35,8 +35,6 @@ import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
 
-import scala.collection.mutable
-
 trait Storage extends Logging {
 
   def getObjects(hash: Seq[Byte]) : Seq[RepositoryObject.ROType]
@@ -71,7 +69,7 @@ trait Storage extends Logging {
  * Generic template for storage singletons.
  */
 class SimpleSingletons[K, V](create: K => V) {
-  private val caches = mutable.Map[K, V]()
+  private val caches = scala.collection.mutable.Map[K, V]()
 
   def apply(k: K): V = {
     synchronized {

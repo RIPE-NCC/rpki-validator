@@ -215,7 +215,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
     store.storeCertificate(certificate)
 
-    val timeInTheFuture = Instant.now.plus(3600 * 1000 * (store.deletionDelay + 1))
+    val timeInTheFuture = Instant.now.plus(3600 * 1000 * (store.hoursForBogusObjects + 1))
 
     store.clearObjects(timeInTheFuture)
 
@@ -256,14 +256,14 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 //  }
 
   test("Should delete older object with the same URI") {
-    val mft1 = ManifestObject(url = "rsync://bla.mft", decoded = testManifest)
-    val mft2 = ManifestObject(url = "rsync://bla.mft", decoded = testManifest1)
+    val uri = new URI("rsync://bla.mft")
+    val mft1 = ManifestObject(url = uri.toString, decoded = testManifest)
+    val mft2 = ManifestObject(url = uri.toString, decoded = testManifest1)
     store.storeManifest(mft1)
     store.storeManifest(mft2)
 
     store.getManifests(mft1.aki) should have size 2
 
-    val uri = new URI("rsync://bla.mft")
     store.cleanOutdated(Seq((uri, mft1.hash)))
 
     val manifests = store.getManifests(mft1.aki)
@@ -272,7 +272,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
 
   }
 
-  ignore("store real repository") {
+  test("store real repository") {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val validationStart = Instant.now()
@@ -282,7 +282,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
       System.currentTimeMillis() - validationStart.getMillis
     }
     val aws = Future {
-      repoService.visitRepo(forceNewFetch = true, validationStart)(URI.create("rsync://rpki.ripe.net/repository/"))
+      repoService.visitRepo(forceNewFetch = true, validationStart)(URI.create("rsync://pub-server-prod.elasticbeanstalk.com/repository/"))
       System.currentTimeMillis() - validationStart.getMillis
     }
     println("NCC done in " + Await.result(ncc, Duration.Inf))
