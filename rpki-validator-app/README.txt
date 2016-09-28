@@ -318,6 +318,15 @@ Known Issues
 Version History
 ---------------
 
+2.23 - 28 September 2016
+= Performance and stability improvements, bugfixes
+= Add Trust Anchor name as additional column in export files
+= Fallback to plain HTTP if HTTPS connection fails
+= Improve error reporting
+= Parse and validate Ghostbusters Records
+= Support multiple TA certificate URLs in TAL
+= Support HTTP URLs in TAL
+
 2.22 - 25 May 2016
 = Multiple improvements in RRDP support
 = Multiple improvements in database and memory handling
