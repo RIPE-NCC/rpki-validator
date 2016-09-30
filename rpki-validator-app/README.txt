@@ -1,6 +1,14 @@
 RIPE NCC RPKI Validator
 =======================
 
+This application allows operators to download and validate the global Resource 
+Public Key Infrastructure (RPKI) data set for use in their BGP decision making 
+process and router configuration. To learn more about RPKI and BGP Origin Validation, 
+please visit:
+
+  https://www.ripe.net/certification/
+
+
 Source Code
 -----------
 
