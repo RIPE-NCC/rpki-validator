@@ -73,7 +73,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
 
   // run on separate thread pool to be sure there's always a thread to run DB operation
   val executionContext = ExecutionContext.fromExecutorService(Executors.newSingleThreadExecutor())
-  def detached[T](block: => T) = Await.result(Future(block)(executionContext), 6.minutes)
+  def detached[T](block: => T) = Await.result(Future(block)(executionContext), 29.minutes)
 
   private def storeRepoObject[T <: CertificateRepositoryObject](obj: RepositoryObject[T], objType: String) =
     RepoService.locker.locked(obj.url) {
@@ -217,7 +217,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
       s"DELETE FROM repo_objects WHERE url = '$uri' AND hash NOT IN $inClause"
     }
     if (sqls.nonEmpty) {
-      val counts = template.getJdbcOperations.batchUpdate(sqls.toArray)
+      val counts = detached(template.getJdbcOperations.batchUpdate(sqls.toArray))
       val sum = counts.sum
       if (sum > 0) info(s"Clear old objects -> deleted $sum objects for which exists a valid alternative.")
     }
