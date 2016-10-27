@@ -85,7 +85,7 @@ class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach wit
   test("should fetch object if URI was never visited") {
     val uri = new URI("http://foo.bar/bla.cer")
 
-    repoService.visitTrustAnchorCertificate(uri, false, Instant.now())
+    repoService.visitTrustAnchorCertificate(uri, Instant.now())
 
     Mockito.verify(fetcher).fetchTrustAnchorCertificate(uri)
   }
@@ -93,8 +93,8 @@ class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach wit
   test("should not fetch object if URI was already visited") {
     val uri: URI = new URI("http://foo.bar/bla.cer")
 
-    repoService.visitTrustAnchorCertificate(uri, false, Instant.now())
-    repoService.visitTrustAnchorCertificate(uri, false, Instant.now())
+    repoService.visitTrustAnchorCertificate(uri, Instant.now())
+    repoService.visitTrustAnchorCertificate(uri, Instant.now())
 
     Mockito.verify(fetcher, Mockito.times(1)).fetchTrustAnchorCertificate(uri)
   }

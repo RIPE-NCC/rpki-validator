@@ -74,8 +74,8 @@ class RepoService(fetcher: RepoFetcher) {
       RepoServiceErrors.lastErrors.getOrElse(uri, Seq.empty)
     }
 
-  def visitTrustAnchorCertificate(uri: URI, forceNewFetch: Boolean, validationStart: Instant) =
-    fetchAndUpdateTime(uri, forceNewFetch, validationStart) {
+  def visitTrustAnchorCertificate(uri: URI, validationStart: Instant) =
+    fetchAndUpdateTime(uri, forceNewFetch = true, validationStart) {
       fetcher.fetchTrustAnchorCertificate(uri)
     }
 

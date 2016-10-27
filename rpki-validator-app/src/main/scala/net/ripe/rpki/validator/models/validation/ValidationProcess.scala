@@ -112,7 +112,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     val certificateLocations: Seq[URI] = trustAnchorLocator.getCertificateLocations.asScala
 
     val taCertUri = certificateLocations.find { uri =>
-      val errors = repoService.visitTrustAnchorCertificate(uri, forceNewFetch = true, validationStart)
+      val errors = repoService.visitTrustAnchorCertificate(uri, validationStart)
       fetchErrors.appendAll(errors)
       errors.isEmpty
     } getOrElse certificateLocations.head
@@ -154,7 +154,7 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
     else {
       val taCertificate = matchingCertificates.head
       ValidatedObject.valid(
-        Some("cert", taCertificate),
+        Some("cert" -> taCertificate),
         Lists.newArrayList(taCertificate.decoded.getSubject.getName),
         taCertUri,
         Some(taCertificate.hash),
