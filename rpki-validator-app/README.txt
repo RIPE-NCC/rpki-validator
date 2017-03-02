@@ -6,7 +6,7 @@ Public Key Infrastructure (RPKI) data set for use in their BGP decision making
 process and router configuration. To learn more about RPKI and BGP Origin Validation, 
 please visit:
 
-  https://www.ripe.net/certification/
+  https://www.ripe.net/manage-ips-and-asns/resource-management/certification
 
 
 Source Code
@@ -33,15 +33,12 @@ Requirements
   uses the following rsync(1) options: --update, --times, --copy-links, --recursive, and
   --delete.
   
-= Oracle JDK 7 or 8
+= Oracle JDK 8
 
   This software was developed and tested using Oracle JDK 8. This Java version should be
   available without restrictions for all major platforms, though it may not be included 
   in your distribution by default.
   
-  Oracle JDK 7, as well as OpenJDK 7 and 8 should also work. Please let us know if you
-  should run into any issues using this.
-
   You can check which version of Java you have by running:
 
   $ java -version
@@ -143,33 +140,18 @@ This validator will automatically pick up any file matching this pattern:
 The Trust Anchor Locator (TAL) files for four Regional Internet Registries are included
 with this distribution: AFRINIC, APNIC, LACNIC and RIPE NCC. 
 
-To access ARIN's TAL, you will have to agree to ARIN's Relying Party Agreement. After 
-that, the TAL will be emailed to the recipient. Please visit this ARIN web page for
-more information: http://www.arin.net/public/rpki/tal/index.xhtml
+To access ARIN's TAL, you will have to agree to ARIN's Relying Party Agreement. Please 
+visit this ARIN web page for more information: 
 
-After obtaining ARIN's TAL, please copy it to the following location to use it:
+  https://www.arin.net/resources/rpki/tal.html
+
+Please make sure you download the TAL formatted for this RPKI Validator:
+
+  https://www.arin.net/resources/rpki/arin-ripevalidator.tal
+
+After downloading ARIN's TAL, please copy it to the following location to use it:
  
   <root-folder>/conf/tal/
-
-If you compare the format of the included files to the Trust Anchor format defined here:
-
-  http://tools.ietf.org/html/rfc6490
-
-you will notice that the format used here is slightly different. We are using key-value 
-pairs to allow specifying some additional information. Make sure that you enter a value 
-for ca.name. The certificate.location and public.key.info correspond to the location and 
-subjectPublicKeyInfo fields in the standard. The prefecth.uris field is optional. You may 
-specify a comma separated list of rsync URIs for directories here, that will be 
-'pre-fetched'. This helps performance for repositories that have a flat structure 
-(children not published under parents).
-
-Example:  
-
-  ca.name = ARIN RPKI Root
-  certificate.location = rsync://rpki.arin.net/repository/arin-rpki-ta.cer
-  public.key.info = MIIBI..... etc 1 LINE
-  prefetch.uris = rsync://rpki.arin.net/repository/
-
  
 API
 ---
@@ -206,10 +188,10 @@ Full documentation can be found here:
 RPSL route object output (beta)
 -------------------------------
 
-With version 2.18 we have added beta support for exporting the full validated ROA set
+With version 2.18 we have added support for exporting the full validated ROA set
 in RPSL route object format: http://yourhost:http-port/export.rpsl
 
-This beta feature is intended to make it easier to integrate using ROA data in an existing
+This feature is intended to make it easier to integrate using ROA data in an existing
 RPSL based tool chain. When using this feature please keep the following in mind:
 
  1) Mandatory attributes missing from ROAs
@@ -259,9 +241,6 @@ RPSL based tool chain. When using this feature please keep the following in mind
     
     If this distinction is important to your decision process then you may not want to
     use this feature.
-
-Please let us know what you think.
-  
 
 
 Deep Links
