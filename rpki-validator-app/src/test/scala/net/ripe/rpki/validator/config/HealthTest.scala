@@ -53,7 +53,7 @@ class HealthTest extends ValidatorTestCase with BeforeAndAfterAll with BeforeAnd
   test("Should return ERROR for status list with one time in the past") {
     val t = new DateTime().minus(ApplicationOptions.validationInterval.length * 5)
     val status = Health.getValidationTimeStatus(Seq(Some(t)))
-    status.code should equal(Code.ERROR)
+    status.code should equal(Code.RECOVERABLE_ERROR)
     status.message.getOrElse("").contains("No trust anchors have been validated since") should be(true)
     println(status)
   }

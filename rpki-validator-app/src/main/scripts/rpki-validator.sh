@@ -102,6 +102,10 @@ fi
 getopts ":c:" OPT_NAME
 CONFIG_FILE=${OPTARG:-conf/rpki-validator.conf}
 
+getopts ":u:" OPT_NAME
+CHECK_URL=${OPTARG:-http://localhost:8080/health}
+
+
 if [[ ! $CONFIG_FILE =~ .*conf$ ]]; then
         error_exit "Configuration file name must end with .conf"
 fi
@@ -201,6 +205,15 @@ case ${FIRST_ARG} in
         fi
         ;;
     status)
+        if [ ${RUNNING} == "true" ]; then
+            info "${APP_NAME} is running"
+            exit 0
+        else
+            info "${APP_NAME} is not running"
+            exit 0
+        fi
+        ;;
+    watchdog)
         if [ ${RUNNING} == "true" ]; then
             info "${APP_NAME} is running"
             exit 0

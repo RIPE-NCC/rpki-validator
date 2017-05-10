@@ -56,7 +56,7 @@ object Health {
       else if (notValidated.nonEmpty)
         notAllValidated
       else
-        Status.error("No trust anchors have been validated since " + tooLongAgo.toString(timeFormatter))
+        Status.recoverableError("No trust anchors have been validated since " + tooLongAgo.toString(timeFormatter))
     }
   }
 
@@ -67,16 +67,16 @@ object Health {
     if (rc == 0)
       Status.ok("can find and execute rsync")
     else
-      Status.error("problems executing rsync, make sure you have rsync installed on the path")
+      Status.validationError("problems executing rsync, make sure you have rsync installed on the path")
   } catch {
     case e: Exception =>
-      Status.error(e.getMessage)
+      Status.validationError(e.getMessage)
   }
 
   def getTasStatus(objects: ValidatedObjects): Map[String, Status] = {
     objects.validationStatusCountByTal.map { case (tal, counters) =>
       val status = counters.get(ValidationStatus.ERROR).map { e =>
-        Status.error("There " + (if (e == 1) "is 1 error" else s"are $e errors"))
+        Status.validationError("There " + (if (e == 1) "is 1 error" else s"are $e errors"))
       }.orElse {
         counters.get(ValidationStatus.WARNING).map { w =>
           Status.warning("There " + (if (w == 1) "is 1 error" else s"are $w errors"))
