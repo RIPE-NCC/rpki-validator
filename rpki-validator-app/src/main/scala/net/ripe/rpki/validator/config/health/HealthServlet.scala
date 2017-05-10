@@ -35,7 +35,9 @@ import net.ripe.rpki.commons.rsync.Rsync
 import net.ripe.rpki.commons.validation.ValidationStatus
 import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.models.{TrustAnchors, ValidatedObjects}
-import org.joda.time.Instant
+import org.joda.time.{DateTime, Instant}
+
+import scala.collection.immutable
 
 object Code extends Enumeration {
   type Code = Value
@@ -119,16 +121,20 @@ abstract class HealthServlet extends HttpServlet {
 
 
   private def lastValidationTimeCheck = {
-    val lastUpdated = getTrustAnchors.all.filter(_.enabled).map(_.lastUpdated)
+    val lastUpdated: immutable.Seq[Option[DateTime]] = getTrustAnchors.all.filter(_.enabled).map(_.lastUpdated)
     val interval = ApplicationOptions.validationInterval.length
     val now = Instant.now
-    lastUpdated.exists(_.exists(_.isBefore(now.minus(interval))))
-    if (lastUpdated.exists(_.isEmpty))
-      Status.warning("Not all TA's are validated.")
-    else if (lastUpdated.exists(_.exists(_.isBefore(now.minus(interval)))))
-      Status.error("Some ")
-    else
-      Status.ok
+
+    val (validated, notValidated) = lastUpdated.partition(_.isDefined)
+
+    if (validated.forall(_.get.isBefore(now.minus(interval * 2))))
+      Status.error("no trust anchors have been validated since " + now.minus(interval * 2))
+    else {
+      if (notValidated.nonEmpty)
+        Status.warning("Not all TA's are validated.")
+      else
+        Status.ok
+    }
   }
 
   private def jvmMemoryCheck = Status.ok
