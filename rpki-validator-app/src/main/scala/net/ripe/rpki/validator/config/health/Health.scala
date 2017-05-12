@@ -88,13 +88,13 @@ object Health {
   }
 
   def jvmMemoryCheck: Status = {
-    val memory = Runtime.getRuntime.totalMemory()
+    val totalMemory = Runtime.getRuntime.totalMemory()
     val freeMemory = Runtime.getRuntime.freeMemory()
     val maxMemory = Runtime.getRuntime.maxMemory()
     if (freeMemory < maxMemory * 0.05)
-      Status.recoverableError(s"{ totalMemory: $memory, freeMemory: $freeMemory, maxMemory: $maxMemory }")
+      Status.recoverableError(s"{ totalMemory: $totalMemory, freeMemory: $freeMemory, maxMemory: $maxMemory }")
     else
-      Status.ok(s"{ totalMemory: $memory, freeMemory: $freeMemory, maxMemory: $maxMemory }")
+      Status.ok(s"{ totalMemory: $totalMemory, freeMemory: $freeMemory, maxMemory: $maxMemory }")
   }
 
 }
