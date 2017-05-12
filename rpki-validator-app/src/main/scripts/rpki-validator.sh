@@ -162,13 +162,21 @@ parse_jvm_options
 #
 RUNNING=is_running
 
+RUN_IN_BACKGROUND="false"
+
+if [ ${FIRST_ARG} == "start" ] || [ ${FIRST_ARG} == "restart" ] || [ ${FIRST_ARG} == "watchdog" ]; then
+    RUN_IN_BACKGROUND="true"
+fi
+
+
 function is_running {
     if [ -e ${PID_FILE} ]; then
         if [ x`cat ${PID_FILE}` == x`pgrep -f -- -Dapp.name=${APP_NAME}` ]; then
-            echo "true"
+            echo "true";
+            exit;
         fi
     fi
-    echo "false"
+    echo "false";
 }
 
 function start_validator {
@@ -188,9 +196,9 @@ function start_validator {
              -Dapp.name=${APP_NAME} -Dconfig.file=${CONFIG_FILE} \
              -classpath ${CLASSPATH} net.ripe.rpki.validator.config.Main"
 
-    if [ ${FIRST_ARG} == "start" ]; then
+    if [ ${RUN_IN_BACKGROUND} == "true" ]; then
         ${CMDLINE} &
-    elif [ ${FIRST_ARG} == "run" ]; then
+    else
         ${CMDLINE}
         exit $?
     fi
@@ -202,6 +210,7 @@ function start_validator {
 
 function stop_validator {
     info "Stopping ${APP_NAME}..."
+    RUNNING=$(is_running)
     if [ ${RUNNING} == "true" ]; then
         kill `cat ${PID_FILE}` && rm ${PID_FILE}
     else
@@ -212,19 +221,19 @@ function stop_validator {
 function check_status {
     if [ ${RUNNING} == "true" ]; then
         info "${APP_NAME} is running"
-        exit 0
     else
         info "${APP_NAME} is not running"
-        exit 0
     fi
+    exit 0
 }
 
 function restart_validator {
     stop_validator
-    RUNNING=is_running
+    RUNNING=$(is_running)
     while [ $RUNNING == "true" ]; do
         sleep 1
-        RUNNING=is_running
+        echo "Waiting for validator to stop..."
+        RUNNING=$(is_running)
     done
     start_validator
 }
@@ -234,8 +243,9 @@ function check_and_maybe_restart_validator {
         echo "Check URL is not set, please set the parameter: -u URL"
         exit 1
     fi
+    RUNNING=$(is_running)
     if [ ${RUNNING} == "true" ]; then
-        HEALTH=$(curl $CHECK_URL)
+        HEALTH=$(curl -s $CHECK_URL)
         HEALTH_HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $CHECK_URL)
         info "Health check JSON is $HEALTH"
         info "Health check response code is $HEALTH_HTTP_STATUS"
