@@ -87,6 +87,14 @@ object Health {
     }
   }
 
-  def jvmMemoryCheck: Status = Status.ok
+  def jvmMemoryCheck: Status = {
+    Status.ok {
+      s"""{
+         totalMemory: ${Runtime.getRuntime.totalMemory()},
+         freeMemory: ${Runtime.getRuntime.freeMemory()},
+         maxMemory: ${Runtime.getRuntime.maxMemory()}
+      }"""
+    }
+  }
 
 }
