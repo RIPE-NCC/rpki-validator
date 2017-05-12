@@ -60,14 +60,14 @@ object Health {
     }
   }
 
-  def rsyncHealthCheck(): Status = try {
+  def rsyncStatus(): Status = try {
     val rsync = new Rsync
     rsync.addOptions("--version")
     val rc = rsync.execute()
     if (rc == 0)
-      Status.ok("can find and execute rsync")
+      Status.ok("Can find and execute rsync")
     else
-      Status.validationError("problems executing rsync, make sure you have rsync installed on the path")
+      Status.validationError("Problems executing rsync, make sure you have rsync installed on the path")
   } catch {
     case e: Exception =>
       Status.validationError(e.getMessage)
@@ -91,10 +91,11 @@ object Health {
     val totalMemory = Runtime.getRuntime.totalMemory()
     val freeMemory = Runtime.getRuntime.freeMemory()
     val maxMemory = Runtime.getRuntime.maxMemory()
+    val message = s"totalMemory: $totalMemory, freeMemory: $freeMemory, maxMemory: $maxMemory"
     if (freeMemory < maxMemory * 0.05)
-      Status.recoverableError(s"{ totalMemory: $totalMemory, freeMemory: $freeMemory, maxMemory: $maxMemory }")
+      Status.recoverableError(message)
     else
-      Status.ok(s"{ totalMemory: $totalMemory, freeMemory: $freeMemory, maxMemory: $maxMemory }")
+      Status.ok(message)
   }
 
 }

@@ -77,7 +77,7 @@ abstract class HealthServlet extends HttpServlet {
     val statuses =
       Health.getTasStatus(getValidatedObjects) ++ Map(
         "rsync" ->
-          Health.rsyncHealthCheck(),
+          Health.rsyncStatus(),
         "last-validation" ->
           Health.getValidationTimeStatus(getTrustAnchors.all.filter(_.enabled).map(_.lastUpdated)),
         "memory" ->
