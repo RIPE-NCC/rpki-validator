@@ -31,16 +31,58 @@ package net.ripe.rpki.validator.config.health
 
 import javax.servlet.http.{HttpServlet, HttpServletRequest, HttpServletResponse}
 
-class HealthServlet extends HttpServlet {
+import net.ripe.rpki.commons.rsync.Rsync
+import net.ripe.rpki.commons.validation.ValidationStatus
+import net.ripe.rpki.validator.config.ApplicationOptions
+import net.ripe.rpki.validator.models.{TrustAnchors, ValidatedObjects}
+import org.joda.time.{DateTime, Instant}
+
+import scala.collection.immutable
+
+object Code extends Enumeration {
+  type Code = Value
+  val OK = Value("OK")
+  val WARNING = Value("WARNING")
+  val VALIDATION_ERROR = Value("VALIDATION_ERROR")
+  val RECOVERABLE_ERROR = Value("RECOVERABLE_ERROR")
+}
+
+case class Status(code: Code.Code, message: Option[String])
+
+object Status {
+  def ok = Status(Code.OK, None)
+
+  def ok(message: String) = Status(Code.OK, Some(message))
+
+  def warning(message: String) = Status(Code.WARNING, Some(message))
+
+  def validationError(message: String) = Status(Code.VALIDATION_ERROR, Some(message))
+
+  def recoverableError(message: String) = Status(Code.RECOVERABLE_ERROR, Some(message))
+}
+
+
+abstract class HealthServlet extends HttpServlet {
 
   import net.liftweb.json.Extraction._
   import net.liftweb.json._
 
   implicit val formats = net.liftweb.json.DefaultFormats
 
-  override def doGet(req: HttpServletRequest, resp: HttpServletResponse) = {
+  protected def getValidatedObjects: ValidatedObjects
 
-    val statuses = HealthChecks.registry.map { e => (e._1, e._2.check()) }
+  protected def getTrustAnchors: TrustAnchors
+
+  override def doGet(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
+    val statuses =
+      Health.getTasStatus(getValidatedObjects) ++ Map(
+        "rsync" ->
+          Health.rsyncStatus(),
+        "last-validation" ->
+          Health.getValidationTimeStatus(getTrustAnchors.all.filter(_.enabled).map(_.lastUpdated)),
+        "memory" ->
+          Health.jvmMemoryCheck
+      )
 
     def setProperResponse(problem: Code.Code, status: Int) = {
       val brokenMessages = statuses.collect {
@@ -52,11 +94,16 @@ class HealthServlet extends HttpServlet {
       resp.setStatus(status)
     }
 
-    if (statuses.exists(_._2.code == Code.ERROR))
-      setProperResponse(Code.ERROR, 500)
+    if (statuses.exists(_._2.code == Code.VALIDATION_ERROR))
+      setProperResponse(Code.VALIDATION_ERROR, 500)
+    if (statuses.exists(_._2.code == Code.RECOVERABLE_ERROR))
+      setProperResponse(Code.RECOVERABLE_ERROR, 503)
     else if (statuses.exists(_._2.code == Code.WARNING))
       setProperResponse(Code.WARNING, 299)
 
-    resp.getWriter.write(compactRender(decompose(statuses)))
+    val formatted = statuses.mapValues(s => Map("code" -> s.code.toString, "message" -> s.message))
+    resp.getWriter.write(compactRender(decompose(formatted)))
   }
+
+
 }
