@@ -27,48 +27,43 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package net.ripe.rpki.validator.config.health
+package net.ripe.rpki.validator.config
 
-import net.ripe.rpki.commons.rsync.Rsync
+import net.ripe.rpki.validator.config.health.{Code, Health, Status}
+import net.ripe.rpki.validator.support.ValidatorTestCase
+import org.joda.time.DateTime
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 
-trait HealthCheck {
-  def check(): Status
-}
+@org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
+class HealthTest extends ValidatorTestCase with BeforeAndAfterAll with BeforeAndAfter {
 
-object Code extends Enumeration {
-  type Code = Value
-  val OK = Value("OK")
-  val WARNING = Value("WARNING")
-  val ERROR = Value("ERROR")
-}
+  test("Should return OK for empty status list") {
+    Health.getValidationTimeStatus(Seq()) should equal(Status.ok)
+  }
 
-case class Status(code: Code.Code, message: Option[String])
+  test("Should return WARNING for status list with one empty time") {
+    Health.getValidationTimeStatus(Seq(None)) should equal(Status.warning("Not all TA's are validated."))
+  }
 
-object Status {
-  def ok = Status(Code.OK, None)
-  def ok(message: String) = Status(Code.OK, Some(message))
-  def warning(message: String) = Status(Code.WARNING, Some(message))
-  def error(message: String) = Status(Code.ERROR, Some(message))
-}
+  test("Should return OK for status list with one existing time") {
+    val t = new DateTime()
+    Health.getValidationTimeStatus(Seq(Some(t))) should equal(Status.ok)
+  }
 
-object HealthChecks {
-  def registry =
-    Map("rsync" -> new RsyncHealthCheck)
-}
+  test("Should return ERROR for status list with one time in the past") {
+    val t = new DateTime().minus(ApplicationOptions.validationInterval.length * 5)
+    val status = Health.getValidationTimeStatus(Seq(Some(t)))
+    status.code should equal(Code.RECOVERABLE_ERROR)
+    status.message.getOrElse("").contains("No trust anchors have been validated since") should be(true)
+    println(status)
+  }
 
-class RsyncHealthCheck extends HealthCheck {
-
-  override def check() = try {
-    val rsync = new Rsync
-    rsync.addOptions("--version")
-    val rc = rsync.execute()
-    if (rc == 0)
-      Status.ok("can find and execute rsync")
-    else
-      Status.error("problems executing rsync, make sure you have rsync installed on the path")
-  } catch {
-    case e: Exception =>
-      Status.error(e.getMessage)
+  test("Should return OK for status list with at least one good timestamp") {
+    Health.getValidationTimeStatus(Seq(
+      None,
+      Some(new DateTime().minus(ApplicationOptions.validationInterval.length * 5)),
+      Some(new DateTime()))
+    ) should equal(Status.ok)
   }
 
 }

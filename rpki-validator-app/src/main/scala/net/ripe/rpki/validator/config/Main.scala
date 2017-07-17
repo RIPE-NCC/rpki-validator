@@ -249,7 +249,7 @@ class Main extends Http with Logging { main =>
         }
       }
 
-      override protected def startTrustAnchorValidation(trustAnchors: Seq[String]) = main.runValidator(trustAnchors, true)
+      override protected def startTrustAnchorValidation(trustAnchors: Seq[String]) = main.runValidator(trustAnchors, forceNewFetch = true)
 
       override protected def trustAnchors = memoryImage.single.get.trustAnchors
       override protected def validatedObjects = memoryImage.single.get.validatedObjects
@@ -291,6 +291,13 @@ class Main extends Http with Logging { main =>
       override protected def getCachedObjects = store.getAllObjects
     }
 
+    val healthServlet = new HealthServlet() {
+      override protected def getValidatedObjects = memoryImage.single.get.validatedObjects
+
+      override protected def getTrustAnchors = memoryImage.single.get.trustAnchors
+    }
+
+
     val root = new ServletContextHandler(server, "/", ServletContextHandler.SESSIONS)
     root.setResourceBase(getClass.getResource("/public").toString)
     val defaultServletHolder = new ServletHolder(new DefaultServlet())
@@ -298,7 +305,7 @@ class Main extends Http with Logging { main =>
     defaultServletHolder.setInitParameter("dirAllowed", "false")
     root.addServlet(defaultServletHolder, "/*")
     root.addServlet(new ServletHolder(restApiServlet), "/api/*")
-    root.addServlet(new ServletHolder(new HealthServlet()), "/health")
+    root.addServlet(new ServletHolder(healthServlet), "/health")
     root.addFilter(new FilterHolder(webFilter), "/*", EnumSet.allOf(classOf[DispatcherType]))
 
     val requestLogHandler = {

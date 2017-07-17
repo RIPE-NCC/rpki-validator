@@ -56,7 +56,7 @@ class TrustAnchorsView(trustAnchors: TrustAnchors, validationStatusCounts: Map[T
         <th class="center">
           <form method="POST" action={ tab.url + "/update" } style="padding:0;margin:0;">
             {
-            if ((trustAnchors.all.forall(_.status.isRunning)) || (trustAnchors.all.forall(!_.enabled)))
+            if (trustAnchors.all.forall(_.status.isRunning) || trustAnchors.all.forall(!_.enabled))
                 <input type="submit" class="btn primary span2" value="Update all" disabled="disabled"/>
             else
                 <input type="submit" class="btn primary span2" value="Update all"/>
