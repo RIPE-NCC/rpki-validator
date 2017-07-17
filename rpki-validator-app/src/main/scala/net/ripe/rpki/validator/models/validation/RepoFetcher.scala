@@ -226,13 +226,20 @@ class Fetchers(httpStore: HttpFetcherStore, config: FetcherConfig) {
     fetcher
   }
 
+  def isLocalFS(u: URI): Boolean = {
+    u.getHost == null && u.getScheme == null && u.toString == u.getPath
+  }
+
   def fetcher(repoUri: URI): Fetcher = {
-    val fetcher = repoUri.getScheme match {
-      case "rsync" => new RsyncFetcher(config)
-      case "http" | "https" => new RrdpFetcher(httpStore)
-      case _ => throw new Exception(s"No fetcher for the uri $repoUri")
+    if (isLocalFS(repoUri)) {
+      new RsyncFetcher(config)
+    } else {
+      repoUri.getScheme match {
+        case "rsync" => new RsyncFetcher(config)
+        case "http" | "https" => new RrdpFetcher(httpStore)
+        case _ => throw new Exception(s"No fetcher for the uri $repoUri")
+      }
     }
-    fetcher
   }
 }
 
