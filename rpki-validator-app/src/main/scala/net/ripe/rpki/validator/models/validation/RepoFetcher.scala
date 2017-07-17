@@ -218,12 +218,15 @@ case class RoaObject(override val url: String,
 class Fetchers(httpStore: HttpFetcherStore, config: FetcherConfig) {
 
   def singleObjectFetcher(objectUri: URI): Fetcher = {
-    val fetcher = objectUri.getScheme match {
-      case "rsync" => new SingleObjectRsyncFetcher(config)
-      case "http" | "https" => new SingleObjectHttpFetcher(httpStore)
-      case _ => throw new Exception(s"No fetcher for the object $objectUri")
+    if (isLocalFS(objectUri)) {
+      new SingleObjectRsyncFetcher(config)
+    } else {
+      objectUri.getScheme match {
+        case "rsync" => new SingleObjectRsyncFetcher(config)
+        case "http" | "https" => new SingleObjectHttpFetcher(httpStore)
+        case _ => throw new Exception(s"No fetcher for the object $objectUri")
+      }
     }
-    fetcher
   }
 
   def isLocalFS(u: URI): Boolean = {
