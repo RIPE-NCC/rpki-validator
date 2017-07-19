@@ -36,7 +36,14 @@ import net.ripe.rpki.validator.models.validation._
 
 import scala.util.control.NonFatal
 
-case class FetcherConfig(rsyncDir: String = "")
+case class FetcherConfig(rsyncDir: String, urlMap: Seq[(String, String)] = Seq()) {
+  def mapUri(u: URI): URI = {
+    val s = urlMap.foldLeft(u.toString) { case (s1, (f, t)) =>
+      s1.replaceAll(f, t)
+    }
+    URI.create(s)
+  }
+}
 
 trait FetcherListener {
   def processObject(repoObj: RepositoryObject.ROType)

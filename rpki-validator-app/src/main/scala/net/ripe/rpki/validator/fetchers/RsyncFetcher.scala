@@ -58,13 +58,10 @@ class RsyncFetcher(config: FetcherConfig) extends Fetcher with RsyncSupport {
   }
 
   override def fetch(url: URI, fetcherListener: FetcherListener): Seq[Error] =
-    fetchRepo(url, rsync, fetcherListener)
-
-  def fetchRepo(url: URI, method: (URI, File) => Option[Error], fetcherListener: FetcherListener): Seq[Error] = withRsyncDir(url) {
-    destDir =>
+    withRsyncDir(url) { destDir =>
       logger.info(s"Downloading the repository $url to ${destDir.getAbsolutePath}")
-      method(url, destDir).toSeq ++ readObjects(destDir, url, fetcherListener)
-  }
+      rsync(config.mapUri(url), destDir).toSeq ++ readObjects(destDir, url, fetcherListener)
+    }
 
   def readObjects(tmpRoot: File, repoUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
     val replacement = {

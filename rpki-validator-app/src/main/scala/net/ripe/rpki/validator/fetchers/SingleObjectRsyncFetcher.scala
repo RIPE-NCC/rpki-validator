@@ -53,7 +53,7 @@ class SingleObjectRsyncFetcher(config: FetcherConfig) extends Fetcher with Rsync
     }
 
     val error = for {
-      error <- rsync(uri, destDir).toLeft(()).right
+      error <- rsync(config.mapUri(uri), destDir).toLeft(()).right
       bytes <- readFile(new File(config.rsyncDir + "/" + fullPath)).right
       processResult <- processObject(uri, bytes, fetcherListener).right
     } yield processResult

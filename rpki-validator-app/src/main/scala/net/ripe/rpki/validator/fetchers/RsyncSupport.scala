@@ -57,7 +57,7 @@ trait RsyncSupport {
     }
   }
 
-  def readFile(f: File) = tryTo(new URI(f.getAbsolutePath))(processingE) {
+  def readFile(f: File): Either[Error, Array[Byte]] = tryTo(new URI(f.getAbsolutePath))(processingE) {
     Files.readAllBytes(f.toPath)
   }
 
