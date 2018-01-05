@@ -37,7 +37,7 @@ import javax.net.ssl.{SSLException, TrustManagerFactory, X509TrustManager}
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.lib.DateAndTime._
 import org.apache.http.client.config.RequestConfig
-import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
 import org.apache.http.conn.ssl.{SSLConnectionSocketFactory, SSLContexts, TrustStrategy}
 import org.apache.http.impl.client.HttpClientBuilder
 import org.joda.time.DateTime
@@ -143,7 +143,7 @@ trait Http { this: Logging =>
         } catch {
           case e: SSLException =>
             logger.error(s"Could not establish SSL connection while retrieving $url, trying to establish SSL connection without certificate check.", e)
-            url.synchronized {
+            this.synchronized {
               invalidSslHosts = invalidSslHosts + url.getHost
             }
             wrongSslHttp.execute(get)
@@ -157,9 +157,9 @@ trait Http { this: Logging =>
     }
   }
 
-  def httpGet(url: String) = fallBackToInsecureSsl(new HttpGet(url))
+  def httpGet(url: String): CloseableHttpResponse = fallBackToInsecureSsl(new HttpGet(url))
 
-  def httpGetIfNotModified(url: String, ifModifiedSince: Option[DateTime]) = {
+  def httpGetIfNotModified(url: String, ifModifiedSince: Option[DateTime]): CloseableHttpResponse = {
     val get = new HttpGet(url)
     ifModifiedSince.foreach { t =>
       get.setHeader("If-Modified-Since", formatAsRFC2616(t))
