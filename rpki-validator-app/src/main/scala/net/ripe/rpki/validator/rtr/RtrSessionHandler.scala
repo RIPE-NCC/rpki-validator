@@ -82,7 +82,7 @@ class RtrSessionHandler[T] (remoteAddress: T,
 
   private def processRequestPdu(pdu: Pdu) = {
     pdu match {
-      case ResetQueryPdu() =
+      case ResetQueryPdu() =>
         sessionData.lastPduReceived = "ResetQuery"
         processResetQuery
       case SerialQueryPdu(sessionId, serial) =>
