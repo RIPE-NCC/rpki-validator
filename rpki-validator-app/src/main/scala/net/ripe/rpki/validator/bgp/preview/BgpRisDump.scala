@@ -45,7 +45,7 @@ case class BgpRisEntry(origin: Asn, prefix: IpRange, visibility: Int)
 case class BgpRisDump(url: String, lastModified: Option[DateTime] = None, entries: Seq[BgpRisEntry] = Nil)
 
 object BgpRisDump extends Logging {
-  def toAnnouncedRoutes(entries: Seq[BgpRisEntry]) = {
+  def toAnnouncedRoutes(entries: Seq[BgpRisEntry]): Seq[BgpAnnouncement] = {
     val (r, t) = DateAndTime.timed {
       entries.par.
         filter(e => e.visibility >= BgpAnnouncementValidator.VISIBILITY_THRESHOLD).
@@ -81,7 +81,7 @@ object BgpRisDump extends Logging {
           Some(BgpRisEntry(origin = Asn.parse(asn), prefix = IpRange.parse(ipprefix), visibility = Integer.parseInt(visibility)))
         } catch {
           case NonFatal(e) =>
-            error("Skipping unparseble line: " + content)
+            error("Skipping unparseable line: " + content)
             debug("Detailed error: ", e)
             None
         }

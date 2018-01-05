@@ -111,10 +111,8 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
   implicit val executionContext = ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
 
   override def fetch(notificationUrl: URI, fetcherListener: FetcherListener): Seq[Error] = {
-
     val fetchTime = new DateTime()
-    val notificationXml: Either[Error, Option[Elem]] = getXmlIfModified(notificationUrl, RrdpFetcher.lastFetchTimes.get(notificationUrl))
-    notificationXml match {
+    getXmlIfModified(notificationUrl, RrdpFetcher.lastFetchTimes.get(notificationUrl)) match {
       case Left(error) => Seq(error)
       case Right(Some(xml)) =>
         RrdpFetcher.lastFetchTimes.put(notificationUrl, fetchTime)

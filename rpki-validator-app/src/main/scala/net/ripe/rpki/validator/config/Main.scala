@@ -144,7 +144,7 @@ class Main extends Http with Logging { main =>
     Future.traverse(bgpAnnouncementSets.single.get)(bgpRisDumpDownloader.download) foreach { dumps =>
       atomic { implicit transaction =>
         bgpAnnouncementSets() = dumps
-        bgpAnnouncementValidator.startUpdate(bgpAnnouncementSets().flatMap(_.entries), memoryImage().getDistinctRtrPrefixes.toSeq)
+        bgpAnnouncementValidator.startUpdate(bgpAnnouncementSets().flatMap(_.entries), memoryImage().getDistinctRtrPrefixes)
       }
     }
   }

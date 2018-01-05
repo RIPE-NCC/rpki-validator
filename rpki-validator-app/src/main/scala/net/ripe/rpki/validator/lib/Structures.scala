@@ -30,13 +30,13 @@
 package net.ripe.rpki.validator.lib
 
 object Structures {
-  def block[T](v: => T)(f: => Unit) = {
+  def block[T](v: => T)(f: => Unit): T = {
     val value = v
     f
     value
   }
 
-  def fBlock[T](v: => T)(f: T => Unit) = {
+  def fBlock[T](v: => T)(f: T => Unit): T = {
     val value = v
     f(value)
     value
