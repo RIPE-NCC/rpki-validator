@@ -151,8 +151,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
     everythingValidated
   }
 
-  private def updateValidationTimes(validatedObjects: Seq[ValidatedObject]) = {
-    val hashes: Iterable[(URI, Array[Byte])] = validatedObjects.filter(_.hash.isDefined).map(o => (o.uri, o.hash.get))
+  private def updateValidationTimes(validatedObjects: Seq[ValidatedObject]): Unit = {
+    val hashes: Iterable[(URI, Array[Byte])] = validatedObjects.withFilter(_.hash.isDefined).map(o => (o.uri, o.hash.get))
 
     val hashesOnly = hashes.map(_._2)
     hashesOnly.foreach { hash =>
@@ -163,7 +163,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   }
 
   private def validatedObject(checkMap: Map[ValidationLocation, List[Check]])(r: (String, RepositoryObject.ROType)): ValidatedObject = {
-    val (name, obj) = r
+    val (_, obj) = r
     val uri = new URI(obj.url)
     val validationChecks = checkMap.get(new ValidationLocation(uri)).map(_.map(_.impl).toSet)
     val hasErrors = validationChecks.exists(c => !c.forall(_.isOk))
@@ -175,8 +175,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   }
 
   private def check[T <: RepositoryObject[_ <: CertificateRepositoryObject]](objects: Seq[(String, T)], crl: CrlObject): List[Check] = {
-    objects.flatMap { pair =>
-      val (_, o) = pair
+    objects.flatMap { case (_, o) =>
       val loc = location(o)
       val result = ValidationResult.withLocation(loc)
       o.decoded.validate(o.url, certificateContext, crl.decoded, URI.create(crl.url), validationOptions, result)
@@ -190,9 +189,8 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
   }
 
   private def getResourcesOfType(types: util.EnumSet[IpResourceType], set: IpResourceSet): IpResourceSet = {
-    val resources = set.asScala.filter(ipResource => types.contains(ipResource.getType))
     import scala.collection.JavaConversions._
-    new IpResourceSet(resources)
+    new IpResourceSet(set.asScala.filter(ip => types.contains(ip.getType)))
   }
 
   private def stepDown(parentManifest: ManifestObject, forceNewFetch: Boolean)(cert: RepositoryObject[X509ResourceCertificate]): Seq[ValidatedObject] = {
@@ -324,8 +322,7 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
 
   def classify(objects: Seq[(String, RepositoryObject.ROType)]) = {
     var (roas, certificates, crls, gbrs) =
-      (Seq[(String, RoaObject)](), Seq[(String, CertificateObject)](), Seq[(String, CrlObject)](), Seq[(String,
-        GhostbustersObject)]())
+      (Seq[(String, RoaObject)](), Seq[(String, CertificateObject)](), Seq[(String, CrlObject)](), Seq[(String, GhostbustersObject)]())
     objects.foreach { obj =>
       val (_, repoObject) = obj
       repoObject match {
