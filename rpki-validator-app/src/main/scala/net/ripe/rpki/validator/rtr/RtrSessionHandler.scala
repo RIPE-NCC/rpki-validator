@@ -82,7 +82,7 @@ class RtrSessionHandler[T] (remoteAddress: T,
 
   private def processRequestPdu(pdu: Pdu) = {
     pdu match {
-      case ResetQueryPdu() =>
+      case ResetQueryPdu() =
         sessionData.lastPduReceived = "ResetQuery"
         processResetQuery
       case SerialQueryPdu(sessionId, serial) =>
@@ -102,13 +102,14 @@ class RtrSessionHandler[T] (remoteAddress: T,
         val currentSessionId = getCurrentSessionId()
         responsePdus = responsePdus :+ CacheResponsePdu(sessionId = currentSessionId)
 
-        getCurrentRtrPrefixes().foreach { rtrPrefix =>
-
+        val uniqueRtrPrefixes: Set[(Asn, IpRange, Int, Int)] = getCurrentRtrPrefixes().map { rtrPrefix =>
           val prefix: IpRange = rtrPrefix.prefix
           val prefixLength: Int = prefix.getPrefixLength
           val maxLength: Int = rtrPrefix.maxPrefixLength.getOrElse(prefixLength)
-          val asn: Asn = rtrPrefix.asn
+          (rtrPrefix.asn, prefix, prefixLength, maxLength)
+        }.toSet
 
+        uniqueRtrPrefixes.foreach { case (asn, prefix, prefixLength, maxLength) =>
           prefix.getStart match {
             case ipv4: Ipv4Address =>
               responsePdus = responsePdus :+ IPv4PrefixAnnouncePdu(ipv4, prefixLength.toByte, maxLength.toByte, asn)
