@@ -81,7 +81,7 @@ class HomeView extends View with ViewHelpers {
                         <p>
                           This RPKI Validator is preconfigured with the trust anchors for AFRINIC, APNIC, Lacnic and
                           RIPE NCC. In order to obtain the trust anchor for the ARIN RPKI repository, you will first
-                          have to accept their <a href="https://www.arin.net/public/rpki/tal/index.xhtml">Relying
+                          have to accept their <a href="https://www.arin.net/resources/rpki/tal.html">Relying
                           Party Agreement</a>. Please refer to the README.txt for details on how to add trust anchors to
                           this application.
                         </p>
