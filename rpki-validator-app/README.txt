@@ -1,6 +1,19 @@
 RIPE NCC RPKI Validator
 =======================
 
+Validator-3
+-----------
+We are working hard to make a new version of this validator. It is available for beta
+testing here:
+https://github.com/RIPE-NCC/rpki-validator-3
+
+We expect to make our first official release by the end of February. Effort on this
+project is expected to be limited to bug fixes only, once the new version is found
+to be stable
+
+Description
+-----------
+
 This application allows operators to download and validate the global Resource 
 Public Key Infrastructure (RPKI) data set for use in their BGP decision making 
 process and router configuration. To learn more about RPKI and BGP Origin Validation, 
@@ -20,7 +33,7 @@ The RIPE NCC RPKI Validator is an open source project on Github. Please contribu
 Support
 -------
 
-Please contact <certification@ripe.net> with any questions relating to the
+Please contact <sw-bugs@ripe.net> with any questions relating to the
 RIPE NCC RPKI Validator or the RIPE NCC Resource Certification (RPKI) service.
 
 
@@ -304,6 +317,10 @@ Known Issues
 
 Version History
 ---------------
+
+2.24 - 9 January 2018
+= Fixed an issue where duplicate Validated ROA Prefixes were sent to a router using RPKI-RTR
+= Updated the set of Trust Anchors to reflect that APNIC now uses a single Trust Anchor instead of five
 
 2.23 - 28 September 2016
 = Performance and stability improvements, bugfixes
