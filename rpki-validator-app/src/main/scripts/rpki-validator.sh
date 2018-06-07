@@ -67,6 +67,16 @@ function check_java_version {
   fi
 }
 
+function is_running {
+    if [ -e ${PID_FILE} ]; then
+        if [ x`cat ${PID_FILE}` == x`pgrep -f -- -Dapp.name=${APP_NAME}` ]; then
+            echo "true";
+            exit;
+        fi
+    fi
+    echo "false";
+}
+
 #
 # Specify the location of the Java home directory. If set then $JAVA_CMD will
 # be defined to $JAVA_HOME/bin/java
@@ -160,7 +170,7 @@ parse_jvm_options
 #
 # Determine if the application is already running
 #
-RUNNING=is_running
+RUNNING=$(is_running)
 
 RUN_IN_BACKGROUND="false"
 
@@ -168,16 +178,6 @@ if [ ${FIRST_ARG} == "start" ] || [ ${FIRST_ARG} == "restart" ] || [ ${FIRST_ARG
     RUN_IN_BACKGROUND="true"
 fi
 
-
-function is_running {
-    if [ -e ${PID_FILE} ]; then
-        if [ x`cat ${PID_FILE}` == x`pgrep -f -- -Dapp.name=${APP_NAME}` ]; then
-            echo "true";
-            exit;
-        fi
-    fi
-    echo "false";
-}
 
 function start_validator {
     if [ ${RUNNING} == "true" ]; then
