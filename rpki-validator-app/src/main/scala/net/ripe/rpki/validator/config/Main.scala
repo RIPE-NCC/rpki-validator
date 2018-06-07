@@ -119,7 +119,7 @@ class Main extends Http with Logging { main =>
 
       Txn.afterCommit { _ =>
         if (oldVersion != newVersion) {
-          bgpAnnouncementValidator.startUpdate(bgpAnnouncements, distinctRtrPrefixes.toSeq)
+          bgpAnnouncementValidator.startUpdate(bgpAnnouncements, distinctRtrPrefixes)
           rtrServer.notify(newVersion)
         }
       }

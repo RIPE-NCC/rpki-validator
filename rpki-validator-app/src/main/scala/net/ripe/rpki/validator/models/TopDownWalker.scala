@@ -293,7 +293,9 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
         val crlChecks = skippedChecks.filter(c => crl.isDefined && c.location.getName.equals(crl.get.url))
         val mftUri = new URI(mft.url)
 
-        var skippedInvalidObjects: Seq[InvalidObject] = Seq(ValidatedObject.invalid(Some(("mft", mft)), certificateContext.getSubjectChain, mftUri, Some(mft.hash), mftChecks.map(c => c.impl).toSet))
+        var skippedInvalidObjects: Seq[InvalidObject] = Seq(ValidatedObject.invalid(
+          Some(("mft", mft)), certificateContext.getSubjectChain, mftUri, Some(mft.hash), mftChecks.map(c => c.impl).toSet
+        ))
         if (crlChecks.nonEmpty) {
           val invalidObject = ValidatedObject.invalid(Some(("crl", crl.get)), certificateContext.getSubjectChain, new URI(crl.get.url), Some(crl.get.hash), crlChecks.map(c => c.impl).toSet)
           skippedInvalidObjects ++= Seq(invalidObject)

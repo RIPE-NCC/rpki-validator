@@ -320,7 +320,7 @@ object Pdus {
     buffer.readByte() match {
       case 1 =>
         val length = buffer.readByte()
-        val maxLenght = buffer.readByte()
+        val maxLength = buffer.readByte()
         buffer.skipBytes(1)
         val ipv6Bytes: Array[Byte] = new Array[Byte](16)
         buffer.getBytes(12, ipv6Bytes)
@@ -328,7 +328,7 @@ object Pdus {
 
         buffer.skipBytes(16)
         val asn = new Asn(buffer.readUnsignedInt())
-        Right(IPv6PrefixAnnouncePdu(prefix, length, maxLenght, asn))
+        Right(IPv6PrefixAnnouncePdu(prefix, length, maxLength, asn))
       case _ =>
         // TODO: Support withdrawals
         Left(BadData(ErrorPdu.UnsupportedPduType, buffer.array))
