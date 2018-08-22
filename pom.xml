@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.ripe.rpki</groupId>
     <artifactId>rpki-validator</artifactId>
-    <version>2.25-SNAPSHOT</version>
+    <version>2.25</version>
     <packaging>pom</packaging>
     <inceptionYear>2008</inceptionYear>
 
@@ -35,7 +35,7 @@
         <url>https://github.com/RIPE-NCC/rpki-validator.git</url>
         <connection>scm:git:git@github.com:RIPE-NCC/rpki-validator.git</connection>
         <developerConnection>scm:git:git@github.com:RIPE-NCC/rpki-validator.git</developerConnection>
-    <tag>rpki-validator-2.24</tag>
+    <tag>rpki-validator-2.25</tag>
   </scm>
 
     <distributionManagement>
