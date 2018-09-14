@@ -66,6 +66,7 @@ import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.config.{ApplicationOptions, Http}
 import net.ripe.rpki.validator.store.HttpFetcherStore
 import org.apache.http.HttpStatus
+import org.apache.http.client.methods.CloseableHttpResponse
 import org.joda.time.DateTime
 
 import scala.collection.immutable.Seq
@@ -81,10 +82,10 @@ object RrdpFetcher {
 class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Logging {
 
   import net.ripe.rpki.validator.fetchers.Fetcher._
+  import scalaz.Scalaz._
 
   import scala.concurrent._
   import scala.concurrent.duration._
-  import scalaz.Scalaz._
 
   class DeltaUnit
 
@@ -286,17 +287,25 @@ class RrdpFetcher(store: HttpFetcherStore) extends Fetcher with Http with Loggin
   def getXml(xmlUrl: URI): Either[Error, Elem] =
     tryTo(xmlUrl)(connectionE) {
       logger.info(s"Fetching $xmlUrl")
-      httpGet(xmlUrl.toString)
+      httpGet(xmlUrl)
     } >>= { response =>
       tryTo(xmlUrl)(parseE) {
-        response.getStatusLine.getStatusCode match {
-          case HttpStatus.SC_OK =>
-            scala.xml.XML.load(response.getEntity.getContent)
-          case _ =>
-            throw new RuntimeException(response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
-        }
+        readAndClose(response)
       }
     }
+
+  private def readAndClose(response: CloseableHttpResponse) = {
+    try {
+      response.getStatusLine.getStatusCode match {
+        case HttpStatus.SC_OK =>
+          scala.xml.XML.load(response.getEntity.getContent)
+        case _ =>
+          throw new RuntimeException(response.getStatusLine.getStatusCode + " " + response.getStatusLine.getReasonPhrase)
+      }
+    } finally {
+      response.close()
+    }
+  }
 
   private def getSnapshot(snapshotUrl: URI, snapshotDef: SnapshotDef): Either[Error, Snapshot] =
     getXml(snapshotUrl) >>= { xml =>
