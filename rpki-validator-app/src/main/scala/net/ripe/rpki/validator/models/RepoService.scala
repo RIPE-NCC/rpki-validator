@@ -33,9 +33,9 @@ import java.net.URI
 
 import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.fetchers.Fetcher
-import net.ripe.rpki.validator.fetchers.Fetcher.{ConnectionError, Error}
+import net.ripe.rpki.validator.fetchers.Fetcher.ConnectionError
 import net.ripe.rpki.validator.lib.Locker
-import net.ripe.rpki.validator.models.validation.RepoFetcher
+import net.ripe.rpki.validator.models.validation.{CertificateObject, RepoFetcher}
 import net.ripe.rpki.validator.store.RepoServiceStore
 import org.joda.time.{Duration, Instant}
 
@@ -74,10 +74,11 @@ class RepoService(fetcher: RepoFetcher) {
       RepoServiceErrors.lastErrors.getOrElse(uri, Seq.empty)
     }
 
-  def visitTrustAnchorCertificate(uri: URI, validationStart: Instant) =
-    fetchAndUpdateTime(uri, forceNewFetch = true, validationStart) {
+  def visitTrustAnchorCertificate(uri: URI): Either[Seq[Fetcher.Error], CertificateObject] = {
+    locker.locked(uri) {
       fetcher.fetchTrustAnchorCertificate(uri)
     }
+  }
 
   private def haveRecentDataInStore(uri: URI, validationTime: Instant, forceNewFetch: Boolean) =
     timeIsRecent(RepoServiceStore.getLastFetchTime(uri), interval(uri), validationTime, forceNewFetch)
