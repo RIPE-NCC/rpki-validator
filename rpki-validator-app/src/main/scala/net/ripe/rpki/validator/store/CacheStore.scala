@@ -33,8 +33,8 @@ import java.io.File
 import java.net.URI
 import java.sql.{ResultSet, Timestamp}
 import java.util.concurrent.Executors
-import javax.sql.DataSource
 
+import javax.sql.DataSource
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.models.RepoService
@@ -59,7 +59,8 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   private val certificateObjectType = "cer"
   private val ghostbustersObjectType = "gbr"
 
-  val deletionDelay = ApplicationOptions.removeOldObjectTimeoutInHours.toHours.toInt
+  val oldObjectsDeletionDelay: FiniteDuration = ApplicationOptions.removeOldObjectTimeoutInHours
+  val bogusObjectsDeletionDelay: FiniteDuration = 24.hours
 
   override def storeCertificate(certificate: CertificateObject) = storeRepoObject(certificate, certificateObjectType)
 
@@ -169,17 +170,16 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
   }
 
   def clearObjects(baseTime: Instant) = detached {
-      val thresholdTime = baseTime.toDateTime.minusHours(deletionDelay).toInstant
+      val thresholdTime = baseTime.minus(oldObjectsDeletionDelay.toMillis)
       val tt = timestamp(thresholdTime)
       val i = template.update(s"DELETE FROM repo_objects WHERE validation_time < '$tt'", Map.empty[String, Object])
       if (i != 0) info(s"Clear old objects -> deleted $i object(s) last time validated before $thresholdTime")
 
-      val hoursForBogusObjects: Int = 24
-      val bogusObjectsDeadline = baseTime.toDateTime.minusHours(hoursForBogusObjects).toInstant
+      val bogusObjectsDeadline = baseTime.minus(bogusObjectsDeletionDelay.toMillis)
       val j = template.update(
         s"DELETE FROM repo_objects WHERE validation_time IS NULL AND download_time < '${timestamp(bogusObjectsDeadline)}'",
         Map.empty[String, Object])
-      if (j != 0) info(s"Clear old objects -> deleted $j object(s) downloaded $hoursForBogusObjects hours before $baseTime and never validated")
+      if (j != 0) info(s"Clear old objects -> deleted $j object(s) downloaded $bogusObjectsDeletionDelay before $baseTime and never validated")
   }
 
   override def delete(url: String, hash: String) = detached {

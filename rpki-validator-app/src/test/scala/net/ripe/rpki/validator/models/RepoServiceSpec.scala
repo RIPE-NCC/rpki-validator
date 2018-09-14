@@ -64,7 +64,7 @@ class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach wit
 
     val firstInstant = Instant.now()
     repoService.visitRepo(false, firstInstant)(uri)
-    val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
+    val secondInstant = firstInstant.plus(1000)
     repoService.visitRepo(false, secondInstant)(uri)
 
     Mockito.verify(fetcher, VerificationModeFactory.times(1)).fetchRepo(uri)
@@ -75,7 +75,7 @@ class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach wit
 
     val firstInstant = Instant.now()
     repoService.visitRepo(false, firstInstant)(uri)
-    val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
+    val secondInstant = firstInstant.plus(1000)
     repoService.visitRepo(true, secondInstant)(uri)
 
     Mockito.verify(fetcher, VerificationModeFactory.times(2)).fetchRepo(uri)
@@ -118,7 +118,7 @@ class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach wit
 
     Mockito.when(fetcher.fetchRepo(uri)).thenReturn(Seq(ConnectionError(uri, "Cannot parse stuff")))
 
-    val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
+    val secondInstant = firstInstant.plus(1000)
     repoService.visitRepo(true, secondInstant)(uri)
     // the last fetch time should be still the first one
     repoService.lastFetchTime(uri) should be(firstInstant)
