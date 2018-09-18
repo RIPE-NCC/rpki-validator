@@ -63,7 +63,8 @@ trait ValidationProcess {
       val startTime = Instant.now
       val certificate = extractTrustAnchorLocator(forceNewFetch, startTime)
       certificate match {
-        case ValidObject(_, uri, _, checks, trustAnchor: X509ResourceCertificate) =>
+        case ValidObject(_, uri, _, _, trustAnchor: X509ResourceCertificate) =>
+          trustAnchorLocator.setFetchedCertificateUri(uri)
           val context = new CertificateRepositoryObjectValidationContext(uri, trustAnchor)
           Success(validateObjects(context, forceNewFetch, startTime) :+ certificate)
         case _ =>
@@ -134,20 +135,18 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
       }
     }
 
-    validCertificateObjects.headOption match {
-      case Some(taCertificate) =>
-        val taCertUri = URI.create(taCertificate.url)
-        trustAnchorLocator.setFetchedCertificateUri(taCertUri)
-        ValidatedObject.valid(
-          Some("cert" -> taCertificate),
-          Lists.newArrayList(taCertificate.decoded.getSubject.getName),
-          taCertUri,
-          Some(taCertificate.hash),
-          (validationResult.getAllValidationChecksForLocation(new ValidationLocation(taCertUri)).asScala
-            ++ convertFetchErrors(fetchErrors, ValidationStatus.WARNING)).toSet,
-          taCertificate.decoded
-        )
-      case None =>
+    validCertificateObjects.headOption.map { taCertificate =>
+      val taCertUri = URI.create(taCertificate.url)
+      ValidatedObject.valid(
+        Some("cert" -> taCertificate),
+        Lists.newArrayList(taCertificate.decoded.getSubject.getName),
+        taCertUri,
+        Some(taCertificate.hash),
+        (validationResult.getAllValidationChecksForLocation(new ValidationLocation(taCertUri)).asScala
+          ++ convertFetchErrors(fetchErrors, ValidationStatus.WARNING)).toSet,
+        taCertificate.decoded
+      )
+    } getOrElse
         ValidatedObject.invalid(
           None,
           Lists.newArrayList("No trust anchor certificate"),
@@ -155,7 +154,6 @@ class TrustAnchorValidationProcess(override val trustAnchorLocator: TrustAnchorL
           None,
           (validationResult.getAllValidationChecksForCurrentLocation.asScala
             ++ convertFetchErrors(fetchErrors, ValidationStatus.FETCH_ERROR)).toSet)
-    }
   }
 
   private def convertFetchErrors(errors: Seq[Fetcher.Error], status: ValidationStatus): Seq[ValidationCheck] = {
