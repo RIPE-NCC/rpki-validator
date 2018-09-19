@@ -30,11 +30,12 @@
 package net.ripe.rpki.validator.config
 
 import java.io.{BufferedInputStream, File, FileInputStream, InputStream}
+import java.net.URI
 import java.security.KeyStore
 import java.security.cert.{CertificateFactory, X509Certificate}
-import javax.net.ssl.{SSLException, TrustManagerFactory, X509TrustManager}
 
 import grizzled.slf4j.Logging
+import javax.net.ssl.{SSLException, TrustManagerFactory, X509TrustManager}
 import net.ripe.rpki.validator.lib.DateAndTime._
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
@@ -157,7 +158,7 @@ trait Http { this: Logging =>
     }
   }
 
-  def httpGet(url: String): CloseableHttpResponse = fallBackToInsecureSsl(new HttpGet(url))
+  def httpGet(url: URI): CloseableHttpResponse = fallBackToInsecureSsl(new HttpGet(url))
 
   def httpGetIfNotModified(url: String, ifModifiedSince: Option[DateTime]): CloseableHttpResponse = {
     val get = new HttpGet(url)

@@ -35,12 +35,10 @@ import java.net.URI
 import net.ripe.ipresource.IpResourceSet
 import net.ripe.rpki.commons.crypto.x509cert.X509ResourceCertificateTest
 import net.ripe.rpki.validator.config.ApplicationOptions
-import net.ripe.rpki.validator.fetchers.Fetcher.Error
-import net.ripe.rpki.validator.fetchers.{FetcherListener, Fetcher, FetcherConfig}
-import net.ripe.rpki.validator.store.{HttpFetcherStore, DataSources, CacheStore}
+import net.ripe.rpki.validator.fetchers.FetcherConfig
+import net.ripe.rpki.validator.store.{CacheStore, DataSources, HttpFetcherStore}
 import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.scalatest.mock.MockitoSugar
-import org.mockito.Mockito.when
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
@@ -66,63 +64,5 @@ class RepoFetcherTest extends ValidatorTestCase with MockitoSugar {
 
     new File(ApplicationOptions.rsyncDirLocation + "/repo1/x").exists should be(true)
     new File(ApplicationOptions.rsyncDirLocation + "/repo2/y").exists should be(true)
-  }
-
-  test("Should add a new trust anchor certificate in the repo") {
-    val dataSource = DataSources.InMemoryDataSource
-    val fetchersMock = mock[Fetchers]
-    val fetcher = new RepoFetcher(new CacheStore(dataSource), fetchersMock)
-
-    val oldUrl = "rsync://repo2/oldCert.cert"
-    val oldCertificate = CertificateObject(oldUrl, decoded = testCertificate1)
-    storage.storeCertificate(oldCertificate)
-
-    val newUrl = "rsync://repo2/cert.cert"
-    val uri = new URI(newUrl)
-
-    val newCert = new CertificateObject(newUrl, decoded = testCertificate2)
-    val mockFetcher = new Fetcher {
-      override def fetch(url: URI, process: FetcherListener): Seq[Error] = {
-        process.processObject(newCert)
-        Seq()
-      }
-    }
-    when(fetchersMock.singleObjectFetcher(uri)).thenReturn(mockFetcher)
-
-    fetcher.fetchTrustAnchorCertificate(uri)
-
-    var certs: Seq[CertificateObject] = storage.getCertificates(newUrl)
-    certs.size should be(1)
-    certs.head should equal(newCert)
-
-    certs = storage.getCertificates(oldUrl)
-    certs.size should be(1)
-    certs.head should equal(oldCertificate)
-  }
-
-  test("Should update an existing trust anchor certificate in the repo by uri") {
-    val dataSource = DataSources.InMemoryDataSource
-    val fetchersMock = mock[Fetchers]
-    val fetcher = new RepoFetcher(new CacheStore(dataSource), fetchersMock)
-
-    val url = "rsync://repo2/cert.cert"
-    val uri = new URI(url)
-    val certificate = CertificateObject(url, decoded = testCertificate1)
-    storage.storeCertificate(certificate)
-
-    val updatedCert = new CertificateObject(url, decoded = testCertificate2)
-    val mockFetcher = new Fetcher {
-        override def fetch(url: URI, process: FetcherListener): Seq[Error] = {
-          process.processObject(updatedCert)
-          Seq()
-        }
-      }
-    when(fetchersMock.singleObjectFetcher(uri)).thenReturn(mockFetcher)
-
-    fetcher.fetchTrustAnchorCertificate(uri)
-
-    val certs: Seq[CertificateObject] = storage.getCertificates(url)
-    certs.size should be(1)
-    certs.head should equal(updatedCert)
   }
 }

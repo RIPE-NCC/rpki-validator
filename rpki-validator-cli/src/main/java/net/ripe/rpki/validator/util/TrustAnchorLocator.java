@@ -95,8 +95,11 @@ public class TrustAnchorLocator {
                 } else break;
             }
 
+            if (certificateLocations.isEmpty())
+                throw new IllegalArgumentException("Certificate URI is not found in the TAL file " + file.toString());
+
             if (line == null)
-                throw new IllegalArgumentException("publicKeyInfo not found in TAL file " + file.toString());
+                throw new IllegalArgumentException("publicKeyInfo is not found in the TAL file " + file.toString());
 
             StringBuilder publicKeyInfo = new StringBuilder(line.trim());
             while ((line = reader.readLine()) != null) {

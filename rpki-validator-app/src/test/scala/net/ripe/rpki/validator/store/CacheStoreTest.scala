@@ -41,7 +41,6 @@ import net.ripe.rpki.validator.support.ValidatorTestCase
 import org.joda.time.Instant
 import org.scalatest.BeforeAndAfter
 
-import scala.collection.JavaConversions._
 import scala.util.Try
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
@@ -196,14 +195,14 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
     store.storeCertificate(certificate)
 
-    val timeInThePast = Instant.now.minus(3600 * 1000 * (store.deletionDelay + 1))
+    val timeInThePast = Instant.now.minus(store.oldObjectsDeletionDelay.toMillis + 1)
     store.updateValidationTimestamp(Seq(roa.hash, certificate.hash), timeInThePast)
 
     store.clearObjects(Instant.now)
 
-    store.getObjects(stringify(roa.hash)).isEmpty should be(true)
+    store.getObjects(stringify(roa.hash)) should be(empty)
 
-    store.getObjects(stringify(certificate.hash)).isEmpty should be(true)
+    store.getObjects(stringify(certificate.hash)) should be(empty)
   }
 
   test("Delete objects never validated") {
@@ -214,13 +213,13 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
     store.storeCertificate(certificate)
 
-    val timeInTheFuture = Instant.now.plus(3600 * 1000 * (store.deletionDelay + 1))
+    val timeInTheFuture = Instant.now.plus(1000 + store.bogusObjectsDeletionDelay.toMillis)
 
     store.clearObjects(timeInTheFuture)
 
-    store.getObjects(stringify(roa.hash)).isEmpty should be(true)
+    store.getObjects(stringify(roa.hash)) should be(empty)
 
-    store.getObjects(stringify(certificate.hash)).isEmpty should be(true)
+    store.getObjects(stringify(certificate.hash)) should be(empty)
   }
 
   test("Should return both objects and certificates matching the url") {

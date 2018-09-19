@@ -30,15 +30,16 @@
 package net.ripe.rpki.validator.config
 
 import java.io.File
+import java.net.URI
 import java.security.KeyStore
 
 import grizzled.slf4j.Logging
 import net.ripe.rpki.validator.support.{JunitLoggingSetup, ValidatorTestCase}
-import org.apache.http.client.methods.{CloseableHttpResponse, HttpGet}
+import org.apache.http.client.methods.CloseableHttpResponse
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server._
 import org.eclipse.jetty.util.ssl.SslContextFactory
-import org.scalatest.{Ignore, BeforeAndAfterAll}
+import org.scalatest.BeforeAndAfterAll
 
 import scala.util.Try
 
@@ -61,7 +62,7 @@ class HttpTest extends ValidatorTestCase with JunitLoggingSetup with BeforeAndAf
   test("Should connect to http server") {
     HttpServer.httpPort
 
-    val response: CloseableHttpResponse = subject.httpGet(s"http://localhost:${HttpServer.httpPort}")
+    val response: CloseableHttpResponse = subject.httpGet(URI.create(s"http://localhost:${HttpServer.httpPort}"))
     Try {
       response.getStatusLine.getStatusCode
     } should be a 'Success
@@ -70,7 +71,7 @@ class HttpTest extends ValidatorTestCase with JunitLoggingSetup with BeforeAndAf
   }
 
   test("Should connect to https server") {
-    val response: CloseableHttpResponse = subject.httpGet(s"https://localhost:${HttpServer.httpsPort}")
+    val response: CloseableHttpResponse = subject.httpGet(URI.create(s"https://localhost:${HttpServer.httpsPort}"))
     Try {
       response.getStatusLine.getStatusCode
     } should be a 'Success
