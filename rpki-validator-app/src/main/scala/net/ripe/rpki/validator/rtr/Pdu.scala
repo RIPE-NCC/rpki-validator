@@ -113,11 +113,10 @@ case class IPv4PrefixAnnouncePdu(ipv4PrefixStart: Ipv4Address, prefixLength: Byt
 /**
  * See: http://tools.ietf.org/html/draft-ietf-sidr-rpki-rtr-16#section-5.6
  */
-case class IPv6PrefixAnnouncePdu(ipv6PrefixStart: Ipv6Address, prefixLength: Byte, maxLength: Byte, asn: Asn) extends Pdu {
+case class IPv6PrefixAnnouncePdu(ipv6PrefixStart: Ipv6Address, prefixLength: Short, maxLength: Short, asn: Asn) extends Pdu {
   override def pduType = PduTypes.IPv6Prefix
   override def length = 32
   override def toPrettyContentString: String = "Add IPv6 Prefix (prefix: " + ipv6PrefixStart + "/" + prefixLength + ", maxLength: " + maxLength + ", Asn: " + asn + ")"
-
 }
 
 /**
@@ -214,6 +213,7 @@ object Pdus {
     val protocol = buffer.readByte()
     val pduType = buffer.readByte()
     val headerShort = buffer.readShort()
+    // NB: this will break for lengths between 2^31 and 2^32
     val length = buffer.readInt()
 
     if (protocol != SupportedProtocol) {
@@ -265,7 +265,7 @@ object Pdus {
     buffer.writeBytes(convertToPrependedByteArray(asn.getValue, 4))
   }
 
-  private def writeIPv6PrefixAnnouncePduPayload(buffer: ChannelBuffer, prefix: Ipv6Address, length: Byte, maxLength: Byte, asn: Asn): Unit = {
+  private def writeIPv6PrefixAnnouncePduPayload(buffer: ChannelBuffer, prefix: Ipv6Address, length: Short, maxLength: Short, asn: Asn): Unit = {
     buffer.writeByte(1)
     buffer.writeByte(length)
     buffer.writeByte(maxLength)
@@ -285,6 +285,7 @@ object Pdus {
   }
 
   private def parseErrorPdu(buffer: ChannelBuffer, headerShort: Short): Right[Nothing, ErrorPdu] = {
+    // NB: this will break for lengths between 2^31 and 2^32
     val causingPduLength = buffer.readInt()
     val causingPdu = buffer.readBytes(causingPduLength).array()
     val errorTextLength = buffer.readInt()
@@ -319,8 +320,8 @@ object Pdus {
   private def parseIPv6PrefixPdu(buffer: ChannelBuffer): Either[BadData, Pdu] = {
     buffer.readByte() match {
       case 1 =>
-        val length = buffer.readByte()
-        val maxLength = buffer.readByte()
+        val length = buffer.readUnsignedByte()
+        val maxLength = buffer.readUnsignedByte()
         buffer.skipBytes(1)
         val ipv6Bytes: Array[Byte] = new Array[Byte](16)
         buffer.getBytes(12, ipv6Bytes)

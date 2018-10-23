@@ -31,9 +31,10 @@ package net.ripe.rpki.validator
 package config
 
 import java.io.{File, PrintStream}
+import java.net.URI
 import java.util.EnumSet
-import javax.servlet.DispatcherType
 
+import javax.servlet.DispatcherType
 import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.api.RestApi
@@ -47,7 +48,6 @@ import net.ripe.rpki.validator.rtr.{Pdu, RTRServer}
 import net.ripe.rpki.validator.store.{CacheStore, DurableCaches}
 import net.ripe.rpki.validator.util.TrustAnchorLocator
 import org.apache.commons.io.FileUtils
-import org.apache.http.client.methods.HttpGet
 import org.eclipse.jetty.server.Server
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
@@ -272,8 +272,12 @@ class Main extends Http with Logging { main =>
       // Software Update checker
       override def newVersionDetailFetcher = new OnlineNewVersionDetailFetcher(ReleaseInfo.version,
         () => {
-          val response = httpGet("https://lirportal.ripe.net/certification/content/static/validator/latest-version.properties")
-          scala.io.Source.fromInputStream(response.getEntity.getContent).mkString
+          val response = httpGet(URI.create("https://lirportal.ripe.net/certification/content/static/validator/latest-version.properties"))
+          try {
+            scala.io.Source.fromInputStream(response.getEntity.getContent).mkString
+          } finally {
+            response.close()
+          }
         })
 
       // UserPreferences

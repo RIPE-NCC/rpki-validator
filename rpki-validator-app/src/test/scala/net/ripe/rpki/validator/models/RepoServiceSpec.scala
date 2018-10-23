@@ -34,12 +34,11 @@ import java.net.URI
 import net.ripe.rpki.validator.fetchers.Fetcher.{ConnectionError, ParseError}
 import net.ripe.rpki.validator.models.validation.RepoFetcher
 import net.ripe.rpki.validator.store.RepoServiceStore
-import net.ripe.rpki.validator.support.{JunitLoggingSetup, ValidatorTestCase}
 import org.joda.time.{Duration, Instant}
 import org.mockito.Mockito
 import org.mockito.internal.verification.VerificationModeFactory
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterEach, FunSuite, Matchers}
 import org.scalatest.mock.MockitoSugar
+import org.scalatest.{BeforeAndAfterEach, FunSuite, Matchers}
 
 @org.junit.runner.RunWith(classOf[org.scalatest.junit.JUnitRunner])
 class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach with MockitoSugar  {
@@ -65,7 +64,7 @@ class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach wit
 
     val firstInstant = Instant.now()
     repoService.visitRepo(false, firstInstant)(uri)
-    val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
+    val secondInstant = firstInstant.plus(1000)
     repoService.visitRepo(false, secondInstant)(uri)
 
     Mockito.verify(fetcher, VerificationModeFactory.times(1)).fetchRepo(uri)
@@ -76,27 +75,18 @@ class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach wit
 
     val firstInstant = Instant.now()
     repoService.visitRepo(false, firstInstant)(uri)
-    val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
+    val secondInstant = firstInstant.plus(1000)
     repoService.visitRepo(true, secondInstant)(uri)
 
     Mockito.verify(fetcher, VerificationModeFactory.times(2)).fetchRepo(uri)
   }
 
-  test("should fetch object if URI was never visited") {
+  test("should fetch TA certificate if URI was never visited") {
     val uri = new URI("http://foo.bar/bla.cer")
 
-    repoService.visitTrustAnchorCertificate(uri, false, Instant.now())
+    repoService.visitTrustAnchorCertificate(uri)
 
     Mockito.verify(fetcher).fetchTrustAnchorCertificate(uri)
-  }
-
-  test("should not fetch object if URI was already visited") {
-    val uri: URI = new URI("http://foo.bar/bla.cer")
-
-    repoService.visitTrustAnchorCertificate(uri, false, Instant.now())
-    repoService.visitTrustAnchorCertificate(uri, false, Instant.now())
-
-    Mockito.verify(fetcher, Mockito.times(1)).fetchTrustAnchorCertificate(uri)
   }
 
   test("fetch time should be recent") {
@@ -128,7 +118,7 @@ class RepoServiceSpec extends FunSuite with Matchers with BeforeAndAfterEach wit
 
     Mockito.when(fetcher.fetchRepo(uri)).thenReturn(Seq(ConnectionError(uri, "Cannot parse stuff")))
 
-    val secondInstant = firstInstant.toDateTime.plusSeconds(1).toInstant
+    val secondInstant = firstInstant.plus(1000)
     repoService.visitRepo(true, secondInstant)(uri)
     // the last fetch time should be still the first one
     repoService.lastFetchTime(uri) should be(firstInstant)
