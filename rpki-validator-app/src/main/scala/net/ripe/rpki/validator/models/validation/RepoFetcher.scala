@@ -54,7 +54,7 @@ import scala.util.control.NonFatal
 trait Hashing {
   def getHash(bytes: Array[Byte]): Array[Byte] = ManifestCms.hashContents(bytes)
 
-  def stringify(bytes: Array[Byte]) = Option(bytes).map {
+  def stringify(bytes: Array[Byte]): String = Option(bytes).map {
     _.map { b => String.format("%02X", new Integer(b & 0xff))}.mkString
   }.getOrElse("")
 

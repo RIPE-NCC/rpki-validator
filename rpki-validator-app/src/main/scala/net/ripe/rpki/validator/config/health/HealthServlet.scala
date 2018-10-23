@@ -102,6 +102,7 @@ abstract class HealthServlet extends HttpServlet {
       setProperResponse(Code.WARNING, 299)
 
     val formatted = statuses.mapValues(s => Map("code" -> s.code.toString, "message" -> s.message))
+    resp.setContentType("application/json")
     resp.getWriter.write(compactRender(decompose(formatted)))
   }
 

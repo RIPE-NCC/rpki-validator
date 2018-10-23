@@ -36,7 +36,7 @@ abstract class RestApi extends ScalatraServlet with BgpPrefixOriginValidationCon
   import net.liftweb.json.JsonDSL._
 
   before() {
-    contentType ="text/json;charset=UTF-8"
+    contentType = "text/json;charset=UTF-8"
     response.setHeader("Set-Cookie", null) // watch out for scalatra.FlashMapSupport
   }
 

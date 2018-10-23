@@ -80,7 +80,7 @@ class Locker extends Logging {
   }
 
   @inline
-  private def _locked[T, X](lock: AccessibleLock)(g: => T): T = {
+  private def _locked[T](lock: AccessibleLock)(g: => T): T = {
     lock.lock()
     try {
       g
