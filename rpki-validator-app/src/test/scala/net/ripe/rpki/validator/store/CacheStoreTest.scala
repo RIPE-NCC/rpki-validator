@@ -213,7 +213,7 @@ class CacheStoreTest extends ValidatorTestCase with BeforeAndAfter with Hashing 
     val certificate = CertificateObject(url = "rsync://bla.cer", decoded = testCertificate)
     store.storeCertificate(certificate)
 
-    val timeInTheFuture = Instant.now.plus(1000 + store.bogusObjectsDeletionDelay.toMillis)
+    val timeInTheFuture = Instant.now.plus(1000000 + store.bogusObjectsDeletionDelay.toMillis)
 
     store.clearObjects(timeInTheFuture)
 
