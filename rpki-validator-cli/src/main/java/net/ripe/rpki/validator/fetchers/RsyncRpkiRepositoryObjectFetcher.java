@@ -103,7 +103,7 @@ public class RsyncRpkiRepositoryObjectFetcher implements RpkiRepositoryObjectFet
     @Override
     public void prefetch(URI uri, ValidationResult result) {
         if (uriCache.contains(uri)) {
-            LOG.debug("rsync cache hit for URI " + uri);
+//            LOG.debug("rsync cache hit for URI " + uri);
             return;
         }
 
@@ -129,7 +129,7 @@ public class RsyncRpkiRepositoryObjectFetcher implements RpkiRepositoryObjectFet
 
     private void fetchFile(URI uri, File destinationFile, ValidationResult result) {
         if (uriCache.contains(uri)) {
-            LOG.debug("rsync cache hit for URI " + uri);
+//            LOG.debug("rsync cache hit for URI " + uri);
             return;
         }
 

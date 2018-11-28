@@ -86,9 +86,9 @@ public class ObjectFetcherResultLogger implements NotifyingCertificateRepository
         for (ValidationCheck check: result.getAllValidationChecksForLocation(new ValidationLocation(uri))) {
             String message = uri + ": " + ValidationMessage.getMessage(check);
             if (check.isOk()) {
-                if (logValidObjects) {
-                    LOG.debug(check.getStatus() + "->" + message);
-                }
+//                if (logValidObjects) {
+//                    LOG.debug(check.getStatus() + "->" + message);
+//                }
             } else {
                 LOG.error(check.getStatus() + "->" + message);
             }
