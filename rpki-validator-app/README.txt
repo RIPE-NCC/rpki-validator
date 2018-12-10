@@ -317,6 +317,8 @@ Known Issues
 
 Version History
 ---------------
+2.25 - 22 August 2018
+= Fixed is_running status checker 
 
 2.24 - 9 January 2018
 = Fixed an issue where duplicate Validated ROA Prefixes were sent to a router using RPKI-RTR
