@@ -34,6 +34,8 @@ import javax.servlet.http.{HttpServlet, HttpServletRequest, HttpServletResponse}
 class HealthServlet extends HttpServlet {
   override def doGet(req: HttpServletRequest, resp: HttpServletResponse): Unit = {
     resp.setContentType("application/json")
+    // it is expected by the Icinga check by historical reasons
+    resp.setStatus(299)
     resp.getWriter.write("""{ "status": "OK"}""")
   }
 
