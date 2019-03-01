@@ -39,9 +39,10 @@ import grizzled.slf4j.Logging
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.api.RestApi
 import net.ripe.rpki.validator.bgp.preview._
-import net.ripe.rpki.validator.config.health.HealthServlet
+import net.ripe.rpki.validator.config.health.{HealthServlet, ValidityServlet}
 import net.ripe.rpki.validator.fetchers.FetcherConfig
 import net.ripe.rpki.validator.lib.{UserPreferences, _}
+import net.ripe.rpki.validator.models.validation.RepositoryObject.ROType
 import net.ripe.rpki.validator.models.validation._
 import net.ripe.rpki.validator.models.{Idle, IgnoreFilter, TrustAnchorData, _}
 import net.ripe.rpki.validator.rtr.{Pdu, RTRServer}
@@ -290,15 +291,13 @@ class Main extends Http with Logging { main =>
     }
 
     val restApiServlet = new RestApi() {
-      override protected def getVrpObjects = memoryImage.single.get.getDistinctRtrPrefixes
-
-      override protected def getCachedObjects = store.getAllObjects
+      override protected def getVrpObjects: Seq[RtrPrefix] = memoryImage.single.get.getDistinctRtrPrefixes
+      override protected def getCachedObjects: Seq[ROType] = store.getAllObjects
     }
 
-    val healthServlet = new HealthServlet() {
-      override protected def getValidatedObjects = memoryImage.single.get.validatedObjects
-
-      override protected def getTrustAnchors = memoryImage.single.get.trustAnchors
+    val validityServlet = new ValidityServlet() {
+      override protected def getValidatedObjects: ValidatedObjects = memoryImage.single.get.validatedObjects
+      override protected def getTrustAnchors: TrustAnchors = memoryImage.single.get.trustAnchors
     }
 
 
@@ -309,7 +308,8 @@ class Main extends Http with Logging { main =>
     defaultServletHolder.setInitParameter("dirAllowed", "false")
     root.addServlet(defaultServletHolder, "/*")
     root.addServlet(new ServletHolder(restApiServlet), "/api/*")
-    root.addServlet(new ServletHolder(healthServlet), "/health")
+    root.addServlet(new ServletHolder(new HealthServlet()), "/health")
+    root.addServlet(new ServletHolder(validityServlet), "/validity")
     root.addFilter(new FilterHolder(webFilter), "/*", EnumSet.allOf(classOf[DispatcherType]))
 
     val requestLogHandler = {

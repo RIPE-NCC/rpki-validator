@@ -38,6 +38,7 @@ import javax.sql.DataSource
 import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
 import net.ripe.rpki.validator.config.ApplicationOptions
 import net.ripe.rpki.validator.models.RepoService
+import net.ripe.rpki.validator.models.validation.RepositoryObject.ROType
 import net.ripe.rpki.validator.models.validation._
 import org.joda.time.Instant
 import org.springframework.jdbc.core.RowMapper
@@ -118,7 +119,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
     ).toSeq
   }
 
-  def getManifests(aki: Array[Byte]) = getRepoObject[ManifestObject](aki, manifestObjectType) { (url, bytes, validationTime) =>
+  def getManifests(aki: Array[Byte]): Seq[ManifestObject] = getRepoObject[ManifestObject](aki, manifestObjectType) { (url, bytes, validationTime) =>
     ManifestObject.parse(url, bytes).copy(validationTime = validationTime)
   }
 
@@ -140,7 +141,7 @@ class CacheStore(dataSource: DataSource) extends Storage with Hashing {
         FROM repo_objects
         WHERE hash = :hash""", Map("hash" -> hash))
 
-  def getAllObjects = getAllObjectsBy("SELECT encoded, validation_time, object_type, url FROM repo_objects", Map())
+  def getAllObjects: Seq[ROType] = getAllObjectsBy("SELECT encoded, validation_time, object_type, url FROM repo_objects", Map())
 
   def getAllObjectsBy(query: String, params: Map[String, Object]): Seq[RepositoryObject.ROType] = detached {
     Try {

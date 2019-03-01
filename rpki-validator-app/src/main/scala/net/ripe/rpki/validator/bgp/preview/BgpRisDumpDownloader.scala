@@ -71,11 +71,10 @@ class BgpRisDumpDownloader(httpClient: HttpClient) extends Logging {
 
   }
 
-  private def lastModified(response: HttpResponse) = {
-    Option(response.getFirstHeader("Last-Modified")) map { h =>
-      new DateTime(org.apache.http.impl.cookie.DateUtils.parseDate(h.getValue))
-    }
-  }
+  private def lastModified(response: HttpResponse) =
+    Option(response.getFirstHeader("Last-Modified"))
+      .flatMap(h => Option(h.getValue))
+      .map(v => new DateTime(org.apache.http.client.utils.DateUtils.parseDate(v)))
 
   protected[preview] def makeResponseHandler(dump: BgpAnnouncementSet): ResponseHandler[BgpAnnouncementSet] = {
     val responseHandler = new ResponseHandler[BgpAnnouncementSet]() {

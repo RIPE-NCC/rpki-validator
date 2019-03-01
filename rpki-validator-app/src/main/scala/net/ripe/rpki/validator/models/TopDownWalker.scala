@@ -305,8 +305,10 @@ class TopDownWalker(certificateContext: CertificateRepositoryObjectValidationCon
       isMftValid
     }
 
-    val validManifest = for { (mft, oCrl, mftObjects, nonFatalChecks, fatalChecks) <- mostRecentValidMft; crl <- oCrl }
-      yield ManifestSearchResult(mft, crl, mftObjects, nonFatalChecks ++ fatalChecks)
+    val validManifest = for {
+      (mft, oCrl, mftObjects, nonFatalChecks, fatalChecks) <- mostRecentValidMft
+      crl <- oCrl
+    } yield ManifestSearchResult(mft, crl, mftObjects, nonFatalChecks ++ fatalChecks)
 
     (validManifest, checksForSkippedMfts)
   }
