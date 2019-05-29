@@ -190,7 +190,7 @@ function start_validator {
     info "Routers can connect on port ${RTR_PORT_VALUE}"
 
     CLASSPATH=:"$LIB_DIR/*"
-    MEM_OPTIONS="-Xms$JVM_XMS -Xmx$JVM_XMX"
+    MEM_OPTIONS="-Xms$JVM_XMS -Xmx$JVM_XMX -XX:+ExitOnOutOfMemoryError"
 
     CMDLINE="${JAVA_CMD} ${JVM_OPTIONS} ${MEM_OPTIONS} ${JAVA_OPTS} \
              -Dapp.name=${APP_NAME} -Dconfig.file=${CONFIG_FILE} \
