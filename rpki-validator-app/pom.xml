@@ -12,7 +12,7 @@
 
     <properties>
         <!-- 9.2 is the last jetty that's compatible with Java 7 -->
-        <jetty.version>9.2.28.v20190418</jetty.version>
+        <jetty.version>9.3.27.v20190418</jetty.version>
         <yammer.version>3.0.2</yammer.version>
         <main.class>net.ripe.rpki.validator.config.Main</main.class>
     </properties>
