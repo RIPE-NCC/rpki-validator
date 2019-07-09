@@ -34,9 +34,8 @@ import java.io.{File, PrintStream}
 import java.net.URI
 import java.util.EnumSet
 
-import javax.servlet.DispatcherType
 import grizzled.slf4j.Logging
-import net.ripe.rpki.commons.crypto.CertificateRepositoryObject
+import javax.servlet.DispatcherType
 import net.ripe.rpki.validator.api.RestApi
 import net.ripe.rpki.validator.bgp.preview._
 import net.ripe.rpki.validator.config.health.{HealthServlet, ValidityServlet}
@@ -52,13 +51,12 @@ import org.apache.commons.io.FileUtils
 import org.eclipse.jetty.server.Server
 import org.joda.time.DateTime
 import org.slf4j.LoggerFactory
+import scalaz.{Failure, Success}
 
-import scala.Predef._
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.stm._
 import scala.math.Ordering.Implicits._
-import scalaz.{Failure, Success}
 
 object Main {
   private val sessionId: Pdu.SessionId = Pdu.randomSessionid
