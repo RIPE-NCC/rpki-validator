@@ -29,7 +29,6 @@
  */
 package net.ripe.rpki.validator.commands;
 
-import net.ripe.rpki.commons.rsync.Rsync;
 import net.ripe.rpki.commons.validation.ValidationResult;
 import net.ripe.rpki.commons.validation.objectvalidators.CertificateRepositoryObjectValidationContext;
 import net.ripe.rpki.validator.fetchers.CachingCertificateRepositoryObjectFetcher;
@@ -44,6 +43,7 @@ import net.ripe.rpki.validator.output.ValidatedRoaWriter;
 import net.ripe.rpki.validator.runtimeproblems.ValidatorIOException;
 import net.ripe.rpki.validator.summary.ValidationSummaryCollector;
 import net.ripe.rpki.validator.summary.ValidationSummaryPrinter;
+import net.ripe.rpki.validator.util.NoopRsync;
 import net.ripe.rpki.validator.util.UriToFileMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.Validate;
@@ -117,7 +117,9 @@ public class TopDownCertificateRepositoryValidator {
     }
 
     private CachingCertificateRepositoryObjectFetcher createCertificateRepositoryObjectFetcher() {
-        CertificateRepositoryObjectFetcher rsyncFetcher = new RpkiRepositoryObjectFetcherAdapter(new RsyncRpkiRepositoryObjectFetcher(new Rsync(), new UriToFileMapper(getUnvalidatedOutputDirectory())));
+        CertificateRepositoryObjectFetcher rsyncFetcher =
+                new RpkiRepositoryObjectFetcherAdapter(new RsyncRpkiRepositoryObjectFetcher(new NoopRsync(),
+                        new UriToFileMapper(getUnvalidatedOutputDirectory())));
 
         ValidatingCertificateRepositoryObjectFetcher validatingFetcher = new ValidatingCertificateRepositoryObjectFetcher(rsyncFetcher);
 

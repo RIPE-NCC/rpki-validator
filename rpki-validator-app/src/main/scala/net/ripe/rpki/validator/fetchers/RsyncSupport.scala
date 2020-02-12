@@ -33,8 +33,8 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Files
 
-import net.ripe.rpki.commons.rsync.Rsync
 import net.ripe.rpki.validator.fetchers.Fetcher.{ConnectionError, Error}
+import net.ripe.rpki.validator.util.NoopRsync
 
 import scala.collection.JavaConversions._
 
@@ -45,7 +45,7 @@ trait RsyncSupport {
   def options: Seq[String]
 
   def rsync(url: URI, destDir: File): Option[Error] = {
-    val r = new Rsync(url.toString, destDir.getAbsolutePath)
+    val r = new NoopRsync(url.toString, destDir.getAbsolutePath)
     r.addOptions(options)
     try {
       r.execute match {

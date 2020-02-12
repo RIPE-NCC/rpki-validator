@@ -30,6 +30,7 @@
 package net.ripe.rpki.validator.cli;
 
 import ch.qos.logback.classic.Level;
+import io.github.faketime.FakeTime;
 import net.ripe.rpki.validator.commands.BottomUpValidationCommand;
 import net.ripe.rpki.validator.commands.PrintCertificateRepositoryObjectCommand;
 import net.ripe.rpki.validator.commands.PrintVersionCommand;
@@ -37,6 +38,8 @@ import net.ripe.rpki.validator.commands.TopDownValidationCommand;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.LocalDateTime;
 
 
 public final class Main {
@@ -49,6 +52,12 @@ public final class Main {
     }
 
     public static void main(String[] args) {
+        System.out.println("Before fake  " + LocalDateTime.now());
+        //-DFAKETIME=[YYYY-MM-DD]T[HH:MM:SS]
+        String fakeTime = System.getProperty("FAKETIME");
+        if(fakeTime != null)
+            FakeTime.stopAt(LocalDateTime.parse(fakeTime));
+        System.out.println("After  fake  " + LocalDateTime.now());
         try {
             new Main().run(args);
             System.exit(0);

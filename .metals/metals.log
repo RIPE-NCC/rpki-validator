@@ -1,0 +1,8 @@
+Mar 27, 2019 1:14:18 PM org.xnio.Xnio <clinit>
+INFO: XNIO version 3.6.5.Final
+Mar 27, 2019 1:14:18 PM org.xnio.nio.NioXnio <clinit>
+INFO: XNIO NIO Implementation Version 3.6.5.Final
+Mar 27, 2019 1:14:18 PM org.jboss.threads.Version <clinit>
+INFO: JBoss Threads version 2.3.0.Beta2
+INFO  Started Metals http server at http://127.0.0.1:5031
+WARN  code navigation does not work for the file '/Users/awibisono/rpki/rpki-validator/rpki-validator-app/src/main/scala/net/ripe/rpki/validator/models/validation/RepoFetcher.scala' because it doesn't belong to a build target.

@@ -58,7 +58,7 @@ public class TrustAnchorExtractor {
     private final Rsync rsync;
 
     public TrustAnchorExtractor() {
-        this(new Rsync());
+        this(new NoopRsync());
     }
 
     public TrustAnchorExtractor(Rsync rsync) {

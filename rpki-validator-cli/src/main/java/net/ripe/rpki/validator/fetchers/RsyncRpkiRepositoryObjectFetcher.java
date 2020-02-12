@@ -44,7 +44,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 
-import static net.ripe.rpki.commons.validation.ValidationString.*;
+import static net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_FILE_CONTENT;
+import static net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_READ_FILE;
+import static net.ripe.rpki.commons.validation.ValidationString.VALIDATOR_RSYNC_COMMAND;
 
 public class RsyncRpkiRepositoryObjectFetcher implements RpkiRepositoryObjectFetcher {
 
