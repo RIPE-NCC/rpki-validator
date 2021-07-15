@@ -1,3 +1,11 @@
+```diff
+! ************************************************************************************************
+! This project is no longer maintained!                                        
+! There are no more security updates, RFCs or RIR policies being implemented.                     
+! Please migrate to an alternative RPKI Relying Party software!                                   
+! ************************************************************************************************
+```
+
 RPKI - Validator
 ================
 
